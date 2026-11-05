@@ -81,3 +81,5 @@ jobs:
           [ "$after" = "302" ] && pass "session invalid after logout" || fail "post-logout: $after"
 
           echo "ALL LIVE CHECKS PASSED"
+
+# Re-run verification against the final production deployment.
