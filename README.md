@@ -18,8 +18,9 @@ See [DEPLOYMENT.md](DEPLOYMENT.md) for the full setup and verification record.
 | Deployment | paid shared hosting | GitHub → Vercel (free) |
 
 The panel is branded **Anoy** (set with `BRAND_NAME`) and the Telegram contact
-is **@libAkAudioVisiual** (`TELEGRAM_USERNAME`). All original page layouts,
-DataTables, SweetAlert2 and every original route are preserved. The visuals were refreshed
+is **@libAkAudioVisiual** (`TELEGRAM_USERNAME`, linked as
+`https://t.me/libAkAudioVisiual`). All original page layouts, DataTables,
+SweetAlert2 and every original route are preserved. The visuals were refreshed
 into a flat, gradient-free design system (`web/public/assets/css/app.css`):
 responsive desktop sidebar / mobile drawer, self-hosted Inter typography,
 consistent cards, forms, tables and alerts. `scripts/refresh-ui.py` documents

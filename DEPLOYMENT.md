@@ -8,7 +8,8 @@
 | GitHub | `masterace572-prog/AnoyMundo`, branch `arena/b2fac70f-anoymundo` |
 | Vercel project | `anoymundo-panel` — `prj_eV3iBh1EUffuxQSaV6AkIEh0kn4D` (new project) |
 | Vercel team | `masterace572-progs-projects` |
-| Production deploy | `dpl_4GqPbbe4F8NGwWAaedxxi9VukQfz` (READY / PROMOTED, flat UI) |
+| Production deploy | `dpl_3qWJ9j8Due7qVTKcTQoTauGx3H6m` (READY / PROMOTED, `Anoy` rebrand) |
+| Panel name / Telegram | `Anoy` / `@libAkAudioVisiual` (`BRAND_NAME`, `TELEGRAM_USERNAME`) |
 | Root Directory | `web` |
 | Supabase | `anoymundo-panel` — `bwsqenepvfwhfomdhaig` (free, ap-south-1) |
 | Default login | `admin` / `admin123` — **change this immediately** |
@@ -118,6 +119,7 @@ No secret is committed to git (`.env*` is ignored).
 | `GET /keys/api`, `GET /admin/api/users` | DataTables JSON from Supabase |
 | `POST /keys/generate` | creates a key, deducts saldo, writes history |
 | `POST /connect` | `status:true` + `real`, `token`, `modname`, 8 feature flags, expiry fields |
+| `GET /connect` (no params) | `{"web_info":{"_client":"Anoy",...},"web__dev":{"author":"@libAkAudioVisiual","telegram":"https://t.me/libAkAudioVisiual"}}` |
 | `POST /connect` with bad key | `{"status":false,"reason":"USER OR GAME NOT REGISTERED"}` |
 | `GET /api/lib/version` | plain-text `1.0` |
 | `GET /assets/css/tailwind.css` | compiled CSS, no CDN dependency |
@@ -141,7 +143,9 @@ curl -sS -X POST https://anoymundo-panel.vercel.app/connect \
   (login, registration, key CRUD, DataTables, `/connect`, maintenance/feature
   toggles, referral → reseller, library upload/version, logout), plus UI
   regression guards: no gradients, no escaped HTML/PHP in notices or form
-  values, responsive viewport, flat CSS and font assets served.
+  values, responsive viewport, flat CSS and font assets served, plus the
+  `Anoy` brand and `@libAkAudioVisiual` handle on login, register and
+  `GET /connect` info.
 - `npm run build` — compiles templates + Tailwind, copies the Inter font,
   parses every template (syntax errors fail the build), validates modules,
   rejects leftover PHP/gradient markup, and verifies the legacy `admin123`
@@ -149,8 +153,9 @@ curl -sS -X POST https://anoymundo-panel.vercel.app/connect \
 - `.github/workflows/live-smoke.yml` — GitHub Actions job that curls the live
   Vercel deployment: health, login with cookie jar, all pages, DataTables,
   key generation, `/connect` success + rejection, cleanup, logout, plus the
-  flat-UI asset checks and the escaped-text regressions. Latest passing run:
-  `42003546248` (also `41998471594`, `41998939557`).
+  flat-UI asset checks, the escaped-text regressions and the `Anoy` /
+  `@libAkAudioVisiual` branding guards. Latest passing run: `42005719821`
+  (also `42003546248`, `41998939557`, `41998471594`).
 
 ## 6. Post-deploy tasks
 
