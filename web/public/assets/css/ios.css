@@ -1038,6 +1038,11 @@ html body.app-body .key-result__key textarea { color: var(--text) !important; }
   html body.app-body .app-content input,
   html body.app-body .app-content select,
   html body.app-body .app-content textarea { max-width: 100% !important; }
+  /* A 10-digit balance cannot sit beside the brand and two 44px controls on a
+     phone. Keep the top bar quiet; the balance stays in the sidebar footer,
+     the dashboard tiles and the balance hint on every form. */
+  html body.app-body .app-topbar-saldo { display: none !important; }
+  html body.app-body .app-topbar-brand { min-width: 0 !important; }
 }
 
 html body.app-body .ui-inline-actions {
