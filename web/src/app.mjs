@@ -697,7 +697,7 @@ export async function handle(req, res) {
     const body = method === 'POST' || method === 'PUT' || method === 'PATCH' ? await parseBody(req) : {};
 
     // --------------------------- public endpoints ---------------------------
-    if (lp === '/api/health' || lp === '/health') return handleHealth(res);
+    if (lp === '/api/health' || lp === '/health') return handleHealth(res, q.get('rpc') === '1');
     if (lp === '/api/lib/version' || lp === '/version.txt' || lp === '/api/version' || lp === '/lib/version.txt') {
       return handleLibVersion(res);
     }

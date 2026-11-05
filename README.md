@@ -89,6 +89,11 @@ request bodies at 4.5 MB and base64 adds ~33%.
 turning the switch **off** is saved too (previously the handler was skipped).
 `/connect` serves `_ftext._status` fresh on every request.
 
+`GET /api/health` reports the driver, database, library release and all 14
+tables. `GET /api/health?rpc=1` additionally verifies that the atomic billing
+function is callable from the serverless function through PostgREST; it sends a
+purposefully invalid order, so it never changes keys or balances.
+
 **UI clarity**: short iOS section titles, aligned field labels, grouped summary
 rows for prices and release info, a live "per key × keys = total" estimate with
 an insufficient-balance hint, and a tighter 390px phone layout. Flat colours

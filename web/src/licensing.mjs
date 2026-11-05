@@ -106,7 +106,7 @@ export function handleConnectInfo(res) {
 }
 
 /** GET /api/health - used by Vercel / the deployment checklist. */
-export async function handleHealth(res) {
+export async function handleHealth(res, deep = false) {
   const started = Date.now();
   const env = envStatus();
   const memory = process.env.DB_DRIVER === 'memory';
@@ -147,6 +147,30 @@ export async function handleHealth(res) {
   } catch (e) {
     checks.schema = { ok: false, detail: e.message };
     ok = false;
+  }
+  // Optional deep probe (?rpc=1): prove the billing RPC is reachable from the
+  // serverless function through PostgREST. The deliberately invalid price makes
+  // the function reject the order and remove its own idempotency row, so this
+  // has no lasting effect on keys or balances.
+  if (deep && !memory) {
+    try {
+      const { data, error } = await db().rpc('create_keys_atomic', {
+        p_request_id: `health-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+        p_user_id: 0, p_game: 'PUBG', p_duration: 1, p_max_devices: 1,
+        p_unit_price: 0, p_total_price: 0, p_keys: ['health-probe'],
+      });
+      let result = data;
+      try { if (typeof result === 'string') result = JSON.parse(result); } catch { /* keep raw */ }
+      const rpcOk = !error && result?.ok === false && typeof result.code === 'string';
+      checks.billing_rpc = {
+        ok: rpcOk,
+        detail: error ? error.message : (result?.code || 'unexpected response'),
+      };
+      if (!rpcOk) ok = false;
+    } catch (e) {
+      checks.billing_rpc = { ok: false, detail: e.message };
+      ok = false;
+    }
   }
   return sendJson(res, { ok, ms: Date.now() - started, driver: process.env.DB_DRIVER === 'memory' ? 'memory' : 'supabase', checks }, ok ? 200 : 500);
 }
