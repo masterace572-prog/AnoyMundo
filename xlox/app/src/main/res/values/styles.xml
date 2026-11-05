@@ -1,115 +1,311 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  Single source of truth for the design system. Light/dark values come from
+  values/colors.xml and values-night/colors.xml — there is ONE theme file and
+  ONE theme, no -night style override and no dynamic colour.
+-->
 <resources>
 
-    <!-- iOS-like appearance. Follows the system setting by default; the in-app
-         appearance button switches between light and dark explicitly. -->
     <style name="AppTheme" parent="Theme.MaterialComponents.DayNight.NoActionBar">
-        <item name="colorPrimary">@color/anoyBlue</item>
-        <item name="colorPrimaryDark">@color/anoyBluePress</item>
-        <item name="colorAccent">@color/anoyBlue</item>
-        <item name="android:colorBackground">@color/anoyBg</item>
-        <item name="android:windowBackground">@color/anoyBg</item>
-        <item name="android:statusBarColor">@color/anoyBg</item>
-        <item name="android:navigationBarColor">@color/anoyBg</item>
-        <item name="android:windowLightStatusBar">true</item>
-        <item name="android:windowLightNavigationBar">true</item>
+        <!-- Every Material colour slot is mapped to a B.1 token, so no widget
+             ever falls back to Material default purple / teal. -->
+        <item name="colorPrimary">@color/accent</item>
+        <item name="colorPrimaryDark">@color/accent_pressed</item>
+        <item name="colorPrimaryVariant">@color/accent_pressed</item>
+        <item name="colorOnPrimary">@color/on_accent</item>
+        <item name="colorSecondary">@color/accent</item>
+        <item name="colorSecondaryVariant">@color/accent_pressed</item>
+        <item name="colorOnSecondary">@color/on_accent</item>
+        <item name="colorTertiary">@color/accent</item>
+        <item name="colorOnTertiary">@color/on_accent</item>
+        <item name="colorSurface">@color/surface</item>
+        <item name="colorOnSurface">@color/text_primary</item>
+        <item name="colorError">@color/error</item>
+        <item name="colorOnError">@color/on_accent</item>
+        <item name="colorOutline">@color/outline</item>
+        <item name="colorPrimaryContainer">@color/accent_subtle</item>
+        <item name="colorOnPrimaryContainer">@color/text_primary</item>
+        <item name="colorSecondaryContainer">@color/accent_subtle</item>
+        <item name="colorOnSecondaryContainer">@color/text_primary</item>
+        <item name="colorSurfaceVariant">@color/surface_subtle</item>
+        <item name="colorOnSurfaceVariant">@color/text_secondary</item>
+        <item name="colorErrorContainer">@color/surface_subtle</item>
+        <item name="colorOnErrorContainer">@color/error</item>
+
+        <!-- Android text colours + default family. -->
+        <item name="android:colorBackground">@color/background</item>
+        <item name="android:windowBackground">@color/background</item>
+        <item name="android:editTextColor">@color/text_primary</item>
+        <item name="android:textColorHint">@color/text_tertiary</item>
+        <item name="android:textColorPrimary">@color/text_primary</item>
+        <item name="android:textColorSecondary">@color/text_secondary</item>
+        <item name="android:fontFamily">@font/inter_regular</item>
+
+        <!-- Ripple = textPrimary at 8%; selection = accentSubtle. -->
+        <item name="colorControlHighlight">@color/ripple</item>
+        <item name="colorControlActivated">@color/accent</item>
+        <item name="colorControlNormal">@color/outline</item>
+        <item name="android:colorControlHighlight">@color/ripple</item>
+
+        <!-- Transparent system bars. Icon contrast is set at runtime by
+             DesignSystem.applyEdgeToEdge() using WindowInsetsControllerCompat. -->
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
         <item name="android:windowTranslucentStatus">false</item>
         <item name="android:windowTranslucentNavigation">false</item>
-        <item name="android:editTextColor">@color/anoyText</item>
-        <item name="android:textColorHint">@color/anoyTextTertiary</item>
-        <item name="android:textColorPrimary">@color/anoyText</item>
-        <item name="android:textColorSecondary">@color/anoyTextSecondary</item>
-        <item name="android:fontFamily">sans-serif</item>
+
+        <!-- Every Material text slot mapped to a Ds text appearance. -->
+        <item name="textAppearanceHeadline1">@style/TextAppearance.Ds.DisplayLarge</item>
+        <item name="textAppearanceHeadline2">@style/TextAppearance.Ds.HeadlineLarge</item>
+        <item name="textAppearanceHeadline3">@style/TextAppearance.Ds.HeadlineMedium</item>
+        <item name="textAppearanceHeadline4">@style/TextAppearance.Ds.HeadlineSmall</item>
+        <item name="textAppearanceHeadline5">@style/TextAppearance.Ds.TitleLarge</item>
+        <item name="textAppearanceHeadline6">@style/TextAppearance.Ds.TitleMedium</item>
+        <item name="textAppearanceSubtitle1">@style/TextAppearance.Ds.BodyLarge</item>
+        <item name="textAppearanceSubtitle2">@style/TextAppearance.Ds.TitleSmall</item>
+        <item name="textAppearanceBody1">@style/TextAppearance.Ds.BodyLarge</item>
+        <item name="textAppearanceBody2">@style/TextAppearance.Ds.BodyMedium</item>
+        <item name="textAppearanceCaption">@style/TextAppearance.Ds.BodySmall</item>
+        <item name="textAppearanceButton">@style/TextAppearance.Ds.LabelLarge</item>
+        <item name="textAppearanceOverline">@style/TextAppearance.Ds.LabelMedium</item>
+
+        <!-- Shape appearances: no default Material 3 shapes / elevation overlays. -->
+        <item name="shapeAppearanceSmallComponent">@style/ShapeAppearance.Ds.Small</item>
+        <item name="shapeAppearanceMediumComponent">@style/ShapeAppearance.Ds.Medium</item>
+        <item name="shapeAppearanceLargeComponent">@style/ShapeAppearance.Ds.Large</item>
+
+        <item name="materialButtonStyle">@style/Widget.Ds.Button.Primary</item>
+        <item name="bottomNavigationStyle">@style/Widget.Ds.BottomNav</item>
+        <item name="tabStyle">@style/Widget.Ds.Tabs</item>
+        <item name="chipStyle">@style/Widget.Ds.Chip</item>
+        <item name="materialAlertDialogTheme">@style/ThemeOverlay.Ds.Dialog</item>
+        <item name="bottomSheetDialogTheme">@style/ThemeOverlay.Ds.Dialog</item>
     </style>
 
-    <!-- SF Pro-like type scale: tight tracking, medium weight for headings. -->
-    <style name="IosLargeTitle">
-        <item name="android:fontFamily">sans-serif-medium</item>
-        <item name="android:textSize">34sp</item>
-        <item name="android:textColor">@color/anoyText</item>
-        <item name="android:letterSpacing">-0.02</item>
-        <item name="android:includeFontPadding">false</item>
+    <style name="ThemeOverlay.Ds.Dialog" parent="ThemeOverlay.MaterialComponents.Dialog">
+        <item name="android:windowBackground">@drawable/ds_dialog</item>
+        <item name="android:backgroundDimEnabled">true</item>
+        <item name="android:windowElevation">@dimen/space_0</item>
+        <item name="colorSurface">@color/surface_elevated</item>
+        <item name="colorOnSurface">@color/text_primary</item>
+        <item name="colorControlHighlight">@color/ripple</item>
     </style>
 
-    <style name="IosTitle">
-        <item name="android:fontFamily">sans-serif-medium</item>
-        <item name="android:textSize">26sp</item>
-        <item name="android:textColor">@color/anoyText</item>
-        <item name="android:letterSpacing">-0.015</item>
-        <item name="android:includeFontPadding">false</item>
-    </style>
-
-    <style name="IosHeadline">
-        <item name="android:fontFamily">sans-serif-medium</item>
-        <item name="android:textSize">17sp</item>
-        <item name="android:textColor">@color/anoyText</item>
-        <item name="android:letterSpacing">-0.01</item>
-        <item name="android:includeFontPadding">false</item>
-    </style>
-
-    <style name="IosBody">
-        <item name="android:fontFamily">sans-serif</item>
-        <item name="android:textSize">15sp</item>
-        <item name="android:textColor">@color/anoyText</item>
-        <item name="android:includeFontPadding">false</item>
-    </style>
-
-    <style name="IosFootnote">
-        <item name="android:fontFamily">sans-serif</item>
-        <item name="android:textSize">13sp</item>
-        <item name="android:textColor">@color/anoyTextSecondary</item>
-        <item name="android:includeFontPadding">false</item>
-    </style>
-
-    <style name="IosCaption">
-        <item name="android:fontFamily">sans-serif</item>
-        <item name="android:textSize">11sp</item>
-        <item name="android:textColor">@color/anoyTextTertiary</item>
-        <item name="android:includeFontPadding">false</item>
-    </style>
-
-    <style name="IosLink">
-        <item name="android:fontFamily">sans-serif-medium</item>
-        <item name="android:textSize">15sp</item>
-        <item name="android:textColor">@color/anoyBlue</item>
-        <item name="android:includeFontPadding">false</item>
-    </style>
-
-    <style name="IosButtonLabel">
-        <item name="android:fontFamily">sans-serif-medium</item>
-        <item name="android:textSize">17sp</item>
-        <item name="android:textColor">@color/anoyOnBlue</item>
+    <!-- ===================== B.2 typography ===================== -->
+    <style name="TextAppearance.Ds.Base" parent="">
+        <item name="android:textColor">@color/text_primary</item>
+        <item name="android:letterSpacing">0</item>
         <item name="android:textAllCaps">false</item>
         <item name="android:includeFontPadding">false</item>
     </style>
+    <style name="TextAppearance.Ds.DisplayLarge" parent="TextAppearance.Ds.Base">
+        <item name="android:fontFamily">@font/source_serif_4_regular</item>
+        <item name="android:textSize">@dimen/text_display_large</item>
+        <item name="android:lineSpacingExtra">@dimen/line_display_large</item>
+    </style>
+    <style name="TextAppearance.Ds.HeadlineLarge" parent="TextAppearance.Ds.Base">
+        <item name="android:fontFamily">@font/source_serif_4_regular</item>
+        <item name="android:textSize">@dimen/text_headline_large</item>
+        <item name="android:lineSpacingExtra">@dimen/line_headline_large</item>
+    </style>
+    <style name="TextAppearance.Ds.HeadlineMedium" parent="TextAppearance.Ds.Base">
+        <item name="android:fontFamily">@font/source_serif_4_regular</item>
+        <item name="android:textSize">@dimen/text_headline_medium</item>
+        <item name="android:lineSpacingExtra">@dimen/line_headline_medium</item>
+    </style>
+    <style name="TextAppearance.Ds.HeadlineSmall" parent="TextAppearance.Ds.Base">
+        <item name="android:fontFamily">@font/source_serif_4_semibold</item>
+        <item name="android:textSize">@dimen/text_headline_small</item>
+        <item name="android:lineSpacingExtra">@dimen/line_headline_small</item>
+    </style>
+    <style name="TextAppearance.Ds.TitleLarge" parent="TextAppearance.Ds.Base">
+        <item name="android:fontFamily">@font/inter_semibold</item>
+        <item name="android:textSize">@dimen/text_title_large</item>
+        <item name="android:lineSpacingExtra">@dimen/line_title_large</item>
+    </style>
+    <style name="TextAppearance.Ds.TitleMedium" parent="TextAppearance.Ds.Base">
+        <item name="android:fontFamily">@font/inter_semibold</item>
+        <item name="android:textSize">@dimen/text_title_medium</item>
+        <item name="android:lineSpacingExtra">@dimen/line_title_medium</item>
+    </style>
+    <style name="TextAppearance.Ds.TitleSmall" parent="TextAppearance.Ds.Base">
+        <item name="android:fontFamily">@font/inter_semibold</item>
+        <item name="android:textSize">@dimen/text_title_small</item>
+        <item name="android:lineSpacingExtra">@dimen/line_title_small</item>
+    </style>
+    <style name="TextAppearance.Ds.BodyLarge" parent="TextAppearance.Ds.Base">
+        <item name="android:fontFamily">@font/inter_regular</item>
+        <item name="android:textSize">@dimen/text_body_large</item>
+        <item name="android:lineSpacingExtra">@dimen/line_body_large</item>
+    </style>
+    <style name="TextAppearance.Ds.BodyMedium" parent="TextAppearance.Ds.Base">
+        <item name="android:fontFamily">@font/inter_regular</item>
+        <item name="android:textSize">@dimen/text_body_medium</item>
+        <item name="android:lineSpacingExtra">@dimen/line_body_medium</item>
+    </style>
+    <style name="TextAppearance.Ds.BodySmall" parent="TextAppearance.Ds.Base">
+        <item name="android:fontFamily">@font/inter_regular</item>
+        <item name="android:textSize">@dimen/text_body_small</item>
+        <item name="android:lineSpacingExtra">@dimen/line_body_small</item>
+    </style>
+    <style name="TextAppearance.Ds.LabelLarge" parent="TextAppearance.Ds.Base">
+        <item name="android:fontFamily">@font/inter_medium</item>
+        <item name="android:textSize">@dimen/text_label_large</item>
+        <item name="android:lineSpacingExtra">@dimen/line_label_large</item>
+    </style>
+    <style name="TextAppearance.Ds.LabelMedium" parent="TextAppearance.Ds.Base">
+        <item name="android:fontFamily">@font/inter_medium</item>
+        <item name="android:textSize">@dimen/text_label_medium</item>
+        <item name="android:lineSpacingExtra">@dimen/line_label_medium</item>
+    </style>
+    <style name="TextAppearance.Ds.Code" parent="TextAppearance.Ds.Base">
+        <item name="android:fontFamily">@font/jetbrains_mono_regular</item>
+        <item name="android:textSize">@dimen/text_body_small</item>
+        <item name="android:lineSpacingExtra">@dimen/line_body_small</item>
+    </style>
+    <style name="TextAppearance.Ds.Secondary" parent="TextAppearance.Ds.BodyMedium">
+        <item name="android:textColor">@color/text_secondary</item>
+    </style>
+    <style name="TextAppearance.Ds.Tertiary" parent="TextAppearance.Ds.BodySmall">
+        <item name="android:textColor">@color/text_tertiary</item>
+    </style>
 
-    <style name="IosSecondaryButtonLabel">
-        <item name="android:fontFamily">sans-serif-medium</item>
-        <item name="android:textSize">15sp</item>
-        <item name="android:textColor">@color/anoyBlue</item>
+    <!-- ===================== shape appearances ===================== -->
+    <style name="ShapeAppearance.Ds.Small" parent="ShapeAppearance.MaterialComponents.SmallComponent">
+        <item name="cornerSize">@dimen/radius_button</item>
+    </style>
+    <style name="ShapeAppearance.Ds.Medium" parent="ShapeAppearance.MaterialComponents.MediumComponent">
+        <item name="cornerSize">@dimen/radius_card</item>
+    </style>
+    <style name="ShapeAppearance.Ds.Large" parent="ShapeAppearance.MaterialComponents.LargeComponent">
+        <item name="cornerSize">@dimen/radius_dialog</item>
+    </style>
+
+    <!-- ===================== B.6 components ===================== -->
+    <style name="Widget.Ds.Button" parent="Widget.AppCompat.Button">
+        <item name="android:minHeight">@dimen/button_height</item>
+        <item name="android:height">@dimen/button_height</item>
+        <item name="android:paddingStart">@dimen/space_16</item>
+        <item name="android:paddingEnd">@dimen/space_16</item>
+        <item name="android:gravity">center</item>
+        <item name="android:singleLine">true</item>
         <item name="android:textAllCaps">false</item>
-        <item name="android:includeFontPadding">false</item>
+        <item name="android:letterSpacing">0</item>
+        <item name="android:stateListAnimator">@null</item>
+        <item name="android:textAppearance">@style/TextAppearance.Ds.LabelLarge</item>
+    </style>
+    <style name="Widget.Ds.Button.Primary" parent="Widget.Ds.Button">
+        <item name="android:background">@drawable/ds_button_primary</item>
+        <item name="android:textColor">@color/ds_on_accent_text</item>
+    </style>
+    <style name="Widget.Ds.Button.Secondary" parent="Widget.Ds.Button">
+        <item name="android:background">@drawable/ds_button_secondary</item>
+        <item name="android:textColor">@color/ds_text_primary_csl</item>
+    </style>
+    <style name="Widget.Ds.Button.Text" parent="Widget.Ds.Button">
+        <item name="android:background">@drawable/ds_button_text</item>
+        <item name="android:textColor">@color/ds_accent_text_csl</item>
+        <item name="android:minWidth">@dimen/touch_target</item>
     </style>
 
-    <style name="CustomProgressBarStyle" parent="Widget.AppCompat.ProgressBar">
-        <item name="android:indeterminateTint">@color/anoyBlue</item>
-        <item name="android:indeterminateTintMode">src_in</item>
+    <style name="Widget.Ds.TextField" parent="Widget.AppCompat.EditText">
+        <item name="android:background">@null</item>
+        <item name="android:minHeight">@dimen/field_height</item>
+        <item name="android:paddingStart">@dimen/space_16</item>
+        <item name="android:paddingEnd">@dimen/space_16</item>
+        <item name="android:textColor">@color/text_primary</item>
+        <item name="android:textColorHint">@color/text_tertiary</item>
+        <item name="android:textAppearance">@style/TextAppearance.Ds.BodyLarge</item>
+        <item name="android:singleLine">true</item>
+        <item name="android:imeOptions">actionDone</item>
     </style>
 
-    <style name="DarkAlertDialogStyle" parent="Theme.MaterialComponents.DayNight.Dialog">
-        <item name="android:windowBackground">@color/anoySurface</item>
-        <item name="android:textColorPrimary">@color/anoyText</item>
-        <item name="android:textColorSecondary">@color/anoyTextSecondary</item>
-        <item name="android:windowMinWidthMinor">85%</item>
-        <item name="android:windowIsTranslucent">false</item>
+    <style name="Widget.Ds.TopAppBar" parent="">
+        <item name="android:background">@color/surface</item>
     </style>
 
-    <style name="AlertDialogStyle" parent="Theme.MaterialComponents.Light.Dialog">
-        <item name="android:windowBackground">@color/anoySurface</item>
-        <item name="android:textColorPrimary">@color/anoyText</item>
-        <item name="android:textColorSecondary">@color/anoyTextSecondary</item>
-        <item name="android:windowMinWidthMinor">85%</item>
-        <item name="android:windowIsTranslucent">false</item>
+    <style name="Widget.Ds.IconButton" parent="Widget.AppCompat.ImageButton">
+        <item name="android:minWidth">@dimen/touch_target</item>
+        <item name="android:minHeight">@dimen/touch_target</item>
+        <item name="android:background">@drawable/ds_button_text</item>
+        <item name="android:scaleType">fitCenter</item>
+        <item name="android:padding">@dimen/space_12</item>
+        <item name="android:stateListAnimator">@null</item>
     </style>
 
+    <style name="Widget.Ds.ListRow" parent="">
+        <item name="android:minHeight">@dimen/list_item_single</item>
+        <item name="android:paddingTop">@dimen/list_item_padding_vertical</item>
+        <item name="android:paddingBottom">@dimen/list_item_padding_vertical</item>
+        <item name="android:gravity">center_vertical</item>
+    </style>
+
+    <style name="Widget.Ds.Card" parent="">
+        <item name="android:background">@drawable/ds_card</item>
+        <item name="android:padding">@dimen/card_padding</item>
+    </style>
+
+    <style name="Widget.Ds.Chip" parent="Widget.MaterialComponents.Chip.Filter">
+        <item name="android:minHeight">@dimen/chip_height</item>
+        <item name="chipMinHeight">@dimen/chip_height</item>
+        <item name="chipStrokeWidth">@dimen/divider</item>
+        <item name="chipStrokeColor">@color/outline</item>
+        <item name="chipBackgroundColor">@color/ds_chip_bg</item>
+        <item name="android:textAppearance">@style/TextAppearance.Ds.LabelMedium</item>
+        <item name="android:textColor">@color/text_primary</item>
+        <item name="checkedIconVisible">false</item>
+    </style>
+
+    <style name="Widget.Ds.BottomNav" parent="Widget.MaterialComponents.BottomNavigationView">
+        <item name="android:background">@color/surface</item>
+        <item name="itemIconTint">@color/ds_nav_item_tint</item>
+        <item name="itemTextColor">@color/ds_nav_item_tint</item>
+        <item name="itemBackground">@color/transparent</item>
+        <item name="itemRippleColor">@color/ripple</item>
+        <item name="elevation">@dimen/space_0</item>
+    </style>
+
+    <style name="Widget.Ds.Tabs" parent="Widget.MaterialComponents.TabLayout">
+        <item name="android:background">@color/surface</item>
+        <item name="tabIndicator">@drawable/ds_tab_indicator</item>
+        <item name="tabIndicatorHeight">@dimen/underline</item>
+        <item name="tabIndicatorColor">@color/accent</item>
+        <item name="tabTextAppearance">@style/TextAppearance.Ds.LabelLarge</item>
+        <item name="tabSelectedTextColor">@color/text_primary</item>
+        <item name="tabTextColor">@color/text_secondary</item>
+        <item name="tabRippleColor">@color/ripple</item>
+    </style>
+
+    <style name="Widget.Ds.Switch" parent="Widget.AppCompat.CompoundButton.Switch">
+        <item name="android:thumbTint">@color/ds_control_tint</item>
+        <item name="android:trackTint">@color/ds_control_tint</item>
+        <item name="android:textAppearance">@style/TextAppearance.Ds.BodyMedium</item>
+    </style>
+    <style name="Widget.Ds.CheckBox" parent="Widget.AppCompat.CompoundButton.CheckBox">
+        <item name="android:buttonTint">@color/ds_control_tint</item>
+        <item name="android:textAppearance">@style/TextAppearance.Ds.BodyMedium</item>
+    </style>
+    <style name="Widget.Ds.RadioButton" parent="Widget.AppCompat.CompoundButton.RadioButton">
+        <item name="android:buttonTint">@color/ds_control_tint</item>
+        <item name="android:textAppearance">@style/TextAppearance.Ds.BodyMedium</item>
+    </style>
+
+    <style name="Widget.Ds.Progress.Linear" parent="Widget.AppCompat.ProgressBar.Horizontal">
+        <item name="android:progressDrawable">@drawable/ds_progress</item>
+        <item name="android:maxHeight">@dimen/progress_linear</item>
+        <item name="android:minHeight">@dimen/progress_linear</item>
+    </style>
+
+    <style name="Widget.Ds.StatusText" parent="TextAppearance.Ds.BodyMedium">
+        <item name="android:textColor">@color/text_primary</item>
+    </style>
+    <style name="Widget.Ds.StatusText.Error" parent="Widget.Ds.StatusText">
+        <item name="android:textColor">@color/error</item>
+    </style>
+    <style name="Widget.Ds.StatusText.Success" parent="Widget.Ds.StatusText">
+        <item name="android:textColor">@color/success</item>
+    </style>
+    <style name="Widget.Ds.StatusText.Warning" parent="Widget.Ds.StatusText">
+        <item name="android:textColor">@color/warning</item>
+    </style>
 </resources>

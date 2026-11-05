@@ -1,8 +1,6 @@
 package com.xlox;
 
 import android.Manifest;
-import android.animation.ObjectAnimator;
-import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -17,20 +15,20 @@ import android.os.Looper;
 import android.provider.Settings;
 import android.util.Log;
 import android.view.View;
-import android.view.animation.LinearInterpolator;
 import android.widget.Button;
 import android.widget.ImageButton;
-import android.widget.ImageView;
-import android.widget.ProgressBar;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
-import com.xlox.ui.AnoyButton;
 import com.xlox.ui.ThemeMode;
+import com.xlox.ui.designsystem.DesignSystem;
+import com.xlox.ui.designsystem.DsMotion;
+import com.xlox.ui.designsystem.PrimaryButton;
+import com.xlox.ui.designsystem.StateView;
+import com.xlox.ui.designsystem.Tokens;
 import com.xlox.utils.AppManager;
 import com.xlox.utils.Downtwo;
 import com.xlox.utils.LibManager;
@@ -64,35 +62,27 @@ public class MAct extends AppCompatActivity {
     private static final String PKG_BGMI = "com.pubg.imobile";
     private static final String PREF_NAME = "com.xlox.download";
     private static final String PREF_VERSION_KEY = "version";
-    private static final String TELEGRAM_URL = "https://t.me/libAkAudioVisiual";
 
     // UI
-    private ProgressBar downloadProgressBar;
-    private TextView downloadStatusText;
-    private TextView percentText;
-    private View downloadBox;
+    private StateView downloadBox;
+    private StateView statusToggle;
     private View restartButton;
-    private ProgressBar loadingCursor;
     private TextView appVersionText;
     private TextView creditText;
     private ImageButton themeToggle;
     private TextView systemReady;
+    private View subscriptionRule;
+    private TextView subscriptionStatus;
 
     private TextView startText;
-    private ImageView actionIcon;
     private View startBgmi;
-    private AnoyButton launchButton;
+    private PrimaryButton launchButton;
     private View startFB;
     private View fbCard;
-    private View statusToggle;
-    private View statusLoader;
-    private ImageView statusErrorIcon;
-    private TextView statusToggleText;
 
     private TextView gameName;
     private TextView packageName;
     private TextView gameStatus;
-    private TextView subscriptionStatus;
     private TextView expiryValue;
     private TextView timeRemaining;
     private TextView deviceValue;
@@ -110,50 +100,42 @@ public class MAct extends AppCompatActivity {
     private boolean isUpdateAvailable = false;
     private boolean isDownloading = false;
 
-    @SuppressLint("SetTextI18n")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         ThemeMode.apply(this);
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         ThemeMode.applyWindow(this);
+        DesignSystem.applySafeDrawing(findViewById(R.id.mainRoot), true, true, false);
 
         checkPermissions();
 
-        // Download UI
         downloadBox = findViewById(R.id.downloadBox);
-        downloadProgressBar = findViewById(R.id.downloadProgressBar);
-        downloadStatusText = findViewById(R.id.downloadStatusText);
-        percentText = findViewById(R.id.percentText);
+        statusToggle = findViewById(R.id.statusToggle);
         restartButton = findViewById(R.id.restartButton);
-        loadingCursor = findViewById(R.id.loadingCursor);
         appVersionText = findViewById(R.id.appVersionText);
         creditText = findViewById(R.id.creditText);
         systemReady = findViewById(R.id.systemReady);
         themeToggle = findViewById(R.id.themeToggle);
+        subscriptionRule = findViewById(R.id.subscriptionRule);
+        subscriptionStatus = findViewById(R.id.subscriptionStatus);
 
-        // Action UI
         startText = findViewById(R.id.startText);
-        actionIcon = findViewById(R.id.actionIcon);
         startBgmi = findViewById(R.id.startBgmi);
-        if (startBgmi instanceof AnoyButton) launchButton = (AnoyButton) startBgmi;
+        if (startBgmi instanceof PrimaryButton) launchButton = (PrimaryButton) startBgmi;
         startFB = findViewById(R.id.startFB);
         fbCard = findViewById(R.id.fbCard);
 
         gameName = findViewById(R.id.gameName);
         packageName = findViewById(R.id.packageName);
         gameStatus = findViewById(R.id.gameStatus);
-        statusToggle = findViewById(R.id.statusToggle);
-        statusLoader = findViewById(R.id.statusLoader);
-        statusErrorIcon = findViewById(R.id.statusErrorIcon);
-        statusToggleText = findViewById(R.id.statusToggleText);
-        subscriptionStatus = findViewById(R.id.subscriptionStatus);
         expiryValue = findViewById(R.id.expiryValue);
         timeRemaining = findViewById(R.id.timeRemaining);
         deviceValue = findViewById(R.id.deviceValue);
         deviceStatus = findViewById(R.id.deviceStatus);
         if (deviceValue != null) {
-            deviceValue.setText(Build.MODEL == null ? "Android device" : Build.MODEL);
+            deviceValue.setText(Build.MODEL == null
+                    ? getString(R.string.android_device) : Build.MODEL);
         }
 
         obbButton = findViewById(R.id.obbButton);
@@ -162,19 +144,21 @@ public class MAct extends AppCompatActivity {
         hoursValue = findViewById(R.id.hoursBox).findViewById(R.id.timeValue);
         minutesValue = findViewById(R.id.minutesBox).findViewById(R.id.timeValue);
         secondsValue = findViewById(R.id.secondsBox).findViewById(R.id.timeValue);
-        ((TextView) findViewById(R.id.daysBox).findViewById(R.id.timeLabel)).setText("DAYS");
-        ((TextView) findViewById(R.id.hoursBox).findViewById(R.id.timeLabel)).setText("HOURS");
-        ((TextView) findViewById(R.id.minutesBox).findViewById(R.id.timeLabel)).setText("MINUTES");
-        ((TextView) findViewById(R.id.secondsBox).findViewById(R.id.timeLabel)).setText("SECONDS");
+        ((TextView) findViewById(R.id.daysBox).findViewById(R.id.timeLabel)).setText(R.string.days);
+        ((TextView) findViewById(R.id.hoursBox).findViewById(R.id.timeLabel)).setText(R.string.hours);
+        ((TextView) findViewById(R.id.minutesBox).findViewById(R.id.timeLabel)).setText(R.string.minutes);
+        ((TextView) findViewById(R.id.secondsBox).findViewById(R.id.timeLabel)).setText(R.string.seconds);
         setKeyTimeUnavailable();
         startKeyCountdown();
-        startPageAnimation();
+
+        ThemeMode.decorateToggle(this, themeToggle);
+        DsMotion.fadeIn(findViewById(R.id.mainCard));
 
         if (themeToggle != null) {
             themeToggle.setOnClickListener(v -> ThemeMode.toggle(this));
         }
         if (systemReady != null) {
-            systemReady.setOnClickListener(v -> openExternalUrl(TELEGRAM_URL));
+            systemReady.setOnClickListener(v -> openExternalUrl(getString(R.string.telegram_url)));
         }
 
         checkObbApplied();
@@ -183,7 +167,7 @@ public class MAct extends AppCompatActivity {
         applyPanelStatus();
 
         if (obbButton != null) {
-            obbButton.setOnClickListener(v -> openExternalUrl(TELEGRAM_URL));
+            obbButton.setOnClickListener(v -> openExternalUrl(getString(R.string.telegram_url)));
         }
 
         if (restartButton != null) {
@@ -192,9 +176,6 @@ public class MAct extends AppCompatActivity {
 
         if (startBgmi != null) {
             startBgmi.setOnClickListener(v -> {
-                // Three hovering dots on every tap, then whichever flow takes
-                // over replaces them with real in-button progress.
-                if (launchButton != null) launchButton.pulseDots(700L);
                 if (isUpdateAvailable) {
                     startDownload();
                 } else if (!isGameInstalled) {
@@ -208,7 +189,7 @@ public class MAct extends AppCompatActivity {
         }
 
         if (startFB != null) {
-            startFB.setOnClickListener(v -> openExternalUrl(TELEGRAM_URL));
+            startFB.setOnClickListener(v -> openExternalUrl(getString(R.string.telegram_url)));
         }
 
         // Start Workflow: Update Check -> Download Files (if needed)
@@ -227,7 +208,7 @@ public class MAct extends AppCompatActivity {
      * read from the /connect reply by the native layer. No hardcoded "Safe".
      */
     private void applyPanelStatus() {
-        String status = "--";
+        String status = getString(R.string.not_available);
         String text = "";
         try {
             String s = modStatus();
@@ -245,8 +226,11 @@ public class MAct extends AppCompatActivity {
                 deviceStatus.setText(panelStatus);
                 boolean safe = panelStatus.equalsIgnoreCase("Safe")
                         || panelStatus.toLowerCase(Locale.US).contains("safe");
-                deviceStatus.setTextColor(ContextCompat.getColor(this,
-                        safe ? R.color.anoyGreen : R.color.anoyOrange));
+                deviceStatus.setTextColor(safe ? Tokens.success(this) : Tokens.warning(this));
+                if (subscriptionRule != null) {
+                    subscriptionRule.setBackgroundColor(
+                            safe ? Tokens.success(this) : Tokens.warning(this));
+                }
             }
             if (creditText != null) {
                 creditText.setText(panelCredit);
@@ -265,8 +249,8 @@ public class MAct extends AppCompatActivity {
         Log.i("MAct", "Loader diagnostics: " + LibManager.diagnostics(this));
         String error = LibManager.lastLoadError(this);
         if (error != null && !error.isEmpty()) {
-            showStatusToggle("Library missing", true);
-            Toast.makeText(this, error, Toast.LENGTH_LONG).show();
+            showStatusToggle(getString(R.string.library_missing), true);
+            DesignSystem.snackbar(this, getString(R.string.diagnostic_detail, error));
             LibManager.clearLoadError(this);
             return;
         }
@@ -274,46 +258,17 @@ public class MAct extends AppCompatActivity {
         if (lib.isFile()) {
             String problem = LibManager.alignmentProblem(lib);
             if (problem != null) {
-                showStatusToggle("Library incompatible", true);
-                Toast.makeText(this, problem, Toast.LENGTH_LONG).show();
-            }
-        }
-    }
-
-    private void startPageAnimation() {
-        View logoGlow = findViewById(R.id.logoGlow);
-        View mainLogo = findViewById(R.id.mainLogo);
-        if (mainLogo != null) {
-            ObjectAnimator logoFloat = ObjectAnimator.ofFloat(mainLogo, View.TRANSLATION_Y, 0f, -4f, 0f);
-            logoFloat.setDuration(3200);
-            logoFloat.setRepeatCount(ObjectAnimator.INFINITE);
-            logoFloat.start();
-        }
-        if (logoGlow != null) {
-            ObjectAnimator glowRotation = ObjectAnimator.ofFloat(logoGlow, View.ROTATION, 0f, 360f);
-            glowRotation.setDuration(9000);
-            glowRotation.setInterpolator(new LinearInterpolator());
-            glowRotation.setRepeatCount(ObjectAnimator.INFINITE);
-            glowRotation.start();
-        }
-        View[] views = {findViewById(R.id.brandHeader), findViewById(R.id.mainCard),
-                findViewById(R.id.statusToggle), findViewById(R.id.keyTimeRow), findViewById(R.id.fbCard)};
-        long delay = 0;
-        for (View view : views) {
-            if (view != null) {
-                view.setAlpha(0f);
-                view.setTranslationY(20f);
-                view.animate().alpha(1f).translationY(0f).setDuration(480).setStartDelay(delay).start();
-                delay += 80;
+                showStatusToggle(getString(R.string.library_incompatible), true);
+                DesignSystem.snackbar(this, getString(R.string.diagnostic_detail, problem));
             }
         }
     }
 
     private void setKeyTimeUnavailable() {
-        if (daysValue != null) daysValue.setText("--");
-        if (hoursValue != null) hoursValue.setText("--");
-        if (minutesValue != null) minutesValue.setText("--");
-        if (secondsValue != null) secondsValue.setText("--");
+        if (daysValue != null) daysValue.setText(R.string.not_available);
+        if (hoursValue != null) hoursValue.setText(R.string.not_available);
+        if (minutesValue != null) minutesValue.setText(R.string.not_available);
+        if (secondsValue != null) secondsValue.setText(R.string.not_available);
     }
 
     private void startKeyCountdown() {
@@ -326,8 +281,8 @@ public class MAct extends AppCompatActivity {
             return;
         }
         if (expiry == null || expiry.trim().isEmpty() || "NULL".equalsIgnoreCase(expiry.trim())) {
-            if (expiryValue != null) expiryValue.setText("--");
-            if (timeRemaining != null) timeRemaining.setText("--");
+            if (expiryValue != null) expiryValue.setText(R.string.not_available);
+            if (timeRemaining != null) timeRemaining.setText(R.string.not_available);
             return;
         }
 
@@ -341,7 +296,7 @@ public class MAct extends AppCompatActivity {
             }
         }
         if (expiryMillis <= 0L) {
-            if (timeRemaining != null) timeRemaining.setText("--");
+            if (timeRemaining != null) timeRemaining.setText(R.string.not_available);
             return;
         }
 
@@ -352,15 +307,21 @@ public class MAct extends AppCompatActivity {
                 if (remaining <= 0L) {
                     setTimeValues(0, 0, 0, 0);
                     if (subscriptionStatus != null) {
-                        subscriptionStatus.setText("Expired");
-                        subscriptionStatus.setTextColor(ContextCompat.getColor(MAct.this, R.color.anoyRed));
+                        subscriptionStatus.setText(R.string.expired);
+                        subscriptionStatus.setTextColor(Tokens.error(MAct.this));
                     }
-                    if (timeRemaining != null) timeRemaining.setText("Expired");
+                    if (subscriptionRule != null) {
+                        subscriptionRule.setBackgroundColor(Tokens.error(MAct.this));
+                    }
+                    if (timeRemaining != null) timeRemaining.setText(R.string.expired);
                     return;
                 }
                 if (subscriptionStatus != null) {
-                    subscriptionStatus.setText("Active");
-                    subscriptionStatus.setTextColor(ContextCompat.getColor(MAct.this, R.color.anoyGreen));
+                    subscriptionStatus.setText(R.string.active);
+                    subscriptionStatus.setTextColor(Tokens.success(MAct.this));
+                }
+                if (subscriptionRule != null) {
+                    subscriptionRule.setBackgroundColor(Tokens.success(MAct.this));
                 }
                 long totalSeconds = TimeUnit.MILLISECONDS.toSeconds(remaining);
                 long days = totalSeconds / 86400L;
@@ -396,14 +357,13 @@ public class MAct extends AppCompatActivity {
         return -1L;
     }
 
-    @SuppressLint("SetTextI18n")
     private void setTimeValues(long days, long hours, long minutes, long seconds) {
         if (daysValue != null) daysValue.setText(String.format(Locale.US, "%02d", days));
         if (hoursValue != null) hoursValue.setText(String.format(Locale.US, "%02d", hours));
         if (minutesValue != null) minutesValue.setText(String.format(Locale.US, "%02d", minutes));
         if (secondsValue != null) secondsValue.setText(String.format(Locale.US, "%02d", seconds));
         if (timeRemaining != null) {
-            timeRemaining.setText(String.format(Locale.US, "%dd %02dh %02dm", days, hours, minutes));
+            timeRemaining.setText(getString(R.string.time_remaining, days, hours, minutes));
         }
     }
 
@@ -411,7 +371,7 @@ public class MAct extends AppCompatActivity {
         SharedPreferences prefs = getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE);
         String localVersion = prefs.getString(PREF_VERSION_KEY, "1.0");
         if (appVersionText != null) {
-            appVersionText.setText("Version " + localVersion);
+            appVersionText.setText(getString(R.string.version_x, localVersion));
         }
     }
 
@@ -424,7 +384,6 @@ public class MAct extends AppCompatActivity {
         runOnUiThread(() -> {
             if (downloadBox != null) downloadBox.setVisibility(View.GONE);
             if (restartButton != null) restartButton.setVisibility(View.VISIBLE);
-            if (loadingCursor != null) loadingCursor.setVisibility(View.GONE);
         });
         isUpdateAvailable = false;
 
@@ -451,13 +410,22 @@ public class MAct extends AppCompatActivity {
     }
 
     private void buttonProgress(int percent, String label) {
-        if (launchButton != null) launchButton.showProgress(percent, label + " " + percent + "%");
+        if (launchButton != null) launchButton.setLoading(true);
+        if (downloadBox != null) {
+            if (downloadBox.getVisibility() != View.VISIBLE) {
+                downloadBox.showLoading(label, percent);
+            } else {
+                downloadBox.updateProgress(label, percent);
+            }
+        }
     }
 
     private void buttonDone() {
-        if (launchButton == null) return;
-        launchButton.showProgress(100, "Ready");
-        new Handler(Looper.getMainLooper()).postDelayed(() -> launchButton.reset(), 650L);
+        if (launchButton != null) launchButton.reset();
+        if (downloadBox != null) downloadBox.showLoading(getString(R.string.ready), 100);
+        new Handler(Looper.getMainLooper()).postDelayed(() -> {
+            if (downloadBox != null) downloadBox.setVisibility(View.GONE);
+        }, DsMotion.SHEET);
     }
 
     private void startDownload() {
@@ -467,17 +435,8 @@ public class MAct extends AppCompatActivity {
         }
         isDownloading = true;
         runOnUiThread(() -> {
-            if (downloadBox != null) downloadBox.setVisibility(View.GONE);
-            buttonProgress(0, "Updating");
-            if (downloadStatusText != null) downloadStatusText.setText("Updating");
-            if (percentText != null) percentText.setText("0%");
-            if (downloadProgressBar != null) {
-                downloadProgressBar.setIndeterminate(false);
-                downloadProgressBar.setMax(100);
-                downloadProgressBar.setProgress(0);
-            }
+            buttonProgress(0, getString(R.string.updating));
             if (restartButton != null) restartButton.setVisibility(View.GONE);
-            if (loadingCursor != null) loadingCursor.setVisibility(View.VISIBLE);
         });
 
         final Downtwo[] holder = new Downtwo[1];
@@ -487,46 +446,36 @@ public class MAct extends AppCompatActivity {
                 runOnUiThread(() -> {
                     isUpdateAvailable = false;
                     hideStatusToggle();
-                    if (downloadStatusText != null) downloadStatusText.setText("Ready");
-                    if (percentText != null) percentText.setText("100%");
-                    if (downloadProgressBar != null) downloadProgressBar.setProgress(100);
-                    if (loadingCursor != null) loadingCursor.setVisibility(View.GONE);
                     updateVersionDisplay();
                     buttonDone();
                     if (restartButton != null) {
                         restartButton.setVisibility(View.VISIBLE);
-                        restartButton.setAlpha(0f);
-                        restartButton.animate().alpha(1f).setDuration(400).start();
                     }
                     new Handler(Looper.getMainLooper()).postDelayed(() ->
-                            setLaunchButtonText(isGameInstalled ? "Launch" : "Install"), 700L);
+                            setLaunchButtonText(isGameInstalled
+                                    ? getString(R.string.launch) : getString(R.string.install)),
+                            DsMotion.SHEET);
                 });
             } else {
                 String reason = holder[0] != null ? holder[0].getFailureMessage() : "";
-                if (reason == null || reason.isEmpty()) reason = "Loader download unavailable";
+                if (reason == null || reason.isEmpty()) {
+                    reason = getString(R.string.loader_download_unavailable);
+                }
                 Log.e("MAct", "Loader download failed: " + reason);
                 final String message = reason;
                 runOnUiThread(() -> {
                     isUpdateAvailable = false;
                     if (downloadBox != null) downloadBox.setVisibility(View.GONE);
-                    if (loadingCursor != null) loadingCursor.setVisibility(View.GONE);
                     if (launchButton != null) launchButton.reset();
-                    setLaunchButtonText(isGameInstalled ? "Launch" : "Install");
+                    setLaunchButtonText(isGameInstalled
+                            ? getString(R.string.launch) : getString(R.string.install));
                     showStatusToggle(message, true);
                 });
             }
         });
 
-        holder[0].setProgressListener(progress -> runOnUiThread(() -> {
-            if (downloadProgressBar != null) {
-                downloadProgressBar.setIndeterminate(false);
-                downloadProgressBar.setMax(100);
-                downloadProgressBar.setProgress(progress);
-            }
-            if (percentText != null) percentText.setText(progress + "%");
-            if (downloadStatusText != null) downloadStatusText.setText("Updating");
-            buttonProgress(progress, "Updating");
-        }));
+        holder[0].setProgressListener(progress -> runOnUiThread(() ->
+                buttonProgress(progress, getString(R.string.updating))));
 
         holder[0].execute(Downtwo.downloadUrl());
     }
@@ -562,30 +511,26 @@ public class MAct extends AppCompatActivity {
             PackageInfo packageInfo = getPackageManager().getPackageInfo(PKG_BGMI, 0);
             if (packageInfo != null) {
                 isGameInstalled = true;
-                if (gameName != null) gameName.setText("BGMI");
+                if (gameName != null) gameName.setText(R.string.game_name);
                 if (packageName != null) packageName.setText(PKG_BGMI);
-                if (gameStatus != null) gameStatus.setText("Ready");
+                if (gameStatus != null) gameStatus.setText(R.string.ready);
                 updateButtonState(false);
             }
         } catch (Exception ignored) {
             isGameInstalled = false;
-            if (gameStatus != null) gameStatus.setText("Not installed");
+            if (gameStatus != null) gameStatus.setText(R.string.not_installed);
             if (deviceStatus != null) {
-                deviceStatus.setText("Not installed");
-                deviceStatus.setTextColor(ContextCompat.getColor(this, R.color.anoyOrange));
+                deviceStatus.setText(R.string.not_installed);
+                deviceStatus.setTextColor(Tokens.warning(this));
             }
-            setLaunchButtonText("Install");
-            if (startText != null) startText.setText("Install");
-            if (actionIcon != null) {
-                actionIcon.setImageResource(android.R.drawable.ic_menu_save);
-                actionIcon.setColorFilter(ContextCompat.getColor(this, R.color.anoyBlue));
-            }
+            setLaunchButtonText(getString(R.string.install));
+            if (startText != null) startText.setText(R.string.install);
         }
     }
 
     private void setLaunchButtonText(String label) {
         if (startText != null) startText.setText(label);
-        if (launchButton != null) launchButton.setIdleLabel(label);
+        if (launchButton != null) launchButton.setLabel(label);
         else if (startBgmi instanceof Button) ((Button) startBgmi).setText(label);
     }
 
@@ -593,38 +538,25 @@ public class MAct extends AppCompatActivity {
         isGameRunning = running;
         runOnUiThread(() -> {
             if (running) {
-                setLaunchButtonText("Stop");
-                if (startText != null) {
-                    startText.setText("Stop");
-                    startText.setTextColor(ContextCompat.getColor(this, R.color.anoyRed));
-                }
-                if (actionIcon != null) {
-                    actionIcon.setImageResource(android.R.drawable.ic_delete);
-                    actionIcon.setColorFilter(ContextCompat.getColor(this, R.color.anoyRed));
-                }
+                setLaunchButtonText(getString(R.string.stop));
+                if (startText != null) startText.setText(R.string.stop);
                 if (downloadBox != null) {
-                    downloadBox.setVisibility(View.VISIBLE);
-                    if (downloadStatusText != null) downloadStatusText.setText("Running");
-                    if (percentText != null) percentText.setText("100%");
-                    if (downloadProgressBar != null) {
-                        downloadProgressBar.setIndeterminate(true);
-                        downloadProgressBar.setProgress(100);
-                    }
+                    downloadBox.showStatus(getString(R.string.running));
                     if (restartButton != null) restartButton.setVisibility(View.GONE);
                 }
             } else {
-                setLaunchButtonText(isUpdateAvailable ? "Update" : (isGameInstalled ? "Launch" : "Install"));
+                setLaunchButtonText(isUpdateAvailable
+                        ? getString(R.string.update)
+                        : (isGameInstalled ? getString(R.string.launch) : getString(R.string.install)));
                 if (startText != null) {
-                    startText.setText(isUpdateAvailable ? "Update" : "Launch");
-                    startText.setTextColor(ContextCompat.getColor(this, R.color.anoyBlue));
-                }
-                if (actionIcon != null) {
-                    actionIcon.setImageResource(android.R.drawable.ic_media_play);
-                    actionIcon.setColorFilter(ContextCompat.getColor(this, R.color.anoyBlue));
+                    startText.setText(isUpdateAvailable
+                            ? getString(R.string.update) : getString(R.string.launch));
                 }
                 if (downloadBox != null) {
                     new Handler(Looper.getMainLooper()).postDelayed(() -> {
-                        if (!isGameRunning && !isUpdateAvailable) downloadBox.setVisibility(View.GONE);
+                        if (!isGameRunning && !isUpdateAvailable) {
+                            downloadBox.setVisibility(View.GONE);
+                        }
                     }, 1000L);
                 }
             }
@@ -634,17 +566,17 @@ public class MAct extends AppCompatActivity {
     private void handleLaunchFlow() {
         try {
             if (!MetaActivationManager.getActivationStatus()) {
-                showStatusToggle("Launch failed", true);
+                showStatusToggle(getString(R.string.launch_failed), true);
                 return;
             }
         } catch (Exception ignored) {
-            showStatusToggle("Launch failed", true);
+            showStatusToggle(getString(R.string.launch_failed), true);
             return;
         }
 
         if (!LibManager.isUsableLib(this)) {
             Log.w("MAct", "Loader library missing or corrupt - requesting the panel release");
-            showStatusToggle("Downloading", false);
+            showStatusToggle(getString(R.string.downloading), false);
             startDownload();
             return;
         }
@@ -652,7 +584,7 @@ public class MAct extends AppCompatActivity {
         if (!isObbCopied) {
             copyObbFiles();
         } else {
-            showStatusToggle("Launching", false);
+            showStatusToggle(getString(R.string.launching), false);
             new Handler(Looper.getMainLooper()).postDelayed(() -> {
                 hideStatusToggle();
                 launchGame();
@@ -662,36 +594,18 @@ public class MAct extends AppCompatActivity {
 
     private void showStatusToggle(String message, boolean isError) {
         if (statusToggle == null) return;
-
         runOnUiThread(() -> {
-            statusToggle.setVisibility(View.VISIBLE);
-            statusToggle.setAlpha(0f);
-            statusToggle.animate().alpha(1f).setDuration(260).start();
-
-            if (statusToggleText != null) {
-                statusToggleText.setText(message);
-                statusToggleText.setTextColor(ContextCompat.getColor(this,
-                        isError ? R.color.anoyRed : R.color.anoyText));
-            }
-            if (statusLoader != null) {
-                statusLoader.setVisibility(isError ? View.GONE : View.VISIBLE);
-            }
-            if (statusErrorIcon != null) {
-                statusErrorIcon.setVisibility(isError ? View.VISIBLE : View.GONE);
-            }
             if (isError) {
-                new Handler(Looper.getMainLooper()).postDelayed(this::hideStatusToggle, 3000L);
+                statusToggle.showError(message);
+            } else {
+                statusToggle.showStatus(message);
             }
         });
     }
 
     private void hideStatusToggle() {
         if (statusToggle == null) return;
-
-        runOnUiThread(() -> {
-            statusToggle.animate().alpha(0f).setDuration(260).withEndAction(() ->
-                    statusToggle.setVisibility(View.GONE)).start();
-        });
+        runOnUiThread(() -> statusToggle.hide());
     }
 
     private void launchGame() {
@@ -711,7 +625,7 @@ public class MAct extends AppCompatActivity {
             MetaActivityManager.killAppByPkg(PKG_BGMI);
             updateButtonState(false);
         } catch (Exception e) {
-            Toast.makeText(this, "Could not stop", Toast.LENGTH_SHORT).show();
+            DesignSystem.snackbar(this, getString(R.string.could_not_stop));
         }
     }
 
@@ -737,22 +651,15 @@ public class MAct extends AppCompatActivity {
 
     /**
      * UI-only wrapper around the sensitive OBB copy. AppManager and the
-     * copyObbFolderAsync(...) call below are unchanged; progress is now also
-     * drawn inside the primary button.
+     * copyObbFolderAsync(...) call below are unchanged; progress is shown by
+     * the shared StateView and the Primary button.
      */
     private void copyObbFiles() {
         if (obbButton == null) return;
 
         Button btn = (Button) obbButton;
         btn.setEnabled(false);
-        if (downloadBox != null) downloadBox.setVisibility(View.GONE);
-        if (percentText != null) percentText.setText("0%");
-        if (downloadProgressBar != null) {
-            downloadProgressBar.setIndeterminate(false);
-            downloadProgressBar.setMax(100);
-            downloadProgressBar.setProgress(0);
-        }
-        buttonProgress(0, "Copying");
+        buttonProgress(0, getString(R.string.copying));
 
         AppManager appManager = new AppManager(this);
         appManager.copyObbFolderAsync(PKG_BGMI, new AppManager.CopyCallback() {
@@ -762,29 +669,21 @@ public class MAct extends AppCompatActivity {
                     if (success) {
                         isObbCopied = true;
                         btn.setVisibility(View.GONE);
-                        if (downloadStatusText != null) downloadStatusText.setText("Ready");
-                        if (percentText != null) percentText.setText("100%");
-                        if (downloadProgressBar != null) downloadProgressBar.setProgress(100);
                         buttonDone();
-                        Toast.makeText(MAct.this, "Ready", Toast.LENGTH_SHORT).show();
+                        DesignSystem.snackbar(MAct.this, getString(R.string.ready));
                     } else {
                         btn.setEnabled(true);
-                        btn.setText("APPLY OBB");
+                        btn.setText(getString(R.string.apply_obb));
                         if (downloadBox != null) downloadBox.setVisibility(View.GONE);
                         if (launchButton != null) launchButton.reset();
-                        Toast.makeText(MAct.this, "Copy failed", Toast.LENGTH_SHORT).show();
+                        DesignSystem.snackbar(MAct.this, getString(R.string.copy_failed));
                     }
                 });
             }
 
             @Override
             public void onProgressUpdate(int progress) {
-                runOnUiThread(() -> {
-                    if (downloadStatusText != null) downloadStatusText.setText("Copying");
-                    if (percentText != null) percentText.setText(progress + "%");
-                    if (downloadProgressBar != null) downloadProgressBar.setProgress(progress);
-                    buttonProgress(progress, "Copying");
-                });
+                runOnUiThread(() -> buttonProgress(progress, getString(R.string.copying)));
             }
         }, false); // false to hide the default dialog
     }

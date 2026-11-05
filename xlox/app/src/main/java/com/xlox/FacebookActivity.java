@@ -9,7 +9,12 @@ import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.ProgressBar;
+import android.widget.ImageButton;
+
 import androidx.appcompat.app.AppCompatActivity;
+
+import com.xlox.ui.ThemeMode;
+import com.xlox.ui.designsystem.DesignSystem;
 
 public class FacebookActivity extends AppCompatActivity {
 
@@ -19,11 +24,17 @@ public class FacebookActivity extends AppCompatActivity {
     @SuppressLint("SetJavaScriptEnabled")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        ThemeMode.apply(this);
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_facebook);
+        ThemeMode.applyWindow(this);
+        DesignSystem.applySafeDrawing(findViewById(R.id.facebookRoot), true, true, false);
 
         webView = findViewById(R.id.facebookWebView);
         progressBar = findViewById(R.id.facebookProgressBar);
+
+        ImageButton back = findViewById(R.id.backButton);
+        if (back != null) back.setOnClickListener(v -> onBackPressed());
 
         WebSettings webSettings = webView.getSettings();
         webSettings.setJavaScriptEnabled(true);
@@ -51,7 +62,7 @@ public class FacebookActivity extends AppCompatActivity {
             }
         });
 
-        webView.loadUrl("https://www.facebook.com/login");
+        webView.loadUrl(getString(R.string.facebook_login_url));
     }
 
     @Override

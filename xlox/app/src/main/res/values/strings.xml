@@ -1,31 +1,103 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- All authored UI copy. Sentence case, plain, direct, no exclamation marks. -->
 <resources>
     <string name="app_name">Anoy</string>
-    <string name="main_title">Anoy</string>
-    <string name="login_title">Anoy</string>
-    <string name="copyright">© 2026 Anoy</string>
 
-    <!-- Official contact used for buying a licence key. -->
-    <string name="telegram_handle">\@libAkAudioVisiual</string>
-    <string name="telegram_url">https://t.me/libAkAudioVisiual</string>
-
-    <string name="brand_subtitle">Loader</string>
+    <!-- Login -->
+    <string name="sign_in_intro">Sign in to continue.</string>
     <string name="access_key_label">Access key</string>
     <string name="access_key_hint">Paste your key</string>
-    <string name="sign_in">Sign In</string>
+    <string name="sign_in">Sign in</string>
     <string name="paste_key">Paste from clipboard</string>
     <string name="need_key">Need a key?</string>
-    <string name="get_key">Get a key</string>
-    <string name="launch">Launch</string>
+    <string name="get_a_key">Get a key</string>
+    <string name="telegram_handle">\@libAkAudioVisiual</string>
+    <string name="telegram_url">https://t.me/libAkAudioVisiual</string>
+    <string name="enter_your_key">Enter your key</string>
+    <string name="show_key">Show key</string>
+    <string name="hide_key">Hide key</string>
+    <string name="loader_library_missing">Loader library missing. Reinstall the app.</string>
+
+    <!-- Shared chrome -->
+    <string name="theme_toggle">Switch appearance</string>
+    <string name="switch_to_dark">Use dark appearance</string>
+    <string name="switch_to_light">Use light appearance</string>
+    <string name="back">Back</string>
+    <string name="close">Close</string>
+    <string name="dismiss">Dismiss</string>
+    <string name="content_description_mark">Anoy</string>
+
+    <!-- Main -->
     <string name="subscription">Subscription</string>
     <string name="expires">Expires</string>
     <string name="time_left">Time left</string>
     <string name="device">Device</string>
     <string name="status">Status</string>
+    <string name="ready">Ready</string>
+    <string name="active">Active</string>
+    <string name="expired">Expired</string>
+    <string name="not_installed">Not installed</string>
+    <string name="not_available">Not available</string>
+    <string name="launch">Launch</string>
+    <string name="install">Install</string>
+    <string name="stop">Stop</string>
+    <string name="update">Update</string>
+    <string name="running">Running</string>
     <string name="updating">Updating</string>
     <string name="copying">Copying</string>
-    <string name="ready">Ready</string>
-    <string name="theme_toggle">Switch appearance</string>
-    <string name="show_key">Show or hide key</string>
-    <string name="dismiss">Dismiss notification</string>
+    <string name="downloading">Downloading</string>
+    <string name="launching">Launching</string>
+    <string name="clear_data">Clear data</string>
+    <string name="apply_obb">Apply OBB</string>
+    <string name="version_x">Version %1$s</string>
+    <string name="percent">%1$d%%</string>
+    <string name="time_remaining">%1$dd %2$dh %3$dm</string>
+    <string name="days">Days</string>
+    <string name="hours">Hours</string>
+    <string name="minutes">Minutes</string>
+    <string name="seconds">Seconds</string>
+    <string name="android_device">Android device</string>
+    <string name="game_name">BGMI</string>
+
+    <!-- States / errors -->
+    <string name="state_error_headline">Something went wrong</string>
+    <string name="state_loading">Working</string>
+    <string name="library_missing">Library missing</string>
+    <string name="library_incompatible">Library incompatible</string>
+    <string name="launch_failed">Launch failed</string>
+    <string name="could_not_stop">Could not stop the game</string>
+    <string name="copy_failed">Copy failed</string>
+    <string name="loader_download_unavailable">Loader download unavailable</string>
+    <string name="diagnostic_detail">%1$s</string>
+    <string name="vpn_detected_title">VPN detected</string>
+    <string name="vpn_detected_message">Turn off your VPN to continue.</string>
+
+    <!-- OBB copy (AppManager) -->
+    <string name="dialog_success">Success</string>
+    <string name="dialog_error">Error</string>
+    <string name="app_installed">App installed.</string>
+    <string name="obb_ready">OBB ready.</string>
+    <string name="sandbox_install_failed">Sandbox install failed</string>
+    <string name="package_not_found">Package not found</string>
+    <string name="obb_folder_not_found">OBB folder not found</string>
+    <string name="main_obb_not_found">Main BGMI OBB file not found</string>
+
+    <!-- Panel download diagnostics (Downtwo) -->
+    <string name="invalid_download_url">Invalid download URL provided</string>
+    <string name="version_endpoint_unreachable">Cannot reach the panel version endpoint</string>
+    <string name="background_error">Background error: %1$s</string>
+    <string name="version_check_failed">Version check failed: %1$s</string>
+    <string name="no_loader_release">No loader release uploaded in the panel yet</string>
+    <string name="download_http_failed">Loader download failed with HTTP %1$d</string>
+    <string name="invalid_loader_zip">Panel did not return a valid loader ZIP (%1$d bytes)</string>
+    <string name="staging_failed">Cannot create staging directory</string>
+    <string name="no_elf_in_zip">Loader ZIP has no libbgmi.so or lib.so ELF library</string>
+    <string name="install_lib_failed">Could not install the loader library</string>
+    <string name="lib_not_usable">Installed loader library is not usable</string>
+    <string name="download_failed">Loader download failed: %1$s</string>
+
+    <!-- WebView -->
+    <string name="facebook">Facebook</string>
+    <string name="facebook_login_url">https://www.facebook.com/login</string>
+    <string name="page_loading">Loading page</string>
 </resources>

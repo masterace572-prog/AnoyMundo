@@ -3,16 +3,14 @@ package com.xlox.ui;
 import android.app.Activity;
 import android.content.Context;
 import android.content.res.Configuration;
-import android.os.Build;
-import android.view.View;
-import android.view.Window;
+import android.widget.ImageButton;
 
 import androidx.appcompat.app.AppCompatDelegate;
-import androidx.core.content.ContextCompat;
 
 import com.xlox.R;
+import com.xlox.ui.designsystem.DesignSystem;
 
-/** Small helper for the clean light / dark appearance switch. */
+/** Light / dark appearance switch. System bars are handled by the design system. */
 public final class ThemeMode {
 
     private static final String PREFS = "anoy_appearance";
@@ -48,29 +46,17 @@ public final class ThemeMode {
                 : AppCompatDelegate.MODE_NIGHT_NO);
     }
 
-    /** Keep the system bars in sync with the selected appearance. */
+    /** Keep the theme-toggle control's icon and label in sync with the palette. */
+    public static void decorateToggle(Context context, ImageButton toggle) {
+        if (toggle == null) return;
+        boolean dark = isDark(context);
+        toggle.setImageResource(dark ? R.drawable.ds_ic_light_mode : R.drawable.ds_ic_dark_mode);
+        toggle.setContentDescription(context.getString(
+                dark ? R.string.switch_to_light : R.string.switch_to_dark));
+    }
+
+    /** Transparent bars, edge-to-edge layout and theme-aware icon contrast. */
     public static void applyWindow(Activity activity) {
-        Window window = activity.getWindow();
-        if (window == null) return;
-        int background = ContextCompat.getColor(activity, R.color.anoyBg);
-        window.setStatusBarColor(background);
-        window.setNavigationBarColor(background);
-        View decor = window.getDecorView();
-        int flags = decor.getSystemUiVisibility();
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            if (isDark(activity)) {
-                flags &= ~View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR;
-            } else {
-                flags |= View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR;
-            }
-        }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            if (isDark(activity)) {
-                flags &= ~View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR;
-            } else {
-                flags |= View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR;
-            }
-        }
-        decor.setSystemUiVisibility(flags);
+        DesignSystem.applyEdgeToEdge(activity);
     }
 }

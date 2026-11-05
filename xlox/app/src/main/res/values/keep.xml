@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools"
+    tools:keep="@dimen/space_20,@dimen/space_40,@dimen/icon_button,@dimen/radius_image,@dimen/radius_avatar,@dimen/radius_sheet,@dimen/list_item_double,@dimen/progress_circular_large,@drawable/ds_sheet,@drawable/ds_chip"
+    tools:discard="" />
+<!--
+  The 8dp spacing scale, shape radii and the full OFL font family are design
+  tokens: every value is intentionally available even where a particular
+  screen does not consume it yet. tools:keep stops UnusedResources from
+  deleting the token layer.
+-->

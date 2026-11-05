@@ -1,49 +1,26 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- iOS-style LIGHT palette. values-night/colors.xml overrides the anoy* names. -->
+<!-- B.1 design tokens — LIGHT. Every colour in the app resolves from this file. -->
 <resources>
-    <color name="anoyBg">#F2F2F7</color>
-    <color name="anoySurface">#FFFFFF</color>
-    <color name="anoySurfaceAlt">#FFFFFF</color>
-    <color name="anoyFill">#E9E9ED</color>
-    <color name="anoyFillStrong">#DEDEE3</color>
-    <color name="anoySeparator">#E3E3E8</color>
-    <color name="anoyText">#1C1C1E</color>
-    <color name="anoyTextSecondary">#6D6D72</color>
-    <color name="anoyTextTertiary">#AEAEB2</color>
-    <color name="anoyBlue">#007AFF</color>
-    <color name="anoyBluePress">#0062CC</color>
-    <color name="anoyOnBlue">#FFFFFF</color>
-    <color name="anoyGreen">#248A3D</color>
-    <color name="anoyRed">#FF3B30</color>
-    <color name="anoyOrange">#B25000</color>
-    <color name="anoyIconButton">#FFFFFF</color>
-    <color name="anoyTrack">#E9E9ED</color>
+    <color name="background">#F5F4EF</color>
+    <color name="surface">#FAF9F5</color>
+    <color name="surface_elevated">#FFFFFF</color>
+    <color name="surface_subtle">#ECEAE3</color>
+    <color name="outline">#DDD9CF</color>
+    <color name="text_primary">#1F1E1D</color>
+    <color name="text_secondary">#6B6860</color>
+    <color name="text_tertiary">#9C988E</color>
+    <color name="accent">#C96442</color>
+    <color name="accent_pressed">#B5573A</color>
+    <color name="on_accent">#FFFFFF</color>
+    <color name="accent_subtle">#F3E4DC</color>
+    <color name="error">#B3261E</color>
+    <color name="success">#4F7A5B</color>
+    <color name="warning">#9A6B1B</color>
 
-    <!-- Legacy names kept so older resources / styles still resolve. -->
-    <color name="colorPrimary">#F2F2F7</color>
-    <color name="colorPrimaryDark">#E5E5EA</color>
-    <color name="colorAccent">#007AFF</color>
-    <color name="black">#1C1C1E</color>
-    <color name="white">#FFFFFF</color>
-    <color name="bg_main">#F2F2F7</color>
-    <color name="card_bg">#FFFFFF</color>
-    <color name="input_bg">#E9E9ED</color>
-    <color name="accent_gold">#007AFF</color>
-    <color name="text_primary">#1C1C1E</color>
-    <color name="text_secondary">#6D6D72</color>
-    <color name="divider">#E3E3E8</color>
-    <color name="status_safe">#007AFF</color>
-    <color name="status_ready">#248A3D</color>
-    <color name="primaryText">#1C1C1E</color>
-    <color name="hintText">#AEAEB2</color>
-    <color name="darker_gray">#6D6D72</color>
-    <color name="button">#007AFF</color>
-    <color name="buttonPrimary">#007AFF</color>
-    <color name="primary">#F2F2F7</color>
-    <color name="primaryVariant">#FFFFFF</color>
-    <color name="secondary">#FFFFFF</color>
-    <color name="background">#F2F2F7</color>
-    <color name="background2">#FFFFFF</color>
-    <color name="error">#FF3B30</color>
-    <color name="secondary2">#FFFFFF</color>
+    <!-- Derived tokens. Alpha-premultiplied so no API 23 android:alpha is needed. -->
+    <color name="ripple">#141F1E1D</color>            <!-- textPrimary at 8% -->
+    <color name="accent_disabled">#61C96442</color>    <!-- accent at 38% -->
+    <color name="on_accent_disabled">#61FFFFFF</color> <!-- onAccent at 38% -->
+    <color name="outline_disabled">#61DDD9CF</color>   <!-- outline at 38% -->
+    <color name="transparent">#00000000</color>
 </resources>

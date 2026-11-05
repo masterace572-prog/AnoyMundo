@@ -2,16 +2,11 @@ package com.xlox;
 
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.content.ContextCompat;
 
 import android.Manifest;
-import android.animation.ObjectAnimator;
-import android.animation.ValueAnimator;
-import android.app.AlertDialog;
 import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
-import android.graphics.Color;
 import android.net.ConnectivityManager;
 import android.net.Network;
 import android.net.NetworkCapabilities;
@@ -24,18 +19,16 @@ import android.os.Message;
 import android.provider.Settings;
 import android.text.InputType;
 import android.util.Log;
-import android.view.View;
-import android.view.animation.DecelerateInterpolator;
-import android.view.animation.LinearInterpolator;
 import android.widget.EditText;
 import android.widget.ImageButton;
-import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
-import android.widget.Toast;
 
-import com.xlox.ui.AnoyButton;
 import com.xlox.ui.ThemeMode;
+import com.xlox.ui.designsystem.DesignSystem;
+import com.xlox.ui.designsystem.DsMotion;
+import com.xlox.ui.designsystem.PrimaryButton;
+import com.xlox.ui.designsystem.Tokens;
 import com.xlox.utils.Prefs;
 
 public class LogAct extends AppCompatActivity {
@@ -51,21 +44,17 @@ public class LogAct extends AppCompatActivity {
     private final String USER = "USER";
 
     private EditText textUsername;
-    private AnoyButton btnLogin;
-    private AnoyButton pasteKey;
-    private AnoyButton buyKey;
+    private PrimaryButton btnLogin;
     private ImageButton themeToggle;
-
-    private TextView premium;
-    private LinearLayout loginCard;
+    private ImageButton eyeToggle;
     private LinearLayout mainContainer;
-    private ImageView logo;
-    private ImageView eyeToggle;
+    private LinearLayout loginCard;
+    private LinearLayout accessKeyField;
+    private TextView accessKeyHelper;
     private boolean isPasswordVisible = false;
 
     private static final int REQUEST_MANAGE_STORAGE_PERMISSION = 100;
     private static final int REQUEST_MANAGE_UNKNOWN_APP_SOURCES = 200;
-    private static final String TELEGRAM_URL = "https://t.me/libAkAudioVisiual";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -73,140 +62,94 @@ public class LogAct extends AppCompatActivity {
         super.onCreate(savedInstanceState);
 
         if (iskokofm()) {
-            new AlertDialog.Builder(this)
-                    .setTitle("VPN detected")
-                    .setMessage("Turn off VPN to continue.")
-                    .setPositiveButton("OK", null).show();
+            DesignSystem.showMessage(this, getString(R.string.vpn_detected_title),
+                    getString(R.string.vpn_detected_message));
             return;
         }
 
         setContentView(R.layout.activity_login);
         ThemeMode.applyWindow(this);
+        DesignSystem.applySafeDrawing(findViewById(R.id.loginRoot), true, true, true);
+
         prefs = new Prefs(this);
         checkAndRequestPermissions();
 
         textUsername = findViewById(R.id.userkey);
         btnLogin = findViewById(R.id.login);
-        pasteKey = findViewById(R.id.pasteKey);
-        buyKey = findViewById(R.id.buyKey);
         themeToggle = findViewById(R.id.themeToggle);
-        premium = findViewById(R.id.premium);
-        loginCard = findViewById(R.id.loginCard);
-        mainContainer = findViewById(R.id.mainContainer);
-        logo = findViewById(R.id.logo);
         eyeToggle = findViewById(R.id.eyeToggle);
-
-        int blue = ContextCompat.getColor(this, R.color.anoyBlue);
-        if (pasteKey != null) {
-            pasteKey.setDotColor(blue);
-            pasteKey.setFillColor(Color.argb(28, 0, 122, 255));
-        }
-        if (buyKey != null) {
-            buyKey.setDotColor(blue);
-            buyKey.setFillColor(Color.argb(28, 0, 122, 255));
-        }
+        mainContainer = findViewById(R.id.mainContainer);
+        loginCard = findViewById(R.id.loginCard);
+        accessKeyField = findViewById(R.id.accessKeyField);
+        accessKeyHelper = findViewById(R.id.accessKeyHelper);
 
         textUsername.setText(prefs.getSt(USER, ""));
+        ThemeMode.decorateToggle(this, themeToggle);
 
-        if (eyeToggle != null) {
-            eyeToggle.setOnClickListener(v -> {
-                if (isPasswordVisible) {
-                    textUsername.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
-                    eyeToggle.setAlpha(0.55f);
-                } else {
-                    textUsername.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD);
-                    eyeToggle.setAlpha(1f);
+        eyeToggle.setOnClickListener(v -> {
+            if (isPasswordVisible) {
+                textUsername.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
+                eyeToggle.setImageResource(R.drawable.ds_ic_visibility);
+                eyeToggle.setContentDescription(getString(R.string.show_key));
+            } else {
+                textUsername.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD);
+                eyeToggle.setImageResource(R.drawable.ds_ic_visibility_off);
+                eyeToggle.setContentDescription(getString(R.string.hide_key));
+            }
+            isPasswordVisible = !isPasswordVisible;
+            textUsername.setSelection(textUsername.getText().length());
+        });
+
+        findViewById(R.id.pasteKey).setOnClickListener(v -> {
+            ClipboardManager clipboard = (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
+            if (clipboard != null && clipboard.hasPrimaryClip()
+                    && clipboard.getPrimaryClip() != null
+                    && clipboard.getPrimaryClip().getItemCount() > 0) {
+                CharSequence copiedKey = clipboard.getPrimaryClip().getItemAt(0).coerceToText(this);
+                if (copiedKey != null) {
+                    textUsername.setText(copiedKey);
+                    textUsername.setSelection(textUsername.getText().length());
                 }
-                isPasswordVisible = !isPasswordVisible;
-                textUsername.setSelection(textUsername.getText().length());
-            });
-        }
+            }
+            clearFieldError();
+        });
 
-        if (pasteKey != null) {
-            pasteKey.setOnClickListener(v -> {
-                pasteKey.pulseDots(650L);
-                ClipboardManager clipboard = (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
-                if (clipboard != null && clipboard.hasPrimaryClip()
-                        && clipboard.getPrimaryClip() != null
-                        && clipboard.getPrimaryClip().getItemCount() > 0) {
-                    CharSequence copiedKey = clipboard.getPrimaryClip().getItemAt(0).coerceToText(this);
-                    if (copiedKey != null) {
-                        textUsername.setText(copiedKey);
-                        textUsername.setSelection(textUsername.getText().length());
-                    }
-                }
-            });
-        }
+        findViewById(R.id.buyKey).setOnClickListener(v ->
+                openExternalUrl(getString(R.string.telegram_url)));
 
-        if (buyKey != null) {
-            buyKey.setOnClickListener(v -> {
-                buyKey.pulseDots(650L);
-                openExternalUrl(TELEGRAM_URL);
-            });
-        }
+        themeToggle.setOnClickListener(v -> ThemeMode.toggle(this));
 
-        if (themeToggle != null) {
-            themeToggle.setOnClickListener(v -> ThemeMode.toggle(this));
-        }
-
-        startIntroAnimation();
+        DsMotion.fadeIn(loginCard);
 
         btnLogin.setOnClickListener(v -> {
             String userKey = textUsername.getText().toString().trim();
             if (userKey.isEmpty()) {
-                textUsername.setError("Enter your key");
+                showFieldError();
                 return;
             }
+            clearFieldError();
             if (iskokofm()) {
-                new AlertDialog.Builder(this)
-                        .setTitle("VPN detected")
-                        .setMessage("Turn off VPN to continue.")
-                        .setPositiveButton("OK", null).show();
+                DesignSystem.showMessage(this, getString(R.string.vpn_detected_title),
+                        getString(R.string.vpn_detected_message));
                 return;
             }
 
             prefs.setSt(USER, userKey);
-            btnLogin.showDots();
+            btnLogin.setLoading(true);
             Login(this, userKey);
         });
     }
 
-    private void startIntroAnimation() {
-        if (mainContainer != null) {
-            mainContainer.setVisibility(View.VISIBLE);
-            mainContainer.setAlpha(1f);
-        }
-        if (logo != null) {
-            logo.setAlpha(0f);
-            logo.setTranslationY(-24f);
-            logo.animate().alpha(1f).translationY(0f).setDuration(700)
-                    .setInterpolator(new DecelerateInterpolator(1.4f)).start();
-            ObjectAnimator logoFloat = ObjectAnimator.ofFloat(logo, View.TRANSLATION_Y, 0f, -4f, 0f);
-            logoFloat.setStartDelay(800);
-            logoFloat.setDuration(3200);
-            logoFloat.setRepeatCount(ValueAnimator.INFINITE);
-            logoFloat.start();
-        }
-        View logoGlow = findViewById(R.id.logoGlow);
-        if (logoGlow != null) {
-            ObjectAnimator glowRotation = ObjectAnimator.ofFloat(logoGlow, View.ROTATION, 0f, 360f);
-            glowRotation.setDuration(9000);
-            glowRotation.setInterpolator(new LinearInterpolator());
-            glowRotation.setRepeatCount(ValueAnimator.INFINITE);
-            glowRotation.start();
-        }
-        if (premium != null) {
-            premium.setAlpha(0f);
-            premium.setTranslationY(16f);
-            premium.animate().alpha(1f).translationY(0f).setDuration(600).setStartDelay(90)
-                    .setInterpolator(new DecelerateInterpolator(1.4f)).start();
-        }
-        if (loginCard != null) {
-            loginCard.setAlpha(0f);
-            loginCard.setTranslationY(28f);
-            loginCard.animate().alpha(1f).translationY(0f).setDuration(650).setStartDelay(140)
-                    .setInterpolator(new DecelerateInterpolator(1.4f)).start();
-        }
+    private void showFieldError() {
+        accessKeyField.setBackgroundResource(R.drawable.ds_field_error);
+        accessKeyHelper.setText(R.string.enter_your_key);
+        accessKeyHelper.setTextColor(Tokens.error(this));
+    }
+
+    private void clearFieldError() {
+        accessKeyField.setBackgroundResource(R.drawable.ds_field);
+        accessKeyHelper.setText(R.string.access_key_hint);
+        accessKeyHelper.setTextColor(Tokens.textTertiary(this));
     }
 
     private void Login(final Context m_Context, final String userKey) {
@@ -217,7 +160,7 @@ public class LogAct extends AppCompatActivity {
                 finish();
             } else {
                 btnLogin.reset();
-                Toast.makeText(m_Context, (String) msg.obj, Toast.LENGTH_SHORT).show();
+                DesignSystem.snackbar(LogAct.this, (String) msg.obj);
             }
             return true;
         });
@@ -228,7 +171,7 @@ public class LogAct extends AppCompatActivity {
                 result = Check(m_Context, userKey);
             } catch (Throwable t) {
                 Log.e("LogAct", "Native licence check unavailable", t);
-                result = "Loader library missing - reinstall the app";
+                result = getString(R.string.loader_library_missing);
             }
             if ("OK".equals(result)) {
                 loginHandler.sendEmptyMessage(0);

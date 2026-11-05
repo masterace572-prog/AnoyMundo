@@ -1,177 +1,174 @@
 <?xml version="1.0" encoding="utf-8"?>
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
+<!-- Screen 1: sign in. One serif headline (top app bar), one accent-filled control. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/loginRoot"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/anoyBg">
+    android:background="@color/background"
+    android:clipToPadding="false"
+    android:orientation="vertical">
+
+    <LinearLayout
+        android:id="@+id/loginTopBar"
+        style="@style/Widget.Ds.TopAppBar"
+        android:layout_width="match_parent"
+        android:layout_height="@dimen/top_bar_height"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="@dimen/space_12"
+        android:paddingEnd="@dimen/space_12">
+
+        <TextView
+            android:id="@+id/appName"
+            style="@style/TextAppearance.Ds.HeadlineSmall"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/app_name" />
+
+        <View
+            android:layout_width="@dimen/space_0"
+            android:layout_height="@dimen/divider"
+            android:layout_weight="1" />
+
+        <ImageButton
+            android:id="@+id/themeToggle"
+            style="@style/Widget.Ds.IconButton"
+            android:layout_width="@dimen/touch_target"
+            android:layout_height="@dimen/touch_target"
+            android:contentDescription="@string/theme_toggle"
+            android:src="@drawable/ds_ic_dark_mode" />
+    </LinearLayout>
 
     <ScrollView
+        android:id="@+id/loginScroll"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
+        android:layout_height="@dimen/space_0"
+        android:layout_weight="1"
+        android:clipToPadding="false"
         android:fillViewport="true"
         android:scrollbars="none">
 
         <LinearLayout
             android:id="@+id/mainContainer"
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:gravity="center_horizontal|center_vertical"
+            android:layout_height="wrap_content"
+            android:gravity="center_horizontal"
             android:orientation="vertical"
-            android:paddingStart="28dp"
-            android:paddingTop="70dp"
-            android:paddingEnd="28dp"
-            android:paddingBottom="44dp">
+            android:paddingStart="@dimen/screen_padding"
+            android:paddingTop="@dimen/space_32"
+            android:paddingEnd="@dimen/screen_padding"
+            android:paddingBottom="@dimen/space_32">
 
-            <FrameLayout
-                android:layout_width="88dp"
-                android:layout_height="88dp">
-                <ImageView
-                    android:id="@+id/logoGlow"
-                    android:layout_width="88dp"
-                    android:layout_height="88dp"
-                    android:alpha="0"
-                    android:contentDescription="@string/app_name" />
-                <ImageView
-                    android:id="@+id/logo"
-                    android:layout_width="88dp"
-                    android:layout_height="88dp"
-                    android:layout_gravity="center"
-                    android:contentDescription="@string/app_name"
-                    android:src="@drawable/ic_anoy" />
-            </FrameLayout>
-
-            <TextView
-                android:id="@+id/appName"
-                style="@style/IosLargeTitle"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="22dp"
-                android:text="@string/app_name" />
+            <ImageView
+                android:id="@+id/logo"
+                android:layout_width="@dimen/mark_size"
+                android:layout_height="@dimen/mark_size"
+                android:contentDescription="@string/content_description_mark"
+                android:src="@drawable/ds_mark_anoy" />
 
             <TextView
                 android:id="@+id/premium"
-                style="@style/IosBody"
+                style="@style/TextAppearance.Ds.Secondary"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:text="@string/brand_subtitle"
-                android:textColor="@color/anoyTextSecondary" />
+                android:layout_marginTop="@dimen/space_16"
+                android:text="@string/sign_in_intro" />
 
             <LinearLayout
                 android:id="@+id/loginCard"
+                style="@style/Widget.Ds.Card"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="40dp"
-                android:background="@drawable/bg_ios_card"
-                android:orientation="vertical"
-                android:padding="20dp">
+                android:layout_marginTop="@dimen/section_gap"
+                android:orientation="vertical">
 
                 <TextView
-                    style="@style/IosFootnote"
+                    android:id="@+id/accessKeyLabel"
+                    style="@style/TextAppearance.Ds.LabelMedium"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="@string/access_key_label" />
+                    android:text="@string/access_key_label"
+                    android:textColor="@color/text_secondary"
+                    android:labelFor="@id/userkey" />
 
                 <LinearLayout
+                    android:id="@+id/accessKeyField"
                     android:layout_width="match_parent"
-                    android:layout_height="52dp"
-                    android:layout_marginTop="8dp"
-                    android:background="@drawable/bg_ios_field"
+                    android:layout_height="@dimen/field_height"
+                    android:layout_marginTop="@dimen/space_8"
+                    android:background="@drawable/ds_field"
                     android:gravity="center_vertical"
-                    android:orientation="horizontal"
-                    android:paddingStart="16dp"
-                    android:paddingEnd="12dp">
+                    android:orientation="horizontal">
 
                     <EditText
                         android:id="@+id/userkey"
-                        android:layout_width="0dp"
+                        style="@style/Widget.Ds.TextField"
+                        android:layout_width="@dimen/space_0"
                         android:layout_height="match_parent"
                         android:layout_weight="1"
-                        android:background="@null"
-                        android:fontFamily="sans-serif"
-                        android:hint="@string/access_key_hint"
-                        android:imeOptions="actionDone"
                         android:inputType="textPassword"
-                        android:singleLine="true"
-                        android:textColor="@color/anoyText"
-                        android:textColorHint="@color/anoyTextTertiary"
-                        android:textSize="15sp" />
+                        android:nextFocusForward="@id/login" />
 
-                    <ImageView
+                    <ImageButton
                         android:id="@+id/eyeToggle"
-                        android:layout_width="22dp"
-                        android:layout_height="22dp"
-                        android:alpha="0.9"
-                        android:clickable="true"
+                        style="@style/Widget.Ds.IconButton"
+                        android:layout_width="@dimen/touch_target"
+                        android:layout_height="@dimen/touch_target"
                         android:contentDescription="@string/show_key"
-                        android:focusable="true"
-                        android:src="@drawable/ic_eye" />
+                        android:src="@drawable/ds_ic_visibility" />
                 </LinearLayout>
 
-                <com.xlox.ui.AnoyButton
-                    android:id="@+id/login"
-                    style="@style/IosButtonLabel"
+                <TextView
+                    android:id="@+id/accessKeyHelper"
+                    style="@style/TextAppearance.Ds.Tertiary"
                     android:layout_width="match_parent"
-                    android:layout_height="54dp"
-                    android:layout_marginTop="18dp"
-                    android:background="@drawable/bg_ios_button"
-                    android:stateListAnimator="@null"
-                    android:text="@string/sign_in"
-                    android:textAllCaps="false" />
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/space_8"
+                    android:text="@string/access_key_hint" />
 
-                <com.xlox.ui.AnoyButton
+                <com.xlox.ui.designsystem.PrimaryButton
+                    android:id="@+id/login"
+                    style="@style/Widget.Ds.Button.Primary"
+                    android:layout_width="match_parent"
+                    android:layout_height="@dimen/button_height"
+                    android:layout_marginTop="@dimen/space_24"
+                    android:text="@string/sign_in" />
+
+                <androidx.appcompat.widget.AppCompatButton
                     android:id="@+id/pasteKey"
-                    style="@style/IosSecondaryButtonLabel"
+                    style="@style/Widget.Ds.Button.Text"
                     android:layout_width="wrap_content"
-                    android:layout_height="44dp"
+                    android:layout_height="@dimen/button_height"
                     android:layout_gravity="center_horizontal"
-                    android:layout_marginTop="4dp"
-                    android:background="@drawable/bg_ios_secondary"
-                    android:minWidth="180dp"
-                    android:paddingStart="16dp"
-                    android:paddingEnd="16dp"
-                    android:stateListAnimator="@null"
-                    android:text="@string/paste_key"
-                    android:textAllCaps="false" />
+                    android:layout_marginTop="@dimen/space_8"
+                    android:minWidth="@dimen/touch_target"
+                    android:text="@string/paste_key" />
             </LinearLayout>
 
             <TextView
                 android:id="@+id/buyNow"
-                style="@style/IosFootnote"
+                style="@style/TextAppearance.Ds.Secondary"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="26dp"
+                android:layout_marginTop="@dimen/section_gap"
                 android:text="@string/need_key" />
 
-            <com.xlox.ui.AnoyButton
+            <androidx.appcompat.widget.AppCompatButton
                 android:id="@+id/buyKey"
-                style="@style/IosLink"
+                style="@style/Widget.Ds.Button.Text"
                 android:layout_width="wrap_content"
-                android:layout_height="40dp"
-                android:layout_marginTop="2dp"
-                android:background="@drawable/bg_ios_secondary"
-                android:minWidth="190dp"
-                android:paddingStart="14dp"
-                android:paddingEnd="14dp"
-                android:stateListAnimator="@null"
-                android:text="@string/telegram_handle"
-                android:textAllCaps="false" />
+                android:layout_height="@dimen/button_height"
+                android:minWidth="@dimen/touch_target"
+                android:text="@string/get_a_key" />
+
+            <TextView
+                android:id="@+id/telegramCaption"
+                style="@style/TextAppearance.Ds.Tertiary"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/space_8"
+                android:text="@string/telegram_handle" />
 
         </LinearLayout>
     </ScrollView>
-
-    <ImageButton
-        android:id="@+id/themeToggle"
-        android:layout_width="40dp"
-        android:layout_height="40dp"
-        android:layout_gravity="top|end"
-        android:layout_marginTop="18dp"
-        android:layout_marginEnd="20dp"
-        android:background="@drawable/bg_icon_button"
-        android:contentDescription="@string/theme_toggle"
-        android:padding="9dp"
-        android:scaleType="fitCenter"
-        android:src="@drawable/ic_theme"
-        android:tint="@color/anoyBlue" />
-
-</FrameLayout>
+</LinearLayout>

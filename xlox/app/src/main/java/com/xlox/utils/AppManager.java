@@ -12,7 +12,7 @@ import android.widget.TextView;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.xlox.R;
-import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+import com.xlox.ui.designsystem.DesignSystem;
 
 
 import java.io.File;
@@ -58,7 +58,10 @@ public class AppManager extends AppCompatActivity {
 
                 if (method == COPY_OBB && showDialog) {
 
-                    progressDialog = new Dialog(ctx);
+                    progressDialog = new Dialog(ctx, R.style.ThemeOverlay.Ds.Dialog);
+                    progressDialog.getWindow().setBackgroundDrawable(
+                            new android.graphics.drawable.ColorDrawable(
+                                    android.graphics.Color.TRANSPARENT));
                     progressDialog.setContentView(R.layout.progress_dialog);
                     progressDialog.setCancelable(false);
 
@@ -71,7 +74,7 @@ public class AppManager extends AppCompatActivity {
                     }
 
                     if (progressText != null) {
-                        progressText.setText("0%");
+                        progressText.setText(ctx.getString(R.string.percent, 0));
                     }
 
                     progressDialog.show();
@@ -103,7 +106,7 @@ public class AppManager extends AppCompatActivity {
                 }
 
                 if (progressText != null) {
-                    progressText.setText(values[0] + "%");
+                    progressText.setText(ctx.getString(R.string.percent, values[0]));
                 }
             }
 
@@ -134,14 +137,14 @@ public class AppManager extends AppCompatActivity {
                     boolean result = MetaPackageManager.isInnerAppInstalled(pkg);
 
                     if (!result) {
-                        errorMessage = "Sandbox install failed!";
+                        errorMessage = ctx.getString(R.string.sandbox_install_failed);
                         return false;
                     }
 
                     return true;
 
                 } catch (PackageManager.NameNotFoundException e) {
-                    errorMessage = "Package not found!";
+                    errorMessage = ctx.getString(R.string.package_not_found);
                     return false;
 
                 } catch (Exception e) {
@@ -157,7 +160,7 @@ public class AppManager extends AppCompatActivity {
                     File sourceDir = new File("/storage/emulated/0/Android/obb/" + pkg);
 
                     if (!sourceDir.exists()) {
-                        errorMessage = "OBB folder not found!";
+                        errorMessage = ctx.getString(R.string.obb_folder_not_found);
                         return false;
                     }
 
@@ -173,7 +176,7 @@ public class AppManager extends AppCompatActivity {
 
                     File mainObb = findMainObb(sourceDir, pkg);
                     if (mainObb == null) {
-                        errorMessage = "Main BGMI OBB file not found!";
+                        errorMessage = ctx.getString(R.string.main_obb_not_found);
                         return false;
                     }
 
@@ -259,11 +262,15 @@ public class AppManager extends AppCompatActivity {
 
             private void showResultDialog(boolean success, String errorMessage) {
 
-                new MaterialAlertDialogBuilder(ctx)
-                        .setTitle(success ? "Success" : "Error")
-                        .setMessage(success ? (method == INSTALL_APP ? "App installed successfully." : "OBB ready successfully.") : errorMessage)
-                        .setPositiveButton("OK", (dialog, which) -> dialog.dismiss())
-                        .show();
+                CharSequence title = ctx.getString(
+                        success ? R.string.dialog_success : R.string.dialog_error);
+                CharSequence message = success
+                        ? ctx.getString(method == INSTALL_APP
+                                ? R.string.app_installed : R.string.obb_ready)
+                        : errorMessage;
+                DesignSystem.dialog(ctx, title, message,
+                        ctx.getString(R.string.close), null, !success,
+                        null, null).show();
             }
 
         }.execute();

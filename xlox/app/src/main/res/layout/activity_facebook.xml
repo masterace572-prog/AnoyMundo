@@ -1,21 +1,59 @@
 <?xml version="1.0" encoding="utf-8"?>
-<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<!-- Screen 3: WebView. Edge-to-edge with safeDrawing padding on the container. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/facebookRoot"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/anoyBg">
+    android:background="@color/background"
+    android:clipToPadding="false"
+    android:orientation="vertical">
 
-    <WebView
-        android:id="@+id/facebookWebView"
+    <LinearLayout
+        style="@style/Widget.Ds.TopAppBar"
         android:layout_width="match_parent"
-        android:layout_height="match_parent" />
+        android:layout_height="@dimen/top_bar_height"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="@dimen/space_8"
+        android:paddingEnd="@dimen/space_12">
 
-    <ProgressBar
-        android:id="@+id/facebookProgressBar"
-        style="?android:attr/progressBarStyleLarge"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_centerInParent="true"
-        android:indeterminateTint="@color/anoyBlue"
-        android:visibility="gone" />
+        <ImageButton
+            android:id="@+id/backButton"
+            style="@style/Widget.Ds.IconButton"
+            android:layout_width="@dimen/touch_target"
+            android:layout_height="@dimen/touch_target"
+            android:contentDescription="@string/back"
+            android:src="@drawable/ds_ic_arrow_back"
+            android:tint="@color/text_primary" />
 
-</RelativeLayout>
+        <TextView
+            style="@style/TextAppearance.Ds.HeadlineSmall"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="@dimen/space_8"
+            android:text="@string/facebook" />
+    </LinearLayout>
+
+    <FrameLayout
+        android:id="@+id/webContainer"
+        android:layout_width="match_parent"
+        android:layout_height="@dimen/space_0"
+        android:layout_weight="1"
+        android:clipToPadding="false">
+
+        <WebView
+            android:id="@+id/facebookWebView"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
+
+        <ProgressBar
+            android:id="@+id/facebookProgressBar"
+            android:layout_width="@dimen/progress_circular_large"
+            android:layout_height="@dimen/progress_circular_large"
+            android:layout_gravity="center"
+            android:contentDescription="@string/page_loading"
+            android:indeterminate="true"
+            android:indeterminateTint="@color/text_secondary"
+            android:visibility="gone" />
+    </FrameLayout>
+</LinearLayout>

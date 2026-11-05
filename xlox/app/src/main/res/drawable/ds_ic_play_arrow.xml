@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Material Symbols Outlined, 400 weight, grade 0, FILL 0. Apache-2.0 (see xlox/licenses/). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="@dimen/icon_bar"
+    android:height="@dimen/icon_bar"
+    android:viewportWidth="960"
+    android:viewportHeight="960">
+    <group android:translateY="960">
+        <path
+            android:fillColor="@color/text_secondary"
+            android:pathData="M320-203v-560l440 280-440 280Zm60-280Zm0 171 269-171-269-171v342Z" />
+    </group>
+</vector>

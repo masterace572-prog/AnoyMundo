@@ -5,6 +5,8 @@ import android.content.SharedPreferences;
 import android.os.AsyncTask;
 import android.util.Log;
 
+import com.xlox.R;
+
 import net.lingala.zip4j.ZipFile;
 
 import java.io.File;
@@ -111,11 +113,11 @@ public class Downtwo extends AsyncTask<String, String, String> {
     protected String doInBackground(String... params) {
         try {
             if (params.length == 0 || params[0] == null) {
-                return fail("Invalid download URL provided");
+                return fail(context.getString(R.string.invalid_download_url));
             }
             serverVersion = getServerVersion();
             if (serverVersion == null || serverVersion.trim().isEmpty()) {
-                return fail("Cannot reach the panel version endpoint");
+                return fail(context.getString(R.string.version_endpoint_unreachable));
             }
             serverVersion = serverVersion.trim();
 
@@ -133,7 +135,7 @@ public class Downtwo extends AsyncTask<String, String, String> {
             return downloadAndExtract(params[0]);
         } catch (Exception e) {
             Log.e(TAG, "doInBackground error", e);
-            return fail("Background error: " + e.getMessage());
+            return fail(context.getString(R.string.background_error, String.valueOf(e.getMessage())));
         }
     }
 
@@ -178,7 +180,7 @@ public class Downtwo extends AsyncTask<String, String, String> {
             return value.isEmpty() ? "1.0" : value.split("[\\r\\n]")[0].trim();
         } catch (Exception e) {
             Log.e(TAG, "Error fetching server version", e);
-            failureMessage = "Version check failed: " + e.getMessage();
+            failureMessage = context.getString(R.string.version_check_failed, String.valueOf(e.getMessage()));
             return null;
         } finally {
             if (connection != null) connection.disconnect();
@@ -201,10 +203,10 @@ public class Downtwo extends AsyncTask<String, String, String> {
 
             int code = connection.getResponseCode();
             if (code == HttpURLConnection.HTTP_NOT_FOUND) {
-                return fail("No loader release uploaded in the panel yet (Admin -> Library)");
+                return fail(context.getString(R.string.no_loader_release));
             }
             if (code != HttpURLConnection.HTTP_OK) {
-                return fail("Loader download failed with HTTP " + code);
+                return fail(context.getString(R.string.download_http_failed, code));
             }
 
             long totalSize = connection.getContentLength();
@@ -226,24 +228,24 @@ public class Downtwo extends AsyncTask<String, String, String> {
             input.close();
 
             if (zip.length() < 64 || !isZip(zip)) {
-                return fail("Panel did not return a valid loader ZIP (" + zip.length() + " bytes)");
+                return fail(context.getString(R.string.invalid_loader_zip, (int) zip.length()));
             }
 
             LibManager.deleteRecursive(staging);
             if (!staging.mkdirs()) {
-                return fail("Cannot create staging directory");
+                return fail(context.getString(R.string.staging_failed));
             }
             new ZipFile(zip).extractAll(staging.getAbsolutePath());
 
             File found = LibManager.findLib(staging);
             if (found == null) {
-                return fail("Loader ZIP has no libbgmi.so / lib.so ELF library");
+                return fail(context.getString(R.string.no_elf_in_zip));
             }
             if (!LibManager.installLib(context, found)) {
-                return fail("Could not install the loader library");
+                return fail(context.getString(R.string.install_lib_failed));
             }
             if (!LibManager.isUsableLib(context)) {
-                return fail("Installed loader library is not usable");
+                return fail(context.getString(R.string.lib_not_usable));
             }
 
             LibManager.prefs(context).edit()
@@ -255,7 +257,7 @@ public class Downtwo extends AsyncTask<String, String, String> {
             return null; // success
         } catch (Exception e) {
             Log.e(TAG, "Error downloading or extracting loader", e);
-            return fail("Loader download failed: " + e.getMessage());
+            return fail(context.getString(R.string.download_failed, String.valueOf(e.getMessage())));
         } finally {
             if (connection != null) connection.disconnect();
             LibManager.deleteRecursive(staging);
