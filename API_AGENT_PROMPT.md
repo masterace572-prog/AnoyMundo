@@ -1,7 +1,7 @@
 # Copy-paste prompt: build a licence-key management site with the Anoy API
 
 Copy everything between the two `-----` lines and paste it into another AI agent.
-Replace `PASTE_YOUR_API_KEY_HERE` with a token created at
+Replace `<MY_API_KEY>` with a token created at
 `https://anoymundo-panel.vercel.app/api-keys` (log in first, sidebar →
 **Developer → API keys** → Create API key → copy the `amk_…` token once).
 
@@ -16,7 +16,8 @@ invent endpoints — use exactly the ones below.
 
 - Base URL: `https://anoymundo-panel.vercel.app/api/v1`
 - Authentication: send the header `X-API-Key: <MY_API_KEY>` on EVERY request.
-  `Authorization: Bearer <MY_API_KEY>` also works.
+  `Authorization: Bearer <MY_API_KEY>` also works (replace `<MY_API_KEY>` with
+  your real `amk_…` token).
 - Content type for POST/PATCH bodies: `application/json` (form-encoded also
   accepted).
 - CORS is open; `OPTIONS` preflight returns `204`.
@@ -156,7 +157,7 @@ retry once. A `404 key_not_found` also means "not your key".
 5. Proper error/empty/loading states, responsive mobile layout, no secrets in
    the browser, and no gradient-heavy styling (clean flat UI).
 6. A short README with setup: `npm install`, put
-   `ANOY_API_KEY=PASTE_YOUR_API_KEY_HERE` in `.env`, `npm run dev`, and note that
+   `ANOY_API_KEY=<MY_API_KEY>` in `.env`, `npm run dev`, and note that
    the key comes from `https://anoymundo-panel.vercel.app/api-keys`.
 
 ## Hard constraints
