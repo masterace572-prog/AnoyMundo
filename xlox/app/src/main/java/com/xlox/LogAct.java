@@ -57,7 +57,6 @@ public class LogAct extends AppCompatActivity {
     private LinearLayout mainContainer;
     private LinearLayout loginCard;
     private LinearLayout accessKeyField;
-    private TextView accessKeyHelper;
     private View pasteKey;
     private TransitionDrawable fieldFocus;
     private boolean isPasswordVisible = false;
@@ -94,7 +93,6 @@ public class LogAct extends AppCompatActivity {
         mainContainer = findViewById(R.id.mainContainer);
         loginCard = findViewById(R.id.loginCard);
         accessKeyField = findViewById(R.id.accessKeyField);
-        accessKeyHelper = findViewById(R.id.accessKeyHelper);
         pasteKey = findViewById(R.id.pasteKey);
 
         textUsername.setText(prefs.getSt(USER, ""));
@@ -194,15 +192,13 @@ public class LogAct extends AppCompatActivity {
 
     private void showFieldError() {
         accessKeyField.setBackgroundResource(R.drawable.ds_field_error);
-        accessKeyHelper.setText(R.string.enter_your_key);
-        accessKeyHelper.setTextColor(Tokens.errorInk(this));
+        textUsername.setHintTextColor(Tokens.errorInk(this));
     }
 
     private void clearFieldError() {
         accessKeyField.setBackground(fieldFocus);
         fieldFocus.resetTransition();
-        accessKeyHelper.setText(R.string.access_key_hint_short);
-        accessKeyHelper.setTextColor(Tokens.textTertiary(this));
+        textUsername.setHintTextColor(Tokens.textTertiary(this));
     }
 
     private void Login(final Context m_Context, final String userKey) {

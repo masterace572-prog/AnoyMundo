@@ -101,7 +101,6 @@
                     style="@style/TextAppearance.Ds.Micro"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:labelFor="@id/userkey"
                     android:text="@string/access_key_label" />
 
                 <LinearLayout
@@ -147,14 +146,6 @@
                         android:src="@drawable/ds_ic_eye"
                         app:tint="@color/icon" />
                 </LinearLayout>
-
-                <TextView
-                    android:id="@+id/accessKeyHelper"
-                    style="@style/TextAppearance.Ds.Tertiary"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="@dimen/space_8"
-                    android:text="@string/access_key_hint_short" />
 
                 <com.xlox.ui.designsystem.PrimaryButton
                     android:id="@+id/login"

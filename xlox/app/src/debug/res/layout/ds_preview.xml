@@ -425,10 +425,8 @@
                 <TextView style="@style/Widget.Ds.Pill" android:layout_width="wrap_content" android:layout_height="@dimen/touch_target" android:gravity="center" android:paddingStart="@dimen/space_16" android:paddingEnd="@dimen/space_16" android:text="@string/ds_pill" />
                 <TextView style="@style/Widget.Ds.Badge" android:layout_width="wrap_content" android:layout_height="@dimen/touch_target" android:layout_marginStart="@dimen/space_8" android:gravity="center" android:paddingStart="@dimen/space_16" android:paddingEnd="@dimen/space_16" android:text="@string/ds_badge" />
             </LinearLayout>
-            <LinearLayout style="@style/Widget.Ds.ListRow" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
-                <TextView style="@style/TextAppearance.Ds.BodyMedium" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="@string/ds_list_row" />
-                <ImageView android:layout_width="@dimen/icon_inline" android:layout_height="@dimen/icon_inline" android:contentDescription="@null" android:importantForAccessibility="no" android:src="@drawable/ds_ic_chevron_right" />
-            </LinearLayout>
+            <TextView style="@style/Widget.Ds.ListRow" android:layout_width="match_parent" android:layout_height="wrap_content" android:drawableEnd="@drawable/ds_ic_chevron_right" android:drawablePadding="@dimen/space_8" android:text="@string/ds_list_row" android:textAppearance="@style/TextAppearance.Ds.BodyMedium" />
+            <TextView style="@style/TextAppearance.Ds.Tertiary" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/ds_card_body" />
             <TextView style="@style/Widget.Ds.StatusText.Success" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/ds_status_ok" />
             <TextView style="@style/Widget.Ds.StatusText.Warning" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/ds_status_warn" />
             <TextView style="@style/Widget.Ds.StatusText.Error" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/ds_error" />

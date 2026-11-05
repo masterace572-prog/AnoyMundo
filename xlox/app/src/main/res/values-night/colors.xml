@@ -42,8 +42,6 @@
     <color name="ripple">#14F2F3F5</color>
     <color name="accent_disabled">#61E67E53</color>
     <color name="on_accent_disabled">#6114100E</color>
-    <color name="outline_disabled">#61262934</color>
-    <color name="scrim">#990D0E11</color>
     <color name="transparent">#00000000</color>
     <color name="splash_background">#0D0E11</color>
 </resources>

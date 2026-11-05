@@ -39,6 +39,8 @@ public class ThemeToggleView extends View {
     private final RectF rect = new RectF();
     private final RectF thumbRect = new RectF();
     private final Path moon = new Path();
+    private final Path cut = new Path();
+    private final Paint solid = new Paint(Paint.ANTI_ALIAS_FLAG);
 
     private float progress = 0f; // 0 = light (sun), 1 = dark (moon)
     private boolean dark;
@@ -68,6 +70,7 @@ public class ThemeToggleView extends View {
         border.setStrokeWidth(stroke);
         thumb.setColor(Tokens.accentWash(context));
         thumb.setStyle(Paint.Style.FILL);
+        solid.setStyle(Paint.Style.FILL);
         thumbEdge.setColor(accent);
         thumbEdge.setStyle(Paint.Style.STROKE);
         thumbEdge.setStrokeWidth(stroke);
@@ -148,13 +151,11 @@ public class ThemeToggleView extends View {
         if (glyph.getAlpha() > 0) {
             int saved = canvas.save();
             canvas.rotate(90f * (1f - progress), cx, cy);
-            Paint solid = new Paint(Paint.ANTI_ALIAS_FLAG);
             solid.setColor(glyph.getColor());
             solid.setAlpha(glyph.getAlpha());
-            solid.setStyle(Paint.Style.FILL);
             moon.reset();
             moon.addCircle(cx, cy, gr * 1.25f, Path.Direction.CW);
-            Path cut = new Path();
+            cut.reset();
             cut.addCircle(cx + gr * 0.62f, cy - gr * 0.28f, gr * 1.12f, Path.Direction.CW);
             moon.op(cut, Path.Op.DIFFERENCE);
             canvas.drawPath(moon, solid);

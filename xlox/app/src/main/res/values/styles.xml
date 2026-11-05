@@ -4,7 +4,7 @@
   values/colors.xml, dark-first values in values-night/colors.xml. One theme,
   no -night style override, no dynamic colour.
 -->
-<resources xmlns:tools="http://schemas.android.com/tools">
+<resources>
 
     <!-- ============================ app theme ============================ -->
     <style name="AppTheme" parent="Theme.MaterialComponents.DayNight.NoActionBar">
@@ -176,7 +176,7 @@
     <!-- ===================== tabular mono (telemetry) ===================== -->
     <style name="TextAppearance.Ds.Mono.Base" parent="TextAppearance.Ds.Base">
         <item name="android:fontFamily">@font/jetbrains_mono_regular</item>
-        <item name="android:fontFeatureSettings" tools:targetApi="21">tnum</item>
+        <item name="android:fontFeatureSettings">tnum</item>
     </style>
     <style name="TextAppearance.Ds.Mono.Hero" parent="TextAppearance.Ds.Mono.Base">
         <item name="android:textSize">@dimen/text_mono_hero</item>

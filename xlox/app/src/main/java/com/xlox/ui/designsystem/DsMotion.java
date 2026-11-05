@@ -1,5 +1,6 @@
 package com.xlox.ui.designsystem;
 
+import android.annotation.SuppressLint;
 import android.animation.ValueAnimator;
 import android.content.Context;
 import android.os.Build;
@@ -96,7 +97,9 @@ public final class DsMotion {
                 .withEndAction(end).start();
     }
 
-    /** Press-scale physics (0.97x) that never swallows the click. */
+    /** Press-scale physics (0.97x). The listener returns false so the platform
+     *  still dispatches performClick() to the original click listener. */
+    @SuppressLint("ClickableViewAccessibility")
     public static void attachPressScale(View v, final float pressed) {
         if (v == null) return;
         v.setOnTouchListener((view, event) -> {

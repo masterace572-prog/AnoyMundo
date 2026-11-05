@@ -8,14 +8,13 @@
     <string name="welcome_subtitle">Enter your access key to continue</string>
     <string name="access_key_label">ACCESS KEY</string>
     <string name="access_key_hint">Paste or enter your key</string>
-    <string name="access_key_hint_short">Access key</string>
     <string name="sign_in">Sign in</string>
     <string name="paste_key">Paste from clipboard</string>
+    <string name="enter_your_key">Enter your access key</string>
     <string name="need_key">Need a key?</string>
     <string name="get_a_key">Get a key</string>
     <string name="telegram_handle">\@libAkAudioVisiual</string>
     <string name="telegram_url">https://t.me/libAkAudioVisiual</string>
-    <string name="enter_your_key">Enter your access key</string>
     <string name="show_key">Show key</string>
     <string name="hide_key">Hide key</string>
     <string name="loader_library_missing">Loader library missing. Reinstall the app.</string>
