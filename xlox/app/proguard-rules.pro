@@ -8,3 +8,5 @@
 -keep class com.xlox.LogAct { *; }
 -keep class com.xlox.MAct { *; }
 -keep class com.xlox.utils.Downtwo { *; }
+-keep class com.xlox.ui.AnoyButton { *; }
+-keep class com.xlox.ui.ThemeMode { *; }

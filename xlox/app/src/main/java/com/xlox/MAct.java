@@ -8,32 +8,32 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
-import android.graphics.Color;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
+import android.os.Looper;
 import android.provider.Settings;
 import android.util.Log;
 import android.view.View;
 import android.view.animation.LinearInterpolator;
 import android.widget.Button;
+import android.widget.ImageButton;
 import android.widget.ImageView;
-import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
+import com.xlox.ui.AnoyButton;
+import com.xlox.ui.ThemeMode;
 import com.xlox.utils.AppManager;
 import com.xlox.utils.Downtwo;
 import com.xlox.utils.LibManager;
-
 
 import java.io.File;
 import java.text.ParseException;
@@ -50,10 +50,15 @@ public class MAct extends AppCompatActivity {
 
     private static native String exdate();
 
+    /** Real status / safe text as configured in the admin panel (/Server). */
+    private static native String modStatus();
+    private static native String credit();
+
     static {
         try {
             System.loadLibrary("XloX");
-        } catch (UnsatisfiedLinkError ignored) {}
+        } catch (UnsatisfiedLinkError ignored) {
+        }
     }
 
     private static final String PKG_BGMI = "com.pubg.imobile";
@@ -69,10 +74,14 @@ public class MAct extends AppCompatActivity {
     private View restartButton;
     private ProgressBar loadingCursor;
     private TextView appVersionText;
-    
+    private TextView creditText;
+    private ImageButton themeToggle;
+    private TextView systemReady;
+
     private TextView startText;
     private ImageView actionIcon;
     private View startBgmi;
+    private AnoyButton launchButton;
     private View startFB;
     private View fbCard;
     private View statusToggle;
@@ -104,16 +113,10 @@ public class MAct extends AppCompatActivity {
     @SuppressLint("SetTextI18n")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        ThemeMode.apply(this);
         super.onCreate(savedInstanceState);
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            getWindow().setStatusBarColor(Color.BLACK);
-            getWindow().getDecorView().setSystemUiVisibility(
-                    View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-            );
-        }
-
         setContentView(R.layout.activity_main);
+        ThemeMode.applyWindow(this);
 
         checkPermissions();
 
@@ -125,11 +128,15 @@ public class MAct extends AppCompatActivity {
         restartButton = findViewById(R.id.restartButton);
         loadingCursor = findViewById(R.id.loadingCursor);
         appVersionText = findViewById(R.id.appVersionText);
+        creditText = findViewById(R.id.creditText);
+        systemReady = findViewById(R.id.systemReady);
+        themeToggle = findViewById(R.id.themeToggle);
 
         // Action UI
         startText = findViewById(R.id.startText);
         actionIcon = findViewById(R.id.actionIcon);
         startBgmi = findViewById(R.id.startBgmi);
+        if (startBgmi instanceof AnoyButton) launchButton = (AnoyButton) startBgmi;
         startFB = findViewById(R.id.startFB);
         fbCard = findViewById(R.id.fbCard);
 
@@ -163,9 +170,17 @@ public class MAct extends AppCompatActivity {
         startKeyCountdown();
         startPageAnimation();
 
+        if (themeToggle != null) {
+            themeToggle.setOnClickListener(v -> ThemeMode.toggle(this));
+        }
+        if (systemReady != null) {
+            systemReady.setOnClickListener(v -> openExternalUrl(TELEGRAM_URL));
+        }
+
         checkObbApplied();
         updateGameStatus();
         updateVersionDisplay();
+        applyPanelStatus();
 
         if (obbButton != null) {
             obbButton.setOnClickListener(v -> openExternalUrl(TELEGRAM_URL));
@@ -177,6 +192,9 @@ public class MAct extends AppCompatActivity {
 
         if (startBgmi != null) {
             startBgmi.setOnClickListener(v -> {
+                // Three hovering dots on every tap, then whichever flow takes
+                // over replaces them with real in-button progress.
+                if (launchButton != null) launchButton.pulseDots(700L);
                 if (isUpdateAvailable) {
                     startDownload();
                 } else if (!isGameInstalled) {
@@ -201,6 +219,40 @@ public class MAct extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
         showLoaderDiagnostics();
+        applyPanelStatus();
+    }
+
+    /**
+     * Display the real "Safe" status and safe text the admin set at /Server,
+     * read from the /connect reply by the native layer. No hardcoded "Safe".
+     */
+    private void applyPanelStatus() {
+        String status = "--";
+        String text = "";
+        try {
+            String s = modStatus();
+            if (s != null && !s.trim().isEmpty()) status = s.trim();
+            String c = credit();
+            if (c != null) text = c.trim();
+        } catch (Throwable t) {
+            Log.d("MAct", "Panel status unavailable", t);
+        }
+
+        final String panelStatus = status;
+        final String panelCredit = text;
+        runOnUiThread(() -> {
+            if (deviceStatus != null) {
+                deviceStatus.setText(panelStatus);
+                boolean safe = panelStatus.equalsIgnoreCase("Safe")
+                        || panelStatus.toLowerCase(Locale.US).contains("safe");
+                deviceStatus.setTextColor(ContextCompat.getColor(this,
+                        safe ? R.color.anoyGreen : R.color.anoyOrange));
+            }
+            if (creditText != null) {
+                creditText.setText(panelCredit);
+                creditText.setVisibility(panelCredit.isEmpty() ? View.GONE : View.VISIBLE);
+            }
+        });
     }
 
     /**
@@ -213,9 +265,8 @@ public class MAct extends AppCompatActivity {
         Log.i("MAct", "Loader diagnostics: " + LibManager.diagnostics(this));
         String error = LibManager.lastLoadError(this);
         if (error != null && !error.isEmpty()) {
-            showStatusToggle("LIB NOT LOADED", true);
+            showStatusToggle("Library missing", true);
             Toast.makeText(this, error, Toast.LENGTH_LONG).show();
-            // Shown once; a repeated failure writes the file again.
             LibManager.clearLoadError(this);
             return;
         }
@@ -223,7 +274,7 @@ public class MAct extends AppCompatActivity {
         if (lib.isFile()) {
             String problem = LibManager.alignmentProblem(lib);
             if (problem != null) {
-                showStatusToggle("LIB NOT 16 KB COMPATIBLE", true);
+                showStatusToggle("Library incompatible", true);
                 Toast.makeText(this, problem, Toast.LENGTH_LONG).show();
             }
         }
@@ -233,19 +284,17 @@ public class MAct extends AppCompatActivity {
         View logoGlow = findViewById(R.id.logoGlow);
         View mainLogo = findViewById(R.id.mainLogo);
         if (mainLogo != null) {
-            ObjectAnimator logoFloat = ObjectAnimator.ofFloat(mainLogo, View.TRANSLATION_Y, 0f, -6f, 0f);
-            logoFloat.setDuration(2600);
+            ObjectAnimator logoFloat = ObjectAnimator.ofFloat(mainLogo, View.TRANSLATION_Y, 0f, -4f, 0f);
+            logoFloat.setDuration(3200);
             logoFloat.setRepeatCount(ObjectAnimator.INFINITE);
             logoFloat.start();
         }
         if (logoGlow != null) {
             ObjectAnimator glowRotation = ObjectAnimator.ofFloat(logoGlow, View.ROTATION, 0f, 360f);
-            glowRotation.setDuration(7000);
+            glowRotation.setDuration(9000);
             glowRotation.setInterpolator(new LinearInterpolator());
             glowRotation.setRepeatCount(ObjectAnimator.INFINITE);
             glowRotation.start();
-            logoGlow.animate().translationY(-5f).setDuration(1300)
-                    .withEndAction(() -> logoGlow.animate().translationY(0f).setDuration(1300).start()).start();
         }
         View[] views = {findViewById(R.id.brandHeader), findViewById(R.id.mainCard),
                 findViewById(R.id.statusToggle), findViewById(R.id.keyTimeRow), findViewById(R.id.fbCard)};
@@ -253,9 +302,9 @@ public class MAct extends AppCompatActivity {
         for (View view : views) {
             if (view != null) {
                 view.setAlpha(0f);
-                view.setTranslationY(34f);
-                view.animate().alpha(1f).translationY(0f).setDuration(560).setStartDelay(delay).start();
-                delay += 110;
+                view.setTranslationY(20f);
+                view.animate().alpha(1f).translationY(0f).setDuration(480).setStartDelay(delay).start();
+                delay += 80;
             }
         }
     }
@@ -296,7 +345,7 @@ public class MAct extends AppCompatActivity {
             return;
         }
 
-        final Handler timerHandler = new Handler(getMainLooper());
+        final Handler timerHandler = new Handler(Looper.getMainLooper());
         final Runnable timer = new Runnable() {
             @Override public void run() {
                 long remaining = expiryMillis - System.currentTimeMillis();
@@ -304,14 +353,14 @@ public class MAct extends AppCompatActivity {
                     setTimeValues(0, 0, 0, 0);
                     if (subscriptionStatus != null) {
                         subscriptionStatus.setText("Expired");
-                        subscriptionStatus.setTextColor(Color.parseColor("#FF5252"));
+                        subscriptionStatus.setTextColor(ContextCompat.getColor(MAct.this, R.color.anoyRed));
                     }
                     if (timeRemaining != null) timeRemaining.setText("Expired");
                     return;
                 }
                 if (subscriptionStatus != null) {
                     subscriptionStatus.setText("Active");
-                    subscriptionStatus.setTextColor(Color.parseColor("#25C779"));
+                    subscriptionStatus.setTextColor(ContextCompat.getColor(MAct.this, R.color.anoyGreen));
                 }
                 long totalSeconds = TimeUnit.MILLISECONDS.toSeconds(remaining);
                 long days = totalSeconds / 86400L;
@@ -329,17 +378,20 @@ public class MAct extends AppCompatActivity {
         try {
             long numeric = Long.parseLong(value);
             return numeric < 100000000000L ? numeric * 1000L : numeric;
-        } catch (NumberFormatException ignored) {}
+        } catch (NumberFormatException ignored) {
+        }
 
-        String[] formats = {"yyyy-MM-dd HH:mm:ss", "yyyy-MM-dd HH:mm", "yyyy-MM-dd",
-                "dd-MM-yyyy HH:mm:ss", "dd/MM/yyyy HH:mm:ss", "MMM dd, yyyy HH:mm:ss"};
+        String[] formats = {"yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", "yyyy-MM-dd HH:mm:ss",
+                "yyyy-MM-dd HH:mm", "yyyy-MM-dd", "dd-MM-yyyy HH:mm:ss",
+                "dd/MM/yyyy HH:mm:ss", "MMM dd, yyyy HH:mm:ss"};
         for (String format : formats) {
             try {
                 SimpleDateFormat parser = new SimpleDateFormat(format, Locale.US);
                 parser.setLenient(false);
                 Date parsed = parser.parse(value);
                 if (parsed != null) return parsed.getTime();
-            } catch (ParseException ignored) {}
+            } catch (ParseException ignored) {
+            }
         }
         return -1L;
     }
@@ -398,6 +450,16 @@ public class MAct extends AppCompatActivity {
         holder[0].execute(Downtwo.downloadUrl(), "check_only");
     }
 
+    private void buttonProgress(int percent, String label) {
+        if (launchButton != null) launchButton.showProgress(percent, label + " " + percent + "%");
+    }
+
+    private void buttonDone() {
+        if (launchButton == null) return;
+        launchButton.showProgress(100, "Ready");
+        new Handler(Looper.getMainLooper()).postDelayed(() -> launchButton.reset(), 650L);
+    }
+
     private void startDownload() {
         if (isDownloading) {
             Log.d("MAct", "A loader download is already running");
@@ -405,9 +467,9 @@ public class MAct extends AppCompatActivity {
         }
         isDownloading = true;
         runOnUiThread(() -> {
-            if (downloadBox != null) downloadBox.setVisibility(View.VISIBLE);
-            setLaunchButtonText("UPDATING...");
-            if (downloadStatusText != null) downloadStatusText.setText("Preparing process...");
+            if (downloadBox != null) downloadBox.setVisibility(View.GONE);
+            buttonProgress(0, "Updating");
+            if (downloadStatusText != null) downloadStatusText.setText("Updating");
             if (percentText != null) percentText.setText("0%");
             if (downloadProgressBar != null) {
                 downloadProgressBar.setIndeterminate(false);
@@ -425,23 +487,21 @@ public class MAct extends AppCompatActivity {
                 runOnUiThread(() -> {
                     isUpdateAvailable = false;
                     hideStatusToggle();
-                    if (downloadStatusText != null) downloadStatusText.setText("All process done");
+                    if (downloadStatusText != null) downloadStatusText.setText("Ready");
                     if (percentText != null) percentText.setText("100%");
                     if (downloadProgressBar != null) downloadProgressBar.setProgress(100);
                     if (loadingCursor != null) loadingCursor.setVisibility(View.GONE);
-
-                    updateVersionDisplay(); // Refresh version text after update
-                    setLaunchButtonText(isGameInstalled ? "LAUNCH GAME" : "INSTALL GAME");
-
+                    updateVersionDisplay();
+                    buttonDone();
                     if (restartButton != null) {
                         restartButton.setVisibility(View.VISIBLE);
                         restartButton.setAlpha(0f);
-                        restartButton.animate().alpha(1f).setDuration(500).start();
+                        restartButton.animate().alpha(1f).setDuration(400).start();
                     }
+                    new Handler(Looper.getMainLooper()).postDelayed(() ->
+                            setLaunchButtonText(isGameInstalled ? "Launch" : "Install"), 700L);
                 });
             } else {
-                // Surface the real reason instead of failing silently: this was
-                // the main "lib not loading" symptom.
                 String reason = holder[0] != null ? holder[0].getFailureMessage() : "";
                 if (reason == null || reason.isEmpty()) reason = "Loader download unavailable";
                 Log.e("MAct", "Loader download failed: " + reason);
@@ -450,7 +510,8 @@ public class MAct extends AppCompatActivity {
                     isUpdateAvailable = false;
                     if (downloadBox != null) downloadBox.setVisibility(View.GONE);
                     if (loadingCursor != null) loadingCursor.setVisibility(View.GONE);
-                    setLaunchButtonText(isGameInstalled ? "LAUNCH GAME" : "INSTALL GAME");
+                    if (launchButton != null) launchButton.reset();
+                    setLaunchButtonText(isGameInstalled ? "Launch" : "Install");
                     showStatusToggle(message, true);
                 });
             }
@@ -463,7 +524,8 @@ public class MAct extends AppCompatActivity {
                 downloadProgressBar.setProgress(progress);
             }
             if (percentText != null) percentText.setText(progress + "%");
-            if (downloadStatusText != null) downloadStatusText.setText("Preparing process...");
+            if (downloadStatusText != null) downloadStatusText.setText("Updating");
+            buttonProgress(progress, "Updating");
         }));
 
         holder[0].execute(Downtwo.downloadUrl());
@@ -489,7 +551,8 @@ public class MAct extends AppCompatActivity {
                     isObbCopied = true;
                     runOnUiThread(() -> { if (obbButton != null) obbButton.setVisibility(View.GONE); });
                 }
-            } catch (Exception ignored) {}
+            } catch (Exception ignored) {
+            }
         }).start();
     }
 
@@ -499,59 +562,50 @@ public class MAct extends AppCompatActivity {
             PackageInfo packageInfo = getPackageManager().getPackageInfo(PKG_BGMI, 0);
             if (packageInfo != null) {
                 isGameInstalled = true;
-                if (gameName != null) gameName.setText("BGMI INDIA");
+                if (gameName != null) gameName.setText("BGMI");
                 if (packageName != null) packageName.setText(PKG_BGMI);
-                if (gameStatus != null) gameStatus.setText("SAFE");
-                if (deviceStatus != null) {
-                    deviceStatus.setText("Safe");
-                    deviceStatus.setTextColor(Color.parseColor("#315FE5"));
-                }
+                if (gameStatus != null) gameStatus.setText("Ready");
                 updateButtonState(false);
             }
         } catch (Exception ignored) {
             isGameInstalled = false;
-            if (gameStatus != null) gameStatus.setText("Not Installed");
+            if (gameStatus != null) gameStatus.setText("Not installed");
             if (deviceStatus != null) {
                 deviceStatus.setText("Not installed");
-                deviceStatus.setTextColor(Color.parseColor("#FF9800"));
+                deviceStatus.setTextColor(ContextCompat.getColor(this, R.color.anoyOrange));
             }
-            setLaunchButtonText("INSTALL GAME");
-            if (startText != null) {
-                startText.setText("INSTALL GAME");
-                startText.setTextColor(Color.parseColor("#FF8C00"));
-            }
+            setLaunchButtonText("Install");
+            if (startText != null) startText.setText("Install");
             if (actionIcon != null) {
                 actionIcon.setImageResource(android.R.drawable.ic_menu_save);
-                actionIcon.setColorFilter(Color.parseColor("#FF8C00"));
+                actionIcon.setColorFilter(ContextCompat.getColor(this, R.color.anoyBlue));
             }
         }
     }
 
     private void setLaunchButtonText(String label) {
         if (startText != null) startText.setText(label);
-        if (startBgmi instanceof Button) ((Button) startBgmi).setText(label);
+        if (launchButton != null) launchButton.setIdleLabel(label);
+        else if (startBgmi instanceof Button) ((Button) startBgmi).setText(label);
     }
 
     private void updateButtonState(boolean running) {
         isGameRunning = running;
         runOnUiThread(() -> {
             if (running) {
-                setLaunchButtonText("STOP GAME");
+                setLaunchButtonText("Stop");
                 if (startText != null) {
-                    startText.setText("STOP GAME");
-                    startText.setTextColor(Color.parseColor("#FF4444"));
+                    startText.setText("Stop");
+                    startText.setTextColor(ContextCompat.getColor(this, R.color.anoyRed));
                 }
                 if (actionIcon != null) {
                     actionIcon.setImageResource(android.R.drawable.ic_delete);
-                    actionIcon.setColorFilter(Color.parseColor("#FF4444"));
-                }
-                if (startBgmi != null) {
-                    startBgmi.setBackgroundResource(R.drawable.bg_ref_stop_button);
+                    actionIcon.setColorFilter(ContextCompat.getColor(this, R.color.anoyRed));
                 }
                 if (downloadBox != null) {
                     downloadBox.setVisibility(View.VISIBLE);
-                    if (downloadStatusText != null) downloadStatusText.setText("Game Running...");
-                    if (percentText != null) percentText.setText("ACTIVE");
+                    if (downloadStatusText != null) downloadStatusText.setText("Running");
+                    if (percentText != null) percentText.setText("100%");
                     if (downloadProgressBar != null) {
                         downloadProgressBar.setIndeterminate(true);
                         downloadProgressBar.setProgress(100);
@@ -559,30 +613,19 @@ public class MAct extends AppCompatActivity {
                     if (restartButton != null) restartButton.setVisibility(View.GONE);
                 }
             } else {
-                if (isUpdateAvailable) {
-                    setLaunchButtonText("UPDATE AVAILABLE");
-                    if (startText != null) {
-                        startText.setText("UPDATE AVAILABLE");
-                        startText.setTextColor(Color.parseColor("#FF8C00"));
-                    }
-                } else {
-                    setLaunchButtonText("LAUNCH GAME");
-                    if (startText != null) {
-                        startText.setText("LAUNCH");
-                        startText.setTextColor(Color.parseColor("#FF8C00"));
-                    }
+                setLaunchButtonText(isUpdateAvailable ? "Update" : (isGameInstalled ? "Launch" : "Install"));
+                if (startText != null) {
+                    startText.setText(isUpdateAvailable ? "Update" : "Launch");
+                    startText.setTextColor(ContextCompat.getColor(this, R.color.anoyBlue));
                 }
                 if (actionIcon != null) {
                     actionIcon.setImageResource(android.R.drawable.ic_media_play);
-                    actionIcon.setColorFilter(Color.parseColor("#FF8C00"));
-                }
-                if (startBgmi != null) {
-                    startBgmi.setBackgroundResource(R.drawable.bg_orange_action);
+                    actionIcon.setColorFilter(ContextCompat.getColor(this, R.color.anoyBlue));
                 }
                 if (downloadBox != null) {
-                    new Handler().postDelayed(() -> {
+                    new Handler(Looper.getMainLooper()).postDelayed(() -> {
                         if (!isGameRunning && !isUpdateAvailable) downloadBox.setVisibility(View.GONE);
-                    }, 1000);
+                    }, 1000L);
                 }
             }
         });
@@ -591,17 +634,17 @@ public class MAct extends AppCompatActivity {
     private void handleLaunchFlow() {
         try {
             if (!MetaActivationManager.getActivationStatus()) {
-                showStatusToggle("LAUNCHING FAILED", true);
+                showStatusToggle("Launch failed", true);
                 return;
             }
         } catch (Exception ignored) {
-            showStatusToggle("LAUNCHING FAILED", true);
+            showStatusToggle("Launch failed", true);
             return;
         }
 
         if (!LibManager.isUsableLib(this)) {
             Log.w("MAct", "Loader library missing or corrupt - requesting the panel release");
-            showStatusToggle("DOWNLOADING LIBRARY...", false);
+            showStatusToggle("Downloading", false);
             startDownload();
             return;
         }
@@ -609,48 +652,45 @@ public class MAct extends AppCompatActivity {
         if (!isObbCopied) {
             copyObbFiles();
         } else {
-            showStatusToggle("LAUNCHING BGMI", false);
-            new Handler().postDelayed(() -> {
+            showStatusToggle("Launching", false);
+            new Handler(Looper.getMainLooper()).postDelayed(() -> {
                 hideStatusToggle();
                 launchGame();
-            }, 2500);
+            }, 2500L);
         }
     }
 
     private void showStatusToggle(String message, boolean isError) {
         if (statusToggle == null) return;
-        
+
         runOnUiThread(() -> {
             statusToggle.setVisibility(View.VISIBLE);
             statusToggle.setAlpha(0f);
-            statusToggle.animate().alpha(1f).setDuration(300).start();
-            
+            statusToggle.animate().alpha(1f).setDuration(260).start();
+
             if (statusToggleText != null) {
                 statusToggleText.setText(message);
-                statusToggleText.setTextColor(isError ? Color.parseColor("#FF5252") : Color.WHITE);
+                statusToggleText.setTextColor(ContextCompat.getColor(this,
+                        isError ? R.color.anoyRed : R.color.anoyText));
             }
-            
             if (statusLoader != null) {
                 statusLoader.setVisibility(isError ? View.GONE : View.VISIBLE);
             }
-            
             if (statusErrorIcon != null) {
                 statusErrorIcon.setVisibility(isError ? View.VISIBLE : View.GONE);
             }
-            
             if (isError) {
-                new Handler().postDelayed(this::hideStatusToggle, 3000);
+                new Handler(Looper.getMainLooper()).postDelayed(this::hideStatusToggle, 3000L);
             }
         });
     }
 
     private void hideStatusToggle() {
         if (statusToggle == null) return;
-        
+
         runOnUiThread(() -> {
-            statusToggle.animate().alpha(0f).setDuration(300).withEndAction(() -> {
-                statusToggle.setVisibility(View.GONE);
-            }).start();
+            statusToggle.animate().alpha(0f).setDuration(260).withEndAction(() ->
+                    statusToggle.setVisibility(View.GONE)).start();
         });
     }
 
@@ -671,7 +711,7 @@ public class MAct extends AppCompatActivity {
             MetaActivityManager.killAppByPkg(PKG_BGMI);
             updateButtonState(false);
         } catch (Exception e) {
-            Toast.makeText(this, "Stop Failed: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Could not stop", Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -691,24 +731,29 @@ public class MAct extends AppCompatActivity {
         try {
             startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url)));
         } catch (Exception e) {
-            Log.e("MAct", "Unable to open social link", e);
+            Log.e("MAct", "Unable to open contact link", e);
         }
     }
 
+    /**
+     * UI-only wrapper around the sensitive OBB copy. AppManager and the
+     * copyObbFolderAsync(...) call below are unchanged; progress is now also
+     * drawn inside the primary button.
+     */
     private void copyObbFiles() {
         if (obbButton == null) return;
-        
+
         Button btn = (Button) obbButton;
         btn.setEnabled(false);
-        if (downloadBox != null) downloadBox.setVisibility(View.VISIBLE);
-        if (downloadStatusText != null) downloadStatusText.setText("Preparing process...");
+        if (downloadBox != null) downloadBox.setVisibility(View.GONE);
         if (percentText != null) percentText.setText("0%");
         if (downloadProgressBar != null) {
             downloadProgressBar.setIndeterminate(false);
             downloadProgressBar.setMax(100);
             downloadProgressBar.setProgress(0);
         }
-        
+        buttonProgress(0, "Copying");
+
         AppManager appManager = new AppManager(this);
         appManager.copyObbFolderAsync(PKG_BGMI, new AppManager.CopyCallback() {
             @Override
@@ -717,18 +762,17 @@ public class MAct extends AppCompatActivity {
                     if (success) {
                         isObbCopied = true;
                         btn.setVisibility(View.GONE);
-                        if (downloadStatusText != null) downloadStatusText.setText("Facebook access ready");
+                        if (downloadStatusText != null) downloadStatusText.setText("Ready");
                         if (percentText != null) percentText.setText("100%");
                         if (downloadProgressBar != null) downloadProgressBar.setProgress(100);
-                        new Handler().postDelayed(() -> {
-                            if (downloadBox != null) downloadBox.setVisibility(View.GONE);
-                        }, 900);
-                        Toast.makeText(MAct.this, "OBB Copied Successfully", Toast.LENGTH_SHORT).show();
+                        buttonDone();
+                        Toast.makeText(MAct.this, "Ready", Toast.LENGTH_SHORT).show();
                     } else {
                         btn.setEnabled(true);
                         btn.setText("APPLY OBB");
                         if (downloadBox != null) downloadBox.setVisibility(View.GONE);
-                        Toast.makeText(MAct.this, "OBB Copy Failed", Toast.LENGTH_SHORT).show();
+                        if (launchButton != null) launchButton.reset();
+                        Toast.makeText(MAct.this, "Copy failed", Toast.LENGTH_SHORT).show();
                     }
                 });
             }
@@ -736,9 +780,10 @@ public class MAct extends AppCompatActivity {
             @Override
             public void onProgressUpdate(int progress) {
                 runOnUiThread(() -> {
-                    if (downloadStatusText != null) downloadStatusText.setText("Preparing process...");
+                    if (downloadStatusText != null) downloadStatusText.setText("Copying");
                     if (percentText != null) percentText.setText(progress + "%");
                     if (downloadProgressBar != null) downloadProgressBar.setProgress(progress);
+                    buttonProgress(progress, "Copying");
                 });
             }
         }, false); // false to hide the default dialog
@@ -750,7 +795,7 @@ public class MAct extends AppCompatActivity {
                 ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, 100);
             }
         }
-        
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             if (!Environment.isExternalStorageManager()) {
                 Intent intent = new Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION);

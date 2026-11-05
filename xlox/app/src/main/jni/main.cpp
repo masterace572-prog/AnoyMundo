@@ -27,6 +27,11 @@ static std::string exdate = oxorany ("NULL");
 
 std::string g_Token, g_Auth;
 
+/* Real status / "safe text" set by the admin panel at /Server. Exposed to the
+   UI so it never shows a hardcoded "Safe" that disagrees with the panel. */
+static std::string g_ModStatus = "Safe";
+static std::string g_Credit = "";
+
 bool xConnected = false, xServerConnection = false, memek = false;
 
 
@@ -34,6 +39,18 @@ extern "C"
 JNIEXPORT jstring JNICALL
 Java_com_xlox_MAct_exdate(JNIEnv *env, jclass clazz) {
     return env->NewStringUTF(exdate.c_str());
+}
+
+extern "C"
+JNIEXPORT jstring JNICALL
+Java_com_xlox_MAct_modStatus(JNIEnv *env, jclass clazz) {
+    return env->NewStringUTF(g_ModStatus.c_str());
+}
+
+extern "C"
+JNIEXPORT jstring JNICALL
+Java_com_xlox_MAct_credit(JNIEnv *env, jclass clazz) {
+    return env->NewStringUTF(g_Credit.c_str());
 }
 extern "C" JNIEXPORT jstring JNICALL
 Java_com_xlox_MAct_ZENINOP(JNIEnv *env, jobject activityObject) {
@@ -184,6 +201,8 @@ Java_com_xlox_LogAct_Check(JNIEnv *env, jclass clazz, jobject mContext, jstring 
     g_Token.clear();
     g_Auth.clear();
     exdate = oxorany("NULL");
+    g_ModStatus = "Safe";
+    g_Credit.clear();
 
     auto user_key = env->GetStringUTFChars(mUserKey, 0);
     std::string hwid = user_key;
@@ -258,6 +277,9 @@ Java_com_xlox_LogAct_Check(JNIEnv *env, jclass clazz, jobject mContext, jstring 
                         memek = xConnected;
                         if (xConnected) {
                             exdate = data.value("EXP", data.value("exdate", std::string{"NULL"}));
+                            // Admin panel /Server -> Safe Mode + safe text.
+                            g_ModStatus = data.value("mod_status", std::string("Safe"));
+                            g_Credit = data.value("credit", std::string(""));
                         } else {
                             errMsg = "INVALID TOKEN";
                         }

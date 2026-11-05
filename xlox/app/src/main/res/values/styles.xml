@@ -1,36 +1,113 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
+    <!-- iOS-like appearance. Follows the system setting by default; the in-app
+         appearance button switches between light and dark explicitly. -->
     <style name="AppTheme" parent="Theme.MaterialComponents.DayNight.NoActionBar">
-        <item name="android:statusBarColor">#000000</item>
-        <item name="android:navigationBarColor">#000000</item>
-        <item name="android:windowLightStatusBar">false</item>
-        <item name="android:windowLightNavigationBar">false</item>
+        <item name="colorPrimary">@color/anoyBlue</item>
+        <item name="colorPrimaryDark">@color/anoyBluePress</item>
+        <item name="colorAccent">@color/anoyBlue</item>
+        <item name="android:colorBackground">@color/anoyBg</item>
+        <item name="android:windowBackground">@color/anoyBg</item>
+        <item name="android:statusBarColor">@color/anoyBg</item>
+        <item name="android:navigationBarColor">@color/anoyBg</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowLightNavigationBar">true</item>
         <item name="android:windowTranslucentStatus">false</item>
         <item name="android:windowTranslucentNavigation">false</item>
-        <item name="android:windowBackground">#000000</item>
-        <item name="android:editTextColor">#F4F4F5</item>
-        <item name="android:textColorHint">#77777F</item>
-        <item name="colorAccent">#315FE5</item>
+        <item name="android:editTextColor">@color/anoyText</item>
+        <item name="android:textColorHint">@color/anoyTextTertiary</item>
+        <item name="android:textColorPrimary">@color/anoyText</item>
+        <item name="android:textColorSecondary">@color/anoyTextSecondary</item>
+        <item name="android:fontFamily">sans-serif</item>
+    </style>
+
+    <!-- SF Pro-like type scale: tight tracking, medium weight for headings. -->
+    <style name="IosLargeTitle">
+        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="android:textSize">34sp</item>
+        <item name="android:textColor">@color/anoyText</item>
+        <item name="android:letterSpacing">-0.02</item>
+        <item name="android:includeFontPadding">false</item>
+    </style>
+
+    <style name="IosTitle">
+        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="android:textSize">26sp</item>
+        <item name="android:textColor">@color/anoyText</item>
+        <item name="android:letterSpacing">-0.015</item>
+        <item name="android:includeFontPadding">false</item>
+    </style>
+
+    <style name="IosHeadline">
+        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="android:textSize">17sp</item>
+        <item name="android:textColor">@color/anoyText</item>
+        <item name="android:letterSpacing">-0.01</item>
+        <item name="android:includeFontPadding">false</item>
+    </style>
+
+    <style name="IosBody">
+        <item name="android:fontFamily">sans-serif</item>
+        <item name="android:textSize">15sp</item>
+        <item name="android:textColor">@color/anoyText</item>
+        <item name="android:includeFontPadding">false</item>
+    </style>
+
+    <style name="IosFootnote">
+        <item name="android:fontFamily">sans-serif</item>
+        <item name="android:textSize">13sp</item>
+        <item name="android:textColor">@color/anoyTextSecondary</item>
+        <item name="android:includeFontPadding">false</item>
+    </style>
+
+    <style name="IosCaption">
+        <item name="android:fontFamily">sans-serif</item>
+        <item name="android:textSize">11sp</item>
+        <item name="android:textColor">@color/anoyTextTertiary</item>
+        <item name="android:includeFontPadding">false</item>
+    </style>
+
+    <style name="IosLink">
+        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="android:textSize">15sp</item>
+        <item name="android:textColor">@color/anoyBlue</item>
+        <item name="android:includeFontPadding">false</item>
+    </style>
+
+    <style name="IosButtonLabel">
+        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="android:textSize">17sp</item>
+        <item name="android:textColor">@color/anoyOnBlue</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="android:includeFontPadding">false</item>
+    </style>
+
+    <style name="IosSecondaryButtonLabel">
+        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="android:textSize">15sp</item>
+        <item name="android:textColor">@color/anoyBlue</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="android:includeFontPadding">false</item>
     </style>
 
     <style name="CustomProgressBarStyle" parent="Widget.AppCompat.ProgressBar">
-        <item name="android:indeterminateTint">#315FE5</item>
+        <item name="android:indeterminateTint">@color/anoyBlue</item>
         <item name="android:indeterminateTintMode">src_in</item>
     </style>
 
     <style name="DarkAlertDialogStyle" parent="Theme.MaterialComponents.DayNight.Dialog">
-        <item name="android:windowBackground">#111115</item>
-        <item name="android:textColorPrimary">#F4F4F5</item>
-        <item name="android:textColorSecondary">#85858D</item>
+        <item name="android:windowBackground">@color/anoySurface</item>
+        <item name="android:textColorPrimary">@color/anoyText</item>
+        <item name="android:textColorSecondary">@color/anoyTextSecondary</item>
         <item name="android:windowMinWidthMinor">85%</item>
         <item name="android:windowIsTranslucent">false</item>
     </style>
 
     <style name="AlertDialogStyle" parent="Theme.MaterialComponents.Light.Dialog">
-        <item name="android:windowBackground">#111115</item>
-        <item name="android:textColorPrimary">#F4F4F5</item>
-        <item name="android:textColorSecondary">#85858D</item>
+        <item name="android:windowBackground">@color/anoySurface</item>
+        <item name="android:textColorPrimary">@color/anoyText</item>
+        <item name="android:textColorSecondary">@color/anoyTextSecondary</item>
         <item name="android:windowMinWidthMinor">85%</item>
         <item name="android:windowIsTranslucent">false</item>
     </style>

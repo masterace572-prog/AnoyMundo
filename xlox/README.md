@@ -1,9 +1,39 @@
-# XLOX loader — Anoy panel integration
+# Anoy loader — panel integration
 
-Android (arm64-v8a) loader app from `XLOX-Loader-Source.zip`, now wired to the
-**Anoy** panel and buildable in CI. The source was extracted from the archive
+Android (arm64-v8a) loader app, now wired to the **Anoy** panel and buildable in CI. The source was extracted from the archive
 into this directory (the original archive stays at the repo root; the local
 `_extract/` copy is git-ignored).
+
+## Anoy UI (1.1.0)
+
+The app UI is a clean, low-text iOS-style layout with **light and dark**
+appearances (the round button in the top-right switches; the default follows
+the system setting). Palettes live in `res/values/colors.xml` (light) and
+`res/values-night/colors.xml` (dark); the type scale is in
+`res/values/styles.xml` (`IosLargeTitle`, `IosHeadline`, `IosBody`, …).
+Primary actions are blue; the in-app mark is `res/drawable/ic_anoy.png`.
+
+`com.xlox.ui.AnoyButton` is a reusable button that draws its own feedback:
+
+- **Three hovering dots** the moment any action is tapped (login, paste, buy a
+  key, launch). Long-running actions keep them until the result arrives.
+- **Progress inside the button** — a fill that grows across the blue pill with
+  a compact `Updating 42%` / `Copying 42%` label — while the panel release is
+  downloading or the OBB is being copied. No separate dialog appears.
+- A subtle press-scale animation on every button.
+
+The **Status** card shows the real `data.mod_status` from `POST /connect`
+(`Safe` or `Anti-Cheat is High..!!`) and the admin-configured `data.credit`
+safe text, captured by the native layer. It is never hardcoded in the UI.
+`@libAkAudioVisiual` is shown on both screens as the buy-a-key contact.
+
+> The Java package (`com.xlox`), the native library name (`libXloX.so`) and the
+> keystore are build/JNI identifiers, not user-facing text — they are kept so
+> the JNI signatures and existing installs continue to work. No `XLOX` text is
+> displayed anywhere in the app.
+
+`AppManager.copyObbFolderAsync(...)` and all OBB copy logic are unchanged; only
+the UI callbacks around it were updated.
 
 ## What was broken / what changed
 

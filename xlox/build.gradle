@@ -1,4 +1,4 @@
-// Top-level build file for the Anoy / XLOX loader app.
+// Top-level build file for the Anoy loader app.
 // Only Android Gradle Plugin is needed: the original LSParanoid / BlackObfuscator
 // / Kotlin plugins were dead weight and made CI builds depend on JitPack and
 // Sonatype snapshots. String obfuscation now lives in the native panel_config.h.

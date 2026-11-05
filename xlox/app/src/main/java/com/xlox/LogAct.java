@@ -2,19 +2,15 @@ package com.xlox;
 
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.appcompat.widget.AppCompatButton;
-import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 
 import android.Manifest;
-import android.animation.AnimatorSet;
 import android.animation.ObjectAnimator;
 import android.animation.ValueAnimator;
 import android.app.AlertDialog;
-import android.app.Dialog;
 import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.net.ConnectivityManager;
 import android.net.Network;
@@ -31,17 +27,16 @@ import android.util.Log;
 import android.view.View;
 import android.view.animation.DecelerateInterpolator;
 import android.view.animation.LinearInterpolator;
-import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
-import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.xlox.utils.Downtwo;
+import com.xlox.ui.AnoyButton;
+import com.xlox.ui.ThemeMode;
 import com.xlox.utils.Prefs;
-
 
 public class LogAct extends AppCompatActivity {
 
@@ -56,47 +51,60 @@ public class LogAct extends AppCompatActivity {
     private final String USER = "USER";
 
     private EditText textUsername;
-    private AppCompatButton btnLogin;
+    private AnoyButton btnLogin;
+    private AnoyButton pasteKey;
+    private AnoyButton buyKey;
+    private ImageButton themeToggle;
 
-    private Dialog loadingDialog;
-
-    // UI
     private TextView premium;
-    private TextView pasteKey;
     private LinearLayout loginCard;
     private LinearLayout mainContainer;
     private ImageView logo;
     private ImageView eyeToggle;
     private boolean isPasswordVisible = false;
 
-    // Permissions
     private static final int REQUEST_MANAGE_STORAGE_PERMISSION = 100;
     private static final int REQUEST_MANAGE_UNKNOWN_APP_SOURCES = 200;
-
-    private static final String PREFS_NAME = "com.xlox.prefs";
-    private static final String PREF_PERMISSIONS_GRANTED = "permissions_granted";
+    private static final String TELEGRAM_URL = "https://t.me/libAkAudioVisiual";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        ThemeMode.apply(this);
         super.onCreate(savedInstanceState);
 
         if (iskokofm()) {
-            new AlertDialog.Builder(LogAct.this).setTitle("VPN Detected").setMessage("Please disable VPN to continue").setPositiveButton("OK", null).show();
+            new AlertDialog.Builder(this)
+                    .setTitle("VPN detected")
+                    .setMessage("Turn off VPN to continue.")
+                    .setPositiveButton("OK", null).show();
             return;
         }
 
         setContentView(R.layout.activity_login);
+        ThemeMode.applyWindow(this);
         prefs = new Prefs(this);
         checkAndRequestPermissions();
 
         textUsername = findViewById(R.id.userkey);
         btnLogin = findViewById(R.id.login);
+        pasteKey = findViewById(R.id.pasteKey);
+        buyKey = findViewById(R.id.buyKey);
+        themeToggle = findViewById(R.id.themeToggle);
         premium = findViewById(R.id.premium);
         loginCard = findViewById(R.id.loginCard);
         mainContainer = findViewById(R.id.mainContainer);
         logo = findViewById(R.id.logo);
         eyeToggle = findViewById(R.id.eyeToggle);
-        pasteKey = findViewById(R.id.pasteKey);
+
+        int blue = ContextCompat.getColor(this, R.color.anoyBlue);
+        if (pasteKey != null) {
+            pasteKey.setDotColor(blue);
+            pasteKey.setFillColor(Color.argb(28, 0, 122, 255));
+        }
+        if (buyKey != null) {
+            buyKey.setDotColor(blue);
+            buyKey.setFillColor(Color.argb(28, 0, 122, 255));
+        }
 
         textUsername.setText(prefs.getSt(USER, ""));
 
@@ -104,10 +112,10 @@ public class LogAct extends AppCompatActivity {
             eyeToggle.setOnClickListener(v -> {
                 if (isPasswordVisible) {
                     textUsername.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
-                    eyeToggle.setAlpha(0.5f);
+                    eyeToggle.setAlpha(0.55f);
                 } else {
                     textUsername.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD);
-                    eyeToggle.setAlpha(1.0f);
+                    eyeToggle.setAlpha(1f);
                 }
                 isPasswordVisible = !isPasswordVisible;
                 textUsername.setSelection(textUsername.getText().length());
@@ -116,6 +124,7 @@ public class LogAct extends AppCompatActivity {
 
         if (pasteKey != null) {
             pasteKey.setOnClickListener(v -> {
+                pasteKey.pulseDots(650L);
                 ClipboardManager clipboard = (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
                 if (clipboard != null && clipboard.hasPrimaryClip()
                         && clipboard.getPrimaryClip() != null
@@ -129,25 +138,35 @@ public class LogAct extends AppCompatActivity {
             });
         }
 
+        if (buyKey != null) {
+            buyKey.setOnClickListener(v -> {
+                buyKey.pulseDots(650L);
+                openExternalUrl(TELEGRAM_URL);
+            });
+        }
+
+        if (themeToggle != null) {
+            themeToggle.setOnClickListener(v -> ThemeMode.toggle(this));
+        }
+
         startIntroAnimation();
 
         btnLogin.setOnClickListener(v -> {
             String userKey = textUsername.getText().toString().trim();
             if (userKey.isEmpty()) {
-                textUsername.setError("Please enter key");
+                textUsername.setError("Enter your key");
                 return;
             }
             if (iskokofm()) {
-                new AlertDialog.Builder(LogAct.this).setTitle("VPN Detected").setMessage("Please disable VPN to continue").setPositiveButton("OK", null).show();
+                new AlertDialog.Builder(this)
+                        .setTitle("VPN detected")
+                        .setMessage("Turn off VPN to continue.")
+                        .setPositiveButton("OK", null).show();
                 return;
             }
 
             prefs.setSt(USER, userKey);
-            
-            btnLogin.setEnabled(false);
-            btnLogin.setText("Checking key...");
-            btnLogin.setTextColor(Color.WHITE);
-            
+            btnLogin.showDots();
             Login(this, userKey);
         });
     }
@@ -159,32 +178,34 @@ public class LogAct extends AppCompatActivity {
         }
         if (logo != null) {
             logo.setAlpha(0f);
-            logo.setTranslationY(-180f);
-            logo.animate().alpha(1f).translationY(0f).setDuration(1200).setInterpolator(new DecelerateInterpolator(1.4f)).start();
-            ObjectAnimator logoFloat = ObjectAnimator.ofFloat(logo, View.TRANSLATION_Y, 0f, -6f, 0f);
-            logoFloat.setStartDelay(1300);
-            logoFloat.setDuration(2600);
+            logo.setTranslationY(-24f);
+            logo.animate().alpha(1f).translationY(0f).setDuration(700)
+                    .setInterpolator(new DecelerateInterpolator(1.4f)).start();
+            ObjectAnimator logoFloat = ObjectAnimator.ofFloat(logo, View.TRANSLATION_Y, 0f, -4f, 0f);
+            logoFloat.setStartDelay(800);
+            logoFloat.setDuration(3200);
             logoFloat.setRepeatCount(ValueAnimator.INFINITE);
             logoFloat.start();
         }
         View logoGlow = findViewById(R.id.logoGlow);
         if (logoGlow != null) {
             ObjectAnimator glowRotation = ObjectAnimator.ofFloat(logoGlow, View.ROTATION, 0f, 360f);
-            glowRotation.setDuration(7000);
+            glowRotation.setDuration(9000);
             glowRotation.setInterpolator(new LinearInterpolator());
             glowRotation.setRepeatCount(ValueAnimator.INFINITE);
             glowRotation.start();
-            logoGlow.animate().alpha(1f).setDuration(1500).setInterpolator(new DecelerateInterpolator()).start();
         }
         if (premium != null) {
             premium.setAlpha(0f);
-            premium.setTranslationY(120f);
-            premium.animate().alpha(1f).translationY(0f).setDuration(1200).setStartDelay(450).setInterpolator(new DecelerateInterpolator(1.4f)).start();
+            premium.setTranslationY(16f);
+            premium.animate().alpha(1f).translationY(0f).setDuration(600).setStartDelay(90)
+                    .setInterpolator(new DecelerateInterpolator(1.4f)).start();
         }
         if (loginCard != null) {
             loginCard.setAlpha(0f);
-            loginCard.setTranslationY(260f);
-            loginCard.animate().alpha(1f).translationY(0f).setDuration(1500).setStartDelay(650).setInterpolator(new DecelerateInterpolator(1.4f)).start();
+            loginCard.setTranslationY(28f);
+            loginCard.animate().alpha(1f).translationY(0f).setDuration(650).setStartDelay(140)
+                    .setInterpolator(new DecelerateInterpolator(1.4f)).start();
         }
     }
 
@@ -194,10 +215,8 @@ public class LogAct extends AppCompatActivity {
                 Intent i = new Intent(m_Context, MAct.class);
                 startActivity(i);
                 finish();
-            } else if (msg.what == 1) {
-                btnLogin.setEnabled(true);
-                btnLogin.setText("LOGIN");
-                btnLogin.setTextColor(Color.parseColor("#FF8C00"));
+            } else {
+                btnLogin.reset();
                 Toast.makeText(m_Context, (String) msg.obj, Toast.LENGTH_SHORT).show();
             }
             return true;
@@ -222,6 +241,14 @@ public class LogAct extends AppCompatActivity {
         }).start();
     }
 
+    private void openExternalUrl(String url) {
+        try {
+            startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url)));
+        } catch (Exception e) {
+            Log.e("LogAct", "Unable to open contact link", e);
+        }
+    }
+
     private void checkAndRequestPermissions() {
         if (!isStoragePermissionGranted()) {
             requestStoragePermissionDirect();
@@ -240,7 +267,9 @@ public class LogAct extends AppCompatActivity {
             intent.setData(Uri.fromParts("package", getPackageName(), null));
             startActivityForResult(intent, REQUEST_MANAGE_STORAGE_PERMISSION);
         } else {
-            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, REQUEST_MANAGE_STORAGE_PERMISSION);
+            androidx.core.app.ActivityCompat.requestPermissions(this,
+                    new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE},
+                    REQUEST_MANAGE_STORAGE_PERMISSION);
         }
     }
 
@@ -250,7 +279,8 @@ public class LogAct extends AppCompatActivity {
 
     private void requestUnknownAppPermissionsDirect() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            Intent intent = new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:" + getPackageName()));
+            Intent intent = new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
+                    Uri.parse("package:" + getPackageName()));
             startActivityForResult(intent, REQUEST_MANAGE_UNKNOWN_APP_SOURCES);
         }
     }
@@ -260,10 +290,9 @@ public class LogAct extends AppCompatActivity {
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode == REQUEST_MANAGE_STORAGE_PERMISSION) {
             checkAndRequestPermissions();
-        } else if (requestCode == REQUEST_MANAGE_UNKNOWN_APP_SOURCES) {
-            if (canRequestPackageInstalls()) {
-                android.os.Process.killProcess(android.os.Process.myPid());
-            }
+        } else if (requestCode == REQUEST_MANAGE_UNKNOWN_APP_SOURCES
+                && canRequestPackageInstalls()) {
+            android.os.Process.killProcess(android.os.Process.myPid());
         }
     }
 
@@ -278,7 +307,8 @@ public class LogAct extends AppCompatActivity {
                     if (caps != null && caps.hasTransport(NetworkCapabilities.TRANSPORT_VPN)) return true;
                 }
             }
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) {
+        }
         return false;
     }
 

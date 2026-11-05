@@ -3,25 +3,21 @@
     android:layout_width="0dp"
     android:layout_height="70dp"
     android:layout_weight="1"
-    android:background="@drawable/bg_login_card"
+    android:background="@drawable/bg_ios_card"
     android:gravity="center"
     android:orientation="vertical"
     android:padding="6dp">
     <TextView
         android:id="@+id/timeValue"
+        style="@style/IosHeadline"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="00"
-        android:textColor="#D9A441"
-        android:textSize="21sp"
-        android:textStyle="bold" />
+        android:text="00" />
     <TextView
         android:id="@+id/timeLabel"
+        style="@style/IosCaption"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="3dp"
-        android:text="TIME"
-        android:textColor="#8490AD"
-        android:textSize="9sp"
-        android:textStyle="bold" />
+        android:text="TIME" />
 </LinearLayout>

@@ -1,6 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">XLOX LOADER</string>
-    <string name="main_title">XLOX LOADER</string>
-    <string name="login_title">XLOX LOADER</string>
-    <string name="copyright">© 2026 XLOX LOADER</string>
+    <string name="app_name">Anoy</string>
+    <string name="main_title">Anoy</string>
+    <string name="login_title">Anoy</string>
+    <string name="copyright">© 2026 Anoy</string>
+
+    <!-- Official contact used for buying a licence key. -->
+    <string name="telegram_handle">\@libAkAudioVisiual</string>
+    <string name="telegram_url">https://t.me/libAkAudioVisiual</string>
+
+    <string name="brand_subtitle">Loader</string>
+    <string name="access_key_label">Access key</string>
+    <string name="access_key_hint">Paste your key</string>
+    <string name="sign_in">Sign In</string>
+    <string name="paste_key">Paste from clipboard</string>
+    <string name="need_key">Need a key?</string>
+    <string name="get_key">Get a key</string>
+    <string name="launch">Launch</string>
+    <string name="subscription">Subscription</string>
+    <string name="expires">Expires</string>
+    <string name="time_left">Time left</string>
+    <string name="device">Device</string>
+    <string name="status">Status</string>
+    <string name="updating">Updating</string>
+    <string name="copying">Copying</string>
+    <string name="ready">Ready</string>
+    <string name="theme_toggle">Switch appearance</string>
+    <string name="show_key">Show or hide key</string>
+    <string name="dismiss">Dismiss notification</string>
 </resources>

@@ -49,7 +49,7 @@ public class Downtwo extends AsyncTask<String, String, String> {
     public static final String RESULT_UPDATE = "Update Available";
     public static final String RESULT_NOTIFIED = "Already Notified";
     private static final String RESULT_FAILED = "UPDATE_UNAVAILABLE";
-    private static final String ZIP_NAME = "Xlox.zip";
+    private static final String ZIP_NAME = "anoy-release.zip";
 
     // Fallbacks keep the app usable (with a clear error) if libXloX.so failed to
     // load on a device; the native panel_config.h values are the source of truth.
@@ -163,7 +163,7 @@ public class Downtwo extends AsyncTask<String, String, String> {
             connection.setConnectTimeout(10000);
             connection.setReadTimeout(10000);
             connection.setInstanceFollowRedirects(true);
-            connection.setRequestProperty("User-Agent", "AnoyXLOX/1.0");
+            connection.setRequestProperty("User-Agent", "Anoy/1.0");
             int code = connection.getResponseCode();
             if (code != HttpURLConnection.HTTP_OK) {
                 Log.e(TAG, "Version endpoint returned HTTP " + code);
@@ -195,7 +195,7 @@ public class Downtwo extends AsyncTask<String, String, String> {
             connection.setConnectTimeout(15000);
             connection.setReadTimeout(60000);
             connection.setInstanceFollowRedirects(true);
-            connection.setRequestProperty("User-Agent", "AnoyXLOX/1.0");
+            connection.setRequestProperty("User-Agent", "Anoy/1.0");
             connection.setRequestProperty("Accept", "application/zip");
             connection.connect();
 

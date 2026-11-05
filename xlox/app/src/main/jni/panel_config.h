@@ -1,5 +1,5 @@
 /*
- * Anoy panel integration for the XLOX loader.
+ * Anoy panel integration for the Anoy loader.
  *
  * These are the ONLY endpoints the app talks to. Change ANOY_PANEL_BASE to
  * point the APK at another deployment, then rebuild. The panel must expose:
@@ -19,6 +19,6 @@
 /* Must match STATIC_WORDS on the panel (real = game-user_key-serial-WORDS). */
 #define ANOY_STATIC_WORDS "Vm8Lk7Uj2JmsjCPVPVjrLa7zgfx3uz9E"
 
-#define ANOY_USER_AGENT   "AnoyXLOX/1.0"
+#define ANOY_USER_AGENT   "Anoy/1.0"
 
 #endif

@@ -3,7 +3,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#000000">
+    android:background="@color/anoyBg">
 
     <ScrollView
         android:layout_width="match_parent"
@@ -17,64 +17,70 @@
             android:layout_height="match_parent"
             android:gravity="center_horizontal|center_vertical"
             android:orientation="vertical"
-            android:paddingStart="26dp"
-            android:paddingTop="30dp"
-            android:paddingEnd="26dp"
-            android:paddingBottom="86dp">
+            android:paddingStart="28dp"
+            android:paddingTop="70dp"
+            android:paddingEnd="28dp"
+            android:paddingBottom="44dp">
 
             <FrameLayout
-                android:layout_width="78dp"
-                android:layout_height="78dp">
+                android:layout_width="88dp"
+                android:layout_height="88dp">
                 <ImageView
                     android:id="@+id/logoGlow"
-                    android:layout_width="78dp"
-                    android:layout_height="78dp"
+                    android:layout_width="88dp"
+                    android:layout_height="88dp"
                     android:alpha="0"
                     android:contentDescription="@string/app_name" />
                 <ImageView
                     android:id="@+id/logo"
-                    android:layout_width="74dp"
-                    android:layout_height="74dp"
+                    android:layout_width="88dp"
+                    android:layout_height="88dp"
                     android:layout_gravity="center"
                     android:contentDescription="@string/app_name"
-                    android:scaleType="centerCrop"
-                    android:src="@drawable/logo_transparent" />
+                    android:src="@drawable/ic_anoy" />
             </FrameLayout>
 
             <TextView
                 android:id="@+id/appName"
+                style="@style/IosLargeTitle"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="22dp"
-                android:text="XLOX LOADER"
-                android:textColor="#F4F4F5"
-                android:textSize="27sp"
-                android:textStyle="bold" />
+                android:text="@string/app_name" />
 
             <TextView
                 android:id="@+id/premium"
+                style="@style/IosBody"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="5dp"
-                android:letterSpacing="0.2"
-                android:text="SECURE ACCESS"
-                android:textColor="#315FE5"
-                android:textSize="13sp" />
+                android:layout_marginTop="4dp"
+                android:text="@string/brand_subtitle"
+                android:textColor="@color/anoyTextSecondary" />
 
             <LinearLayout
                 android:id="@+id/loginCard"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="36dp"
-                android:orientation="vertical">
+                android:layout_marginTop="40dp"
+                android:background="@drawable/bg_ios_card"
+                android:orientation="vertical"
+                android:padding="20dp">
+
+                <TextView
+                    style="@style/IosFootnote"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/access_key_label" />
 
                 <LinearLayout
                     android:layout_width="match_parent"
-                    android:layout_height="48dp"
-                    android:background="@drawable/bg_reference_input"
+                    android:layout_height="52dp"
+                    android:layout_marginTop="8dp"
+                    android:background="@drawable/bg_ios_field"
                     android:gravity="center_vertical"
+                    android:orientation="horizontal"
                     android:paddingStart="16dp"
-                    android:paddingEnd="14dp">
+                    android:paddingEnd="12dp">
 
                     <EditText
                         android:id="@+id/userkey"
@@ -82,72 +88,90 @@
                         android:layout_height="match_parent"
                         android:layout_weight="1"
                         android:background="@null"
-                        android:hint="Enter access key"
+                        android:fontFamily="sans-serif"
+                        android:hint="@string/access_key_hint"
+                        android:imeOptions="actionDone"
                         android:inputType="textPassword"
                         android:singleLine="true"
-                        android:textColor="#F4F4F5"
-                        android:textColorHint="#77777F"
-                        android:textSize="14sp" />
+                        android:textColor="@color/anoyText"
+                        android:textColorHint="@color/anoyTextTertiary"
+                        android:textSize="15sp" />
 
                     <ImageView
                         android:id="@+id/eyeToggle"
                         android:layout_width="22dp"
                         android:layout_height="22dp"
-                        android:alpha="0.7"
+                        android:alpha="0.9"
                         android:clickable="true"
-                        android:contentDescription="Show or hide key"
+                        android:contentDescription="@string/show_key"
                         android:focusable="true"
-                        android:src="@drawable/ic_eye"
-                        app:tint="#D8D8DE" />
+                        android:src="@drawable/ic_eye" />
                 </LinearLayout>
 
-                <androidx.appcompat.widget.AppCompatButton
+                <com.xlox.ui.AnoyButton
                     android:id="@+id/login"
+                    style="@style/IosButtonLabel"
                     android:layout_width="match_parent"
-                    android:layout_height="50dp"
-                    android:layout_marginTop="14dp"
-                    android:background="@drawable/bg_blue_action"
+                    android:layout_height="54dp"
+                    android:layout_marginTop="18dp"
+                    android:background="@drawable/bg_ios_button"
                     android:stateListAnimator="@null"
-                    android:text="Login"
-                    android:textAllCaps="false"
-                    android:textColor="#FFFFFF"
-                    android:textSize="16sp"
-                    android:textStyle="bold" />
+                    android:text="@string/sign_in"
+                    android:textAllCaps="false" />
 
-                <TextView
+                <com.xlox.ui.AnoyButton
                     android:id="@+id/pasteKey"
+                    style="@style/IosSecondaryButtonLabel"
                     android:layout_width="wrap_content"
                     android:layout_height="44dp"
                     android:layout_gravity="center_horizontal"
-                    android:layout_marginTop="9dp"
-                    android:clickable="true"
-                    android:focusable="true"
-                    android:gravity="center"
-                    android:text="Paste Key"
-                    android:textColor="#315FE5"
-                    android:textSize="15sp" />
-
-                <TextView
-                    android:id="@+id/buyNow"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_gravity="center_horizontal"
                     android:layout_marginTop="4dp"
-                    android:gravity="center"
-                    android:text="Don't Have a Key? Buy Now"
-                    android:textColor="#77777F"
-                    android:textSize="13sp" />
+                    android:background="@drawable/bg_ios_secondary"
+                    android:minWidth="180dp"
+                    android:paddingStart="16dp"
+                    android:paddingEnd="16dp"
+                    android:stateListAnimator="@null"
+                    android:text="@string/paste_key"
+                    android:textAllCaps="false" />
             </LinearLayout>
+
+            <TextView
+                android:id="@+id/buyNow"
+                style="@style/IosFootnote"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="26dp"
+                android:text="@string/need_key" />
+
+            <com.xlox.ui.AnoyButton
+                android:id="@+id/buyKey"
+                style="@style/IosLink"
+                android:layout_width="wrap_content"
+                android:layout_height="40dp"
+                android:layout_marginTop="2dp"
+                android:background="@drawable/bg_ios_secondary"
+                android:minWidth="190dp"
+                android:paddingStart="14dp"
+                android:paddingEnd="14dp"
+                android:stateListAnimator="@null"
+                android:text="@string/telegram_handle"
+                android:textAllCaps="false" />
+
         </LinearLayout>
     </ScrollView>
 
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="bottom|center_horizontal"
-        android:layout_marginBottom="34dp"
-        android:letterSpacing="0.2"
-        android:text="SYSTEM READY"
-        android:textColor="#3E3E45"
-        android:textSize="10sp" />
+    <ImageButton
+        android:id="@+id/themeToggle"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:layout_gravity="top|end"
+        android:layout_marginTop="18dp"
+        android:layout_marginEnd="20dp"
+        android:background="@drawable/bg_icon_button"
+        android:contentDescription="@string/theme_toggle"
+        android:padding="9dp"
+        android:scaleType="fitCenter"
+        android:src="@drawable/ic_theme"
+        android:tint="@color/anoyBlue" />
+
 </FrameLayout>
