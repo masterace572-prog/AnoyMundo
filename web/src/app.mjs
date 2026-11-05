@@ -6,7 +6,7 @@ import {
 } from './db.mjs';
 import {
   currentUser, authenticate, hashPassword, codeHash, verifyPassword,
-  setSession, clearSession, getClientIp, displayName,
+  setSession, clearSession, getClientIp, displayName, passwordIssue,
 } from './auth.mjs';
 import {
   renderPage, sendHtml, sendJson, sendText, buildSelect, sqlDateTime,
@@ -20,7 +20,7 @@ import {
 import {
   handleApiV1, createApiKeyForUser, listApiKeysForUser, mutateApiKey,
 } from './api-keys.mjs';
-import { createKeysForUser } from './key-service.mjs';
+import { createKeysForUser, deleteKeysWithRefund, refundMessage } from './key-service.mjs';
 
 // ---------------------------------------------------------------------------
 // small utilities
@@ -67,13 +67,30 @@ function publicBase(req) {
 }
 
 function fail(req, res, url, message, errors = {}, old = {}) {
-  return redirect(res, url, { msgDanger: `Failed: ${message}`, errors, old });
+  return redirect(res, url, { msgDanger: message, errors, old });
 }
 
 async function logAttempt(username, ip, ok) {
   try {
-    await db().from('auth_attempt').insert({ username: String(username || '').slice(0, 66), ip: String(ip).slice(0, 100), ok });
+    await db().from('auth_attempt').insert({
+      username: String(username || '').slice(0, 66), ip: String(ip).slice(0, 100),
+      ok: !!ok, created_at: nowIso(),
+    });
   } catch { /* audit table is best-effort */ }
+}
+
+/** Simple brute-force guard. Fails open if the audit table is unavailable. */
+async function tooManyAttempts(username, ip) {
+  const since = new Date(Date.now() - 10 * 60_000).toISOString();
+  try {
+    const [byUser, byIp] = await Promise.all([
+      db().from('auth_attempt').select('id', { count: 'exact', head: true })
+        .eq('ok', false).eq('username', String(username).slice(0, 66)).gt('created_at', since),
+      db().from('auth_attempt').select('id', { count: 'exact', head: true })
+        .eq('ok', false).eq('ip', String(ip).slice(0, 100)).gt('created_at', since),
+    ]);
+    return (byUser.count || 0) >= 8 || (byIp.count || 0) >= 15;
+  } catch { return false; }
 }
 
 function parseDateInput(value) {
@@ -196,7 +213,13 @@ function keyFormData(key) {
   };
 }
 
+function bumpVersion(value) {
+  const m = String(value || '').match(/^(.*?)(\d+)$/);
+  return m ? `${m[1]}${Number(m[2]) + 1}` : '1.1';
+}
+
 function serverData(settings) {
+  const release = settings.release || null;
   return {
     onoff: settings.onoff,
     ftext: settings.ftext,
@@ -204,6 +227,9 @@ function serverData(settings) {
     server: settings.modname,
     credit: settings.credit,
     lib: settings.lib ? { ...settings.lib, currentTime: sqlDateTime() } : {},
+    release,
+    currentVersion: release?.version || '',
+    suggestedVersion: bumpVersion(release?.version || '1.0'),
   };
 }
 
@@ -216,6 +242,9 @@ async function doLogin(req, res, body) {
   const remember = !!body.stay_log;
   const ip = getClientIp(req);
   const errors = {};
+  if (await tooManyAttempts(username, ip)) {
+    return fail(req, res, '/login', 'Too many sign-in attempts. Wait 10 minutes and try again.', { password: 'Temporarily locked.' }, { username });
+  }
   if (!alnum(username, 4, 25)) errors.username = 'Enter a valid username (4-25 alphanumeric characters).';
   if (password.length < 6 || password.length > 45) errors.password = 'Password must be 6-45 characters.';
   if (Object.keys(errors).length) {
@@ -254,6 +283,10 @@ async function doRegister(req, res, body) {
     if (data) errors.fullname = 'The fullname has been taken.';
   }
   if (password.length < 6 || password.length > 45) errors.password = 'Password must be 6-45 characters.';
+  else {
+    const issue = passwordIssue(password, username);
+    if (issue) errors.password = issue;
+  }
   if (password !== password2) errors.password2 = 'Passwords do not match.';
   if (!alnum(referral, 4, 25)) errors.referral = 'Enter a valid referral code.';
 
@@ -263,15 +296,31 @@ async function doRegister(req, res, body) {
     if (error || !data) errors.referral = 'Wrong referral, please try again.';
     else if (data.used_by) errors.referral = `Wrong referral, code has been used · ${data.used_by}.`;
     else if (data.acc_expiration && new Date(data.acc_expiration).getTime() < Date.now()) errors.referral = 'This referral code has expired.';
-    else code = data;
+    else if (![2, 3].includes(Number(data.level)) || Number(data.set_saldo) < 0 || Number(data.set_saldo) > 99999) {
+      errors.referral = 'This referral code is not valid. Ask your admin for a new one.';
+    } else code = data;
   }
   if (Object.keys(errors).length) return fail(req, res, '/register', 'Please check the form.', errors, old);
 
+  // Re-check the code immediately before creating the account, then claim it
+  // conditionally so two simultaneous registrations cannot share one code.
+  const { data: freshCode } = await db().from('referral_code').select('used_by,acc_expiration')
+    .eq('id_reff', code.id_reff).maybeSingle();
+  if (!freshCode || freshCode.used_by || (freshCode.acc_expiration && new Date(freshCode.acc_expiration).getTime() < Date.now())) {
+    return fail(req, res, '/register', 'That referral code was just used. Ask for a new one.', { referral: 'Already used.' }, old);
+  }
+  const { error: claimError, data: claimed } = await db().from('referral_code')
+    .update({ used_by: username, updated_at: nowIso() }).eq('id_reff', code.id_reff).eq('used_by', '').select('id_reff');
+  if (claimError || !claimed?.length) {
+    return fail(req, res, '/register', 'That referral code was just used. Ask for a new one.', { referral: 'Already used.' }, old);
+  }
+
   const { error: insertError } = await db().from('users').insert({
     email, username, fullname,
-    level: num(code.level, 3),
+    // A referral can never mint another Owner. Owner is unique and fixed.
+    level: Math.max(2, Math.min(3, num(code.level, 3))),
     password: hashPassword(password),
-    saldo: num(code.set_saldo, 0),
+    saldo: Math.max(0, Math.min(99999, num(code.set_saldo, 0))),
     uplink: code.created_by,
     user_ip: getClientIp(req),
     expiration_date: code.acc_expiration || null,
@@ -279,33 +328,41 @@ async function doRegister(req, res, body) {
     created_at: nowIso(),
     updated_at: nowIso(),
   });
-  if (insertError) return fail(req, res, '/register', 'Could not create the account.', { username: insertError.message }, old);
-  await db().from('referral_code').update({ used_by: username, updated_at: nowIso() }).eq('id_reff', code.id_reff);
-  return redirect(res, '/login', { msgSuccess: 'Register Successfuly! Please login.' });
+  if (insertError) {
+    // Roll back the claim so the code is not burned by a failed signup.
+    await db().from('referral_code').update({ used_by: '', updated_at: nowIso() }).eq('id_reff', code.id_reff).eq('used_by', username);
+    return fail(req, res, '/register', 'Could not create the account. Please try again.', { username: insertError.message }, old);
+  }
+  return redirect(res, '/login', { msgSuccess: 'Account created. Please sign in.' });
 }
 
 async function doGenerate(req, res, body, user) {
   const custom = str(body.custominput) === 'custom';
-  const loopMap = { 1: 5, 2: 10, 3: 50, 4: 100, 5: 1 };
-  const loops = loopMap[num(body.loopcount, 5)] || 1;
+  // The form now posts the real number of keys. Legacy 1-5 selector values are
+  // still accepted so old bookmarks cannot silently order 100 keys.
+  const legacy = { 1: 5, 2: 10, 3: 50, 4: 100, 5: 1 };
+  const raw = num(body.count ?? body.loopcount, 1);
+  const count = body.count != null ? raw : (legacy[raw] ?? raw);
   const old = { game: str(body.game) || 'PUBG', max_devices: body.max_devices, duration: body.duration };
-  // The panel and the personal API-key endpoints share this service, so the
-  // price, saldo debit, key format and history row are always identical.
   const result = await createKeysForUser(user, {
     game: body.game, duration: body.duration, max_devices: body.max_devices,
-    count: loops, custom_key: custom ? str(body.cuslicense) : '',
+    count, custom_key: custom ? str(body.cuslicense) : '',
+    request_id: body.request_id,
   });
   if (!result.ok) {
-    if (result.code === 'key_exists' || result.code === 'insert_failed' || result.code === 'account_inactive') {
-      return fail(req, res, '/keys/generate', result.message, result.errors || { user_key: result.message }, old);
+    const errors = result.errors || { duration: result.message };
+    if (result.code === 'insufficient_balance') {
+      return fail(req, res, '/keys/generate',
+        `Not enough balance. This order needs ₹${Number(result.required || result.price).toLocaleString('en-IN')}; you have ₹${Number(result.available ?? 0).toLocaleString('en-IN')}.`,
+        errors, old);
     }
-    return redirect(res, '/keys/generate', {
-      msgWarning: 'Please top up to your beloved admin.',
-      errors: result.errors || { duration: result.message }, old,
-    });
+    if (result.code === 'account_expired' || result.code === 'account_inactive') {
+      return fail(req, res, '/keys/generate', result.message, { duration: result.message }, old);
+    }
+    return fail(req, res, '/keys/generate', result.message, errors, old);
   }
   return redirect(res, '/keys/generate', {
-    msgSuccess: `Successfuly Generated ${result.licenses.length} key(s). Fee: ₹${result.price}`,
+    msgSuccess: `Generated ${result.licenses.length} key${result.licenses.length === 1 ? '' : 's'}. Charged ₹${Number(result.price).toLocaleString('en-IN')}.`,
     user_key: result.licenses.join('\n'), game: result.game,
     duration: String(result.duration), max_devices: String(result.max_devices),
   });
@@ -328,8 +385,8 @@ async function doKeyEdit(req, res, body, user) {
     if (!config.games[game]) errors.game = 'Invalid game.';
     if (!/^[A-Za-z0-9_-]{1,32}$/.test(userKey)) errors.user_key = 'Invalid user key.';
     else if (userKey !== key.user_key && (await getKeyByUserKey(userKey))) errors.user_key = 'The user key has been taken.';
-    if (!Number.isInteger(duration) || duration < 1) errors.duration = 'Invalid duration.';
-    if (!Number.isInteger(maxDevices) || maxDevices < 1) errors.max_devices = 'Invalid max devices.';
+    if (!Number.isInteger(duration) || duration < 1 || duration > 100000) errors.duration = 'Invalid duration.';
+    if (!Number.isInteger(maxDevices) || maxDevices < 1 || maxDevices > 100) errors.max_devices = 'Devices must be 1-100.';
     if (![0, 1].includes(status)) errors.status = 'Invalid status.';
     const expiredDate = str(body.expired_date) ? parseDateInput(body.expired_date) : null;
     if (str(body.expired_date) && !expiredDate) errors.expired_date = 'Invalid expired date.';
@@ -359,10 +416,16 @@ async function doSettings(req, res, body, user, targetUrl) {
     if (!verifyPassword(current, user.password)) errors.current = 'Wrong current password.';
     if (current === password) errors.password = 'Nothing to change.';
     if (password.length < 6 || password.length > 45) errors.password = 'Password must be 6-45 characters.';
+    else {
+      const issue = passwordIssue(password, user.username);
+      if (issue) errors.password = issue;
+    }
     if (password !== password2) errors.password2 = 'Passwords do not match.';
     if (Object.keys(errors).length) return fail(req, res, targetUrl, 'Please check the form.', errors);
-    await db().from('users').update({ password: hashPassword(password), updated_at: nowIso() }).eq('id_users', user.id_users);
-    return redirect(res, targetUrl, { msgSuccess: 'Password Successfuly Changed.' });
+    const { error } = await db().from('users')
+      .update({ password: hashPassword(password), updated_at: nowIso() }).eq('id_users', user.id_users);
+    if (error) return fail(req, res, targetUrl, 'Could not save the new password. Please try again.');
+    return redirect(res, targetUrl, { msgSuccess: 'Password updated.' });
   }
   if (body.fullname_form) {
     const fullname = str(body.fullname);
@@ -370,41 +433,52 @@ async function doSettings(req, res, body, user, targetUrl) {
     if (fullname === user.fullname) errors.fullname = 'Nothing to change.';
     if (!/^[A-Za-z ]{4,155}$/.test(fullname)) errors.fullname = 'Only alphabetical characters and spaces (4-155).';
     if (Object.keys(errors).length) return fail(req, res, targetUrl, 'Please check the form.', errors);
-    await db().from('users').update({ fullname, updated_at: nowIso() }).eq('id_users', user.id_users);
-    return redirect(res, targetUrl, { msgSuccess: 'Account Detail Successfuly Changed.' });
+    const { error } = await db().from('users').update({ fullname, updated_at: nowIso() }).eq('id_users', user.id_users);
+    if (error) return fail(req, res, targetUrl, 'Could not save your details. Please try again.');
+    return redirect(res, targetUrl, { msgSuccess: 'Profile updated.' });
   }
   return redirect(res, targetUrl, { msgWarning: 'Unknown action.' });
 }
 
 async function doServer(req, res, body, user) {
   const targetUrl = '/Server';
+  const write = async (table, patch, label) => {
+    const { error } = await db().from(table).update(patch).eq('id', 1);
+    if (error) {
+      console.error(`[anoymundo] ${table} update failed:`, error.message);
+      return redirect(res, targetUrl, { msgDanger: 'Could not save this change. Please try again.' });
+    }
+    return redirect(res, targetUrl, { msgSuccess: label });
+  };
+
   if (body.modname_form && user.isAdmin) {
     const modname = str(body.modname).slice(0, 100);
     if (!modname) return fail(req, res, targetUrl, 'Mod name cannot be empty.');
-    await db().from('modname').update({ modname }).eq('id', 1);
-    return redirect(res, targetUrl, { msgSuccess: 'Mod Name Successfuly Changed.' });
+    if (!/^[A-Za-z0-9 ._-]{1,100}$/.test(modname)) return fail(req, res, targetUrl, 'Use letters, numbers, spaces, . _ or -.');
+    return write('modname', { modname }, 'Mod name updated.');
   }
   if (body.status_form && user.isAdmin) {
     const status = body.radios === 'on' ? 'on' : 'off';
     const myinput = str(body.myInput).slice(0, 500);
-    await db().from('onoff').update({ status, myinput }).eq('id', 1);
-    return redirect(res, targetUrl, { msgSuccess: 'Mod Status Successfuly Changed.' });
+    return write('onoff', { status, myinput }, 'Maintenance settings updated.');
   }
   if (body.feature_form && user.isOwner) {
     const flags = ['ESP', 'Item', 'AIM', 'SilentAim', 'BulletTrack', 'Memory', 'Floating', 'Setting'];
     const patch = {};
     for (const flag of flags) patch[flag.toLowerCase()] = body[flag] === 'on' ? 'on' : 'off';
-    await db().from('feature').update(patch).eq('id', 1);
-    return redirect(res, targetUrl, { msgSuccess: 'Mod Feature Stats Changed.' });
+    return write('feature', patch, 'Features updated.');
   }
-  if ('_ftextr' in body && user.isAdmin) {
+  // The hidden marker is always posted. A checkbox that is OFF is simply
+  // absent from the body, so testing for `_ftextr` alone used to make it
+  // impossible to switch the mod status back. That is the bug fixed here.
+  if (body.floating_form && user.isAdmin) {
     const myinput = str(body._ftext).slice(0, 100);
+    if (!myinput) return fail(req, res, targetUrl, 'Floating text cannot be empty.');
     const status = body._ftextr === 'Safe' ? 'Safe' : 'Anti-Cheat is High..!!';
-    await db().from('_ftext').update({ _ftext: myinput, _status: status }).eq('id', 1);
-    return redirect(res, targetUrl, { msgSuccess: 'Successfuly Changed Mod Floating And Status.' });
+    return write('_ftext', { _ftext: myinput, _status: status }, `Mod status set to ${status === 'Safe' ? 'Safe' : 'High risk'}.`);
   }
   if (body.password_form || body.fullname_form) return doSettings(req, res, body, user, targetUrl);
-  return redirect(res, targetUrl, { msgWarning: 'Access Denied!' });
+  return redirect(res, targetUrl, { msgWarning: 'Unknown action. Nothing was changed.' });
 }
 
 async function doReferral(req, res, body, user) {
@@ -416,11 +490,11 @@ async function doReferral(req, res, body, user) {
   const errors = {};
   if (!Number.isFinite(setSaldo) || setSaldo < 0 || setSaldo > 99999) errors.set_saldo = 'Invalid saldo.';
   if (!config.accExpire[days]) errors.accExpire = 'Invalid days.';
-  if (!config.accLevel[level]) errors.accLevel = 'Invalid level.';
+  if (level === 1 || !config.accLevel[level]) errors.accLevel = 'Choose Admin or Reseller.';
   if (Object.keys(errors).length) return fail(req, res, targetUrl, 'check the form', errors);
   const code = randomAlnum(6);
   const { error } = await db().from('referral_code').insert({
-    code: codeHash(code), referral: code.slice(0, 7), level,
+    code: codeHash(code), referral: code.slice(0, 7), level: Math.max(2, Math.min(3, level)),
     set_saldo: Math.max(0, setSaldo), used_by: '', created_by: user.username,
     acc_expiration: new Date(Date.now() + days * 86400_000).toISOString(),
     created_at: nowIso(), updated_at: nowIso(),
@@ -434,6 +508,11 @@ async function doUserEdit(req, res, body, user) {
   const targetUrl = `/admin/user/${id}`;
   const target = id ? await db().from('users').select('*').eq('id_users', id).maybeSingle() : null;
   if (!target?.data) return fail(req, res, '/admin/manage-users', 'User no longer exists.');
+  // The Owner row is never editable from the user manager, and no account can
+  // be promoted to Owner. There is exactly one Owner, enforced again in SQL.
+  if (String(target.data.username) === config.ownerUsername || Number(target.data.level) === 1) {
+    return fail(req, res, '/admin/manage-users', 'The Owner account cannot be changed here.');
+  }
   const username = str(body.username);
   const fullname = str(body.fullname);
   const level = num(body.level, 0);
@@ -445,9 +524,9 @@ async function doUserEdit(req, res, body, user) {
   if (!alnum(username, 4, 25)) errors.username = 'Invalid username.';
   else if (username !== target.data.username && (await getUserByUsername(username))) errors.username = 'The username has taken by other.';
   if (fullname && !/^[A-Za-z ]{4,155}$/.test(fullname)) errors.fullname = 'Only alphabetical characters and spaces.';
-  if (!config.accLevel[level]) errors.level = 'Invalid role.';
+  if (level === 1 || !config.accLevel[level]) errors.level = 'Choose Admin or Reseller.';
   if (![1, 2, 3].includes(status)) errors.status = 'Invalid status.';
-  if (saldo < 0) errors.saldo = 'Invalid currency.';
+  if (!Number.isSafeInteger(saldo) || saldo < 0 || saldo > 999999999) errors.saldo = 'Invalid balance.';
   const uplinkUser = await getUserByUsername(uplink);
   if (!uplinkUser) errors.uplink = 'Uplink not registered anymore.';
   if (str(body.expiration) && !expiration) errors.expiration = 'Invalid expiration date.';
@@ -460,35 +539,150 @@ async function doUserEdit(req, res, body, user) {
   return redirect(res, targetUrl, { msgSuccess: `Successfuly update ${target.data.username}.` });
 }
 
+function validVersion(value) {
+  return /^[A-Za-z0-9][A-Za-z0-9._+-]{0,31}$/.test(str(value));
+}
+
+function urlFileName(url, fallback) {
+  try {
+    const last = new URL(url).pathname.split('/').filter(Boolean).pop();
+    return String(last || fallback).replace(/["\r\n/\\]/g, '_').slice(0, 255);
+  } catch { return fallback; }
+}
+
+/**
+ * Publishes a loader release. Two actions:
+ *   upload -> new file (or external URL) becomes the current release
+ *   link   -> push a new version + external URL onto the current release
+ *
+ * Both are validated BEFORE anything is changed, and if the insert fails the
+ * previous current release is restored. It can never leave zero current
+ * releases (which was the "external link update doesn't work" failure).
+ */
 async function doLibUpload(req, res, body, user) {
   if (!user.isOwner) return sendJson(res, { ok: false, error: 'Access Denied!' }, 403);
-  const name = str(body.file_name).replace(/["\r\n/\\]/g, '_').slice(0, 255) || 'release.zip';
-  const base64 = str(body.content_base64);
-  const version = str(body.version).slice(0, 32) || '1.0';
-  const externalUrl = str(body.external_url);
-  if (!base64 && !externalUrl) return sendJson(res, { ok: false, error: 'No file or URL provided.' }, 400);
-  const bytes = base64 ? Buffer.from(base64.replace(/^data:[^;]+;base64,/, ''), 'base64') : Buffer.alloc(0);
-  if (bytes.length > config.maxUploadMb * 1024 * 1024) {
-    return sendJson(res, { ok: false, error: `File is larger than ${config.maxUploadMb} MB (Vercel function body limit).` }, 400);
+  const action = str(body.action) === 'link' ? 'link' : 'upload';
+  const version = str(body.version).slice(0, 32);
+  const externalUrl = str(body.external_url).slice(0, 2000);
+  const notes = str(body.notes).slice(0, 500) || null;
+
+  if (!validVersion(version)) {
+    return sendJson(res, { ok: false, error: 'Enter a version like 1.3 (letters, numbers, . _ + -).' }, 400);
   }
-  if (base64 && bytes.length < 4) return sendJson(res, { ok: false, error: 'Uploaded data looks invalid.' }, 400);
-  const sha256 = crypto.createHash('sha256').update(bytes).digest('hex');
-  // Only one current release at a time (partial unique index).
-  await db().from('client_release').update({ is_current: false }).eq('is_current', true);
-  const { error } = await db().from('client_release').insert({
+  if (externalUrl && !/^https?:\/\//i.test(externalUrl)) {
+    return sendJson(res, { ok: false, error: 'The external link must start with https:// or http://.' }, 400);
+  }
+
+  const { data: current, error: readError } = await db().from('client_release')
+    .select('*').eq('is_current', true).maybeSingle();
+  if (readError) return sendJson(res, { ok: false, error: 'Could not read the current release.' }, 500);
+
+  if (action === 'link') {
+    if (!externalUrl) return sendJson(res, { ok: false, error: 'Enter an external link.' }, 400);
+    if (!current) return sendJson(res, { ok: false, error: 'Upload a release first, then update its link.' }, 404);
+    const patch = {
+      version, external_url: externalUrl, content_base64: null,
+      file_name: urlFileName(externalUrl, current.file_name || 'release.zip'),
+      file_size: 0, sha256: '', notes, uploaded_by: user.username,
+    };
+    const { error } = await db().from('client_release').update(patch).eq('id', current.id);
+    if (error) return sendJson(res, { ok: false, error: `Could not update the link: ${error.message}` }, 500);
+    return sendJson(res, { ok: true, version, external_url: externalUrl, file_name: patch.file_name, mode: 'link' });
+  }
+
+  const name = str(body.file_name).replace(/["\r\n/\\]/g, '_').slice(0, 255) ||
+    urlFileName(externalUrl, 'release.zip');
+  const base64 = str(body.content_base64);
+  if (!base64 && !externalUrl) {
+    return sendJson(res, { ok: false, error: 'Choose a file or enter an external link.' }, 400);
+  }
+  const bytes = base64
+    ? Buffer.from(base64.replace(/^data:[^;]+;base64,/, ''), 'base64')
+    : Buffer.alloc(0);
+  if (bytes.length > config.maxUploadMb * 1024 * 1024) {
+    return sendJson(res, { ok: false, error: `File is larger than ${config.maxUploadMb} MB.` }, 400);
+  }
+  if (base64 && bytes.length < 4) {
+    return sendJson(res, { ok: false, error: 'The uploaded file looks invalid.' }, 400);
+  }
+  const sha256 = bytes.length ? crypto.createHash('sha256').update(bytes).digest('hex') : '';
+
+  const { error: demoteError } = await db().from('client_release')
+    .update({ is_current: false }).eq('is_current', true);
+  if (demoteError) {
+    return sendJson(res, { ok: false, error: 'Could not retire the previous release. Nothing was changed.' }, 500);
+  }
+
+  const { error: insertError } = await db().from('client_release').insert({
     version, file_name: name, file_size: bytes.length, sha256,
     content_base64: base64 ? bytes.toString('base64') : null,
-    external_url: externalUrl || null,
-    notes: str(body.notes).slice(0, 500) || null,
+    external_url: externalUrl || null, notes,
     is_current: true, uploaded_by: user.username, created_at: nowIso(),
-  });
-  if (error) return sendJson(res, { ok: false, error: error.message }, 500);
-  await db().from('lib').insert({
-    file: name, file_type: `Onlinelib/${name}`,
-    file_size: `${(bytes.length / 1024).toFixed(1)} KB`, time: nowIso(),
-  });
-  return sendJson(res, { ok: true, version, file_name: name, file_size: bytes.length, sha256 });
+  }).select('id').single();
+  if (insertError) {
+    if (current) await db().from('client_release').update({ is_current: true }).eq('id', current.id);
+    console.error('[anoymundo] release insert failed:', insertError.message);
+    return sendJson(res, { ok: false, error: 'Could not publish the release. The previous version is still active.' }, 500);
+  }
+
+  // Best-effort audit row; never let it fail a successful publish.
+  try {
+    await db().from('lib').insert({
+      file: name, file_type: `Onlinelib/${name}`,
+      file_size: `${(bytes.length / 1024).toFixed(1)} KB`, time: nowIso(),
+    });
+  } catch { /* ignore */ }
+  return sendJson(res, { ok: true, version, file_name: name, file_size: bytes.length, sha256, mode: 'upload' });
 }
+
+// ---------------------------------------------------------------------------
+// One consistent, in-panel error surface. A Vercel timeout, a database hiccup
+// or any unexpected exception must never show a raw stack trace, never strand
+// the user outside the panel, and never claim an action succeeded.
+// ---------------------------------------------------------------------------
+function errorPage(title, message, ref) {
+  const safeRef = escapeHtml(ref);
+  return `<!doctype html><html lang="en" data-theme="light"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>${escapeHtml(title)} · ${escapeHtml(config.brand)}</title>
+<link rel="stylesheet" href="/assets/css/tailwind.css">
+<link rel="stylesheet" href="/assets/css/app.css">
+<link rel="stylesheet" href="/assets/css/ios.css"></head>
+<body class="app-body"><main class="auth-shell"><div class="auth-card" style="text-align:center">
+<span class="brand-mark brand-mark-lg" aria-hidden="true">!</span>
+<h1 class="auth-title">${escapeHtml(title)}</h1>
+<p class="auth-subtitle">${escapeHtml(message)}</p>
+<p class="field-hint">Reference ${safeRef}</p>
+<div style="margin-top:24px"><a href="/dashboard" class="ui-btn auth-submit">Back to dashboard</a></div>
+</div></main></body></html>`;
+}
+
+function isJsonRoute(p, method, req) {
+  const lp = p.toLowerCase();
+  const accept = String(req.headers?.accept || '');
+  const contentType = String(req.headers?.['content-type'] || '');
+  return lp.startsWith('/api/') || lp === '/connect' || lp === '/health' ||
+    (lp === '/lib' && method === 'POST') ||
+    lp.startsWith('/keys/reset') || lp === '/keys/api' || lp === '/admin/api/users' ||
+    contentType.includes('application/json') || accept.includes('application/json');
+}
+
+function handleFailure(req, res, p, method, error) {
+  const ref = crypto.randomBytes(3).toString('hex').toUpperCase();
+  console.error(`[anoymundo] ${ref} request failed on ${p}:`, error?.stack || error);
+  if (res.headersSent) return res.end();
+  const generic = 'Something went wrong. Nothing was changed. Please try again.';
+  if (isJsonRoute(p, method, req)) {
+    return sendJson(res, { ok: false, status: false, error: generic, ref }, 500);
+  }
+  if (method === 'POST') {
+    const target = (p === '/login' || p === '/register') ? p : back(req, '/dashboard');
+    return redirect(res, target, { msgDanger: `${generic} (Ref ${ref})` });
+  }
+  return sendHtml(res, errorPage('Something went wrong', generic, ref), 500);
+}
+
 
 // ---------------------------------------------------------------------------
 // Main dispatch
@@ -586,10 +780,15 @@ export async function handle(req, res) {
           }
         }
         if (action === 'revoke' || action === 'delete') {
-          await mutateApiKey(user, num(body.id, 0), action);
-          return redirect(res, '/api-keys', {
-            msgSuccess: action === 'revoke' ? 'API key revoked.' : 'API key deleted.',
-          });
+          try {
+            const done = await mutateApiKey(user, num(body.id, 0), action);
+            if (!done) return redirect(res, '/api-keys', { msgDanger: 'That API key was not found.' });
+            return redirect(res, '/api-keys', {
+              msgSuccess: action === 'revoke' ? 'API key revoked.' : 'API key deleted.',
+            });
+          } catch (error) {
+            return redirect(res, '/api-keys', { msgDanger: `Could not update the API key: ${error.message}` });
+          }
         }
         return redirect(res, '/api-keys', { msgWarning: 'Unknown action.' });
       }
@@ -615,7 +814,7 @@ export async function handle(req, res) {
       if (method === 'POST') return doGenerate(req, res, body, user);
       const message = Number(user.saldo) > 0
         ? { text: `Total Saldo ₹${Number(user.saldo).toLocaleString('en-IN')}`, type: 'success' }
-        : { text: 'Please top up to your beloved admin.', type: 'warning' };
+        : { text: 'Your balance is empty. Ask your admin to top up.', type: 'warning' };
       return page(req, res, 'keys_generate', {
         user, title: 'Generate', pageMessage: message,
         form: { max_devices: 1, duration: 24, game: 'PUBG' },
@@ -645,16 +844,24 @@ export async function handle(req, res) {
       if (!user.isOwner && key.registrator !== user.username) {
         return sendJson(res, { registered: true, keys: userKey, devices_total: deviceList(key.devices).length, devices_max: key.max_devices });
       }
-      await db().from('keys_code').delete().eq('user_key', userKey);
-      return sendJson(res, { registered: true, keys: userKey, deleted: true, devices_total: 0, devices_max: key.max_devices });
+      const refund = await deleteKeysWithRefund([key.id_keys], user);
+      if (!refund.ok) return sendJson(res, { registered: true, keys: userKey, deleted: false, error: refund.message }, 500);
+      return sendJson(res, {
+        registered: true, keys: userKey, deleted: refund.deleted > 0,
+        refunded: refund.refunded, refund_total: refund.refund_total,
+        devices_total: 0, devices_max: key.max_devices,
+      });
     }
     if (lp === '/keys/deleteexp' || lp === '/keys/deleteunused') {
-      let query = db().from('keys_code').delete();
-      if (lp === '/keys/deleteexp') query = query.lt('expired_date', nowIso());
-      else query = query.is('expired_date', null);
+      let query = db().from('keys_code').select('id_keys,expired_date,registrator').limit(500);
       if (!user.isOwner) query = query.eq('registrator', user.username);
-      await query;
-      return redirect(res, '/keys', { msgSuccess: 'success' });
+      const { data, error } = await query;
+      if (error) return redirect(res, '/keys', { msgDanger: 'Could not read keys. Nothing was deleted.' });
+      const ids = (data || []).filter((row) => (lp === '/keys/deleteexp'
+        ? !!row.expired_date && new Date(row.expired_date).getTime() < Date.now()
+        : !row.expired_date)).map((row) => row.id_keys);
+      const result = await deleteKeysWithRefund(ids, user);
+      return redirect(res, '/keys', { msgSuccess: refundMessage(result) });
     }
     if (lp === '/keys/download') {
       const { data } = await db().from('keys_code').select('user_key');
@@ -710,9 +917,18 @@ export async function handle(req, res) {
     const userDeleteMatch = p.match(/^\/admin\/user\/delete\/(\d+)$/i);
     if (userDeleteMatch) {
       if (!user.isOwner) return redirect(res, '/dashboard', { msgWarning: 'Access Denied!' });
-      if (Number(userDeleteMatch[1]) === user.id_users) return redirect(res, '/admin/manage-users', { msgDanger: 'You cannot delete yourself.' });
-      await db().from('users').delete().eq('id_users', Number(userDeleteMatch[1]));
-      return redirect(res, '/admin/manage-users', { msgSuccess: 'success' });
+      const targetId = Number(userDeleteMatch[1]);
+      if (targetId === user.id_users) return redirect(res, '/admin/manage-users', { msgDanger: 'You cannot delete yourself.' });
+      const { data: target } = await db().from('users').select('id_users,username,level').eq('id_users', targetId).maybeSingle();
+      if (!target) return redirect(res, '/admin/manage-users', { msgDanger: 'User no longer exists.' });
+      if (Number(target.level) === 1 || target.username === config.ownerUsername) {
+        return redirect(res, '/admin/manage-users', { msgDanger: 'The Owner account cannot be deleted.' });
+      }
+      const { data: theirKeys } = await db().from('keys_code').select('id_keys').eq('registrator', target.username).limit(500);
+      await deleteKeysWithRefund((theirKeys || []).map((k) => k.id_keys), user);
+      const { error } = await db().from('users').delete().eq('id_users', targetId);
+      if (error) return redirect(res, '/admin/manage-users', { msgDanger: 'Could not delete this user. Please try again.' });
+      return redirect(res, '/admin/manage-users', { msgSuccess: 'User and their keys removed.' });
     }
     const userEditMatch = p.match(/^\/admin\/user\/(\d+)$/i);
     if (userEditMatch) {
@@ -744,16 +960,9 @@ export async function handle(req, res) {
     }
 
     // -------------------------------- 404 -----------------------------------
-    return sendHtml(res, `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>404 - ${escapeHtml(config.brand)}</title><link rel="stylesheet" href="/assets/css/tailwind.css"><link rel="stylesheet" href="/assets/css/app.css"></head><body class="app-body"><main class="auth-shell"><div class="auth-card" style="text-align:center"><span class="brand-mark brand-mark-lg" aria-hidden="true">404</span><h1 class="auth-title">Page not found</h1><p class="auth-subtitle">${escapeHtml(p)}</p><div style="margin-top:24px"><a href="/dashboard" class="ui-btn auth-submit">Back to dashboard</a></div></div></main></body></html>`, 404);
+    return sendHtml(res, `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>404 - ${escapeHtml(config.brand)}</title><link rel="stylesheet" href="/assets/css/tailwind.css"><link rel="stylesheet" href="/assets/css/app.css"><link rel="stylesheet" href="/assets/css/ios.css"></head><body class="app-body"><main class="auth-shell"><div class="auth-card" style="text-align:center"><span class="brand-mark brand-mark-lg" aria-hidden="true">404</span><h1 class="auth-title">Page not found</h1><p class="auth-subtitle">${escapeHtml(p)}</p><div style="margin-top:24px"><a href="/dashboard" class="ui-btn auth-submit">Back to dashboard</a></div></div></main></body></html>`, 404);
   } catch (error) {
-    console.error('[anoymundo] request failed:', error);
-    if (!res.headersSent) {
-      res.statusCode = 500;
-      res.setHeader('Content-Type', 'text/html; charset=utf-8');
-      res.setHeader('Cache-Control', 'no-store');
-    }
-    const detail = process.env.NODE_ENV === 'production' ? 'Please check the server logs.' : escapeHtml(error.stack || error.message);
-    return res.end(`<!doctype html><html><head><meta charset="utf-8"><title>Server error</title></head><body style="font-family:sans-serif;padding:2rem"><h1>Something went wrong</h1><pre style="white-space:pre-wrap">${detail}</pre><p><a href="/">Home</a></p></body></html>`);
+    return handleFailure(req, res, p, method, error);
   }
 }
 

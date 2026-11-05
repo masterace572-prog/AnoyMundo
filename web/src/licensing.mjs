@@ -11,6 +11,15 @@ const md5 = (value) => crypto.createHash('md5').update(String(value)).digest('he
  * Keeps the exact JSON contract the Android client expects.
  */
 export async function handleConnect(req, res, body) {
+  try {
+    return await connect(req, res, body);
+  } catch (error) {
+    console.error('[anoymundo] /connect failed:', error);
+    return sendJson(res, { status: false, reason: 'SERVER UNAVAILABLE' }, 503);
+  }
+}
+
+async function connect(req, res, body) {
   const game = String(body.game || '').trim();
   const userKey = String(body.user_key || '').trim();
   const serial = String(body.serial || '').trim();
@@ -129,7 +138,7 @@ export async function handleHealth(res) {
     };
   }
   try {
-    const expected = ['users', 'keys_code', 'history', 'referral_code', 'feature', 'modname', 'onoff', '_ftext', 'credit', 'lib', 'client_release', 'auth_attempt', 'api_keys'];
+    const expected = ['users', 'keys_code', 'history', 'referral_code', 'feature', 'modname', 'onoff', '_ftext', 'credit', 'lib', 'client_release', 'auth_attempt', 'api_keys', 'key_orders'];
     // Parallel round trips keep the health probe fast on a cold lambda.
     const results = await Promise.all(expected.map((table) => countRows(table).catch(() => null)));
     const present = results.filter((n) => n !== null).length;
@@ -184,5 +193,6 @@ export function handleLibInfo(res) {
   return db().from('client_release')
     .select('id,version,file_name,file_size,sha256,external_url,notes,is_current,uploaded_by,created_at')
     .order('id', { ascending: false }).limit(20)
-    .then(({ data, error }) => sendJson(res, error ? { error: error.message } : { releases: data || [] }, error ? 500 : 200));
+    .then(({ data, error }) => sendJson(res, error ? { error: error.message } : { releases: data || [] }, error ? 500 : 200))
+    .catch((error) => sendJson(res, { error: error.message }, 500));
 }

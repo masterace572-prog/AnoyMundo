@@ -35,6 +35,23 @@ export function hashPassword(password) {
   return bcrypt.hashSync(preHash(password), 8);
 }
 
+/** Returns '' for an acceptable new password, or a short reason to show. */
+const WEAK_PASSWORDS = new Set([
+  'admin123', 'admin1234', 'password', 'password1', '123456', '12345678',
+  '123456789', 'qwerty123', 'letmein', 'iloveyou', 'abc12345',
+]);
+export function passwordIssue(password, username = '') {
+  const p = String(password ?? '');
+  if (p.length < 8) return 'Use at least 8 characters.';
+  if (p.length > 45) return 'Use at most 45 characters.';
+  if (WEAK_PASSWORDS.has(p.toLowerCase())) return 'Choose a less common password.';
+  if (!/[A-Za-z]/.test(p) || !/[0-9]/.test(p)) return 'Include a letter and a number.';
+  if (username && p.toLowerCase().includes(String(username).toLowerCase())) {
+    return 'Do not include your username in the password.';
+  }
+  return '';
+}
+
 // ---------------------------------------------------------------------------
 // Stateless signed session cookie (replaces PHP file-based sessions, which
 // cannot work on Vercel's read-only / ephemeral filesystem).
@@ -160,12 +177,15 @@ export async function currentUser(req) {
   if (!session) return null;
   const user = await getUserById(session.uid);
   if (!user) return null;
+  // If an account is renamed, an old cookie must not keep its privileges.
+  if (String(user.username) !== String(session.un)) return null;
   if (Number(user.status) !== 1 || Number(user.level) > 3) return null;
   if (user.expiration_date && new Date(user.expiration_date).getTime() < Date.now()) return null;
+  const isOwner = Number(user.level) === 1 && user.username === config.ownerUsername;
   return {
     ...user,
-    isAdmin: Number(user.level) === 1 || Number(user.level) === 2,
-    isOwner: Number(user.level) === 1,
+    isAdmin: isOwner || Number(user.level) === 2,
+    isOwner,
     notLevel2: Number(user.level) !== 2,
     displayName: displayName(user),
     levelName: levelName(user.level),

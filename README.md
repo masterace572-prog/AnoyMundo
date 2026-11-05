@@ -53,6 +53,47 @@ control, buttons are 12px blue pills with an in-button spinner while loading
 (switch-only forms show the spinner in the switch track), and secondary copy
 was shortened so screens stay quiet. No gradients and no CDN font dependency.
 
+**Billing integrity and error handling (v1.2)** — `supabase/schema.sql` adds an
+idempotent hardening migration that must be applied to the project once:
+
+- `create_keys_atomic()` debits saldo and inserts the **whole** key batch in one
+  Postgres transaction. A timeout, duplicate key or database error can never
+  leave keys behind without charging (or charge without keys). If the function
+  is unavailable the panel **fails closed** — no keys, no debit.
+- Pricing is `price_per_device(duration) × max_devices × count`: 100 keys cost
+  100× one key. A fresh balance is read server-side on every request, and an
+  order that exceeds it is rejected **before** anything is written.
+- `key_orders` gives every generation request an idempotency id, so a double
+  click or replayed request returns the original batch instead of charging
+  twice. A short abuse throttle caps rapid-fire purchases.
+- `price_paid` is stored on each key. `delete_keys_refund()` deletes keys and
+  refunds the exact price for keys that never had a device and never started
+  their timer — in the same transaction. Used by single deletes, bulk deletes,
+  user deletion and `DELETE /api/v1/keys/{key}`.
+- `users_single_owner_idx` makes a second level-1 Owner row impossible at the
+  database level. Owner-only routes are additionally bound to `admin`; referral
+  codes and the user editor cannot mint another Owner. Login has a failed-attempt
+  throttle and new passwords must be 8+ characters with a letter and a number.
+- All unexpected errors now render an in-panel iOS error page, a compact flash
+  on the form they came from, or JSON for API routes — never a raw Vercel stack
+  trace. Mutating handlers check database errors and report clear messages.
+
+**Library releases**: `/lib` shows the current version, suggests the next one,
+and has a **Bump** button plus a separate **Push a link** action that updates
+the external URL and version without uploading a file. Publish validates first
+and restores the previous current release if the write fails, so there is never
+zero current releases. `MAX_LIB_UPLOAD_MB` defaults to 3 because Vercel caps
+request bodies at 4.5 MB and base64 adds ~33%.
+
+**Mod status**: the Safe switch posts a hidden `floating_form` marker, so
+turning the switch **off** is saved too (previously the handler was skipped).
+`/connect` serves `_ftext._status` fresh on every request.
+
+**UI clarity**: short iOS section titles, aligned field labels, grouped summary
+rows for prices and release info, a live "per key × keys = total" estimate with
+an insufficient-balance hint, and a tighter 390px phone layout. Flat colours
+only — no gradients, no text overload.
+
 ## Layout
 
 ```

@@ -34,6 +34,7 @@
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path></svg>
                         <span>Delete unused keys</span>
                     </a>
+                    <p class="actions-menu-note">Never-used keys are refunded automatically.</p>
                 </div>
             </div>
         </div>
@@ -206,9 +207,10 @@
         }
     }
 
-    function confirmAction(title, confirmText) {
+    function confirmAction(title, confirmText, detail) {
         return Swal.fire({
             title: title,
+            text: detail || '',
             icon: 'warning',
             showCancelButton: true,
             customClass: { popup: 'swal-compact', confirmButton: 'swal-confirm-danger' },
@@ -219,7 +221,7 @@
     }
 
     function resetUserKey1(keys, btn) {
-        confirmAction('Delete this key?', 'Yes, delete').then((result) => {
+        confirmAction('Delete this key?', 'Yes, delete', 'Unused keys are refunded.').then((result) => {
             if (!result.isConfirmed) return;
             var pending = startAction(btn);
             var api_url = `${window.location.origin}/keys/resetAll`;
@@ -229,7 +231,9 @@
                     if (data.registered) {
                         if (data.deleted || data.reset) {
                             $(`#devMax-${keys}`).html(`0/${data.devices_max}`);
-                            notify('Key deleted', 'success');
+                            notify(Number(data.refund_total) > 0
+                                ? 'Key deleted · refunded ₹' + Number(data.refund_total).toLocaleString('en-IN')
+                                : 'Key deleted', 'success');
                         } else {
                             notify(data.devices_total
                                 ? "You don't have any access to this user."

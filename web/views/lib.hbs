@@ -1,66 +1,49 @@
 <div class="container-fluid px-4 py-6">
     <div class="mb-6">{{> msgStatus}}</div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <!-- Current release -->
-        <div class="ui-card rounded-2xl p-6 sm:p-8 animate-fade-in-up">
-            <div class="flex items-center mb-6">
-                <div class="ui-icon w-12 h-12 rounded-xl flex items-center justify-center mr-4">
-                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01"></path>
-                    </svg>
-                </div>
-                <h2 class="text-2xl font-bold text-gray-800">Current Library</h2>
+    <div class="ui-card rounded-2xl p-6 sm:p-8 mb-6 animate-fade-in-up">
+        <div class="flex items-center justify-between mb-4">
+            <div>
+                <h2 class="ui-section-title">Current release</h2>
+                <p class="field-hint">Version {{currentVersion}} · endpoint /api/lib/version</p>
             </div>
-            <div class="space-y-2 text-sm text-gray-700">
-                <p><strong>File:</strong> <span class="font-mono">{{lib.file}}</span></p>
-                <p><strong>Size:</strong> {{lib.file_size}}</p>
-                <p><strong>ID:</strong> {{lib.id}}</p>
-                <p><strong>Path:</strong> <span class="font-mono">{{lib.file_type}}</span></p>
-                <p><strong>Last modified:</strong> {{lib.time}}</p>
-                <p><strong>Current time:</strong> {{lib.currentTime}}</p>
-                <p><strong>Version endpoint:</strong> <code>/api/lib/version</code></p>
-                <p><strong>Download endpoint:</strong> <code>/api/lib/download</code></p>
-            </div>
-            <div class="mt-6 flex flex-wrap gap-3">
+            <div class="ui-inline-actions">
                 <a href="/api/lib/download" class="ui-btn">Download</a>
-                <a href="/Server" class="ui-btn">Online system</a>
+                <a href="/Server" class="ui-btn ui-btn--ghost">Server settings</a>
             </div>
         </div>
+        <div class="ui-summary">
+            <div class="ui-summary__row"><span>File</span><strong class="font-mono">{{release.file_name}}</strong></div>
+            <div class="ui-summary__row"><span>Source</span><strong>{{#if release.external_url}}External link{{else}}Stored file{{/if}}</strong></div>
+            <div class="ui-summary__row"><span>Uploaded by</span><strong>{{release.uploaded_by}}</strong></div>
+        </div>
+    </div>
 
-        <!-- Upload -->
-        <div class="ui-card rounded-2xl p-6 sm:p-8 animate-fade-in-up" style="animation-delay: 0.1s">
-            <div class="flex items-center mb-6">
-                <div class="ui-icon w-12 h-12 rounded-xl flex items-center justify-center mr-4">
-                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
-                    </svg>
-                </div>
-                <h2 class="text-2xl font-bold text-gray-800">Upload Library</h2>
-            </div>
-
-            <p class="text-sm text-gray-600 mb-4">
-                Upload the ZIP/SO the Android loader downloads, or point it at an external URL.
-                Files are stored in Supabase because Vercel's filesystem is read-only.
-                Maximum size: {{maxUploadMb}} MB.
-            </p>
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div class="ui-card rounded-2xl p-6 sm:p-8 animate-fade-in-up">
+            <h2 class="ui-section-title">Upload release</h2>
+            <p class="field-hint mb-5">ZIP or SO, max {{maxUploadMb}} MB. Stored in the database.</p>
 
             <form id="lib-form" class="space-y-4">
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Version</label>
-                    <input type="text" name="version" id="lib-version" value="1.0" class="w-full px-4 py-3 bg-white/50 border border-gray-200 rounded-xl">
+                    <label for="lib-version" class="field-label">Version</label>
+                    <div class="ui-inline-field">
+                        <input type="text" name="version" id="lib-version" value="{{suggestedVersion}}" maxlength="32" class="w-full px-4 py-3 bg-white/50 border border-gray-200 rounded-xl">
+                        <button type="button" id="lib-bump" class="ui-btn ui-btn--ghost">Bump</button>
+                    </div>
+                    <p class="field-hint">Current {{currentVersion}} · a new version triggers an update.</p>
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">File (ZIP / SO)</label>
+                    <label for="lib-file" class="field-label">File (ZIP / SO)</label>
                     <input type="file" name="myfile" id="lib-file" class="w-full px-4 py-3 bg-white/50 border border-gray-200 rounded-xl">
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Or external URL (optional)</label>
-                    <input type="url" name="external_url" id="lib-url" placeholder="https://..." class="w-full px-4 py-3 bg-white/50 border border-gray-200 rounded-xl">
+                    <label for="lib-url" class="field-label">Or external link</label>
+                    <input type="url" name="external_url" id="lib-url" placeholder="https://…" class="w-full px-4 py-3 bg-white/50 border border-gray-200 rounded-xl">
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Notes (optional)</label>
-                    <input type="text" name="notes" id="lib-notes" class="w-full px-4 py-3 bg-white/50 border border-gray-200 rounded-xl">
+                    <label for="lib-notes" class="field-label">Notes <span class="field-optional">optional</span></label>
+                    <input type="text" name="notes" id="lib-notes" maxlength="500" class="w-full px-4 py-3 bg-white/50 border border-gray-200 rounded-xl">
                 </div>
                 <button type="submit" id="lib-submit" class="w-full py-3 px-6 text-white font-bold rounded-xl ui-btn ui-btn--primary" data-busy-label="Uploading…">Upload</button>
             </form>
@@ -78,20 +61,55 @@
             </div>
             <div id="lib-result" class="mt-4 text-sm" aria-live="polite"></div>
         </div>
+
+        <div class="ui-card rounded-2xl p-6 sm:p-8 animate-fade-in-up" style="animation-delay: 0.1s">
+            <h2 class="ui-section-title">Push a link</h2>
+            <p class="field-hint mb-5">Change the download link and bump the version without uploading a file.</p>
+
+            <form id="link-form" class="space-y-4">
+                <div>
+                    <label for="link-version" class="field-label">New version</label>
+                    <input type="text" id="link-version" value="{{suggestedVersion}}" maxlength="32" class="w-full px-4 py-3 bg-white/50 border border-gray-200 rounded-xl">
+                </div>
+                <div>
+                    <label for="link-url" class="field-label">External link</label>
+                    <input type="url" id="link-url" placeholder="https://…" class="w-full px-4 py-3 bg-white/50 border border-gray-200 rounded-xl">
+                </div>
+                <button type="submit" id="link-submit" class="w-full py-3 px-6 text-white font-bold rounded-xl ui-btn ui-btn--primary" data-busy-label="Saving…">Update link</button>
+            </form>
+            <div id="link-result" class="mt-4 text-sm" aria-live="polite"></div>
+        </div>
     </div>
 </div>
 
 <script>
-/* Real upload progress. XHR gives byte-level upload events; fetch does not. */
+/* Real upload progress. XHR gives byte-level upload events; fetch does not.
+   Server text is always inserted as text, never as HTML. */
 (function () {
     'use strict';
     var form = document.getElementById('lib-form');
     var button = document.getElementById('lib-submit');
     var result = document.getElementById('lib-result');
     var progress = document.getElementById('lib-progress');
-    if (!form || !button || !result || !progress) return;
+    var linkForm = document.getElementById('link-form');
+    var linkButton = document.getElementById('link-submit');
+    var linkResult = document.getElementById('link-result');
 
     function ui() { return window.AnoyUI || null; }
+
+    function status(box, text, kind) {
+        if (!box) return;
+        box.textContent = '';
+        var el = document.createElement('div');
+        el.className = 'ui-status' + (kind ? ' ui-status--' + kind : '');
+        var dot = document.createElement('span');
+        dot.className = 'ui-status__dot';
+        dot.setAttribute('aria-hidden', 'true');
+        var label = document.createElement('span');
+        label.textContent = text;
+        el.appendChild(dot); el.appendChild(label);
+        box.appendChild(el);
+    }
 
     function setProgress(pct, message, detail, state) {
         var U = ui();
@@ -106,33 +124,16 @@
         if (msgEl) msgEl.textContent = message;
     }
 
-    function busy(on) {
+    function busy(btn, on, label) {
         var U = ui();
         if (U && U.busyButton && U.releaseButton) {
-            if (on) U.busyButton(button, 'Uploading…'); else U.releaseButton(button);
-        } else {
-            button.disabled = !!on;
-        }
+            if (on) U.busyButton(btn, label); else U.releaseButton(btn);
+        } else btn.disabled = !!on;
     }
 
     function bytes(n) {
         var U = ui();
         return (U && U.humanBytes) ? U.humanBytes(n) : (Math.round((Number(n) || 0) / 1024) + ' KB');
-    }
-
-    /* Server-provided text is always inserted as text, never as HTML. */
-    function status(text, kind) {
-        result.textContent = '';
-        var box = document.createElement('div');
-        box.className = 'ui-status' + (kind ? ' ui-status--' + kind : '');
-        var dot = document.createElement('span');
-        dot.className = 'ui-status__dot';
-        dot.setAttribute('aria-hidden', 'true');
-        var label = document.createElement('span');
-        label.textContent = text;
-        box.appendChild(dot);
-        box.appendChild(label);
-        result.appendChild(box);
     }
 
     function encode(file, onProgress) {
@@ -166,81 +167,120 @@
                 var data = null;
                 try { data = JSON.parse(xhr.responseText); } catch (e) { /* not JSON */ }
                 if (xhr.status >= 200 && xhr.status < 300 && data) resolve(data);
-                else reject(new Error((data && data.error) || ('Upload failed (HTTP ' + xhr.status + ')')));
+                else reject(new Error((data && data.error) || ('Request failed (HTTP ' + xhr.status + ')')));
             };
-            xhr.onerror = function () { reject(new Error('Network error while uploading.')); };
-            xhr.ontimeout = function () { reject(new Error('The upload timed out. Try a smaller file.')); };
+            xhr.onerror = function () { reject(new Error('Network error. Nothing was changed.')); };
+            xhr.ontimeout = function () { reject(new Error('The request timed out. Try a smaller file.')); };
             xhr.send(JSON.stringify(payload));
         });
     }
 
-    form.addEventListener('submit', function (e) {
-        e.preventDefault();
-        if (form.getAttribute('data-anoy-upload-busy') === '1') return;
+    function validVersion(v) { return /^[A-Za-z0-9][A-Za-z0-9._+-]{0,31}$/.test(v); }
+    function validUrl(u) { return /^https?:\/\//i.test(u); }
 
-        var file = document.getElementById('lib-file').files[0];
-        var externalUrl = document.getElementById('lib-url').value.trim();
-        if (!file && !externalUrl) {
-            status('Choose a file or enter an external URL.', 'error');
-            return;
-        }
+    function bump(value) {
+        var m = String(value || '').match(/^(.*?)(\d+)$/);
+        return m ? m[1] + (Number(m[2]) + 1) : '1.1';
+    }
 
-        form.setAttribute('data-anoy-upload-busy', '1');
-        result.textContent = '';
-        busy(true);
-        setProgress(0, 'Preparing upload…', 'Keep this tab open until the release is saved.', 'working');
-
-        var succeeded = false;
-        var version = document.getElementById('lib-version').value.trim() || '1.0';
-        var notes = document.getElementById('lib-notes').value.trim();
-        var start = file ? 24 : 8;
-
-        var prepare = file
-            ? encode(file, function (frac) {
-                  setProgress(2 + frac * (start - 2), 'Reading file…',
-                      bytes(file.size) + ' selected · ' + file.name, 'working');
-              })
-            : Promise.resolve('');
-
-        prepare.then(function (contentBase64) {
-            setProgress(start, 'Uploading…',
-                file ? ('Sending ' + bytes(file.size)) : 'Saving external URL…', 'working');
-            var payload = {
-                version: version,
-                file_name: file ? file.name : (externalUrl.split('/').pop() || 'release.zip'),
-                content_base64: contentBase64,
-                external_url: externalUrl,
-                notes: notes
-            };
-            return send(payload, function (loaded, total) {
-                var frac = total ? loaded / total : 0;
-                setProgress(start + frac * (94 - start), 'Uploading…',
-                    bytes(loaded) + ' of ' + bytes(total) + ' sent', 'working');
-            });
-        }).then(function (data) {
-            if (!data.ok) throw new Error(data.error || 'Upload failed');
-            setProgress(96, 'Saving release…', 'Writing the new version to the panel.', 'working');
-            return data;
-        }).then(function (data) {
-            succeeded = true;
-            setProgress(100, 'Upload complete', data.file_name + ' · ' + bytes(data.file_size), 'done');
-            /* The button stays locked until reload; stop calling it "Uploading". */
-            var lbl = button.querySelector('.ui-btn__busy-label');
-            if (lbl) lbl.textContent = 'Uploaded';
-            var sp = button.querySelector('.ui-spinner');
-            if (sp) sp.style.display = 'none';
-            status('Uploaded ' + data.file_name + ' (' + bytes(data.file_size) + '). Refreshing…', 'success');
-            window.setTimeout(function () { window.location.reload(); }, 1600);
-        }).catch(function (err) {
-            var message = (err && err.message) ? err.message : 'Upload failed.';
-            setProgress(100, 'Upload failed', message, 'error');
-            status(message, 'error');
-        }).then(function () {
-            /* Keep the button locked on success: the page is about to reload. */
-            if (succeeded) return;
-            form.removeAttribute('data-anoy-upload-busy');
-            busy(false);
-        });
+    var bumpBtn = document.getElementById('lib-bump');
+    var versionEl = document.getElementById('lib-version');
+    if (bumpBtn && versionEl) bumpBtn.addEventListener('click', function () {
+        versionEl.value = bump(versionEl.value.trim());
     });
+
+    if (form && button && result && progress) {
+        form.addEventListener('submit', function (e) {
+            e.preventDefault();
+            if (form.getAttribute('data-anoy-upload-busy') === '1') return;
+
+            var file = document.getElementById('lib-file').files[0];
+            var externalUrl = document.getElementById('lib-url').value.trim();
+            var version = versionEl.value.trim();
+            if (!validVersion(version)) { status(result, 'Enter a version like 1.3.', 'error'); return; }
+            if (externalUrl && !validUrl(externalUrl)) { status(result, 'Use a https:// link.', 'error'); return; }
+            if (!file && !externalUrl) { status(result, 'Choose a file or enter an external link.', 'error'); return; }
+            var maxBytes = Number('{{maxUploadMb}}') * 1024 * 1024;
+            if (file && file.size > maxBytes) {
+                status(result, 'File is larger than {{maxUploadMb}} MB. Use an external link for big releases.', 'error');
+                return;
+            }
+
+            form.setAttribute('data-anoy-upload-busy', '1');
+            result.textContent = '';
+            busy(button, true, 'Uploading…');
+            setProgress(0, 'Preparing upload…', 'Keep this tab open until the release is saved.', 'working');
+
+            var succeeded = false;
+            var notes = document.getElementById('lib-notes').value.trim();
+            var start = file ? 24 : 8;
+            var prepare = file
+                ? encode(file, function (frac) {
+                      setProgress(2 + frac * (start - 2), 'Reading file…',
+                          bytes(file.size) + ' selected · ' + file.name, 'working');
+                  })
+                : Promise.resolve('');
+
+            prepare.then(function (contentBase64) {
+                setProgress(start, 'Uploading…', file ? ('Sending ' + bytes(file.size)) : 'Saving link…', 'working');
+                return send({
+                    action: 'upload', version: version,
+                    file_name: file ? file.name : (externalUrl.split('/').pop() || 'release.zip'),
+                    content_base64: contentBase64, external_url: externalUrl, notes: notes
+                }, function (loaded, total) {
+                    var frac = total ? loaded / total : 0;
+                    setProgress(start + frac * (94 - start), 'Uploading…',
+                        bytes(loaded) + ' of ' + bytes(total) + ' sent', 'working');
+                });
+            }).then(function (data) {
+                if (!data.ok) throw new Error(data.error || 'Upload failed');
+                setProgress(96, 'Saving release…', 'Writing the new version.', 'working');
+                return data;
+            }).then(function (data) {
+                succeeded = true;
+                setProgress(100, 'Upload complete', data.file_name + ' · ' + bytes(data.file_size), 'done');
+                var lbl = button.querySelector('.ui-btn__busy-label');
+                if (lbl) lbl.textContent = 'Uploaded';
+                var sp = button.querySelector('.ui-spinner');
+                if (sp) sp.style.display = 'none';
+                status(result, 'Uploaded version ' + data.version + '. Refreshing…', 'success');
+                window.setTimeout(function () { window.location.reload(); }, 1600);
+            }).catch(function (err) {
+                var message = (err && err.message) ? err.message : 'Upload failed.';
+                setProgress(100, 'Upload failed', message, 'error');
+                status(result, message + ' The previous release is still active.', 'error');
+            }).then(function () {
+                if (succeeded) return;
+                form.removeAttribute('data-anoy-upload-busy');
+                busy(button, false);
+            });
+        });
+    }
+
+    if (linkForm && linkButton && linkResult) {
+        linkForm.addEventListener('submit', function (e) {
+            e.preventDefault();
+            if (linkForm.getAttribute('data-anoy-busy') === '1') return;
+            var version = document.getElementById('link-version').value.trim();
+            var url = document.getElementById('link-url').value.trim();
+            linkResult.textContent = '';
+            if (!validVersion(version)) { status(linkResult, 'Enter a version like 1.3.', 'error'); return; }
+            if (!validUrl(url)) { status(linkResult, 'Enter a https:// link.', 'error'); return; }
+
+            linkForm.setAttribute('data-anoy-busy', '1');
+            busy(linkButton, true, 'Saving…');
+            send({ action: 'link', version: version, external_url: url }, function () {})
+                .then(function (data) {
+                    if (!data.ok) throw new Error(data.error || 'Could not update the link');
+                    status(linkResult, 'Version ' + data.version + ' is live. Refreshing…', 'success');
+                    window.setTimeout(function () { window.location.reload(); }, 1400);
+                })
+                .catch(function (err) {
+                    status(linkResult, (err && err.message) || 'Could not update the link.', 'error');
+                    linkForm.removeAttribute('data-anoy-busy');
+                    busy(linkButton, false);
+                });
+        });
+    }
 })();
 </script>

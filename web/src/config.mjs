@@ -23,9 +23,13 @@ export const config = {
     (env.SUPABASE_SERVICE_ROLE_KEY ? `dev-${env.SUPABASE_SERVICE_ROLE_KEY.slice(-32)}` : 'local-dev-secret-change-me'),
   staticWords: env.STATIC_WORDS || env.LOADER_LICENSE_SALT || 'Vm8Lk7Uj2JmsjCPVPVjrLa7zgfx3uz9E',
   brand: env.BRAND_NAME || 'Anoy',
+  // The single Owner account. owner-only routes are bound to this username as
+  // well as level 1, so a stray level-1 row can never reach the owner panel.
+  // The database enforces the same rule with a unique partial index.
+  ownerUsername: 'admin',
   telegramHandle: String(env.TELEGRAM_USERNAME || 'libAkAudioVisiual').replace(/^@/, ''),
   baseUrl: env.PUBLIC_BASE_URL || '',
-  maxUploadMb: Number(env.MAX_LIB_UPLOAD_MB || 4),
+  maxUploadMb: Number(env.MAX_LIB_UPLOAD_MB || 3),
   sessionMinutes: 30,
   rememberHours: 24,
   passwordSalt: 'XquxmymXDtWRA66D',

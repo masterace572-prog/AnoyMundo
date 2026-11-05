@@ -89,7 +89,7 @@ try {
   // 1. health
   let r = await request('/api/health');
   ok(r.status === 200 && r.body.ok === true, 'GET /api/health reports all checks OK', JSON.stringify(r.body));
-  ok(r.body.checks?.schema?.ok === true, 'schema check sees all 13 tables');
+  ok(r.body.checks?.schema?.ok === true, 'schema check sees all 14 tables');
 
   // 2. public pages + auth wall
   r = await request('/');
@@ -224,12 +224,25 @@ try {
   ok(r.status === 400 && r.body?.error?.code === 'invalid_request', 'invalid custom_key is rejected');
   r = await request('/api/v1/keys', { method: 'POST', headers: H,
     body: { game: 'PUBG', duration: 2, max_devices: 1, count: 3 } });
-  ok(r.status === 201 && r.body?.keys?.length === 3 && r.body?.price === 10
-    && r.body?.saldo_after === saldoBefore - 20,
-    'bulk count keeps the legacy one-fee-per-request pricing (docs and panel agree)');
+  ok(r.status === 201 && r.body?.keys?.length === 3 && r.body?.price === 30
+    && r.body?.unit_price === 10 && r.body?.saldo_after === saldoBefore - 30,
+    'bulk generation charges per key (3 x 10 = 30), not once per request');
   for (const bulk of r.body?.keys || []) {
     await request(`/api/v1/keys/${bulk.user_key}`, { method: 'DELETE', headers: H });
   }
+  const bulkIdem = 'req-smoke-idem-0000001';
+  r = await request('/api/v1/keys', { method: 'POST', headers: H,
+    body: { game: 'PUBG', duration: 2, max_devices: 1, count: 2, request_id: bulkIdem } });
+  const idemKeys = (r.body?.keys || []).map((k) => k.user_key);
+  const idemSaldo = r.body?.saldo_after;
+  ok(r.status === 201 && r.body?.price === 20 && idemKeys.length === 2,
+    'idempotent batch charges 2 x 10 = 20');
+  r = await request('/api/v1/keys', { method: 'POST', headers: H,
+    body: { game: 'PUBG', duration: 2, max_devices: 1, count: 2, request_id: bulkIdem } });
+  ok(r.status === 201 && r.body?.price === 20 && r.body?.saldo_after === idemSaldo
+    && (r.body?.keys || []).map((k) => k.user_key).join() === idemKeys.join(),
+    'replaying the same request_id returns the original batch without charging again');
+  for (const k of idemKeys) await request(`/api/v1/keys/${k}`, { method: 'DELETE', headers: H });
   r = await request('/api/v1/keys', { method: 'POST', headers: { 'X-API-Key': 'amk_wrong' },
     body: { game: 'PUBG', duration: 2, max_devices: 1 } });
   ok(r.status === 401 && r.body?.error?.code === 'invalid_api_key', 'revoked/unknown API key is rejected');
@@ -286,6 +299,15 @@ try {
   ok(r.body?.status === true && /maintenance/i.test(r.body?.reason || ''), '/connect honours maintenance mode');
   r = await request('/Server', { method: 'POST', body: new URLSearchParams({ status_form: '1', myInput: '' }) });
   ok(r.status === 302, 'POST /Server maintenance off succeeds');
+  r = await request('/Server', { method: 'POST', body: new URLSearchParams({ floating_form: '1', _ftext: 'Short status line' }) });
+  ok(r.status === 302, 'POST /Server floating text without checkbox succeeds');
+  r = await request('/Server');
+  ok(/Anti-Cheat is High/.test(r.body), 'turning the Safe switch OFF actually changes mod status');
+  r = await request('/Server', { method: 'POST', body: new URLSearchParams({ floating_form: '1', _ftextr: 'Safe', _ftext: 'Short status line' }) });
+  r = await request('/Server');
+  ok(/Safe/.test(r.body), 'turning the Safe switch ON changes mod status back');
+  r = await request('/connect', { method: 'POST', body: new URLSearchParams({ game: 'PUBG', user_key: generatedKey, serial: 'TESTDEVICE001' }) });
+  ok(r.body?.data?.mod_status === 'Safe', '/connect serves the freshly saved mod status');
   r = await request('/Server', { method: 'POST', body: new URLSearchParams({ feature_form: '1', AIM: 'on' }) });
   ok(r.status === 302, 'POST /Server feature toggle succeeds');
   r = await request('/connect', { method: 'POST', body: new URLSearchParams({ game: 'PUBG', user_key: generatedKey, serial: 'TESTDEVICE001' }) });
@@ -313,6 +335,17 @@ try {
   ok(r.status === 302 && r.location === '/dashboard', 'the new reseller can log in');
   r = await request('/dashboard');
   ok(r.status === 200 && /Reseller/.test(r.body), 'reseller dashboard shows the Reseller role');
+  r = await request('/lib');
+  ok(r.status === 302 && r.location === '/dashboard', 'owner-only /lib is blocked for a reseller');
+  r = await request('/admin/manage-users');
+  ok(r.status === 302 && r.location === '/dashboard', 'owner-only user manager is blocked for a reseller');
+  r = await request('/keys/generate', { method: 'POST', body: new URLSearchParams({ game: 'PUBG', max_devices: '3', duration: '168', count: '100', custominput: 'auto', request_id: 'req-smoke-lowbal-0001' }) });
+  ok(r.status === 302, 'oversized bulk order redirects with an error');
+  r = await request('/keys/generate');
+  ok(/Not enough balance/.test(r.body), 'insufficient balance is reported inside the panel (not a Vercel error page)');
+  ok(/data-balance="500"/.test(r.body), 'a rejected order leaves saldo untouched');
+  r = await request('/keys/api?draw=1&start=0&length=10');
+  ok(r.body?.recordsTotal === 0, 'a rejected order creates zero keys');
   await request('/logout');
   await request('/login', { method: 'POST', body: new URLSearchParams({ username: 'admin', password: 'admin123' }) });
   r = await request('/admin/api/users?draw=1&start=0&length=10&search%5Bvalue%5D=reseller1');
@@ -326,6 +359,16 @@ try {
   ok(r.body?.ok === true, 'POST /lib uploads a release to the database');
   r = await request('/api/lib/version');
   ok(r.body.trim() === '1.1', 'version endpoint reflects the new release');
+  r = await request('/lib', { method: 'POST', body: { action: 'link', version: '1.2', external_url: 'https://example.com/lib.so' } });
+  ok(r.body?.ok === true && r.body?.mode === 'link', 'POST /lib link action updates the external URL and bumps the version');
+  r = await request('/api/lib/version');
+  ok(r.body.trim() === '1.2', 'version endpoint reflects the pushed link');
+  r = await request('/api/lib/download');
+  ok(r.status === 302 && r.location === 'https://example.com/lib.so', 'download follows the pushed external link');
+  r = await request('/lib', { method: 'POST', body: { action: 'link', version: 'bad version', external_url: 'https://example.com/lib.so' } });
+  ok(r.status === 400 && /version/i.test(r.body?.error || ''), 'invalid version is rejected with a clear JSON error');
+  r = await request('/lib', { method: 'POST', body: { action: 'link', version: '1.3', external_url: 'javascript:alert(1)' } });
+  ok(r.status === 400 && /https/.test(r.body?.error || ''), 'non-http external link is rejected');
 
   // 14. static assets
   r = await request('/assets/css/tailwind.css');

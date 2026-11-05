@@ -92,8 +92,9 @@ Content-Type: application/json</code></pre>
   "count": 1, "price": 80, "currency": "INR",
   "saldo_before": 2147384644, "saldo_after": 2147384564, "charged": 80
 }</code></pre>
-            <p class="doc-note"><strong>Saldo rule:</strong> <span class="doc-inline">price = price_per_device(duration) × max_devices</span>, charged once per request (the same bulk-generation pricing as the panel; <span class="doc-inline">count</span> does not multiply the fee).
-            The balance is debited atomically before the keys are written; if a write fails the charge is refunded.
+            <p class="doc-note"><strong>Saldo rule:</strong> <span class="doc-inline">price = price_per_device(duration) × max_devices × count</span>. Every key is charged.
+            The debit and all key inserts run in one database transaction: if anything fails, no keys are created and nothing is charged.
+            Repeating the same <span class="doc-inline">request_id</span> returns the original result instead of charging twice.
             Insufficient balance → <span class="doc-inline">402 insufficient_balance</span> and nothing is created.</p>
         </div>
 

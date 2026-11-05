@@ -930,3 +930,119 @@ html body.app-body .auth-card { animation: ios-fade-up .42s var(--ios-ease) both
 @media print {
   html body.app-body .app-content .ui-card { animation: none !important; }
 }
+
+/* ---------------------------------------------------------------------------
+   Clarity layer — shorter copy, aligned labels, readable summaries, and a
+   tighter phone layout. Flat colour only: no gradients, no decorative noise.
+   --------------------------------------------------------------------------- */
+html body.app-body .ui-section-title {
+  margin: 0 !important;
+  color: var(--text) !important;
+  font-size: 20px !important;
+  font-weight: 650 !important;
+  line-height: 1.25 !important;
+  letter-spacing: -0.4px !important;
+}
+html body.app-body .field-label {
+  display: block !important;
+  margin: 0 0 8px !important;
+  color: var(--muted) !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  line-height: 1.35 !important;
+  letter-spacing: -0.1px !important;
+}
+html body.app-body .field-value {
+  margin: 0 !important;
+  color: var(--text) !important;
+  font-size: 16px !important;
+  font-weight: 600 !important;
+  line-height: 1.35 !important;
+}
+html body.app-body .field-optional {
+  color: var(--faint) !important;
+  font-weight: 400 !important;
+}
+html body.app-body .field-hint--error {
+  color: var(--danger) !important;
+  font-weight: 600 !important;
+}
+html body.app-body .ui-summary {
+  background: var(--fill) !important;
+  border: 1px solid var(--separator) !important;
+  border-radius: 14px !important;
+  padding: 6px 14px !important;
+}
+html body.app-body .ui-summary--compact { padding: 4px 14px !important; }
+html body.app-body .ui-summary__row {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 16px !important;
+  min-height: 42px !important;
+  padding: 6px 0 !important;
+  border-bottom: 1px solid var(--separator) !important;
+  color: var(--muted) !important;
+  font-size: 14px !important;
+}
+html body.app-body .ui-summary__row:last-child { border-bottom: 0 !important; }
+html body.app-body .ui-summary__row strong {
+  color: var(--text) !important;
+  font-size: 15px !important;
+  font-weight: 600 !important;
+  text-align: right !important;
+  overflow-wrap: anywhere !important;
+  min-width: 0 !important;
+}
+html body.app-body .ui-summary__row--total {
+  color: var(--text) !important;
+  font-weight: 600 !important;
+}
+html body.app-body .ui-summary__row--total strong {
+  color: var(--accent) !important;
+  font-size: 19px !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.4px !important;
+}
+html body.app-body .ui-inline-field {
+  display: flex !important;
+  align-items: stretch !important;
+  gap: 10px !important;
+}
+html body.app-body .ui-inline-field > input { flex: 1 1 auto !important; min-width: 0 !important; }
+html body.app-body .ui-inline-field > .ui-btn { flex: 0 0 auto !important; }
+html body.app-body .ui-btn--ghost {
+  background: var(--fill) !important;
+  color: var(--accent) !important;
+  border: 1px solid var(--separator) !important;
+  box-shadow: none !important;
+}
+html body.app-body .actions-menu-note {
+  margin: 8px 12px 10px !important;
+  max-width: 230px !important;
+  color: var(--faint) !important;
+  font-size: 12px !important;
+  line-height: 1.4 !important;
+}
+html body.app-body .key-result__key textarea { color: var(--text) !important; }
+
+@media (max-width: 640px) {
+  html body.app-body .container-fluid { padding-left: 14px !important; padding-right: 14px !important; }
+  html body.app-body .app-content .ui-card > .flex.items-center.justify-between { flex-wrap: wrap !important; gap: 12px !important; }
+  html body.app-body .ui-section-title { font-size: 18px !important; }
+  html body.app-body .ui-summary__row { font-size: 13px !important; min-height: 40px !important; }
+  html body.app-body .ui-summary__row--total strong { font-size: 17px !important; }
+  html body.app-body .ui-inline-field > .ui-btn { padding-left: 14px !important; padding-right: 14px !important; }
+  html body.app-body .app-content .ui-card .grid { grid-template-columns: minmax(0, 1fr) !important; }
+  html body.app-body .app-content .ui-card .grid > * { min-width: 0 !important; }
+  html body.app-body .app-content input,
+  html body.app-body .app-content select,
+  html body.app-body .app-content textarea { max-width: 100% !important; }
+}
+
+html body.app-body .ui-inline-actions {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 10px !important;
+  align-items: center !important;
+}

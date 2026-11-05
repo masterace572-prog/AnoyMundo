@@ -7,7 +7,7 @@ import crypto from 'node:crypto';
 import { config } from './config.mjs';
 import { db, getUserById, getKeyByUserKey, deviceList } from './db.mjs';
 import { sendJson } from './render.mjs';
-import { createKeysForUser, quoteKeys } from './key-service.mjs';
+import { createKeysForUser, quoteKeys, deleteKeysWithRefund } from './key-service.mjs';
 
 const sha256 = (value) => crypto.createHash('sha256').update(String(value)).digest('hex');
 const nowIso = () => new Date().toISOString();
@@ -114,6 +114,8 @@ function publicKey(row) {
     devices: deviceList(row.devices),
     device_count: deviceList(row.devices).length,
     expired_date: row.expired_date || null,
+    price_paid: Number(row.price_paid || 0),
+    refundable: Number(row.price_paid || 0) > 0 && !deviceList(row.devices).length && !row.expired_date,
     created_at: row.created_at || null,
     updated_at: row.updated_at || null,
   };
@@ -193,7 +195,7 @@ export async function handleApiV1(req, res, body, q, path, method) {
       if (method !== 'GET') return fail(res, 405, 'method_not_allowed', 'Use GET on /api/v1/pricing.');
       return ok(res, {
         currency: 'INR',
-        rule: 'price = price_per_device_for_duration × max_devices',
+        rule: 'price = price_per_device_for_duration × max_devices × count',
         games: Object.keys(config.games),
         durations: Object.entries(config.prices).map(([hours, perDevice]) => ({
           duration: Number(hours), hours: Number(hours), label: config.durations[hours] || `${hours} Hours`,
@@ -227,17 +229,20 @@ export async function handleApiV1(req, res, body, q, path, method) {
           max_devices: body.max_devices ?? q.get('max_devices'),
           count: body.count ?? q.get('count') ?? 1,
           custom_key: body.custom_key ?? q.get('custom_key') ?? '',
+          request_id: body.request_id ?? q.get('request_id') ?? '',
         });
         if (!result.ok) {
           const status = result.code === 'insufficient_balance' ? 402
             : result.code === 'key_exists' || result.code === 'balance_conflict' ? 409
-              : result.code === 'account_inactive' ? 403 : 400;
+              : result.code === 'account_inactive' || result.code === 'account_expired' ? 403
+                : result.code === 'rate_limited' ? 429
+                  : result.code === 'service_unavailable' ? 503 : 400;
           return fail(res, status, result.code, result.message);
         }
         return ok(res, {
           keys: result.rows.map(publicKey),
           count: result.licenses.length,
-          price: result.price, currency: 'INR',
+          price: result.price, unit_price: result.unit_price, currency: 'INR',
           saldo_before: result.saldo_before, saldo_after: result.saldo_after,
           charged: result.price,
         }, 201);
@@ -255,8 +260,12 @@ export async function handleApiV1(req, res, body, q, path, method) {
       if (method === 'GET') return ok(res, { key: publicKey(key) });
 
       if (method === 'DELETE') {
-        await db().from('keys_code').delete().eq('user_key', key.user_key);
-        return ok(res, { deleted: true, user_key: key.user_key });
+        const refund = await deleteKeysWithRefund([key.id_keys], user);
+        if (!refund.ok) return fail(res, 500, 'delete_failed', refund.message);
+        return ok(res, {
+          deleted: refund.deleted > 0, user_key: key.user_key,
+          refunded: refund.refunded, refund_total: refund.refund_total,
+        });
       }
 
       if (method === 'POST' || method === 'PATCH' || method === 'PUT') {

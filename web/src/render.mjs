@@ -172,23 +172,36 @@ export function renderPage(req, res, name, data = {}) {
   return compile('layout')({ ...base, content, pageCss: data.pageCss || '', pageJs: data.pageJs || '' });
 }
 
+function securityHeaders(res, html) {
+  res.setHeader('Cache-Control', 'no-store');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('Referrer-Policy', 'no-referrer');
+  if (html) {
+    // No frame restriction: the panel is shown inside the Arena live preview.
+    res.setHeader('Content-Security-Policy',
+      "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline' https:; " +
+      "script-src 'self' 'unsafe-inline' https:; font-src 'self' data: https:; " +
+      "connect-src 'self'; base-uri 'self'; form-action 'self'");
+  }
+}
+
 export function sendHtml(res, html, status = 200) {
   res.statusCode = status;
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
-  res.setHeader('Cache-Control', 'no-store');
+  securityHeaders(res, true);
   res.end(html);
 }
 
 export function sendJson(res, payload, status = 200) {
   res.statusCode = status;
   res.setHeader('Content-Type', 'application/json; charset=utf-8');
-  res.setHeader('Cache-Control', 'no-store');
+  securityHeaders(res, false);
   res.end(JSON.stringify(payload));
 }
 
 export function sendText(res, text, status = 200, contentType = 'text/plain; charset=utf-8') {
   res.statusCode = status;
   res.setHeader('Content-Type', contentType);
-  res.setHeader('Cache-Control', 'no-store');
+  securityHeaders(res, false);
   res.end(text);
 }

@@ -18,7 +18,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01"></path>
                     </svg>
                 </div>
-                <h2 class="text-2xl font-bold text-gray-800">Server Maintenance</h2>
+                <h2 class="ui-section-title">Maintenance</h2>
             </div>
             
             <form method="post" action="" class="space-y-6">
@@ -26,19 +26,19 @@
                 
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">
-                        Current Status: <span class="text-purple-600 font-semibold">{{onoff.status}}</span>
+                        Status: <span class="text-purple-600 font-semibold">{{onoff.status}}</span>
                     </label>
                     
                     <label class="ui-switch">
                             <input type="checkbox" name="radios" value="on" {{#if (eq onoff.status "on")}} checked {{/if}}>
                             <span class="ui-switch__track" aria-hidden="true"><span class="ui-switch__thumb"></span></span>
-                            <span class="ui-switch__label">Maintenance Mode</span>
+                            <span class="ui-switch__label">Maintenance mode</span>
                         </label>
                 </div>
                 
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">
-                        Offline Message: <span class="text-gray-500 text-xs">{{onoff.myinput}}</span>
+                        Offline message
                     </label>
                     <textarea 
                         name="myInput" 
@@ -49,7 +49,7 @@
                 </div>
                 
                 <button type="submit" class="w-full py-3 px-6 text-white font-bold rounded-xl transition-all duration-300 shadow-lg ui-btn ui-btn--primary">
-                    Update Settings
+                    Save
                 </button>
             </form>
         </div>
@@ -63,7 +63,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path>
                     </svg>
                 </div>
-                <h2 class="text-2xl font-bold text-gray-800">Mod Features</h2>
+                <h2 class="ui-section-title">Features</h2>
             </div>
             
             <form method="post" action="" class="space-y-4">
@@ -116,19 +116,19 @@
                     <label class="ui-switch">
                             <input type="checkbox" name="Floating" value="on" {{#if (eq feature.floating "on")}} checked {{/if}}>
                             <span class="ui-switch__track" aria-hidden="true"><span class="ui-switch__thumb"></span></span>
-                            <span class="ui-switch__label">Floating Texts</span>
+                            <span class="ui-switch__label">Floating text</span>
                         </label>
                     
                     <!-- Settings -->
                     <label class="ui-switch">
                             <input type="checkbox" name="Setting" value="on" {{#if (eq feature.setting "on")}} checked {{/if}}>
                             <span class="ui-switch__track" aria-hidden="true"><span class="ui-switch__thumb"></span></span>
-                            <span class="ui-switch__label">Settings</span>
+                            <span class="ui-switch__label">In-app settings</span>
                         </label>
                 </div>
                 
                 <button type="submit" class="w-full py-3 px-6 text-white font-bold rounded-xl transition-all duration-300 shadow-lg mt-6 ui-btn ui-btn--primary">
-                    Update Features
+                    Save features
                 </button>
             </form>
         </div>
@@ -141,7 +141,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
                     </svg>
                 </div>
-                <h2 class="text-2xl font-bold text-gray-800">Change Mod Name</h2>
+                <h2 class="ui-section-title">Mod name</h2>
             </div>
             
             <form method="post" action="" class="space-y-6">
@@ -149,7 +149,7 @@
                 
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">
-                        Current Mod Name: <span class="text-pink-600 font-semibold">{{server.modname}}</span>
+                        Current: <span class="text-pink-600 font-semibold">{{server.modname}}</span>
                     </label>
                     <input 
                         type="text" 
@@ -161,7 +161,7 @@
                 </div>
                 
                 <button type="submit" class="w-full py-3 px-6 text-white font-bold rounded-xl transition-all duration-300 shadow-lg ui-btn ui-btn--primary">
-                    Update Mod Name
+                    Save name
                 </button>
             </form>
         </div>
@@ -174,39 +174,33 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"></path>
                     </svg>
                 </div>
-                <h2 class="text-2xl font-bold text-gray-800">Floating Text</h2>
+                <h2 class="ui-section-title">Mod status</h2>
             </div>
             
-            <form method="post" action="" class="space-y-6">
-                <input type="hidden" name="_ftext" value="1">
-                
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">
-                        Current Status: <span class="text-green-600 font-semibold">{{ftext._status}}</span>
-                    </label>
-                    
-                    <label class="ui-switch">
-                            <input type="checkbox" name="_ftextr" value="Safe" {{#if (eq ftext._status "Safe")}} checked {{/if}}>
-                            <span class="ui-switch__track" aria-hidden="true"><span class="ui-switch__thumb"></span></span>
-                            <span class="ui-switch__label">Safe Mode</span>
-                        </label>
+            <form method="post" action="" class="space-y-5">
+                <input type="hidden" name="floating_form" value="1">
+
+                <div class="ui-summary ui-summary--compact">
+                    <div class="ui-summary__row"><span>Mod status</span><strong>{{ftext._status}}</strong></div>
                 </div>
-                
+
+                <label class="ui-switch" for="mod-safe">
+                    <input type="checkbox" name="_ftextr" id="mod-safe" value="Safe" {{#if (eq ftext._status "Safe")}} checked {{/if}}>
+                    <span class="ui-switch__track" aria-hidden="true"><span class="ui-switch__thumb"></span></span>
+                    <span class="ui-switch__label">Safe mode</span>
+                </label>
+                <p class="field-hint">Off shows a high-risk warning in the loader.</p>
+
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">
-                        Current Text: <span class="text-gray-500 text-xs">{{ftext._ftext}}</span>
-                    </label>
-                    <input 
-                        type="text" 
-                        name="_ftext" 
-                        required
-                        class="w-full px-4 py-3 bg-white/50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 transition-all"
-                        placeholder="Give Feedback Else Key Removed!"
-                    >
+                    <label for="floating-text" class="field-label">Floating text</label>
+                    <input type="text" name="_ftext" id="floating-text" required maxlength="100"
+                           value="{{ftext._ftext}}"
+                           class="w-full px-4 py-3 bg-white/50 border border-gray-200 rounded-xl"
+                           placeholder="Short status line">
                 </div>
-                
-                <button type="submit" class="w-full py-3 px-6 text-white font-bold rounded-xl transition-all duration-300 shadow-lg ui-btn ui-btn--primary">
-                    Update Floating Text
+
+                <button type="submit" class="w-full py-3 px-6 text-white font-bold rounded-xl ui-btn ui-btn--primary" data-busy-label="Saving…">
+                    Save status
                 </button>
             </form>
         </div>

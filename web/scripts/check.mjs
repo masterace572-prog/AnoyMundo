@@ -91,6 +91,48 @@ for (const asset of ['public/assets/css/ios.css', 'public/assets/js/app-ui.js', 
   if (!fs.existsSync(path.join(root, asset))) errors.push(`missing static asset: ${asset}`);
 }
 
+// ---- v1.2 security / billing regression guards -----------------------------
+const src = (rel) => fs.readFileSync(path.join(root, rel), 'utf8');
+const keyService = src('src/key-service.mjs');
+if (!/create_keys_atomic/.test(keyService) || !/p_total_price/.test(keyService)) {
+  errors.push('key-service.mjs must use the atomic SQL transaction');
+}
+if (!/FAIL CLOSED/.test(keyService)) {
+  errors.push('key-service.mjs must fail closed when the transaction is unavailable');
+}
+if (!/unitPrice \* \(Number\.isInteger\(count\) \? count : 0\)/.test(keyService)) {
+  errors.push('key-service.mjs must charge price x devices x number of keys');
+}
+if (!/delete_keys_refund/.test(keyService) || !/price_paid/.test(keyService)) {
+  errors.push('key-service.mjs must refund never-used keys by their stored price');
+}
+const appSrc = src('src/app.mjs');
+if (!/config\.ownerUsername/.test(appSrc) || !/handleFailure/.test(appSrc)) {
+  errors.push('app.mjs must bind the Owner identity and use the friendly error handler');
+}
+if (/Charged once per request|charged once, not per key|Please top up to your beloved admin/.test(appSrc + src('views/keys_generate.hbs'))) {
+  errors.push('outdated pricing copy is still present');
+}
+const generateView = src('views/keys_generate.hbs');
+if (!/name="count"/.test(generateView) || !/name="request_id"/.test(generateView)) {
+  errors.push('generate view must post a real key count and an idempotency id');
+}
+if (!/floating_form/.test(src('views/server.hbs'))) {
+  errors.push('server view must post the hidden floating_form marker');
+}
+const libView = src('views/lib.hbs');
+if (!/action: 'link'/.test(libView) || !/id="link-form"/.test(libView)) {
+  errors.push('library view must support pushing an external link');
+}
+const iosCss = src('public/assets/css/ios.css');
+if (/linear-gradient|radial-gradient|conic-gradient/.test(iosCss)) {
+  errors.push('ios.css contains a gradient function');
+}
+if (!/\.ui-section-title/.test(iosCss) || !/\.ui-summary__row/.test(iosCss)) {
+  errors.push('ios.css is missing the clarity/typography layer');
+}
+if (errors.length === 0) process.stdout.write('  ok  v1.2 security + billing guards\n');
+
 if (errors.length) {
   console.error('\n[check] FAILED:');
   for (const e of errors) console.error('  - ' + e);

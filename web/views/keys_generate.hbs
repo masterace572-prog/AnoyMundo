@@ -1,67 +1,44 @@
-
-
-
 <div class="container-fluid px-4 py-6">
     <div class="max-w-4xl mx-auto">
-        <!-- Message Status -->
-        <div class="mb-6">
-            {{> msgStatus}}
-        </div>
-        
-        <!-- Success Key Display -->
+        <div class="mb-6">{{> msgStatus}}</div>
+
         {{#if flash.user_key}}
-            <div class="ui-card key-result mb-4 animate-fade-in-up">
-                <div class="key-result__head">
-                    <div class="ui-icon">
-                        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                        </svg>
-                    </div>
-                    <h2 class="key-result__title">Key Generated Successfully!</h2>
+        <div class="ui-card key-result mb-4 animate-fade-in-up">
+            <div class="key-result__head">
+                <div class="ui-icon">
+                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
                 </div>
-                
-                <div class="space-y-3 rounded-xl p-4 ui-tint">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        <div>
-                            <p class="text-sm text-gray-600">Game</p>
-                            <p class="text-lg font-semibold text-gray-800">{{flash.game}}</p>
-                        </div>
-                        <div>
-                            <p class="text-sm text-gray-600">Duration</p>
-                            <p class="text-lg font-semibold text-gray-800">{{flash.duration}} Hours</p>
-                        </div>
-                        <div>
-                            <p class="text-sm text-gray-600">Max Devices</p>
-                            <p class="text-lg font-semibold text-gray-800">{{flash.max_devices}} Devices</p>
-                        </div>
+                <h2 class="key-result__title">Key Generated Successfully!</h2>
+            </div>
+            <div class="rounded-xl p-4 ui-tint">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div><p class="field-label">Game</p><p class="field-value">{{flash.game}}</p></div>
+                    <div><p class="field-label">Duration</p><p class="field-value">{{flash.duration}} Hours</p></div>
+                    <div><p class="field-label">Devices</p><p class="field-value">{{flash.max_devices}}</p></div>
+                </div>
+                <div class="mt-4">
+                    <p class="field-label mb-2">License key</p>
+                    <div class="flex items-center space-x-3 p-3 key-result__key">
+                        <textarea id="mytext" rows="3" class="flex-1 bg-transparent font-mono text-sm font-bold resize-none" readonly>{{flash.user_key}}</textarea>
+                        <button type="button" onclick="copyText()" class="px-4 py-2 text-white rounded-lg ui-btn" aria-label="Copy keys">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                            </svg>
+                        </button>
                     </div>
-                    
-                    <div class="mt-4">
-                        <p class="text-sm text-gray-600 mb-2">License Key</p>
-                        <div class="flex items-center space-x-3 p-3 key-result__key">
-                            <textarea id="mytext" rows="3" class="flex-1 bg-transparent font-mono text-sm font-bold text-purple-600 resize-none" readonly>{{flash.user_key}}</textarea>
-                            <button onclick="copyText()" class="px-4 py-2 text-white rounded-lg transition-all ui-btn">
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
-                                </svg>
-                            </button>
-                        </div>
-                        <p class="text-xs text-gray-500 mt-2"><i>Duration will start when license login.</i></p>
-                    </div>
+                    <p class="field-hint">Starts when the key is first used.</p>
                 </div>
             </div>
+        </div>
         {{/if}}
-        
-        <!-- Generate Key Form -->
-        <div class="ui-card rounded-2xl p-8 animate-fade-in-up" style="animation-delay: 0.1s">
+
+        <div class="ui-card rounded-2xl p-6 sm:p-8 animate-fade-in-up" style="animation-delay: 0.1s">
             <div class="flex items-center justify-between mb-6">
-                <div class="flex items-center">
-                    <div class="ui-icon ui-icon w-12 h-12 rounded-xl flex items-center justify-center mr-4">
-                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-                        </svg>
-                    </div>
-                    <h2 class="text-2xl font-bold text-gray-800">Create License</h2>
+                <div>
+                    <h2 class="ui-section-title">Create keys</h2>
+                    <p class="field-hint">Balance ₹<span id="balance-value" data-balance="{{user.saldo}}">{{user.saldo}}</span></p>
                 </div>
                 <a href="/keys" class="ui-btn" aria-label="All keys">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -70,74 +47,64 @@
                     <span>All keys</span>
                 </a>
             </div>
-            
-            <form method="post" action="" class="space-y-6">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <!-- Game -->
+
+            <form method="post" action="" id="generate-form" class="space-y-5">
+                <input type="hidden" name="request_id" id="request_id" value="">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Game</label>
+                        <label for="game" class="field-label">Game</label>
                         {{{selects.game}}}
-                        {{#if errors.game}}
-                            <small class="text-red-500 text-xs mt-1">{{errors.game}}</small>
-                        {{/if}}
+                        {{#if errors.game}}<p class="field-error">{{errors.game}}</p>{{/if}}
                     </div>
-                    
-                    <!-- Max Devices -->
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Max Devices</label>
-                        <input type="number" name="max_devices" id="max_devices" value="{{form.max_devices}}" class="w-full px-4 py-3 bg-white/50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all" placeholder="1">
-                        {{#if errors.max_devices}}
-                            <small class="text-red-500 text-xs mt-1">{{errors.max_devices}}</small>
-                        {{/if}}
+                        <label for="max_devices" class="field-label">Devices per key</label>
+                        <input type="number" name="max_devices" id="max_devices" min="1" max="100" step="1" value="{{form.max_devices}}" class="w-full px-4 py-3 bg-white/50 border border-gray-200 rounded-xl" placeholder="1">
+                        {{#if errors.max_devices}}<p class="field-error">{{errors.max_devices}}</p>{{/if}}
                     </div>
                 </div>
-                
-                <!-- Duration -->
+
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Duration</label>
+                    <label for="duration" class="field-label">Duration</label>
                     {{{selects.duration}}}
-                    {{#if errors.duration}}
-                        <small class="text-red-500 text-xs mt-1">{{errors.duration}}</small>
-                    {{/if}}
+                    {{#if errors.duration}}<p class="field-error">{{errors.duration}}</p>{{/if}}
                 </div>
-                
-                <!-- Custom Key Toggle -->
-                <div class="flex items-center p-4 rounded-xl ui-tint">
-                    <input type="checkbox" name="check" id="check" onchange="fupi(this)" class="w-5 h-5 text-purple-600 rounded focus:ring-purple-500">
-                    <label for="check" class="ml-3 text-gray-800 font-medium cursor-pointer">Custom Key</label>
+
+                <label class="ui-switch" for="check">
+                    <input type="checkbox" id="check" onchange="fupi(this)">
+                    <span class="ui-switch__track" aria-hidden="true"><span class="ui-switch__thumb"></span></span>
+                    <span class="ui-switch__label">Use a custom key</span>
+                </label>
+
+                <div id="custom-key-section" hidden>
+                    <label for="custom" class="field-label">Custom key</label>
+                    <input type="text" name="cuslicense" id="custom" minlength="4" maxlength="19" class="w-full px-4 py-3 bg-white/50 border border-gray-200 rounded-xl" placeholder="4-19 letters, numbers, - or _">
+                    {{#if errors.custom_key}}<p class="field-error">{{errors.custom_key}}</p>{{/if}}
                 </div>
-                
-                <!-- Custom Key Input -->
-                <div id="custom-key-section" style="display: none;">
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Input Your Key</label>
-                    <input type="text" name="cuslicense" id="custom" minlength="4" maxlength="16" class="w-full px-4 py-3 bg-white/50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all" placeholder="Enter custom key">
-                </div>
-                
-                <!-- Bulk Keys -->
+
                 <div id="bulk-section">
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Bulk Keys</label>
-                    <select name="loopcount" id="hulala" class="w-full px-4 py-3 bg-white/50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all">
-                        <option value="5">1 Keys</option>
-                        <option value="1">5 Keys</option>
-                        <option value="2">10 Keys</option>
-                        <option value="3">25 Keys</option>
-                        <option value="3">50 Keys</option>
-                        <option value="4">100 Keys</option>
+                    <label for="hulala" class="field-label">Number of keys</label>
+                    <select name="count" id="hulala" class="w-full px-4 py-3 bg-white/50 border border-gray-200 rounded-xl">
+                        <option value="1">1 key</option>
+                        <option value="5">5 keys</option>
+                        <option value="10">10 keys</option>
+                        <option value="25">25 keys</option>
+                        <option value="50">50 keys</option>
+                        <option value="100">100 keys</option>
                     </select>
                 </div>
-                
-                <input type="text" id="textinput" name="custominput" hidden>
-                
-                <!-- Estimation -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Estimation</label>
-                    <input type="text" id="estimation" class="w-full px-4 py-3 border border-green-200 rounded-xl font-bold text-green-700 ui-tint" placeholder="Your order will total" readonly>
-                    <p class="field-hint">Charged once per request, not per key.</p>
+
+                <input type="hidden" id="textinput" name="custominput" value="auto">
+
+                <div class="ui-summary">
+                    <div class="ui-summary__row"><span>Per key</span><strong id="unit-price">—</strong></div>
+                    <div class="ui-summary__row"><span>Keys</span><strong id="qty-price">—</strong></div>
+                    <div class="ui-summary__row ui-summary__row--total"><span>Total</span><strong id="estimation">—</strong></div>
                 </div>
-                
-                <!-- Submit Button -->
-                <button type="submit" class="w-full py-4 px-6 text-white font-bold rounded-xl transition-all duration-300 shadow-lg ui-btn ui-btn--primary">
-                    Generate License Key
+                <p class="field-hint" id="estimation-hint" aria-live="polite">Charged per key. You are charged only when all keys are created.</p>
+                {{#if errors.count}}<p class="field-error">{{errors.count}}</p>{{/if}}
+
+                <button type="submit" class="w-full py-4 px-6 text-white font-bold rounded-xl ui-btn ui-btn--primary" data-busy-label="Generating…">
+                    Generate keys
                 </button>
             </form>
         </div>
@@ -145,43 +112,74 @@
 </div>
 
 <script>
-    /* Estimation display only. Plain DOM so it still works when the optional
-       CDN script is unavailable; the same prices and form fields as before. */
+    /* Live estimate. Plain DOM, no CDN dependency. Server re-checks everything. */
     (function () {
         var price = JSON.parse('{{{priceJson}}}');
         var deviceEl = document.getElementById('max_devices');
         var durationEl = document.getElementById('duration');
-        var gameEl = document.getElementById('game');
-        var estimation = document.getElementById('estimation');
-        function getPrice() {
-            var device = Number(deviceEl && deviceEl.value);
-            var durate = durationEl && durationEl.value;
-            var gprice = Number(price[durate]);
-            if (isFinite(gprice) && isFinite(device)) {
-                estimation.value = '₹' + (device * gprice) + ' charged once, not per key.';
+        var qtyEl = document.getElementById('hulala');
+        var unitEl = document.getElementById('unit-price');
+        var qtyOut = document.getElementById('qty-price');
+        var totalEl = document.getElementById('estimation');
+        var hint = document.getElementById('estimation-hint');
+        var balanceEl = document.getElementById('balance-value');
+        var balance = Number((balanceEl && balanceEl.getAttribute('data-balance')) || 0);
+        if (balanceEl && isFinite(balance)) balanceEl.textContent = balance.toLocaleString('en-IN');
+        var customOn = false;
+
+        function money(n) { return '₹' + Number(n || 0).toLocaleString('en-IN'); }
+
+        function render() {
+            var devices = Number(deviceEl && deviceEl.value);
+            var unit = (price[durationEl && durationEl.value] || 0) * devices;
+            var qty = customOn ? 1 : Math.max(1, Number(qtyEl && qtyEl.value) || 1);
+            var total = unit * qty;
+            if (!isFinite(unit) || unit <= 0) {
+                unitEl.textContent = '—'; qtyOut.textContent = '—'; totalEl.textContent = 'Choose options';
+                hint.textContent = 'Choose a valid duration and device count.';
+                return;
+            }
+            unitEl.textContent = money(unit);
+            qtyOut.textContent = String(qty);
+            totalEl.textContent = money(total);
+            if (total > balance) {
+                hint.textContent = 'Not enough balance. Ask your admin to top up.';
+                hint.className = 'field-hint field-hint--error';
             } else {
-                estimation.value = 'Estimation error';
+                hint.textContent = 'Charged per key. Nothing is charged if the request fails.';
+                hint.className = 'field-hint';
             }
         }
-        if (estimation) {
-            getPrice();
-            [deviceEl, durationEl, gameEl].forEach(function (el) {
-                if (el) el.addEventListener('change', getPrice);
-            });
-        }
+
+        [deviceEl, durationEl, qtyEl].forEach(function (el) {
+            if (el) { el.addEventListener('change', render); el.addEventListener('input', render); }
+        });
+        render();
+
+        var form = document.getElementById('generate-form');
+        if (form) form.addEventListener('submit', function () {
+            var id = 'req-' + Date.now().toString(36) + '-' +
+                (window.crypto && crypto.randomUUID ? crypto.randomUUID().slice(0, 12) : Math.random().toString(36).slice(2, 14));
+            document.getElementById('request_id').value = id.replace(/[^A-Za-z0-9_-]/g, '');
+        });
+
+        window.setCustomMode = function (on) { customOn = on; render(); };
     })();
 
     function fupi(obj) {
         var on = !!obj.checked;
-        document.getElementById("custom-key-section").style.display = on ? "block" : "none";
-        document.getElementById("bulk-section").style.display = on ? "none" : "block";
-        document.getElementById("textinput").value = on ? "custom" : "auto";
+        document.getElementById('custom-key-section').hidden = !on;
+        document.getElementById('bulk-section').hidden = on;
+        document.getElementById('hulala').disabled = on;
+        document.getElementById('textinput').value = on ? 'custom' : 'auto';
+        if (window.setCustomMode) window.setCustomMode(on);
     }
-    
+
     function copyText() {
-        var copyText = document.getElementById("mytext");
-        copyText.select();
-        document.execCommand("copy");
-        alert("Key copied to clipboard!");
+        var area = document.getElementById('mytext');
+        if (!area) return;
+        area.select();
+        try { document.execCommand('copy'); } catch (e) { /* clipboard unavailable */ }
+        if (window.AnoyUI && window.AnoyUI.toast) window.AnoyUI.toast('Keys copied', 'success');
     }
 </script>

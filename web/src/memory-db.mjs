@@ -11,8 +11,8 @@ const seed = () => ({
     updated_at: '2025-11-19T17:51:31Z', expiration_date: '2050-01-01T00:00:00Z',
   }],
   keys_code: [
-    { id_keys: 1, game: 'PUBG', user_key: 'admin-2-lyK0Y', duration: 2, expired_date: null, max_devices: 1, devices: null, status: 1, registrator: 'admin', created_at: '2025-11-19T13:17:39Z', updated_at: '2025-11-19T13:17:39Z' },
-    { id_keys: 2, game: 'PUBG', user_key: 'admin-2-f7VwE', duration: 2, expired_date: null, max_devices: 1, devices: null, status: 1, registrator: 'admin', created_at: '2025-11-19T17:51:31Z', updated_at: '2025-11-19T17:51:31Z' },
+    { id_keys: 1, game: 'PUBG', user_key: 'admin-2-lyK0Y', duration: 2, expired_date: null, max_devices: 1, devices: null, status: 1, registrator: 'admin', price_paid: 10, created_at: '2025-11-19T13:17:39Z', updated_at: '2025-11-19T13:17:39Z' },
+    { id_keys: 2, game: 'PUBG', user_key: 'admin-2-f7VwE', duration: 2, expired_date: null, max_devices: 1, devices: null, status: 1, registrator: 'admin', price_paid: 10, created_at: '2025-11-19T17:51:31Z', updated_at: '2025-11-19T17:51:31Z' },
   ],
   history: [
     { id_history: 1, keys_id: '1', user_do: 'admin', info: 'PUBG|admin|2|1', created_at: '2025-11-19T13:17:39Z', updated_at: '2025-11-19T13:17:39Z' },
@@ -31,13 +31,14 @@ const seed = () => ({
   client_release: [{ id: 1, version: '1.0', file_name: 'no-release.zip', file_size: 0, sha256: '', content_base64: null, external_url: null, notes: 'Placeholder', is_current: true, uploaded_by: 'admin', created_at: new Date().toISOString() }],
   auth_attempt: [],
   api_keys: [],
+  key_orders: [],
 });
 
 const serials = {
   users: 'id_users', keys_code: 'id_keys', history: 'id_history',
   referral_code: 'id_reff', feature: 'id', modname: 'id', onoff: 'id',
   credit: 'id', lib: 'id', _ftext: 'id', client_release: 'id', auth_attempt: 'id',
-  api_keys: 'id',
+  api_keys: 'id', key_orders: 'request_id',
 };
 
 function clone(value) {
@@ -74,6 +75,11 @@ class Query {
   ilike(col, pattern) {
     const needle = String(pattern).replace(/%/g, '').toLowerCase();
     this.filters.push((r) => String(r[col] ?? '').toLowerCase().includes(needle));
+    return this;
+  }
+  in(col, values) {
+    const set = new Set((Array.isArray(values) ? values : []).map(String));
+    this.filters.push((r) => set.has(String(r[col])));
     return this;
   }
   is(col, value) {
