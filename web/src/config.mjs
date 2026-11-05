@@ -22,7 +22,8 @@ export const config = {
     // always have AUTH_SECRET set; this only keeps `npm run dev` usable.
     (env.SUPABASE_SERVICE_ROLE_KEY ? `dev-${env.SUPABASE_SERVICE_ROLE_KEY.slice(-32)}` : 'local-dev-secret-change-me'),
   staticWords: env.STATIC_WORDS || env.LOADER_LICENSE_SALT || 'Vm8Lk7Uj2JmsjCPVPVjrLa7zgfx3uz9E',
-  brand: env.BRAND_NAME || '𝙋𝙍𝙄𝙉𝘾𝙀 𝙋𝘼𝙋𝘼 𝙁𝙄𝙇𝙀',
+  brand: env.BRAND_NAME || 'Anoy',
+  telegramHandle: String(env.TELEGRAM_USERNAME || 'libAkAudioVisiual').replace(/^@/, ''),
   baseUrl: env.PUBLIC_BASE_URL || '',
   maxUploadMb: Number(env.MAX_LIB_UPLOAD_MB || 4),
   sessionMinutes: 30,

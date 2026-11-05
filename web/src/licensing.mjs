@@ -89,7 +89,10 @@ export function handleConnectInfo(res) {
       license: config.license,
       version: config.version,
     },
-    web__dev: { author: '@', telegram: 'https://t.me/' },
+    web__dev: {
+      author: `@${config.telegramHandle}`,
+      telegram: `https://t.me/${config.telegramHandle}`,
+    },
   });
 }
 

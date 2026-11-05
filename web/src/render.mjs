@@ -123,6 +123,10 @@ export function renderPage(req, res, name, data = {}) {
 
   const base = {
     brand: config.brand,
+    telegram: {
+      handle: `@${config.telegramHandle}`,
+      url: `https://t.me/${config.telegramHandle}`,
+    },
     currentPath,
     navDashboard: on('/dashboard', true) || currentPath === '/' || currentPath === '/login',
     navKeys: on('/keys') && !on('/keys/generate'),

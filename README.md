@@ -17,8 +17,9 @@ See [DEPLOYMENT.md](DEPLOYMENT.md) for the full setup and verification record.
 | Library upload | writes `TumharaPapaDARK/lib.so` to disk | stored in Supabase `client_release` |
 | Deployment | paid shared hosting | GitHub → Vercel (free) |
 
-The original **PRINCE PAPA FILE** branding, page layouts, DataTables,
-SweetAlert2 and every original route are preserved. The visuals were refreshed
+The panel is branded **Anoy** (set with `BRAND_NAME`) and the Telegram contact
+is **@libAkAudioVisiual** (`TELEGRAM_USERNAME`). All original page layouts,
+DataTables, SweetAlert2 and every original route are preserved. The visuals were refreshed
 into a flat, gradient-free design system (`web/public/assets/css/app.css`):
 responsive desktop sidebar / mobile drawer, self-hosted Inter typography,
 consistent cards, forms, tables and alerts. `scripts/refresh-ui.py` documents
@@ -50,7 +51,7 @@ excluded.
 cd web
 npm install
 npm run build       # generates templates + compiles Tailwind, validates all modules
-npm test            # 71 end-to-end HTTP tests using an in-memory DB
+npm test            # 74 end-to-end HTTP tests using an in-memory DB
 npm run dev         # http://localhost:3000  (DB_DRIVER=memory)
 ```
 
@@ -69,7 +70,8 @@ See [DEPLOYMENT.md](DEPLOYMENT.md). Required Vercel environment variables:
 - `SUPABASE_SERVICE_ROLE_KEY` (server-only secret, never `NEXT_PUBLIC_`)
 - `AUTH_SECRET`
 
-Optional: `BRAND_NAME`, `STATIC_WORDS`, `PUBLIC_BASE_URL`,
+Optional: `BRAND_NAME` (default `Anoy`), `TELEGRAM_USERNAME`
+(default `libAkAudioVisiual`), `STATIC_WORDS`, `PUBLIC_BASE_URL`,
 `MAX_LIB_UPLOAD_MB`, `FALLBACK_LIB_VERSION`.
 
 ## Preserved API contract

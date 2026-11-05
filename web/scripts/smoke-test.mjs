@@ -94,14 +94,25 @@ try {
   // 2. public pages + auth wall
   r = await request('/');
   ok(r.status === 200 && /Sign In/.test(r.body), 'GET / renders the original login page');
-  ok(/𝙋𝙍𝙄𝙉𝘾𝙀 𝙋𝘼𝙋𝘼 𝙁𝙄𝙇𝙀/.test(r.body), 'login page keeps original PRINCE PAPA FILE branding');
+  ok(/>Anoy</.test(r.body) && !/𝙋𝙍𝙄𝙉𝘾𝙀|PRINCE PAPA/.test(r.body),
+    'login page shows the Anoy brand (old name removed)');
   ok(/name="viewport"/.test(r.body) && /app\.css/.test(r.body),
     'login page has a responsive viewport and loads the design system');
   ok(!/linear-gradient|bg-gradient/.test(r.body) && !/ui-alert/.test(r.body),
     'login page is gradient-free and has no stale welcome banner');
+  ok(/https:\/\/t\.me\/libAkAudioVisiual/.test(r.body) && /@libAkAudioVisiual/.test(r.body)
+    && !/aalyanmods|AALYANMODS|AloneBoy_Boss/.test(r.body),
+    'login page links the new Telegram handle');
   r = await request('/register');
   ok(r.status === 200 && /Create Account/.test(r.body), 'GET /register renders the flat sign-up form');
   ok(!/linear-gradient|bg-gradient/.test(r.body), 'register page is gradient-free');
+  ok(/https:\/\/t\.me\/libAkAudioVisiual/.test(r.body) && /@libAkAudioVisiual/.test(r.body)
+    && !/aalyanmods|AALYANMODS|AloneBoy_Boss/.test(r.body),
+    'register page links the same Telegram handle');
+  r = await request('/connect');
+  ok(r.body?.web_info?._client === 'Anoy' && r.body?.web__dev?.author === '@libAkAudioVisiual'
+    && r.body?.web__dev?.telegram === 'https://t.me/libAkAudioVisiual',
+    'GET /connect info reports the Anoy brand and Telegram handle');
   r = await request('/dashboard');
   ok(r.status === 302 && r.location === '/login', 'protected page redirects anonymous visitor to /login');
 

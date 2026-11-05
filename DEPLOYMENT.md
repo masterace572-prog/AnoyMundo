@@ -91,7 +91,8 @@ Configured for Production + Preview + Development:
 | `SUPABASE_SERVICE_ROLE_KEY` | encrypted, server-only — never `NEXT_PUBLIC_` |
 | `AUTH_SECRET` | encrypted, signs the session cookie |
 | `STATIC_WORDS` | `Vm8Lk7Uj2JmsjCPVPVjrLa7zgfx3uz9E` (must match loader) |
-| `BRAND_NAME` | `𝙋𝙍𝙄𝙉𝘾𝙀 𝙋𝘼𝙋𝘼 𝙁𝙄𝙇𝙀` |
+| `BRAND_NAME` | `Anoy` (panel name in sidebar / `<title>` / `GET /connect` info) |
+| `TELEGRAM_USERNAME` | `libAkAudioVisiual` — used on login, register and `GET /connect` info |
 | `PUBLIC_BASE_URL` | `https://anoymundo-panel.vercel.app` |
 | `MAX_LIB_UPLOAD_MB` | `4` |
 | `FALLBACK_LIB_VERSION` | `1.0` |
@@ -110,7 +111,7 @@ No secret is committed to git (`.env*` is ignored).
 | Check | Result |
 |---|---|
 | `GET /api/health` | `{"ok":true,...,"schema":"12/12 expected tables present"}` |
-| `GET /` and `/login` | flat PRINCE PAPA FILE sign-in page |
+| `GET /` and `/login` | flat Anoy sign-in page with @libAkAudioVisiual contact |
 | `GET /register` | responsive two-column sign-up form |
 | `POST /login` (`admin`/`admin123`) | 302 → `/dashboard`, signed `am_session` cookie |
 | `/dashboard`, `/keys`, `/keys/generate`, `/settings`, `/Server`, `/admin/*`, `/lib` | 200, responsive sidebar layout, no gradients, no leaked PHP/HTML |
@@ -136,7 +137,7 @@ curl -sS -X POST https://anoymundo-panel.vercel.app/connect \
 
 ## 5. Automated tests
 
-- `npm test` — 71 offline end-to-end HTTP tests using an in-memory DB driver
+- `npm test` — 74 offline end-to-end HTTP tests using an in-memory DB driver
   (login, registration, key CRUD, DataTables, `/connect`, maintenance/feature
   toggles, referral → reseller, library upload/version, logout), plus UI
   regression guards: no gradients, no escaped HTML/PHP in notices or form
@@ -169,7 +170,7 @@ curl -sS -X POST https://anoymundo-panel.vercel.app/connect \
 cd web
 npm install
 npm run build     # prebuild + validation
-npm test          # 71 offline end-to-end tests
+npm test          # 74 offline end-to-end tests
 npm run dev       # live preview on 0.0.0.0:3000 (memory DB by default)
 ```
 
