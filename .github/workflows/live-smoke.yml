@@ -1,0 +1,83 @@
+name: Live deployment smoke test
+
+# Exercises the deployed Vercel functions against the real Supabase project.
+# GitHub Actions can reach the public deployment; the sandbox cannot.
+on:
+  workflow_dispatch:
+  push:
+    branches: [arena/b2fac70f-anoymundo]
+    paths: ['.github/workflows/live-smoke.yml']
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: End-to-end checks against Vercel
+        env:
+          BASE: https://anoymundo-panel.vercel.app
+        run: |
+          set -euo pipefail
+          JAR=$(mktemp)
+          pass() { echo "PASS  $1"; }
+          fail() { echo "FAIL  $1"; exit 1; }
+
+          health=$(curl -sS --max-time 30 "$BASE/api/health")
+          echo "$health" | grep -q '"ok":true' && [ "$(echo "$health" | grep -o '12/12')" = "12/12" ] \
+            && pass "GET /api/health (Supabase + 12 tables)" || fail "health: $health"
+
+          curl -sS --max-time 30 "$BASE/" | grep -q 'Sign In' \
+            && pass "GET / renders the original login page" || fail "login page"
+
+          curl -sS --max-time 30 "$BASE/register" | grep -q 'Create Account' \
+            && pass "GET /register renders" || fail "register page"
+
+          ver=$(curl -sS --max-time 30 "$BASE/api/lib/version" | tr -d '\n')
+          [ -n "$ver" ] && pass "GET /api/lib/version -> $ver" || fail "lib version"
+
+          css=$(curl -sS --max-time 30 -o /dev/null -w '%{http_code}' "$BASE/assets/css/tailwind.css")
+          [ "$css" = "200" ] && pass "GET /assets/css/tailwind.css -> 200" || fail "static CSS: $css"
+
+          status=$(curl -sS --max-time 30 -o /dev/null -w '%{http_code}' -b "$JAR" -c "$JAR" \
+            -X POST -d 'username=admin&password=admin123&stay_log=1' "$BASE/login")
+          [ "$status" = "302" ] && pass "POST /login (legacy bcrypt hash) -> 302" || fail "login: $status"
+          grep -q 'am_session' "$JAR" && pass "signed session cookie issued" || fail "session cookie"
+
+          for route in dashboard keys keys/generate settings Server admin/manage-users admin/create-referral lib; do
+            code=$(curl -sS --max-time 30 -o /dev/null -w '%{http_code}' -b "$JAR" -c "$JAR" "$BASE/$route")
+            [ "$code" = "200" ] && pass "GET /$route -> 200" || fail "/$route returned $code"
+          done
+
+          keys=$(curl -sS --max-time 30 -b "$JAR" -c "$JAR" "$BASE/keys/api?draw=1&start=0&length=10")
+          echo "$keys" | grep -q 'recordsTotal' && pass "GET /keys/api -> DataTables JSON" || fail "keys api: $keys"
+
+          users=$(curl -sS --max-time 30 -b "$JAR" -c "$JAR" "$BASE/admin/api/users?draw=1&start=0&length=10")
+          echo "$users" | grep -q 'recordsTotal' && pass "GET /admin/api/users -> DataTables JSON" || fail "users api: $users"
+
+          gen=$(curl -sS --max-time 30 -o /dev/null -w '%{http_code}' -b "$JAR" -c "$JAR" \
+            -X POST -d 'game=PUBG&max_devices=1&duration=2&loopcount=5&custominput=auto' "$BASE/keys/generate")
+          [ "$gen" = "302" ] && pass "POST /keys/generate -> 302" || fail "generate: $gen"
+
+          generated=$(curl -sS --max-time 30 -b "$JAR" -c "$JAR" "$BASE/keys/generate" \
+            | grep -o 'id="mytext"[^>]*>[^<]*' | head -1 | sed 's/.*>//')
+          [ -n "$generated" ] && pass "generated key persisted: $generated" || fail "no generated key in flash"
+
+          connect=$(curl -sS --max-time 30 -X POST \
+            -d 'game=PUBG' --data-urlencode "user_key=$generated" -d 'serial=GITHUBACTIONSTEST1' "$BASE/connect")
+          echo "$connect" | grep -q '"status":true' \
+            && pass "POST /connect accepts the generated key" || fail "connect: $connect"
+          echo "$connect" | grep -q '"token"' && pass "/connect returns md5 token" || fail "connect token"
+
+          bad=$(curl -sS --max-time 30 -X POST -d 'game=PUBG&user_key=not-a-real-key&serial=X1' "$BASE/connect")
+          echo "$bad" | grep -q 'USER OR GAME NOT REGISTERED' \
+            && pass "POST /connect rejects unknown keys" || fail "connect rejection: $bad"
+
+          del=$(curl -sS --max-time 30 -b "$JAR" -c "$JAR" "$BASE/keys/resetAll?userkey=$generated&reset=1")
+          echo "$del" | grep -q '"deleted":true' && pass "GET /keys/resetAll cleans up test key" || fail "cleanup: $del"
+
+          out=$(curl -sS --max-time 30 -o /dev/null -w '%{http_code}' -b "$JAR" -c "$JAR" "$BASE/logout")
+          [ "$out" = "302" ] && pass "GET /logout -> 302" || fail "logout: $out"
+          after=$(curl -sS --max-time 30 -o /dev/null -w '%{http_code}' -b "$JAR" -c "$JAR" "$BASE/dashboard")
+          [ "$after" = "302" ] && pass "session invalid after logout" || fail "post-logout: $after"
+
+          echo "ALL LIVE CHECKS PASSED"
