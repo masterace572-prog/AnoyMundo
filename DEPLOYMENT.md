@@ -1,32 +1,55 @@
-# Deployment guide — AnoyMundo Panel on Vercel + Supabase
+# Deployment — AnoyMundo Panel on Vercel + Supabase
 
-The site is already converted in `web/`. The free stack is:
+**Live site:** https://anoymundo-panel.vercel.app
+**Status:** deployed, tested and healthy (last verified 2026-11-05).
 
-- **GitHub** `masterace572-prog/AnoyMundo` (source of truth)
-- **Vercel** hobby project, Root Directory `web`, Node 20/22
-- **Supabase** free project `anoymundo-panel` (`bwsqenepvfwhfomdhaig`, ap-south-1)
+| Piece | Value |
+|---|---|
+| GitHub | `masterace572-prog/AnoyMundo`, branch `arena/b2fac70f-anoymundo` |
+| Vercel project | `anoymundo-panel` — `prj_eV3iBh1EUffuxQSaV6AkIEh0kn4D` (new project) |
+| Vercel team | `masterace572-progs-projects` |
+| Production deploy | `dpl_6GYAYTyv9e2gTiCanFj7tTD478h9` (READY / PROMOTED) |
+| Root Directory | `web` |
+| Supabase | `anoymundo-panel` — `bwsqenepvfwhfomdhaig` (free, ap-south-1) |
+| Default login | `admin` / `admin123` — **change this immediately** |
+| Starter referral | `WELCOME` |
 
-The existing `kuro-panel` Vercel project and its Supabase database are **not**
+The existing `kuro-panel` Vercel project and its Supabase database were **not**
 touched.
 
 ---
 
-## 1. Supabase (already done for this deployment)
+## 1. What is deployed
 
-1. Create a free project (or reuse `anoymundo-panel`).
-2. Apply [`supabase/schema.sql`](supabase/schema.sql) in the SQL Editor or as a
-   migration (`anoymundo_panel_schema`). It creates 12 tables, enables RLS,
-   seeds the original `admin / admin123` account, the two original license
-   keys, the server settings, and a starter referral code `WELCOME`.
-3. Project Settings → API → copy:
-   - **Project URL** → `SUPABASE_URL`
-   - **service_role** (legacy JWT) or a secret key → `SUPABASE_SERVICE_ROLE_KEY`
+`web/` is the whole app. `vercel.json` pins `"framework": null` (Other preset)
+so Vercel builds `api/index.js` as a normal Node.js serverless function instead
+of auto-detecting `src/app.mjs` as a backend entrypoint. Routing:
 
-> `client_release.content_base64` holds the loader ZIP as base64 text, because
-> Vercel's filesystem is read-only and PostgREST bytea/hex would double the
-> payload size.
+```json
+"routes": [
+  { "src": "^/api/.*$", "dest": "/api/index.js" },
+  { "handle": "filesystem" },
+  { "src": "/.*", "dest": "/api/index.js" }
+]
+```
 
-Verification query:
+`public/` is served as static files; everything else goes to the single
+function. `npm run build` compiles the Handlebars templates and Tailwind CSS
+before the function is bundled; both generated files are also committed so the
+bundle never depends on build ordering.
+
+## 2. Supabase
+
+Applied `supabase/schema.sql` as migration `anoymundo_panel_schema`. It creates
+12 tables, enables RLS (service-role access only), and seeds the original
+`main.sql` data: admin account, 2 license keys, feature flags, mod name,
+server status, credit text and a `WELCOME` referral code. A placeholder
+`client_release` row provides version `1.0` until a real loader ZIP is uploaded.
+
+`client_release.content_base64` stores the loader ZIP as base64 text — Vercel's
+filesystem is read-only, and hex-encoded `bytea` would double the payload size.
+
+Verify with:
 
 ```sql
 select
@@ -34,127 +57,106 @@ select
   (select count(*) from keys_code) as keys,
   (select count(*) from referral_code) as referrals,
   (select version from client_release where is_current) as release;
+-- expected: 1, 2, 1, 1.0
 ```
 
-Expected: `1, 2, 1, 1.0`.
+## 3. Vercel environment variables
 
----
+Configured for Production + Preview + Development:
 
-## 2. Push this branch
-
-```bash
-cd /home/user/AnoyMundo
-git add .gitignore README.md DEPLOYMENT.md supabase/schema.sql web
-git commit -m "Convert PHP panel to Vercel serverless + Supabase"
-git push origin arena/b2fac70f-anoymundo
-```
-
-Only `web/` is deployed; the two original ZIPs, `legacy/` and `_extract/` are
-local reference material only.
-
----
-
-## 3. Create the Vercel project
-
-Vercel dashboard → **Add New… → Project** → import
-`masterace572-prog/AnoyMundo`:
-
-| Setting | Value |
-|---|---|
-| Root Directory | `web` |
-| Framework Preset | Other |
-| Build Command | `npm run build` |
-| Output Directory | *(leave empty)* |
-| Install Command | `npm install` |
-| Production Branch | `arena/b2fac70f-anoymundo` (or `main` after merge) |
-| Node.js Version | 20.x or 22.x |
-
-`vercel.json` routes static files first (`public/`) and everything else to the
-single function in `api/index.js`.
-
-### Environment variables
-
-| Name | Value |
+| Name | Notes |
 |---|---|
 | `SUPABASE_URL` | `https://bwsqenepvfwhfomdhaig.supabase.co` |
-| `SUPABASE_SERVICE_ROLE_KEY` | service_role JWT (server-only) |
-| `AUTH_SECRET` | `openssl rand -base64 32` |
-| `BRAND_NAME` | `𝙋𝙍𝙄𝙉𝘾𝙀 𝙋𝘼𝙋𝘼 𝙁𝙄𝙇𝙀` (optional) |
+| `SUPABASE_SERVICE_ROLE_KEY` | encrypted, server-only — never `NEXT_PUBLIC_` |
+| `AUTH_SECRET` | encrypted, signs the session cookie |
 | `STATIC_WORDS` | `Vm8Lk7Uj2JmsjCPVPVjrLa7zgfx3uz9E` (must match loader) |
-| `PUBLIC_BASE_URL` | `https://<project>.vercel.app` |
+| `BRAND_NAME` | `𝙋𝙍𝙄𝙉𝘾𝙀 𝙋𝘼𝙋𝘼 𝙁𝙄𝙇𝙀` |
+| `PUBLIC_BASE_URL` | `https://anoymundo-panel.vercel.app` |
 | `MAX_LIB_UPLOAD_MB` | `4` |
 | `FALLBACK_LIB_VERSION` | `1.0` |
 
-Apply to **Production, Preview and Development**. Never add `NEXT_PUBLIC_` to
-the service key.
+No secret is committed to git (`.env*` is ignored).
 
----
+> Deployments are created explicitly from the branch (Vercel dashboard →
+> Deployments → Redeploy, or the Vercel API with
+> `gitSource.ref = arena/b2fac70f-anoymundo`). If you want deploys on every
+> push, enable "Create deployments" in the project's Git settings. The project
+> is linked to `masterace572-prog/AnoyMundo`; its production branch is `main`,
+> so to use `main` for production, merge this branch into `main` first.
 
-## 4. Deploy & verify
+## 4. Verified endpoints
 
-Trigger a deployment, then check these (replace the host):
-
-| Check | Expected |
+| Check | Result |
 |---|---|
-| `GET /api/health` | `{"ok":true,...}`, `schema: 12/12 expected tables present` |
-| `GET /` | original purple/pink PRINCE PAPA FILE login page |
-| `POST /login` (`admin` / `admin123`) | 302 → `/dashboard`, sets `am_session` |
-| `GET /dashboard` | stats + history, no `<?php` in source |
-| `GET /keys`, `/keys/generate`, `/Server`, `/settings` | 200 with original layout |
-| `GET /keys/api?draw=1&start=0&length=10` | DataTables JSON with 2 seeded keys |
-| `POST /connect` (`game=PUBG&user_key=admin-2-lyK0Y&serial=TEST1`) | `status:true` + `data.token` |
-| `GET /api/lib/version` | `1.0` |
-| `GET /assets/css/tailwind.css` | compiled CSS (no CDN dependency) |
-| `/logout` | clears session, `/dashboard` redirects to `/login` |
+| `GET /api/health` | `{"ok":true,...,"schema":"12/12 expected tables present"}` |
+| `GET /` and `/login` | original PRINCE PAPA FILE login page |
+| `GET /register` | original registration page |
+| `POST /login` (`admin`/`admin123`) | 302 → `/dashboard`, signed `am_session` cookie |
+| `/dashboard`, `/keys`, `/keys/generate`, `/settings`, `/Server`, `/admin/*`, `/lib` | 200, original layout |
+| `GET /keys/api`, `GET /admin/api/users` | DataTables JSON from Supabase |
+| `POST /keys/generate` | creates a key, deducts saldo, writes history |
+| `POST /connect` | `status:true` + `real`, `token`, `modname`, 8 feature flags, expiry fields |
+| `POST /connect` with bad key | `{"status":false,"reason":"USER OR GAME NOT REGISTERED"}` |
+| `GET /api/lib/version` | plain-text `1.0` |
+| `GET /assets/css/tailwind.css` | compiled CSS, no CDN dependency |
+| `GET /logout` | clears session |
 
-Example curl:
+`/connect` accepts both the original form POST and a query-string GET
+(`/connect?game=PUBG&user_key=...&serial=...`) for loaders that use GET.
+
+Example:
 
 ```bash
-curl -sS -X POST https://<project>.vercel.app/connect \
+curl -sS -X POST https://anoymundo-panel.vercel.app/connect \
   -d 'game=PUBG' -d 'user_key=admin-2-lyK0Y' -d 'serial=TESTDEVICE001'
 ```
 
-Expected `status: true` with `data.real = PUBG-admin-2-lyK0Y-TESTDEVICE001-Vm8Lk7Uj2JmsjCPVPVjrLa7zgfx3uz9E`
-and `token = md5(real)`.
+## 5. Automated tests
 
----
+- `npm test` — 53 offline end-to-end HTTP tests using an in-memory DB driver
+  (login, registration, key CRUD, DataTables, `/connect`, maintenance/feature
+  toggles, referral → reseller, library upload/version, logout).
+- `npm run build` — compiles templates + Tailwind, validates every template and
+  module, verifies the legacy `admin123` bcrypt hash.
+- `.github/workflows/live-smoke.yml` — GitHub Actions job that curls the live
+  Vercel deployment: health, login with cookie jar, all pages, DataTables,
+  key generation, `/connect` success + rejection, cleanup, logout. Both runs
+  passed (runs `41998471594`, `41998939557`).
 
-## 5. Post-deploy tasks
+## 6. Post-deploy tasks
 
-1. **Change the seeded admin password** (`/settings` → Change Password). The
-   legacy hash format is preserved so existing users from `main.sql` can log in.
-2. **Upload the loader ZIP** at `/lib` (owner only). `GET /api/lib/download`
-   then serves it and `/api/lib/version` reports its version. Keep it under
-   4 MB: Vercel's function body limit is 4.5 MB. For larger files set an
-   external URL instead.
-3. Point the Android/XLOX loader's `Version()` and `Link()` endpoints at
+1. **Change the seeded admin password** at `/settings`.
+2. **Upload the loader ZIP** at `/lib` (owner only, max 4 MB — Vercel's
+   function body limit is 4.5 MB). For larger files use an external URL.
+   `GET /api/lib/download` then serves it and `/api/lib/version` reports the
+   version.
+3. Point the XLOX loader's `Version()` / `Link()` endpoints at
    `/api/lib/version` and `/api/lib/download` on this domain (later phase).
-4. If a custom domain is added, update `PUBLIC_BASE_URL`.
+4. Add a custom domain in Vercel → Settings → Domains and update
+   `PUBLIC_BASE_URL` if you use one.
 
----
-
-## 6. Local testing & troubleshooting
+## 7. Local development & troubleshooting
 
 ```bash
 cd web
 npm install
 npm run build     # prebuild + validation
-npm test          # 53 end-to-end tests, offline in-memory DB
+npm test          # 53 offline end-to-end tests
 npm run dev       # live preview on 0.0.0.0:3000 (memory DB by default)
 ```
 
-To run locally against the real Supabase project, create `web/.env.local` with
-the three required variables and start `npm run dev` — it will use Supabase
-instead of the memory driver.
+To use the real Supabase project locally, put the three required variables in
+`web/.env.local` and run `npm run dev` (it selects Supabase automatically when
+`SUPABASE_URL` is present).
 
 | Symptom | Cause / fix |
 |---|---|
-| `/api/health` `env.ok:false` | `SUPABASE_URL` or `SUPABASE_SERVICE_ROLE_KEY` missing |
+| `env.ok:false` at `/api/health` | `SUPABASE_URL` or `SUPABASE_SERVICE_ROLE_KEY` missing |
 | `schema: 5/12` | `supabase/schema.sql` not applied |
-| 500 on every page | wrong service key, or RLS blocking (must use service_role) |
+| 500 on every page | wrong service key, or `vercel.json` framework not pinned to `null` |
 | login loops | `AUTH_SECRET` differs between deployments; set it explicitly |
 | unstyled pages | `npm run build` didn't run (Tailwind CSS not compiled) |
 | `/api/lib/download` 404 | no release uploaded yet — use `/lib` |
 
-Logs: Vercel → Project → Deployments → Function logs. The handler logs every
-uncaught error with `[anoymundo] request failed:`.
+Logs: Vercel → `anoymundo-panel` → Deployments → Function logs. Uncaught errors
+are logged as `[anoymundo] request failed:`.

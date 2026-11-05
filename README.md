@@ -4,6 +4,9 @@ This repository contains the original archives (`Free Source .zip`,
 `XLOX-Loader-Source.zip`) and a **working, free-hosting conversion** of the
 CodeIgniter 4 / PHP 7.4 panel from `Free Source .zip`.
 
+**Live site:** https://anoymundo-panel.vercel.app — deployed, tested and healthy.
+See [DEPLOYMENT.md](DEPLOYMENT.md) for the full setup and verification record.
+
 | | Original (PHP 7.4) | Converted (this repo) |
 |---|---|---|
 | Runtime | Apache / PHP + MySQL | Vercel Node.js serverless function |
@@ -47,6 +50,10 @@ npm run build       # generates templates + compiles Tailwind, validates all mod
 npm test            # 53 end-to-end HTTP tests using an in-memory DB
 npm run dev         # http://localhost:3000  (DB_DRIVER=memory)
 ```
+
+`.github/workflows/live-smoke.yml` additionally runs an automated end-to-end
+test against the live Vercel deployment (login, key generation, `/connect`,
+DataTables, library version, logout).
 
 Demo login: `admin` / `admin123` — the seeded legacy bcrypt hash is verified
 unchanged (`md5(salt + password)` → bcrypt cost 8).
