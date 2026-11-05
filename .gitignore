@@ -11,10 +11,8 @@ node_modules/
 npm-debug.log*
 *.log
 
-# ---- generated assets (rebuilt by `npm run prebuild`) ----------------------
-# Kept out of git so CSS/templates can never drift from their sources.
-web/public/assets/css/tailwind.css
-web/src/templates.generated.mjs
+# Generated assets are committed too: Vercel function bundling must find them
+# in the git checkout, before any build step runs. Rebuild with `npm run build`.
 
 # ---- OS / editor -----------------------------------------------------------
 .DS_Store

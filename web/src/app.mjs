@@ -713,3 +713,6 @@ export async function handle(req, res) {
     return res.end(`<!doctype html><html><head><meta charset="utf-8"><title>Server error</title></head><body style="font-family:sans-serif;padding:2rem"><h1>Something went wrong</h1><pre style="white-space:pre-wrap">${detail}</pre><p><a href="/">Home</a></p></body></html>`);
   }
 }
+
+// Default export doubles as a Vercel Node entrypoint (req, res) => void.
+export default handle;
