@@ -52,7 +52,7 @@ excluded.
 cd web
 npm install
 npm run build       # generates templates + compiles Tailwind, validates all modules
-npm test            # 79 end-to-end HTTP tests using an in-memory DB
+npm test            # 105 end-to-end HTTP tests using an in-memory DB
 npm run dev         # http://localhost:3000  (DB_DRIVER=memory)
 ```
 
@@ -86,17 +86,28 @@ Other endpoints: `GET /api/health`, `GET /api/lib/version`,
 `GET /api/lib/download`, `GET /keys/api`, `GET /admin/api/users`,
 `GET /keys/reset`, `GET /keys/resetAll`, all legacy page routes.
 
-**Full API reference:** [`API.md`](API.md) — connect URL, request parameters,
-every response field (`modname`, `mod_status` / status text, `credit` / floating
-text, mod feature flags, `expired_date` / `EXP` / `exdate`, `device`, `rng`),
-error and maintenance text, token verification, expiry/device behaviour and a
-C++ (libcurl + nlohmann/json) example. The same reference is available inside
-the panel at **`/docs`** (login required, linked in the sidebar under
-*Developer*).
+## Two separate developer docs
+
+| Doc | In panel | What it covers |
+|---|---|---|
+| [`INTEGRATION.md`](INTEGRATION.md) | `/docs` | **Loader / mod integration**: connect URL, `modname`, status text, floating text, mod features, expiry, error text, token check and simple C++ (libcurl + nlohmann/json) code |
+| [`API.md`](API.md) | `/api-docs` | **Key-management REST API** (`/api/v1/*`) with personal API keys: create / list / read / update / reset / delete licence keys, saldo charging, error codes |
+| [`API_AGENT_PROMPT.md`](API_AGENT_PROMPT.md) | – | Copy-paste prompt describing only the API-key API, for building a separate site/bot with another AI agent |
+
+## Personal API keys (`/api/v1`)
+
+Any logged-in user can create personal API keys at **`/api-keys`** (sidebar →
+*Developer*). Tokens start with `amk_`, are shown once and are stored only as a
+SHA-256 hash. Send them as `X-API-Key` on every `/api/v1/*` request. The API is
+scoped to **licence keys only**: it can create, list, read, update, reset and
+delete keys — never mod name, status/floating text, features, maintenance or
+users. Creating a key through the API uses the exact same pricing and saldo
+debit as the panel (`price = price_per_device × max_devices × count`, with a
+conditional atomic debit and automatic refund on failure).
 
 ## Security notes
 
-- All 12 tables have RLS enabled with **no public policies**; only the
+- All 13 tables have RLS enabled with **no public policies**; only the
   server-side `service_role` key accesses them, so the anon/publishable key
   cannot read passwords or license keys.
 - No secret is committed to git (`.env*` is ignored).

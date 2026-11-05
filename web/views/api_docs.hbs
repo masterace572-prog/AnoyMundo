@@ -4,238 +4,167 @@
     </div>
 
     <div class="ui-card rounded-2xl p-6 sm:p-8 mb-6">
-        <h1 class="text-2xl font-bold text-gray-800 mb-2">API docs</h1>
-        <p class="doc-section" style="margin-bottom:0">One call does everything: <span class="doc-inline">POST /connect</span>.
-        Below is the connect URL, every response field (mod name, status text, floating text,
-        mod features, expiry), the error text, and a small C++ example.
-        The full reference also lives in <span class="doc-inline">API.md</span> in the repo.</p>
+        <h1 class="text-2xl font-bold text-gray-800 mb-2">API docs — key management</h1>
+        <p class="doc-section" style="margin-bottom:0">Use a <strong>personal API key</strong> to create, list, read, update,
+        reset and delete <strong>licence keys</strong> from your own website or Telegram bot.
+        Creating a key through the API charges your saldo exactly like the panel does.</p>
+        <p class="doc-note" style="margin-top:14px">This API is <strong>only for keys</strong>. It cannot change the mod name,
+        status text, floating text, features, maintenance mode or any other server setting.
+        For the loader / mod side, see <a href="/docs">Integration docs</a>.</p>
+        <p style="margin-top:14px"><a href="/api-keys" class="ui-btn">Create / manage my API keys</a></p>
     </div>
 
     <div class="ui-card rounded-2xl p-6 sm:p-8 mb-6">
         <div class="doc-section">
-            <h2>Base URL</h2>
-            <code class="doc-url">{{apiBase}}</code>
-            <p>Every endpoint below is relative to this host. All loader traffic must use HTTPS.</p>
+            <h2>1. Get an API key</h2>
+            <p>Log in to the panel, open <a href="/api-keys">API keys</a>, give the key a name (for example
+            <span class="doc-inline">my-telegram-bot</span>) and press <strong>Create API key</strong>.
+            The token starts with <span class="doc-inline">amk_</span> and is shown <strong>once</strong> — copy it immediately.
+            Only its SHA-256 hash is stored, so it cannot be recovered later. You can revoke or delete it at any time.</p>
         </div>
 
         <div class="doc-section">
-            <h2>1. Connect URL</h2>
-            <pre class="doc-code"><code>POST {{apiBase}}/connect
-Content-Type: application/x-www-form-urlencoded
+            <h2>2. Base URL + authentication</h2>
+            <code class="doc-url">{{apiBase}}/api/v1</code>
+            <p>Send the token on <strong>every</strong> request as the <span class="doc-inline">X-API-Key</span> header
+            (<span class="doc-inline">Authorization: Bearer &lt;token&gt;</span> also works). No cookies, no session, no CSRF token.
+            CORS is open, so a browser site on another domain can call it directly.</p>
+            <pre class="doc-code"><code>X-API-Key: amk_YOUR_TOKEN_HERE
+Content-Type: application/json</code></pre>
+            <p>Missing or revoked key → <span class="doc-inline">401</span>. A key whose owner is banned or expired → <span class="doc-inline">403</span>.</p>
+        </div>
 
-game=PUBG&amp;user_key=admin-2-lyK0Y&amp;serial=DEVICE123</code></pre>
-            <p>GET is also supported for loaders that use a query string:
-            <span class="doc-inline">/connect?game=PUBG&amp;user_key=…&amp;serial=…</span>.
-            <span class="doc-inline">/api/connect</span> is an alias.</p>
+        <div class="doc-section">
+            <h2>3. Response shape</h2>
+            <pre class="doc-code"><code>// success
+{ "ok": true, "keys": [ ... ], "total": 2, "limit": 50, "offset": 0 }
+
+// failure
+{ "ok": false, "error": { "code": "insufficient_balance", "message": "Insufficient balance" } }</code></pre>
+            <p>Always check <span class="doc-inline">ok</span> and the HTTP status. Errors are JSON, never HTML.</p>
+        </div>
+    </div>
+
+    <div class="ui-card rounded-2xl p-6 sm:p-8 mb-6">
+        <div class="doc-section">
+            <h2>4. Endpoints</h2>
             <div class="table-scroll">
                 <table>
-                    <thead><tr><th>Parameter</th><th>Rules</th><th>What it is</th></tr></thead>
+                    <thead><tr><th>Method</th><th>Path</th><th>What it does</th></tr></thead>
                     <tbody>
-                        <tr><td><span class="doc-inline">game</span></td><td>required, letters / digits / <span class="doc-inline">_</span> / <span class="doc-inline">-</span></td><td>Game the key was generated for (default <span class="doc-inline">PUBG</span>)</td></tr>
-                        <tr><td><span class="doc-inline">user_key</span></td><td>required, 1–36 characters</td><td>Licence key from <span class="doc-inline">/keys</span></td></tr>
-                        <tr><td><span class="doc-inline">serial</span></td><td>required, letters / digits / <span class="doc-inline">_</span> / <span class="doc-inline">-</span></td><td>Stable per-device ID; stored against the key</td></tr>
+                        <tr><td>GET</td><td><span class="doc-inline">/api/v1</span></td><td>Endpoint index + your API key name</td></tr>
+                        <tr><td>GET</td><td><span class="doc-inline">/api/v1/me</span></td><td>Account saldo / level and API key info</td></tr>
+                        <tr><td>GET</td><td><span class="doc-inline">/api/v1/pricing</span></td><td>Available durations and price per device</td></tr>
+                        <tr><td>GET</td><td><span class="doc-inline">/api/v1/keys</span></td><td>List your keys (pagination + filters)</td></tr>
+                        <tr><td>POST</td><td><span class="doc-inline">/api/v1/keys</span></td><td><strong>Create keys</strong> — charges saldo</td></tr>
+                        <tr><td>GET</td><td><span class="doc-inline">/api/v1/keys/{user_key}</span></td><td>One key with its device list</td></tr>
+                        <tr><td>POST / PATCH</td><td><span class="doc-inline">/api/v1/keys/{user_key}</span></td><td>Update devices / duration / game / status / device list (free)</td></tr>
+                        <tr><td>POST</td><td><span class="doc-inline">/api/v1/keys/{user_key}/reset</span></td><td>Clear all bound devices</td></tr>
+                        <tr><td>DELETE</td><td><span class="doc-inline">/api/v1/keys/{user_key}</span></td><td>Delete a key</td></tr>
                     </tbody>
                 </table>
             </div>
+            <p style="margin-top:12px">You can only see and manage keys <strong>your account created</strong>.
+            List filters: <span class="doc-inline">?limit=50&amp;offset=0&amp;game=PUBG&amp;status=1</span>.</p>
         </div>
 
         <div class="doc-section">
-            <h2>2. curl example</h2>
-            <pre class="doc-code"><code>curl -sS -X POST {{apiBase}}/connect \
-  -d 'game=PUBG' \
-  -d 'user_key=admin-2-lyK0Y' \
-  -d 'serial=DEVICE123'</code></pre>
-        </div>
-
-        <div class="doc-section">
-            <h2>3. Success response</h2>
+            <h2>5. Create a key (curl)</h2>
+            <pre class="doc-code"><code>curl -sS -X POST {{apiBase}}/api/v1/keys \
+  -H 'X-API-Key: amk_YOUR_TOKEN_HERE' \
+  -H 'Content-Type: application/json' \
+  -d '{"game":"PUBG","duration":24,"max_devices":1}'
+</code></pre>
+            <p>Body fields: <span class="doc-inline">game</span> (default <span class="doc-inline">PUBG</span>),
+            <span class="doc-inline">duration</span> (hours: 2, 5, 24, 72, 168, 336, 720),
+            <span class="doc-inline">max_devices</span> (1–100), optional <span class="doc-inline">count</span> (1–100)
+            and optional <span class="doc-inline">custom_key</span> (4–19 chars, letters/digits/<span class="doc-inline">_</span>/<span class="doc-inline">-</span>).</p>
             <pre class="doc-code"><code>{
-  "status": true,
-  "data": {
-    "real": "PUBG-admin-2-lyK0Y-DEVICE123-STATIC_WORDS",
-    "token": "1aa36c890b3155533de4ed2e09714704",
-    "modname": "VIP MOD",
-    "mod_status": "Safe",
-    "credit": "MOD STATUS :- 100% SAFE",
-    "ESP": "on", "Item": "on", "AIM": "on", "SilentAim": "on",
-    "BulletTrack": "on", "Floating": "on", "Memory": "on", "Setting": "on",
-    "expired_date": "2026-11-05T11:00:20.704Z",
-    "EXP": "2026-11-05T11:00:20.704Z",
-    "exdate": "2026-11-05T11:00:20.704Z",
-    "device": 1,
-    "rng": 1762333220
-  }
+  "ok": true,
+  "keys": [
+    {
+      "id": 3, "user_key": "admin-24-aB3dE", "game": "PUBG",
+      "duration": 24, "max_devices": 1, "status": 1,
+      "devices": [], "device_count": 0, "expired_date": null,
+      "created_at": "2026-11-05T10:30:00.000Z", "updated_at": "2026-11-05T10:30:00.000Z"
+    }
+  ],
+  "count": 1, "price": 80, "currency": "INR",
+  "saldo_before": 2147384644, "saldo_after": 2147384564, "charged": 80
 }</code></pre>
-            <p>Always check <span class="doc-inline">status</span> first. Maintenance mode also returns
-            <span class="doc-inline">status:true</span> but has <strong>no</strong> <span class="doc-inline">data</span> object — only a
-            <span class="doc-inline">reason</span> message. Treat that as not authorised.</p>
-        </div>
-    </div>
-
-    <div class="ui-card rounded-2xl p-6 sm:p-8 mb-6">
-        <div class="doc-section">
-            <h2>4. Response fields</h2>
-            <div class="table-scroll">
-                <table>
-                    <thead><tr><th>Field</th><th>Meaning / how to use it</th></tr></thead>
-                    <tbody>
-                        <tr><td><span class="doc-inline">status</span></td><td><span class="doc-inline">true</span> = authorised. On <span class="doc-inline">false</span>, read <span class="doc-inline">reason</span>.</td></tr>
-                        <tr><td><span class="doc-inline">reason</span></td><td>Only on failure or maintenance. See the error table below.</td></tr>
-                        <tr><td><span class="doc-inline">data.real</span></td><td><span class="doc-inline">game-user_key-serial-STATIC_WORDS</span>.</td></tr>
-                        <tr><td><span class="doc-inline">data.token</span></td><td><span class="doc-inline">md5(real)</span>. Recompute to detect a tampered reply.</td></tr>
-                        <tr><td><span class="doc-inline">data.modname</span></td><td>Mod name for your menu / title. Set at <span class="doc-inline">/Server → Change Mod Name</span>.</td></tr>
-                        <tr><td><span class="doc-inline">data.mod_status</span></td><td><strong>Status text</strong>: <span class="doc-inline">Safe</span> or <span class="doc-inline">Anti-Cheat is High..!!</span>. Show as a badge.</td></tr>
-                        <tr><td><span class="doc-inline">data.credit</span></td><td><strong>Floating text</strong>: free-form line drawn over the mod menu, e.g. <span class="doc-inline">MOD STATUS :- 100% SAFE</span>.</td></tr>
-                        <tr><td><span class="doc-inline">data.ESP … Setting</span></td><td>Eight <strong>mod feature</strong> gates. Values are the strings <span class="doc-inline">"on"</span> / <span class="doc-inline">"off"</span> — not booleans. Toggled at <span class="doc-inline">/Server → Mod Features</span>.</td></tr>
-                        <tr><td><span class="doc-inline">data.expired_date</span></td><td><strong>Expiry</strong> as ISO-8601 UTC. Compare with current UTC time before enabling features.</td></tr>
-                        <tr><td><span class="doc-inline">data.EXP</span>, <span class="doc-inline">data.exdate</span></td><td>Same expiry value, kept for legacy loaders.</td></tr>
-                        <tr><td><span class="doc-inline">data.device</span></td><td>Maximum devices allowed for this key.</td></tr>
-                        <tr><td><span class="doc-inline">data.rng</span></td><td>Unix timestamp (seconds) when the server built the reply — anti-replay heuristic.</td></tr>
-                    </tbody>
-                </table>
-            </div>
+            <p class="doc-note"><strong>Saldo rule:</strong> <span class="doc-inline">price = price_per_device(duration) × max_devices × count</span>.
+            The balance is debited atomically before the keys are written; if a write fails the charge is refunded.
+            Insufficient balance → <span class="doc-inline">402 insufficient_balance</span> and nothing is created.</p>
         </div>
 
         <div class="doc-section">
-            <h2>5. Expiry &amp; devices</h2>
-            <p>A new key has no expiry. The <strong>first successful</strong> connect sets it to
-            <span class="doc-inline">now + duration hours</span> (2, 5, 24, 72, 168, 336 or 720 hours,
-            chosen when the key is generated). After that it never moves and later calls return
-            <span class="doc-inline">EXPIRED KEY</span>. The key's <span class="doc-inline">device</span> limit counts
-            distinct serials; re-using the same serial is always allowed.</p>
+            <h2>6. List / read / update / reset / delete</h2>
+            <pre class="doc-code"><code># list
+curl -sS {{apiBase}}/api/v1/keys -H 'X-API-Key: amk_YOUR_TOKEN_HERE'
+
+# read one
+curl -sS {{apiBase}}/api/v1/keys/admin-24-aB3dE -H 'X-API-Key: amk_YOUR_TOKEN_HERE'
+
+# update (POST or PATCH)
+curl -sS -X PATCH {{apiBase}}/api/v1/keys/admin-24-aB3dE \
+  -H 'X-API-Key: amk_YOUR_TOKEN_HERE' -H 'Content-Type: application/json' \
+  -d '{"max_devices":3,"status":1}'
+
+# clear bound devices
+curl -sS -X POST {{apiBase}}/api/v1/keys/admin-24-aB3dE/reset \
+  -H 'X-API-Key: amk_YOUR_TOKEN_HERE'
+
+# delete
+curl -sS -X DELETE {{apiBase}}/api/v1/keys/admin-24-aB3dE \
+  -H 'X-API-Key: amk_YOUR_TOKEN_HERE'</code></pre>
         </div>
 
         <div class="doc-section">
-            <h2>6. Status / error text</h2>
-            <p>All rejections are HTTP 200 with <span class="doc-inline">status:false</span>:</p>
-            <div class="table-scroll">
-                <table>
-                    <thead><tr><th>reason</th><th>Cause</th></tr></thead>
-                    <tbody>
-                        <tr><td><span class="doc-inline">INVALID PARAMETER</span></td><td>A parameter is missing or empty</td></tr>
-                        <tr><td><span class="doc-inline">Bad Parameter</span></td><td>Illegal characters or key longer than 36 chars</td></tr>
-                        <tr><td><span class="doc-inline">USER OR GAME NOT REGISTERED</span></td><td>Key missing, or game does not match</td></tr>
-                        <tr><td><span class="doc-inline">USER BLOCKED</span></td><td>Key is not active</td></tr>
-                        <tr><td><span class="doc-inline">EXPIRED KEY</span></td><td>Expiry time is in the past</td></tr>
-                        <tr><td><span class="doc-inline">MAX DEVICE REACHED</span></td><td>New serial and the device limit is full</td></tr>
-                        <tr><td>maintenance message</td><td><span class="doc-inline">status:true</span>, no <span class="doc-inline">data</span>. Show the message from <span class="doc-inline">/Server → Offline Message</span>.</td></tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
+            <h2>7. JavaScript fetch example</h2>
+            <pre class="doc-code"><code>const BASE = "{{apiBase}}/api/v1";
+const TOKEN = "amk_YOUR_TOKEN_HERE";
 
-    <div class="ui-card rounded-2xl p-6 sm:p-8 mb-6">
-        <div class="doc-section">
-            <h2>7. Use in C++</h2>
-            <p>Minimal libcurl POST — no JSON library needed to see the raw reply:</p>
-            <pre class="doc-code"><code>// g++ connect.cpp -o connect -lcurl
-#include &lt;curl/curl.h&gt;
-#include &lt;iostream&gt;
-#include &lt;string&gt;
-
-static size_t onData(char* p, size_t size, size_t nmemb, void* out) {
-    static_cast&lt;std::string*&gt;(out)-&gt;append(p, size * nmemb);
-    return size * nmemb;
+async function api(path, options = {}) {
+  const r = await fetch(BASE + path, {
+    ...options,
+    headers: { "X-API-Key": TOKEN, "Content-Type": "application/json", ...options.headers }
+  });
+  const data = await r.json();
+  if (!data.ok) throw new Error(data.error.code + ": " + data.error.message);
+  return data;
 }
 
-std::string post(const std::string&amp; url, const std::string&amp; body) {
-    CURL* c = curl_easy_init();
-    std::string out;
-    curl_easy_setopt(c, CURLOPT_URL, url.c_str());
-    curl_easy_setopt(c, CURLOPT_POSTFIELDS, body.c_str());
-    curl_easy_setopt(c, CURLOPT_WRITEFUNCTION, onData);
-    curl_easy_setopt(c, CURLOPT_WRITEDATA, &amp;out);
-    curl_easy_setopt(c, CURLOPT_TIMEOUT, 15L);
-    CURLcode rc = curl_easy_perform(c);
-    if (rc != CURLE_OK) std::cerr &lt;&lt; curl_easy_strerror(rc) &lt;&lt; std::endl;
-    curl_easy_cleanup(c);
-    return out;
-}
-
-int main() {
-    std::string json = post("{{apiBase}}/connect",
-        "game=PUBG&amp;user_key=admin-2-lyK0Y&amp;serial=DEVICE123");
-    std::cout &lt;&lt; json &lt;&lt; std::endl;
-}</code></pre>
-            <p>Then parse it (example with <span class="doc-inline">nlohmann/json</span>):</p>
-            <pre class="doc-code"><code>#include &lt;nlohmann/json.hpp&gt;
-#include &lt;string&gt;
-
-void apply(const std::string&amp; json) {
-    auto r = nlohmann::json::parse(json, nullptr, false);
-    if (r.is_discarded()) return;               // bad JSON
-
-    if (!r.value("status", false)) {
-        ShowMessage(r.value("reason", "UNKNOWN ERROR"));  // EXPIRED KEY, USER BLOCKED ...
-        return;
-    }
-    if (!r.contains("data")) {                  // maintenance mode
-        ShowMessage(r.value("reason", "Server is Under Maintenance"));
-        return;
-    }
-
-    const auto&amp; d = r["data"];
-    std::string modName  = d.value("modname", "");       // "VIP MOD"
-    std::string status   = d.value("mod_status", "");    // "Safe" / "Anti-Cheat is High..!!"
-    std::string floating = d.value("credit", "");        // floating text
-    std::string expiry   = d.value("expired_date", "");  // ISO-8601 UTC
-    int maxDevices       = d.value("device", 1);
-    std::string token    = d.value("token", "");
-
-    bool esp       = d.value("ESP", "off") == "on";
-    bool aim       = d.value("AIM", "off") == "on";
-    bool silentAim = d.value("SilentAim", "off") == "on";
-    bool bullet    = d.value("BulletTrack", "off") == "on";
-    bool item      = d.value("Item", "off") == "on";
-    bool floatingW = d.value("Floating", "off") == "on";
-    bool memory    = d.value("Memory", "off") == "on";
-    bool setting   = d.value("Setting", "off") == "on";
-
-    SetMenuTitle(modName);
-    DrawFloatingText(floating);
-    DrawStatusBadge(status);
-    EnableFeatures(esp, aim, silentAim, bullet, item, floatingW, memory, setting);
-    // verify token == md5(game + "-" + key + "-" + serial + "-" + STATIC_WORDS)
-    // and compare expiry with current UTC time before starting the mod.
-}</code></pre>
-            <p class="doc-note">The <span class="doc-inline">ShowMessage</span>, <span class="doc-inline">DrawFloatingText</span>
-            and <span class="doc-inline">EnableFeatures</span> calls are placeholders for your own UI/hooks —
-            the API itself is just JSON over HTTPS.</p>
+const made = await api("/keys", {
+  method: "POST",
+  body: JSON.stringify({ game: "PUBG", duration: 24, max_devices: 1 })
+});
+console.log(made.keys[0].user_key, "charged", made.price);</code></pre>
         </div>
 
         <div class="doc-section">
-            <h2>8. Other endpoints</h2>
+            <h2>8. Error codes</h2>
             <div class="table-scroll">
                 <table>
-                    <thead><tr><th>Method / path</th><th>Returns</th></tr></thead>
+                    <thead><tr><th>HTTP</th><th>code</th><th>Meaning</th></tr></thead>
                     <tbody>
-                        <tr><td><span class="doc-inline">GET /api/health</span></td><td><span class="doc-inline">ok</span>, DB + lib channel, <span class="doc-inline">12/12</span> schema check</td></tr>
-                        <tr><td><span class="doc-inline">GET /api/lib/version</span></td><td>plain text version, e.g. <span class="doc-inline">1.0</span> — first line read by the loader</td></tr>
-                        <tr><td><span class="doc-inline">GET /api/lib/download</span></td><td>current loader ZIP (or 302 to an external URL)</td></tr>
-                        <tr><td><span class="doc-inline">GET /api/lib/info</span></td><td>JSON list of uploaded releases</td></tr>
-                        <tr><td><span class="doc-inline">GET /connect</span> (no params)</td><td><span class="doc-inline">web_info</span> / <span class="doc-inline">web__dev</span> panel info</td></tr>
-                        <tr><td><span class="doc-inline">GET /keys/api</span>, <span class="doc-inline">/admin/api/users</span></td><td>DataTables JSON (session required)</td></tr>
+                        <tr><td>401</td><td><span class="doc-inline">missing_api_key</span>, <span class="doc-inline">invalid_api_key</span></td><td>No key, or revoked/unknown key</td></tr>
+                        <tr><td>403</td><td><span class="doc-inline">account_inactive</span>, <span class="doc-inline">account_expired</span></td><td>Key owner account is blocked or expired</td></tr>
+                        <tr><td>400</td><td><span class="doc-inline">invalid_request</span></td><td>Bad parameters or no updatable field</td></tr>
+                        <tr><td>402</td><td><span class="doc-inline">insufficient_balance</span></td><td>Not enough saldo for the requested keys</td></tr>
+                        <tr><td>404</td><td><span class="doc-inline">key_not_found</span>, <span class="doc-inline">not_found</span></td><td>Key does not exist or is not yours</td></tr>
+                        <tr><td>405</td><td><span class="doc-inline">method_not_allowed</span></td><td>Wrong HTTP verb for the path</td></tr>
+                        <tr><td>409</td><td><span class="doc-inline">key_exists</span>, <span class="doc-inline">balance_conflict</span></td><td>Custom key taken, or concurrent balance change (retry)</td></tr>
                     </tbody>
                 </table>
             </div>
         </div>
 
         <div class="doc-section">
-            <h2>9. Where to change the values</h2>
-            <div class="table-scroll">
-                <table>
-                    <thead><tr><th>Value</th><th>Panel location</th></tr></thead>
-                    <tbody>
-                        <tr><td><span class="doc-inline">modname</span></td><td><span class="doc-inline">/Server → Change Mod Name</span></td></tr>
-                        <tr><td><span class="doc-inline">mod_status</span>, <span class="doc-inline">credit</span></td><td><span class="doc-inline">/Server → Floating Text</span></td></tr>
-                        <tr><td><span class="doc-inline">ESP … Setting</span></td><td><span class="doc-inline">/Server → Mod Features</span> (Owner)</td></tr>
-                        <tr><td>Maintenance message</td><td><span class="doc-inline">/Server → Server Maintenance</span></td></tr>
-                        <tr><td>Duration, device limit, key status</td><td><span class="doc-inline">/keys</span>, <span class="doc-inline">/keys/generate</span>, <span class="doc-inline">/keys/edit</span></td></tr>
-                        <tr><td>Loader version / ZIP</td><td><span class="doc-inline">/lib</span></td></tr>
-                    </tbody>
-                </table>
-            </div>
+            <h2>9. Good practice</h2>
+            <p>Keep the token server-side (bot backend, serverless function), never in public frontend source.
+            Use HTTPS, one key per project so you can revoke it independently, and check
+            <span class="doc-inline">/api/v1/me</span> before a create to show the current balance.
+            Full reference: <span class="doc-inline">API.md</span> in the repo.</p>
         </div>
     </div>
 </div>

@@ -1,0 +1,116 @@
+<div class="container-fluid px-4 py-6">
+    <div class="mb-6">
+        {{> msgStatus}}
+    </div>
+
+    {{#if flash.apiKeyPlain}}
+    <div class="ui-card rounded-2xl p-6 sm:p-8 mb-6">
+        <h2 class="text-xl font-bold text-gray-800 mb-2">Copy your new API key now</h2>
+        <p class="doc-section">Shown once. Only a hash is stored, so if you lose it you must create a new key.</p>
+        <div class="ui-tint p-4 mb-4" style="display:flex;flex-wrap:wrap;gap:10px;align-items:center">
+            <code id="new-api-key" class="doc-inline" style="font-size:13px;word-break:break-all;flex:1 1 240px">{{flash.apiKeyPlain}}</code>
+            <button type="button" id="copy-api-key" class="ui-btn" style="padding:8px 16px;border-radius:8px">Copy</button>
+        </div>
+        <p class="doc-section" style="margin-bottom:0">Send it as <span class="doc-inline">X-API-Key</span> on every request to
+        <span class="doc-inline">/api/v1/…</span>. See <a href="/api-docs">API docs</a>.</p>
+    </div>
+    {{/if}}
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div class="ui-card rounded-2xl p-6 sm:p-8">
+            <h2 class="text-xl font-bold text-gray-800 mb-2">Create API key</h2>
+            <p class="doc-section">One key per project (site, bot, script) so you can revoke it independently.</p>
+            <form method="post" action="/api-keys" class="space-y-4">
+                <input type="hidden" name="action" value="create">
+                <div>
+                    <label for="api-key-name" class="block text-sm font-semibold text-gray-700 mb-2">Key name</label>
+                    <input type="text" id="api-key-name" name="name" maxlength="80" required
+                           class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-green-500"
+                           placeholder="my-telegram-bot">
+                </div>
+                <button type="submit" class="ui-btn w-full text-white font-semibold py-3 px-6 rounded-xl">Create API key</button>
+            </form>
+            <div class="doc-note mt-6">
+                API keys can <strong>only</strong> create, list, update, reset and delete licence keys.
+                They cannot change the mod name, status text, floating text, features or maintenance mode.
+                Creating a key via the API deducts saldo with the same pricing as this panel.
+            </div>
+        </div>
+
+        <div class="lg:col-span-2 ui-card rounded-2xl p-6 sm:p-8">
+            <div class="flex items-center justify-between mb-6" style="flex-wrap:wrap;gap:10px">
+                <div>
+                    <h2 class="text-xl font-bold text-gray-800">Your API keys</h2>
+                    <p class="text-sm text-gray-600">Available balance: ₹{{user.saldo}}</p>
+                </div>
+                <a href="/api-docs" class="ui-btn" style="padding:8px 14px;border-radius:8px;font-size:13px">View API docs</a>
+            </div>
+
+            {{#if apiKeys}}
+            <div class="table-scroll">
+                <table>
+                    <thead>
+                        <tr><th>Name</th><th>Key</th><th>Status</th><th>Created</th><th>Last used</th><th>Actions</th></tr>
+                    </thead>
+                    <tbody>
+                        {{#each apiKeys}}
+                        <tr>
+                            <td><strong>{{this.name}}</strong></td>
+                            <td><code class="doc-inline">{{this.key_prefix}}…{{this.key_last4}}</code></td>
+                            <td>
+                                {{#if (eq this.status 1)}}
+                                <span class="doc-inline" style="background:#dcfce7;color:#166534">Active</span>
+                                {{else}}
+                                <span class="doc-inline" style="background:#fee2e2;color:#991b1b">Revoked</span>
+                                {{/if}}
+                            </td>
+                            <td>{{this.createdLabel}}</td>
+                            <td>{{this.usedLabel}}</td>
+                            <td>
+                                <div style="display:flex;gap:6px;flex-wrap:wrap">
+                                    {{#if (eq this.status 1)}}
+                                    <form method="post" action="/api-keys">
+                                        <input type="hidden" name="action" value="revoke">
+                                        <input type="hidden" name="id" value="{{this.id}}">
+                                        <button type="submit" class="ui-btn" style="padding:6px 10px;border-radius:7px;font-size:12px;background:#b45309">Revoke</button>
+                                    </form>
+                                    {{/if}}
+                                    <form method="post" action="/api-keys">
+                                        <input type="hidden" name="action" value="delete">
+                                        <input type="hidden" name="id" value="{{this.id}}">
+                                        <button type="submit" class="ui-btn" style="padding:6px 10px;border-radius:7px;font-size:12px;background:#b91c1c">Delete</button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                        {{/each}}
+                    </tbody>
+                </table>
+            </div>
+            {{else}}
+            <div class="ui-tint p-8" style="text-align:center;color:var(--muted)">
+                No API keys yet. Create one with the form on the left.
+            </div>
+            {{/if}}
+        </div>
+    </div>
+</div>
+
+<script>
+(function () {
+    var button = document.getElementById('copy-api-key');
+    var code = document.getElementById('new-api-key');
+    if (!button || !code) return;
+    button.addEventListener('click', function () {
+        var value = code.textContent.trim();
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(value).then(function () { button.textContent = 'Copied'; });
+        } else {
+            var input = document.createElement('textarea');
+            input.value = value; document.body.appendChild(input); input.select();
+            try { document.execCommand('copy'); button.textContent = 'Copied'; } catch (e) { /* ignore */ }
+            document.body.removeChild(input);
+        }
+    });
+})();
+</script>

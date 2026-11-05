@@ -158,6 +158,27 @@ create table if not exists public.auth_attempt (
 );
 
 -- ---------------------------------------------------------------------------
+-- api_keys (new in v1.1): personal API keys created by logged-in panel users.
+-- Only a SHA-256 hash of the token is stored; the plaintext is shown once.
+-- These keys can ONLY manage licence keys, never server/mod settings.
+-- ---------------------------------------------------------------------------
+create table if not exists public.api_keys (
+  id            serial primary key,
+  user_id       integer      not null references public.users(id_users) on delete cascade,
+  name          varchar(80)  not null,
+  key_prefix    varchar(20)  not null,
+  key_hash      varchar(64)  not null,
+  key_last4     varchar(4)   not null,
+  status        smallint     not null default 1,
+  last_used_at  timestamptz,
+  created_at    timestamptz  not null default now(),
+  updated_at    timestamptz  not null default now(),
+  constraint api_keys_key_hash_key unique (key_hash)
+);
+create index if not exists api_keys_user_id_idx on public.api_keys (user_id);
+create index if not exists api_keys_key_hash_idx on public.api_keys (key_hash);
+
+-- ---------------------------------------------------------------------------
 -- Row Level Security: the browser never talks to the database directly.
 -- All traffic goes through the Vercel functions using the service_role key,
 -- which bypasses RLS. Keeping RLS ON with no public policies means a leaked
@@ -175,6 +196,7 @@ alter table public.lib            enable row level security;
 alter table public._ftext         enable row level security;
 alter table public.client_release enable row level security;
 alter table public.auth_attempt   enable row level security;
+alter table public.api_keys       enable row level security;
 
 -- ---------------------------------------------------------------------------
 -- Seed data (same values as the original main.sql dump)

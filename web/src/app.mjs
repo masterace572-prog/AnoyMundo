@@ -17,6 +17,10 @@ import {
   handleConnect, handleConnectInfo, handleHealth, handleLibVersion,
   handleLibDownload, handleLibInfo,
 } from './licensing.mjs';
+import {
+  handleApiV1, createApiKeyForUser, listApiKeysForUser, mutateApiKey,
+} from './api-keys.mjs';
+import { createKeysForUser } from './key-service.mjs';
 
 // ---------------------------------------------------------------------------
 // small utilities
@@ -281,59 +285,29 @@ async function doRegister(req, res, body) {
 }
 
 async function doGenerate(req, res, body, user) {
-  const game = str(body.game) || 'PUBG';
-  const maxDevices = num(body.max_devices, 0);
-  const duration = num(body.duration, 0);
   const custom = str(body.custominput) === 'custom';
-  const cuslicense = str(body.cuslicense);
   const loopMap = { 1: 5, 2: 10, 3: 50, 4: 100, 5: 1 };
   const loops = loopMap[num(body.loopcount, 5)] || 1;
-  const old = { game, max_devices: body.max_devices, duration: body.duration };
-  const errors = {};
-  if (!config.games[game]) errors.game = 'Invalid game.';
-  if (!Number.isInteger(maxDevices) || maxDevices < 1) errors.max_devices = 'Minimum devices is 1.';
-  if (!config.prices[duration]) errors.duration = 'Invalid duration.';
-  const price = (config.prices[duration] || 0) * maxDevices;
-  if (price <= 0) errors.duration = 'Invalid duration or devices.';
-  if (Number(user.saldo) < price) errors.duration = 'Insufficient balance';
-  if (Object.keys(errors).length) {
+  const old = { game: str(body.game) || 'PUBG', max_devices: body.max_devices, duration: body.duration };
+  // The panel and the personal API-key endpoints share this service, so the
+  // price, saldo debit, key format and history row are always identical.
+  const result = await createKeysForUser(user, {
+    game: body.game, duration: body.duration, max_devices: body.max_devices,
+    count: loops, custom_key: custom ? str(body.cuslicense) : '',
+  });
+  if (!result.ok) {
+    if (result.code === 'key_exists' || result.code === 'insert_failed' || result.code === 'account_inactive') {
+      return fail(req, res, '/keys/generate', result.message, result.errors || { user_key: result.message }, old);
+    }
     return redirect(res, '/keys/generate', {
-      msgWarning: 'Please top up to your beloved admin.', errors, old,
+      msgWarning: 'Please top up to your beloved admin.',
+      errors: result.errors || { duration: result.message }, old,
     });
   }
-
-  const licenses = [];
-  if (custom) {
-    if (cuslicense.length < 4 || cuslicense.length > 19 || !/^[A-Za-z0-9_-]+$/.test(cuslicense)) {
-      return fail(req, res, '/keys/generate', 'Custom Key is too Short/Long or has invalid characters.', { user_key: 'Invalid custom key' }, old);
-    }
-    const exists = await getKeyByUserKey(cuslicense);
-    if (exists) return fail(req, res, '/keys/generate', 'Key already exists!!', { user_key: 'Key already exists' }, old);
-    licenses.push(cuslicense);
-  } else {
-    for (let i = 0; i < loops; i += 1) licenses.push(`${user.username}-${duration}-${randomAlnum(5)}`);
-  }
-
-  let lastId = null;
-  for (const license of licenses) {
-    const { data, error } = await db().from('keys_code').insert({
-      game, user_key: license, duration, max_devices: maxDevices,
-      registrator: user.username, admin_id: user.id_users, status: 1,
-      expired_date: null, created_at: nowIso(), updated_at: nowIso(),
-    }).select().single();
-    if (error) return fail(req, res, '/keys/generate', 'Could not generate key.', { user_key: error.message }, old);
-    lastId = data?.id_keys ?? null;
-  }
-
-  await db().from('users').update({ saldo: Number(user.saldo) - price, updated_at: nowIso() }).eq('id_users', user.id_users);
-  await db().from('history').insert({
-    keys_id: String(lastId ?? ''), user_do: user.username,
-    info: `${game}|${licenses[0].slice(0, 5)}|${duration}|${maxDevices}`,
-    created_at: nowIso(), updated_at: nowIso(),
-  });
   return redirect(res, '/keys/generate', {
-    msgSuccess: `Successfuly Generated ${licenses.length} key(s). Fee: ₹${price}`,
-    user_key: licenses.join('\n'), game, duration: String(duration), max_devices: String(maxDevices),
+    msgSuccess: `Successfuly Generated ${result.licenses.length} key(s). Fee: ₹${result.price}`,
+    user_key: result.licenses.join('\n'), game: result.game,
+    duration: String(result.duration), max_devices: String(result.max_devices),
   });
 }
 
@@ -538,6 +512,10 @@ export async function handle(req, res) {
       return handleLibDownload(req, res);
     }
     if (lp === '/api/lib/info') return handleLibInfo(res);
+    // Personal API-key endpoints authenticate with X-API-Key, not a session.
+    if (lp === '/api/v1' || lp.startsWith('/api/v1/')) {
+      return handleApiV1(req, res, body, q, p, method);
+    }
     if (lp === '/connect' || lp === '/api/connect') {
       if (method === 'POST') return handleConnect(req, res, body);
       // Some loaders (and deployment checks) use a query-string GET instead
@@ -578,9 +556,52 @@ export async function handle(req, res) {
       return page(req, res, 'dashboard', { user, title: 'Dashboard', stats, history });
     }
 
-    // ------------------------------- api docs ------------------------------
-    if (lp === '/docs' || lp === '/api-docs') {
+    // --------------------------- docs (two kinds) ---------------------------
+    // /docs      = loader integration (mod name, expiry, status, floating text, C++)
+    // /api-docs  = personal API-key REST reference (key management only)
+    if (lp === '/docs') {
+      return page(req, res, 'integration_docs', { user, title: 'Integration docs', apiBase: publicBase(req) });
+    }
+    if (lp === '/api-docs') {
       return page(req, res, 'api_docs', { user, title: 'API docs', apiBase: publicBase(req) });
+    }
+
+    // --------------------- personal API keys (panel UI) ---------------------
+    if (lp === '/api-keys') {
+      if (method === 'POST') {
+        const action = str(body.action);
+        if (action === 'create') {
+          const name = str(body.name);
+          if (!name || name.length > 80) {
+            return redirect(res, '/api-keys', { msgDanger: 'Enter a name of 1–80 characters.' });
+          }
+          try {
+            const { token } = await createApiKeyForUser(user, name);
+            return redirect(res, '/api-keys', {
+              msgSuccess: `API key "${name}" created. Copy it now — it will not be shown again.`,
+              apiKeyPlain: token,
+            });
+          } catch (error) {
+            return redirect(res, '/api-keys', { msgDanger: `Failed: ${error.message}` });
+          }
+        }
+        if (action === 'revoke' || action === 'delete') {
+          await mutateApiKey(user, num(body.id, 0), action);
+          return redirect(res, '/api-keys', {
+            msgSuccess: action === 'revoke' ? 'API key revoked.' : 'API key deleted.',
+          });
+        }
+        return redirect(res, '/api-keys', { msgWarning: 'Unknown action.' });
+      }
+      const apiKeys = await listApiKeysForUser(user);
+      return page(req, res, 'api_keys', {
+        user, title: 'API keys', apiKeys: apiKeys.map((k) => ({
+          ...k,
+          statusLabel: Number(k.status) === 1 ? 'Active' : 'Revoked',
+          createdLabel: humanDate(k.created_at),
+          usedLabel: k.last_used_at ? humanDate(k.last_used_at) : 'Never',
+        })),
+      });
     }
 
     // --------------------------------- keys ---------------------------------

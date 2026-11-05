@@ -1,310 +1,350 @@
-# Anoy — API docs (simple reference)
+# Anoy — Key Management API (`/api/v1`)
 
-**Base URL:** `https://anoymundo-panel.vercel.app`
-**Also available inside the panel:** `/docs` (login required).
+**Base URL:** `https://anoymundo-panel.vercel.app/api/v1`
+**In-panel reference:** `/api-docs` (login required)
+**Scope:** licence keys **only** — create, list, read, update, reset, delete.
 
-Everything the Android/loader client needs comes from **one** call: `POST /connect`.
-The rest of this page explains every field, the error text, and how to consume it
-from C++.
+> This API can **not** change the mod name, status text, floating text, feature
+> flags, maintenance mode, users or any other server setting. For the loader /
+> mod integration (`POST /connect`, `modname`, expiry, status, floating text,
+> C++ code) see [`INTEGRATION.md`](INTEGRATION.md) and `/docs`.
 
 ---
 
-## 1. Endpoints at a glance
+## 1. Get a personal API key
 
-| Method | Path | What it returns |
+1. Log in to the panel at `https://anoymundo-panel.vercel.app`.
+2. Open **API keys** (`/api-keys`) in the sidebar under *Developer*.
+3. Enter a name (e.g. `my-telegram-bot`) → **Create API key**.
+4. Copy the token immediately. It starts with `amk_` and is shown **once**.
+   Only a SHA-256 hash is stored, so it cannot be retrieved later.
+
+You can create one key per project, and **Revoke** or **Delete** it at any time.
+A revoked key immediately returns `401 invalid_api_key`.
+
+---
+
+## 2. Authentication
+
+Send the token on **every** request:
+
+```
+X-API-Key: amk_YOUR_TOKEN_HERE
+Content-Type: application/json        # for POST/PATCH bodies
+```
+
+`Authorization: Bearer amk_YOUR_TOKEN_HERE` also works. `api_key` as a query
+parameter or body field is accepted for simple clients, but the header is
+recommended.
+
+- No session cookie, no CSRF token, no OAuth flow.
+- CORS is open (`Access-Control-Allow-Origin: *`, `OPTIONS` preflight returns
+  `204`), so a browser site on another domain can call the API directly.
+- Every key can **only** see and manage licence keys created by its own
+  account (`registrator` / `admin_id`).
+
+---
+
+## 3. Response shape
+
+```json
+{ "ok": true,  "keys": [ ... ], "total": 2, "limit": 50, "offset": 0 }
+{ "ok": false, "error": { "code": "insufficient_balance", "message": "Insufficient balance" } }
+```
+
+Always check `ok` **and** the HTTP status. Errors are always JSON, never an HTML
+login page.
+
+### Key object
+
+| Field | Type | Meaning |
 |---|---|---|
-| `POST` | `/connect` | licence check → the full mod payload (main endpoint) |
-| `GET` | `/connect?game=…&user_key=…&serial=…` | same as POST, for loaders that use GET |
-| `GET` | `/connect` (no params) | `web_info` / `web__dev` panel information |
-| `GET` | `/api/health` | `ok`, Supabase connection, lib version, `12/12` schema check |
-| `GET` | `/api/lib/version` | plain text version, e.g. `1.0\n` (read by the loader) |
-| `GET` | `/api/lib/download` | the current loader ZIP (or 302 to an external URL) |
-| `GET` | `/api/lib/info` | JSON list of uploaded releases |
-
-`POST /connect` is also reachable as `/api/connect`.
-Legacy aliases still work: `/version.txt`, `/api/version`, `/lib/version.txt`,
-`/xlox.zip`, `/lib.zip`, `/lib.so`, `/Onlinelib/lib.so`, `/download/lib.so`.
+| `id` | number | internal key id |
+| `user_key` | string | the licence key string (use as `{user_key}` in paths) |
+| `game` | string | `PUBG` by default |
+| `duration` | number | validity in hours (2, 5, 24, 72, 168, 336, 720) |
+| `max_devices` | number | device slot limit |
+| `status` | number | `1` active, `2` blocked, `3` expired |
+| `devices` | string[] | bound serials |
+| `device_count` | number | `devices.length` |
+| `expired_date` | string \| null | ISO-8601 UTC, set on the key's first `/connect` |
+| `created_at`, `updated_at` | string | ISO-8601 UTC |
 
 ---
 
-## 2. Connect URL and request
+## 4. Endpoints
 
-```
-POST https://anoymundo-panel.vercel.app/connect
-Content-Type: application/x-www-form-urlencoded
+| Method | Path | Description | Charges saldo |
+|---|---|---|---|
+| `GET` | `/api/v1` | endpoint index + your API key name | no |
+| `GET` | `/api/v1/me` | your account (username, saldo, level) + API key info | no |
+| `GET` | `/api/v1/pricing` | games, durations, price per device | no |
+| `GET` | `/api/v1/keys` | list your keys | no |
+| `POST` | `/api/v1/keys` | **create** one or more keys | **yes** |
+| `GET` | `/api/v1/keys/{user_key}` | one key + device list | no |
+| `POST` / `PATCH` | `/api/v1/keys/{user_key}` | update `max_devices`, `duration`, `game`, `status`, `devices` | no |
+| `POST` | `/api/v1/keys/{user_key}/reset` | clear all bound devices | no |
+| `DELETE` | `/api/v1/keys/{user_key}` | delete a key | no |
 
-game=PUBG&user_key=admin-2-lyK0Y&serial=DEVICE123
-```
+`OPTIONS` on any path is answered with `204` (CORS preflight).
+
+---
+
+## 5. `GET /api/v1/me`
 
 ```bash
-curl -sS -X POST https://anoymundo-panel.vercel.app/connect \
-  -d 'game=PUBG' \
-  -d 'user_key=admin-2-lyK0Y' \
-  -d 'serial=DEVICE123'
+curl -sS https://anoymundo-panel.vercel.app/api/v1/me \
+  -H 'X-API-Key: amk_YOUR_TOKEN_HERE'
 ```
-
-| Parameter | Required | Rules |
-|---|---|---|
-| `game` | yes | `[A-Za-z0-9_-]+`, must match the game the key was generated for (default `PUBG`) |
-| `user_key` | yes | 1–36 characters, the licence key shown in `/keys` |
-| `serial` | yes | `[A-Za-z0-9_-]+`, a per-device ID (Android ID, IMEI hash, etc.). Keep it stable — it is stored against the key |
-
-`GET` alternative (same validation, same JSON):
-
-```
-https://anoymundo-panel.vercel.app/connect?game=PUBG&user_key=admin-2-lyK0Y&serial=DEVICE123
-```
-
----
-
-## 3. Success response
 
 ```json
 {
-  "status": true,
-  "data": {
-    "real": "PUBG-admin-2-lyK0Y-DEVICE123-Vm8Lk7Uj2JmsjCPVPVjrLa7zgfx3uz9E",
-    "token": "1aa36c890b3155533de4ed2e09714704",
-    "modname": "VIP MOD",
-    "mod_status": "Safe",
-    "credit": "MOD STATUS :- 100% SAFE",
-    "ESP": "on",
-    "Item": "on",
-    "AIM": "on",
-    "SilentAim": "on",
-    "BulletTrack": "on",
-    "Floating": "on",
-    "Memory": "on",
-    "Setting": "on",
-    "expired_date": "2026-11-05T11:00:20.704Z",
-    "EXP": "2026-11-05T11:00:20.704Z",
-    "exdate": "2026-11-05T11:00:20.704Z",
-    "device": 1,
-    "rng": 1762333220
-  }
+  "ok": true,
+  "account": { "username": "admin", "fullname": "admin", "level": 1, "saldo": 2147384644, "currency": "INR", "status": 1 },
+  "api_key": { "id": 7, "name": "my-telegram-bot", "prefix": "amk_Xy12AbCd", "last4": "pQ9z", "status": 1,
+               "created_at": "2026-11-05T10:00:00.000Z", "last_used_at": "2026-11-05T10:30:00.000Z" }
 }
 ```
 
-### Field reference
-
-| Field | Type | Meaning / how to use it |
-|---|---|---|
-| `status` | bool | `true` = authorised. **Always check this first.** When `false`, read `reason`. |
-| `reason` | string | Only present on failure, or on a maintenance response. See §5. |
-| `data.real` | string | `${game}-${user_key}-${serial}-${STATIC_WORDS}`. Informational; the client normally does not build it itself. |
-| `data.token` | string | `md5(real)`. Use it to verify the reply was not altered in transit. |
-| `data.modname` | string | Mod name shown in your menu / title. Set at `/Server → Change Mod Name`. |
-| `data.mod_status` | string | **Status text**: `Safe` or `Anti-Cheat is High..!!`. Show it as a badge; when it is not `Safe`, you may want to disable risky features. Set at `/Server → Floating Text`. |
-| `data.credit` | string | **Floating text**: free-form line drawn over your mod menu, e.g. `MOD STATUS :- 100% SAFE`. Set at `/Server → Floating Text`. |
-| `data.ESP` | `"on"` / `"off"` | ESP feature gate |
-| `data.Item` | `"on"` / `"off"` | Item feature gate |
-| `data.AIM` | `"on"` / `"off"` | AIM feature gate |
-| `data.SilentAim` | `"on"` / `"off"` | Silent aim feature gate |
-| `data.BulletTrack` | `"on"` / `"off"` | Bullet track feature gate |
-| `data.Floating` | `"on"` / `"off"` | Floating window feature gate |
-| `data.Memory` | `"on"` / `"off"` | Memory feature gate |
-| `data.Setting` | `"on"` / `"off"` | In-mod settings feature gate |
-| `data.expired_date` | ISO-8601 UTC | Key expiry. Compare with the current UTC time before enabling features. |
-| `data.EXP` | ISO-8601 UTC | Same value, kept for legacy loaders |
-| `data.exdate` | ISO-8601 UTC | Same value, kept for legacy loaders |
-| `data.device` | number | Maximum number of devices allowed for this key |
-| `data.rng` | number | Unix timestamp (seconds) at which the server built the response — useful for anti-replay checks |
-
-The eight `ESP … Setting` flags are toggled at
-`/Server → Mod Features` (Owner only). They are strings, **not** booleans:
-compare with `"on"`.
+Call this first in your site to display the current balance before a create.
 
 ---
 
-## 4. Expiry and devices
-
-- A brand-new key has no `expired_date`. The **first successful** `/connect`
-  sets it to `now + duration hours` (`duration` is chosen when the key is
-  generated: 2, 5, 24, 72, 168, 336 or 720 hours).
-- Once set, the expiry never moves. `/connect` after that time returns
-  `{"status": false, "reason": "EXPIRED KEY"}`.
-- `serial` is added to the key's device list on first use. Re-using the same
-  serial is always allowed. A **new** serial on a key that already has
-  `device` entries is rejected with `MAX DEVICE REACHED`.
-- Reset devices with `/keys/reset?userkey=…` in the panel (session required).
-- The panel exposes the same expiry in `expired_date`, `EXP` and `exdate` so
-  old and new loaders both work.
-
----
-
-## 5. Error / status text
-
-Every rejection is HTTP 200 with `status:false`. Handle the `reason` text:
-
-| `reason` | Cause |
-|---|---|
-| `INVALID PARAMETER` | one of `game`, `user_key`, `serial` is missing or empty |
-| `Bad Parameter` | illegal characters in `game`/`serial`, or `user_key` longer than 36 chars |
-| `USER OR GAME NOT REGISTERED` | key does not exist, or `game` does not match the key |
-| `USER BLOCKED` | key status is not active (`1`) |
-| `EXPIRED KEY` | `expired_date` is in the past |
-| `MAX DEVICE REACHED` | new serial and the device limit is full |
-| maintenance message | **special case:** `status:true` but **no `data` object**. Maintenance is on and `reason` holds the offline message from `/Server → Offline Message`. Treat it as "not authorised" and display the message. |
-
-```json
-{"status": false, "reason": "USER OR GAME NOT REGISTERED"}
-{"status": true, "reason": "Server is Under Maintenance"}
-```
-
----
-
-## 6. Token check
-
-```
-real  = game + "-" + user_key + "-" + serial + "-" + STATIC_WORDS
-token = md5(real)
-```
-
-`STATIC_WORDS` is the `STATIC_WORDS` environment variable on the server
-(must match the loader's licence salt). Recompute `md5(real)` client-side and
-compare with `data.token` if you want to detect a tampered response. Keep the
-salt out of any UI/log output.
-
-`GET /connect` with no parameters returns panel information instead:
+## 6. `GET /api/v1/pricing`
 
 ```json
 {
-  "web_info": {"_client": "Anoy", "license": "Qp5KSGTquetnUkjX6UVBAURH8hTkZuLM", "version": "1.0.0"},
-  "web__dev": {"author": "@libAkAudioVisiual", "telegram": "https://t.me/libAkAudioVisiual"}
+  "ok": true,
+  "currency": "INR",
+  "rule": "price = price_per_device_for_duration × max_devices",
+  "games": ["PUBG"],
+  "durations": [
+    { "duration": 2,   "hours": 2,   "label": "2 Hours — ₹10/Device",  "price_per_device": 10 },
+    { "duration": 5,   "hours": 5,   "label": "5 Hours — ₹20/Device",  "price_per_device": 20 },
+    { "duration": 24,  "hours": 24,  "label": "1 Days — ₹80/Device",   "price_per_device": 80 },
+    { "duration": 72,  "hours": 72,  "label": "3 Days — ₹150/Device",  "price_per_device": 150 },
+    { "duration": 168, "hours": 168, "label": "7 Days — ₹250/Device",  "price_per_device": 250 },
+    { "duration": 336, "hours": 336, "label": "14 Days — ₹350/Device", "price_per_device": 350 },
+    { "duration": 720, "hours": 720, "label": "30 Days — ₹500/Device", "price_per_device": 500 }
+  ]
 }
 ```
 
 ---
 
-## 7. Using it in C++
+## 7. `GET /api/v1/keys` — list
 
-Minimal libcurl POST (no JSON library needed to see the raw reply):
+Query parameters (all optional):
 
-```cpp
-// g++ connect.cpp -o connect -lcurl
-#include <curl/curl.h>
-#include <iostream>
-#include <string>
+| Param | Default | Notes |
+|---|---|---|
+| `limit` | `50` | 1–200 |
+| `offset` | `0` | pagination offset |
+| `game` | – | exact match |
+| `status` | – | `1`, `2` or `3` |
 
-static size_t onData(char* p, size_t size, size_t nmemb, void* out) {
-    static_cast<std::string*>(out)->append(p, size * nmemb);
-    return size * nmemb;
-}
-
-std::string post(const std::string& url, const std::string& body) {
-    CURL* c = curl_easy_init();
-    std::string out;
-    curl_easy_setopt(c, CURLOPT_URL, url.c_str());
-    curl_easy_setopt(c, CURLOPT_POSTFIELDS, body.c_str());
-    curl_easy_setopt(c, CURLOPT_WRITEFUNCTION, onData);
-    curl_easy_setopt(c, CURLOPT_WRITEDATA, &out);
-    curl_easy_setopt(c, CURLOPT_TIMEOUT, 15L);
-    CURLcode rc = curl_easy_perform(c);
-    if (rc != CURLE_OK) std::cerr << curl_easy_strerror(rc) << std::endl;
-    curl_easy_cleanup(c);
-    return out;
-}
-
-int main() {
-    std::string json = post("https://anoymundo-panel.vercel.app/connect",
-                            "game=PUBG&user_key=admin-2-lyK0Y&serial=DEVICE123");
-    std::cout << json << std::endl;
-}
+```bash
+curl -sS 'https://anoymundo-panel.vercel.app/api/v1/keys?limit=20&offset=0&game=PUBG' \
+  -H 'X-API-Key: amk_YOUR_TOKEN_HERE'
 ```
 
-Parsing and using the fields (with [nlohmann/json](https://github.com/nlohmann/json)):
-
-```cpp
-#include <nlohmann/json.hpp>
-#include <string>
-
-void apply(const std::string& json) {
-    auto r = nlohmann::json::parse(json, nullptr, false);
-    if (r.is_discarded()) return;                 // bad JSON / network error
-
-    if (!r.value("status", false)) {
-        std::string reason = r.value("reason", "UNKNOWN ERROR");
-        ShowMessage(reason);                      // EXPIRED KEY, USER BLOCKED, ...
-        return;
-    }
-    if (!r.contains("data")) {                    // maintenance mode
-        ShowMessage(r.value("reason", "Server is Under Maintenance"));
-        return;
-    }
-
-    const auto& d = r["data"];
-    std::string modName  = d.value("modname", "");        // "VIP MOD"
-    std::string status   = d.value("mod_status", "");     // "Safe" / "Anti-Cheat is High..!!"
-    std::string floating = d.value("credit", "");         // floating text on the menu
-    std::string expiry   = d.value("expired_date", "");   // ISO-8601 UTC
-    int maxDevices       = d.value("device", 1);
-    long long rng        = d.value("rng", 0LL);
-    std::string token    = d.value("token", "");
-
-    bool esp       = d.value("ESP", "off") == "on";
-    bool aim       = d.value("AIM", "off") == "on";
-    bool silentAim = d.value("SilentAim", "off") == "on";
-    bool bullet    = d.value("BulletTrack", "off") == "on";
-    bool item      = d.value("Item", "off") == "on";
-    bool floatingW = d.value("Floating", "off") == "on";
-    bool memory    = d.value("Memory", "off") == "on";
-    bool setting   = d.value("Setting", "off") == "on";
-
-    SetMenuTitle(modName);
-    DrawFloatingText(floating);
-    DrawStatusBadge(status);
-    EnableFeatures(esp, aim, silentAim, bullet, item, floatingW, memory, setting);
-    // verify: token == md5(game + "-" + key + "-" + serial + "-" + STATIC_WORDS)
-    // and compare expiry with the current UTC time before starting the mod.
-}
+```json
+{ "ok": true, "keys": [ { "user_key": "admin-2-lyK0Y", "game": "PUBG", "duration": 2,
+  "max_devices": 1, "status": 1, "devices": [], "device_count": 0,
+  "expired_date": null, "created_at": "...", "updated_at": "..." } ],
+  "total": 1, "limit": 20, "offset": 0 }
 ```
-
-`ShowMessage`, `DrawFloatingText`, `EnableFeatures`, etc. are placeholders for
-your own UI/hooks — the API itself is pure JSON over HTTPS.
-
-**JNI / Android note:** the Java loader reads the version from
-`GET /api/lib/version` (first line of plain text) and downloads the loader ZIP
-from `GET /api/lib/download`. Call `/connect` from native code after your HTTP
-stack is up, cache `expired_date`, and re-check on each launch.
 
 ---
 
-## 8. Where admins change these values
+## 8. `POST /api/v1/keys` — create (charges saldo)
 
-| What | Where in the panel |
+### Body (JSON or form-encoded)
+
+| Field | Required | Rules |
+|---|---|---|
+| `game` | no | default `PUBG`; must be one of `/api/v1/pricing` → `games` |
+| `duration` | **yes** | one of `2, 5, 24, 72, 168, 336, 720` (hours) |
+| `max_devices` | **yes** | integer 1–100 |
+| `count` | no | 1–100, default `1`. Total charge is `price × count`. |
+| `custom_key` | no | 4–19 chars, `[A-Za-z0-9_-]+`, only when `count = 1` |
+
+```bash
+curl -sS -X POST https://anoymundo-panel.vercel.app/api/v1/keys \
+  -H 'X-API-Key: amk_YOUR_TOKEN_HERE' \
+  -H 'Content-Type: application/json' \
+  -d '{"game":"PUBG","duration":24,"max_devices":1}'
+```
+
+```json
+{
+  "ok": true,
+  "keys": [ { "id": 3, "user_key": "admin-24-aB3dE", "game": "PUBG", "duration": 24,
+              "max_devices": 1, "status": 1, "devices": [], "device_count": 0,
+              "expired_date": null, "created_at": "2026-11-05T10:30:00.000Z",
+              "updated_at": "2026-11-05T10:30:00.000Z" } ],
+  "count": 1,
+  "price": 80, "currency": "INR",
+  "saldo_before": 2147384644,
+  "saldo_after": 2147384564,
+  "charged": 80
+}
+```
+
+HTTP `201 Created`. Generated keys look like `<username>-<duration>-<5 chars>`.
+`expired_date` is `null` until the first `/connect` from the loader.
+
+### Saldo / charging rules
+
+```
+price            = price_per_device(duration) × max_devices × count
+new_saldo        = current_saldo − price
+```
+
+- The balance is read fresh, then debited with an **optimistic conditional
+  update** (`WHERE saldo = previously_read_value`) so two concurrent requests
+  cannot spend the same balance twice. A conflict returns `409
+  balance_conflict` — just retry.
+- If inserting a key fails, the debit is refunded automatically.
+- There is **no refund** when you later delete a key.
+- Updates, resets, deletes and listing are free.
+- Insufficient balance → `402 insufficient_balance`; nothing is created and
+  the balance is unchanged.
+
+---
+
+## 9. `GET /api/v1/keys/{user_key}` — one key
+
+```bash
+curl -sS https://anoymundo-panel.vercel.app/api/v1/keys/admin-24-aB3dE \
+  -H 'X-API-Key: amk_YOUR_TOKEN_HERE'
+```
+
+```json
+{ "ok": true, "key": { "user_key": "admin-24-aB3dE", "devices": ["DEVICE123"], "device_count": 1, "...": "..." } }
+```
+
+---
+
+## 10. `POST` / `PATCH /api/v1/keys/{user_key}` — manage
+
+Send only the fields you want to change. At least one is required.
+
+| Field | Rules |
 |---|---|
-| `modname` | `/Server → Change Mod Name` |
-| `mod_status` + `credit` (status text / floating text) | `/Server → Floating Text` |
-| `ESP … Setting` feature flags | `/Server → Mod Features` (Owner) |
-| Maintenance `status:true` + `reason` | `/Server → Server Maintenance → Offline Message` |
-| Key `duration`, `device` limit, `status` | `/keys`, `/keys/generate`, `/keys/edit` |
-| `STATIC_WORDS` | Vercel project env var (server-side only) |
-| Loader `version` / ZIP | `/lib` |
+| `max_devices` | integer 1–100 |
+| `duration` | one of the pricing durations |
+| `game` | supported game |
+| `status` | `1` active, `2` blocked, `3` expired |
+| `devices` | comma-separated string or array; sanitised to `[A-Za-z0-9_-]+`, capped at `max_devices` |
+
+```bash
+curl -sS -X PATCH https://anoymundo-panel.vercel.app/api/v1/keys/admin-24-aB3dE \
+  -H 'X-API-Key: amk_YOUR_TOKEN_HERE' \
+  -H 'Content-Type: application/json' \
+  -d '{"max_devices":3,"status":1}'
+```
+
+```json
+{ "ok": true, "key": { "user_key": "admin-24-aB3dE", "max_devices": 3, "status": 1, "...": "..." },
+  "updated": ["max_devices", "status"] }
+```
+
+`POST` is accepted as an alias for `PATCH` so clients that cannot send PATCH
+still work.
 
 ---
 
-## 9. Other JSON endpoints (session required)
+## 11. `POST /api/v1/keys/{user_key}/reset` — clear devices
 
-These power the panel's DataTables and are not part of the loader contract:
+```bash
+curl -sS -X POST https://anoymundo-panel.vercel.app/api/v1/keys/admin-24-aB3dE/reset \
+  -H 'X-API-Key: amk_YOUR_TOKEN_HERE'
+```
 
-| Path | Returns |
-|---|---|
-| `GET /keys/api?draw=1&start=0&length=10` | `draw`, `recordsTotal`, `recordsFiltered`, `data[]` of keys |
-| `GET /admin/api/users?draw=1&start=0&length=10` | same shape for users |
-| `GET /keys/reset?userkey=…` | clears the device list (`{"reset":true}`) |
-| `GET /keys/resetAll?userkey=…&reset=1` | deletes the key (`{"deleted":true}`) |
-
-Unauthenticated requests to panel pages redirect to `/login`.
+```json
+{ "ok": true, "reset": true, "user_key": "admin-24-aB3dE", "devices_cleared": 1,
+  "key": { "devices": [], "device_count": 0, "...": "..." } }
+```
 
 ---
 
-## 10. Security notes
+## 12. `DELETE /api/v1/keys/{user_key}`
 
-- Use HTTPS; never send `user_key` over plain HTTP.
-- `STATIC_WORDS` and the Supabase service key stay **server-side only**.
-- Do not treat `status:true` alone as success — maintenance mode also returns
-  `status:true` but with **no `data`**.
-- Feature flags are `"on"`/`"off"` strings; default to off when a field is
-  missing or unrecognised.
-- `rng` is a server timestamp, not a nonce: use it only for staleness/anti-replay
-  heuristics.
+```bash
+curl -sS -X DELETE https://anoymundo-panel.vercel.app/api/v1/keys/admin-24-aB3dE \
+  -H 'X-API-Key: amk_YOUR_TOKEN_HERE'
+```
+
+```json
+{ "ok": true, "deleted": true, "user_key": "admin-24-aB3dE" }
+```
+
+---
+
+## 13. JavaScript example
+
+```js
+const BASE = "https://anoymundo-panel.vercel.app/api/v1";
+const TOKEN = "amk_YOUR_TOKEN_HERE";
+
+async function api(path, options = {}) {
+  const r = await fetch(BASE + path, {
+    ...options,
+    headers: { "X-API-Key": TOKEN, "Content-Type": "application/json", ...options.headers },
+  });
+  const data = await r.json();
+  if (!data.ok) throw new Error(`${data.error.code}: ${data.error.message}`);
+  return data;
+}
+
+const me = await api("/me");                 // show saldo
+const made = await api("/keys", {
+  method: "POST",
+  body: JSON.stringify({ game: "PUBG", duration: 24, max_devices: 1 }),
+});
+console.log(made.keys[0].user_key, "charged", made.price, "remaining", made.saldo_after);
+const list = await api("/keys?limit=20");
+```
+
+---
+
+## 14. Error codes
+
+| HTTP | `error.code` | Meaning |
+|---|---|---|
+| 401 | `missing_api_key` | no `X-API-Key` header supplied |
+| 401 | `invalid_api_key` | unknown or revoked key |
+| 403 | `account_inactive` | the key owner is blocked |
+| 403 | `account_expired` | the key owner's account expired |
+| 400 | `invalid_request` | bad parameters, or no updatable field sent |
+| 402 | `insufficient_balance` | not enough saldo |
+| 404 | `key_not_found` | key does not exist or is not owned by you |
+| 404 | `not_found` | unknown path |
+| 405 | `method_not_allowed` | wrong HTTP verb |
+| 409 | `key_exists` | `custom_key` already taken |
+| 409 | `balance_conflict` | concurrent balance change — retry |
+| 500 | `internal_error` | server-side failure |
+
+A `404 key_not_found` is returned for both "missing" and "not yours", so keys
+cannot be enumerated with an API key.
+
+---
+
+## 15. Security notes
+
+- Keep the token in a **backend** (bot server, serverless function, server-side
+  route). Do not ship it in public frontend JavaScript or a mobile APK.
+- Use one key per project so revoking one does not break the others.
+- Always use HTTPS. Rotate by creating a new key, switching clients, then
+  deleting the old one.
+- API keys are hashed with SHA-256 at rest; RLS is enabled on the table with no
+  public policies, so only the server-side service role can read it.
+- Scope is enforced in code: no `/api/v1` route touches `modname`, `_ftext`,
+  `feature`, `onoff`, `users` or `client_release`.
+
+---
+
+**Related:** [`API_AGENT_PROMPT.md`](API_AGENT_PROMPT.md) (copy-paste prompt for
+building a site), [`INTEGRATION.md`](INTEGRATION.md) (loader / C++ docs),
+[`DEPLOYMENT.md`](DEPLOYMENT.md) (infrastructure).

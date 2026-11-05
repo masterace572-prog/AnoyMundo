@@ -89,7 +89,7 @@ try {
   // 1. health
   let r = await request('/api/health');
   ok(r.status === 200 && r.body.ok === true, 'GET /api/health reports all checks OK', JSON.stringify(r.body));
-  ok(r.body.checks?.schema?.ok === true, 'schema check sees all 12 tables');
+  ok(r.body.checks?.schema?.ok === true, 'schema check sees all 13 tables');
 
   // 2. public pages + auth wall
   r = await request('/');
@@ -132,7 +132,7 @@ try {
   ok(r.status === 200 && /Dashboard/.test(r.body), 'GET /dashboard renders');
   ok(!/<\?php|<\?=/.test(r.body), 'no untranslated PHP tags leak into HTML');
   for (const route of ['/keys', '/keys/generate', '/keys/1', '/settings', '/Server',
-    '/admin/manage-users', '/admin/create-referral', '/lib']) {
+    '/admin/manage-users', '/admin/create-referral', '/lib', '/api-keys', '/api-docs', '/docs']) {
     r = await request(route);
     ok(r.status === 200, `GET ${route} renders (${r.status})`);
     if (r.status !== 200) console.error(String(r.body).slice(0, 300));
@@ -162,15 +162,74 @@ try {
   ok(/\.field-prefix > input[\s\S]{0,160}padding-left:\s*2\.875rem\s*!important/.test(r.body),
     'app.css gives icon-prefixed inputs enough left padding');
 
-  // In-panel API docs page.
+  // Two separate in-panel docs pages.
   r = await request('/docs');
-  ok(r.status === 200 && /API docs/.test(r.body) && /POST [^<]*\/connect/.test(r.body)
+  ok(r.status === 200 && /Integration docs/.test(r.body) && /POST [^<]*\/connect/.test(r.body)
     && /Use in C\+\+/.test(r.body) && /curl_easy_perform/.test(r.body)
     && /expired_date/.test(r.body) && /mod_status/.test(r.body) && /Floating/.test(r.body)
     && !/linear-gradient|bg-gradient/.test(r.body),
-    'GET /docs renders the API reference with connect fields and a C++ example');
-  ok(/<title>Anoy · API docs<\/title>/.test(r.body) && /nav-link is-active/.test(r.body),
-    'docs page uses the Anoy title and highlights its sidebar link');
+    'GET /docs is the loader integration reference with fields and C++ code');
+  ok(/<title>Anoy · Integration docs<\/title>/.test(r.body) && /nav-link is-active/.test(r.body),
+    'integration docs use the Anoy title and highlight their sidebar link');
+  r = await request('/api-docs');
+  ok(r.status === 200 && /key management/i.test(r.body) && /X-API-Key/.test(r.body)
+    && /\/api\/v1\/keys/.test(r.body) && /<title>Anoy · API docs<\/title>/.test(r.body),
+    'GET /api-docs is the separate key-management API reference');
+
+  // 5b. Personal API keys + /api/v1 key-management API.
+  r = await request('/api/v1/keys');
+  ok(r.status === 401 && r.body?.error?.code === 'missing_api_key',
+    '/api/v1 refuses requests without an API key');
+  r = await request('/api/v1/keys', { method: 'OPTIONS' });
+  ok(r.status === 204 && r.response.headers.get('access-control-allow-origin') === '*',
+    'OPTIONS /api/v1/keys answers CORS preflight for external sites');
+  r = await request('/api-keys', { method: 'POST', body: new URLSearchParams({ action: 'create', name: 'smoke-bot' }) });
+  ok(r.status === 302 && r.location === '/api-keys', 'panel creates a personal API key');
+  r = await request('/api-keys');
+  const apiToken = String(r.body).match(/amk_[A-Za-z0-9_-]{20,}/)?.[0] || '';
+  ok(/smoke-bot/.test(r.body) && apiToken.length > 20, 'new API key is shown once on /api-keys');
+  const H = { 'X-API-Key': apiToken };
+  r = await request('/api/v1/me', { headers: H });
+  ok(r.status === 200 && r.body?.ok === true && r.body?.account?.username === 'admin'
+    && r.body?.api_key?.name === 'smoke-bot', 'GET /api/v1/me authenticates the API key');
+  const saldoBefore = Number(r.body.account.saldo);
+  r = await request('/api/v1/pricing', { headers: H });
+  ok(r.body?.ok === true && r.body?.durations?.length === 7 && r.body?.games?.includes('PUBG'),
+    'GET /api/v1/pricing returns the duration price list');
+  r = await request('/api/v1/keys', { headers: H });
+  ok(r.body?.ok === true && Array.isArray(r.body.keys) && r.body.keys.length >= 2,
+    'GET /api/v1/keys lists the caller licence keys');
+  r = await request('/api/v1/keys', { method: 'POST', headers: H,
+    body: { game: 'PUBG', duration: 2, max_devices: 1 } });
+  ok(r.status === 201 && r.body?.ok === true && r.body?.price === 10
+    && r.body?.saldo_after === saldoBefore - 10 && r.body?.charged === 10,
+    'POST /api/v1/keys creates a key and cuts saldo by the panel price');
+  const madeKey = r.body?.keys?.[0]?.user_key || '';
+  ok(/^admin-2-[A-Za-z0-9]{5}$/.test(madeKey), 'API-created key uses the legacy format');
+  r = await request(`/api/v1/keys/${madeKey}`, { headers: H });
+  ok(r.body?.ok === true && r.body?.key?.user_key === madeKey, 'GET /api/v1/keys/{key} reads one key');
+  r = await request(`/api/v1/keys/${madeKey}`, { method: 'PATCH', headers: H, body: { max_devices: 3 } });
+  ok(r.body?.ok === true && r.body?.key?.max_devices === 3, 'PATCH /api/v1/keys/{key} manages a key');
+  r = await request(`/api/v1/keys/${madeKey}/reset`, { method: 'POST', headers: H });
+  ok(r.body?.ok === true && r.body?.reset === true && r.body?.key?.device_count === 0,
+    'POST /api/v1/keys/{key}/reset clears devices');
+  r = await request(`/api/v1/keys/${madeKey}`, { method: 'DELETE', headers: H });
+  ok(r.body?.ok === true && r.body?.deleted === true, 'DELETE /api/v1/keys/{key} deletes a key');
+  r = await request(`/api/v1/keys/${madeKey}`, { headers: H });
+  ok(r.status === 404 && r.body?.error?.code === 'key_not_found', 'deleted key is gone');
+  r = await request('/api/v1/keys', { method: 'POST', headers: H,
+    body: { game: 'PUBG', duration: 2, max_devices: 1, custom_key: 'x' } });
+  ok(r.status === 400 && r.body?.error?.code === 'invalid_request', 'invalid custom_key is rejected');
+  r = await request('/api/v1/keys', { method: 'POST', headers: { 'X-API-Key': 'amk_wrong' },
+    body: { game: 'PUBG', duration: 2, max_devices: 1 } });
+  ok(r.status === 401 && r.body?.error?.code === 'invalid_api_key', 'revoked/unknown API key is rejected');
+  r = await request('/api/v1/Server', { method: 'POST', headers: H, body: { modname: 'HACKED' } });
+  ok(r.status === 404 && r.body?.error?.code === 'not_found',
+    'API keys cannot reach server/mod-name settings routes');
+  r = await request('/api-keys', { method: 'POST', body: new URLSearchParams({ action: 'revoke', id: '1' }) });
+  ok(r.status === 302, 'panel revokes a personal API key');
+  r = await request('/api/v1/me', { headers: H });
+  ok(r.status === 401 && r.body?.error?.code === 'invalid_api_key', 'revoked API key stops working');
 
   // 6. DataTables API
   r = await request('/keys/api?draw=3&start=0&length=10&order%5B0%5D%5Bcolumn%5D=0&order%5B0%5D%5Bdir%5D=desc');

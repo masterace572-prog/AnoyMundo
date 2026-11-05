@@ -52,9 +52,17 @@
         </a>
 
         <p class="sidebar-label">Developer</p>
-        <a href="/docs" class="nav-link {{#if navDocs}}is-active{{/if}}">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.5C10.5 5 8 4.5 4 4.5v14c4 0 6.5.5 8 2 1.5-1.5 4-2 8-2v-14c-4 0-6.5.5-8 2zm0 0v14"></path></svg>
+        <a href="/api-keys" class="nav-link {{#if navApiKeys}}is-active{{/if}}">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.7 5.7L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.6a1 1 0 01.3-.7l6-6A6 6 0 1121 9z"></path></svg>
+            <span>API keys</span>
+        </a>
+        <a href="/api-docs" class="nav-link {{#if navApiDocs}}is-active{{/if}}">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M8 9l-4 3 4 3m8-6l4 3-4 3M14 5l-4 14"></path></svg>
             <span>API docs</span>
+        </a>
+        <a href="/docs" class="nav-link {{#if navIntegration}}is-active{{/if}}">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.5C10.5 5 8 4.5 4 4.5v14c4 0 6.5.5 8 2 1.5-1.5 4-2 8-2v-14c-4 0-6.5.5-8 2zm0 0v14"></path></svg>
+            <span>Integration docs</span>
         </a>
 
         {{#if user.isAdmin}}

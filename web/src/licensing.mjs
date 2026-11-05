@@ -129,7 +129,7 @@ export async function handleHealth(res) {
     };
   }
   try {
-    const expected = ['users', 'keys_code', 'history', 'referral_code', 'feature', 'modname', 'onoff', '_ftext', 'credit', 'lib', 'client_release', 'auth_attempt'];
+    const expected = ['users', 'keys_code', 'history', 'referral_code', 'feature', 'modname', 'onoff', '_ftext', 'credit', 'lib', 'client_release', 'auth_attempt', 'api_keys'];
     // Parallel round trips keep the health probe fast on a cold lambda.
     const results = await Promise.all(expected.map((table) => countRows(table).catch(() => null)));
     const present = results.filter((n) => n !== null).length;

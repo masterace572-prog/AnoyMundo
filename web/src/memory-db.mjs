@@ -30,12 +30,14 @@ const seed = () => ({
   _ftext: [{ id: 1, _status: 'Safe', _ftext: 'MOD STATUS :- 100% SAFE' }],
   client_release: [{ id: 1, version: '1.0', file_name: 'no-release.zip', file_size: 0, sha256: '', content_base64: null, external_url: null, notes: 'Placeholder', is_current: true, uploaded_by: 'admin', created_at: new Date().toISOString() }],
   auth_attempt: [],
+  api_keys: [],
 });
 
 const serials = {
   users: 'id_users', keys_code: 'id_keys', history: 'id_history',
   referral_code: 'id_reff', feature: 'id', modname: 'id', onoff: 'id',
   credit: 'id', lib: 'id', _ftext: 'id', client_release: 'id', auth_attempt: 'id',
+  api_keys: 'id',
 };
 
 function clone(value) {

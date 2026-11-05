@@ -62,11 +62,16 @@ tags, gradients or escaped HTML in messages.
 
 ## 2. Supabase
 
-Applied `supabase/schema.sql` as migration `anoymundo_panel_schema`. It creates
-12 tables, enables RLS (service-role access only), and seeds the original
+Applied `supabase/schema.sql` as migration `anoymundo_panel_schema`, then
+migration `add_api_keys_table` for the personal API-key feature. That creates
+13 tables, enables RLS (service-role access only), and seeds the original
 `main.sql` data: admin account, 2 license keys, feature flags, mod name,
 server status, credit text and a `WELCOME` referral code. A placeholder
 `client_release` row provides version `1.0` until a real loader ZIP is uploaded.
+
+`public.api_keys` stores only a SHA-256 hash of each `amk_…` token plus its
+prefix/last4, owner, status and `last_used_at`; plaintext is shown once in a
+one-shot flash cookie.
 
 `client_release.content_base64` stores the loader ZIP as base64 text — Vercel's
 filesystem is read-only, and hex-encoded `bytea` would double the payload size.
@@ -111,7 +116,7 @@ No secret is committed to git (`.env*` is ignored).
 
 | Check | Result |
 |---|---|
-| `GET /api/health` | `{"ok":true,...,"schema":"12/12 expected tables present"}` |
+| `GET /api/health` | `{"ok":true,...,"schema":"13/13 expected tables present"}` |
 | `GET /` and `/login` | flat Anoy sign-in page with @libAkAudioVisiual contact |
 | `GET /register` | responsive two-column sign-up form |
 | `POST /login` (`admin`/`admin123`) | 302 → `/dashboard`, signed `am_session` cookie |
@@ -121,7 +126,12 @@ No secret is committed to git (`.env*` is ignored).
 | `POST /connect` | `status:true` + `real`, `token`, `modname`, 8 feature flags, expiry fields |
 | `GET /connect` (no params) | `{"web_info":{"_client":"Anoy",...},"web__dev":{"author":"@libAkAudioVisiual","telegram":"https://t.me/libAkAudioVisiual"}}` |
 | `POST /connect` with bad key | `{"status":false,"reason":"USER OR GAME NOT REGISTERED"}` |
-| `GET /docs` | in-panel API reference (connect URL, fields, C++ example), `Anoy · API docs` |
+| `GET /docs` | in-panel **integration** reference (connect URL, mod name, status/floating text, expiry, C++ example) |
+| `GET /api-docs` | in-panel **key-management API** reference (`/api/v1/*`, personal API keys) |
+| `GET /api-keys` | create / revoke / delete personal API keys (token shown once) |
+| `POST /api/v1/keys` | create licence keys with `X-API-Key`; charges saldo (`price × max_devices × count`) |
+| `GET /api/v1/keys` | list only the caller's keys (`limit`, `offset`, `game`, `status`) |
+| `GET /api/v1/me`, `GET /api/v1/pricing` | account saldo + duration pricing |
 | Saldo inputs on `/admin/user/1`, `/admin/create-referral` | `field-prefix` wrapper + `padding-left: 2.875rem !important` — typed digits never hide behind the currency icon |
 | `GET /api/lib/version` | plain-text `1.0` |
 | `GET /assets/css/tailwind.css` | compiled CSS, no CDN dependency |
@@ -141,7 +151,7 @@ curl -sS -X POST https://anoymundo-panel.vercel.app/connect \
 
 ## 5. Automated tests
 
-- `npm test` — 79 offline end-to-end HTTP tests using an in-memory DB driver
+- `npm test` — 105 offline end-to-end HTTP tests using an in-memory DB driver
   (login, registration, key CRUD, DataTables, `/connect`, maintenance/feature
   toggles, referral → reseller, library upload/version, logout), plus UI
   regression guards: no gradients, no escaped HTML/PHP in notices or form
@@ -179,7 +189,7 @@ curl -sS -X POST https://anoymundo-panel.vercel.app/connect \
 cd web
 npm install
 npm run build     # prebuild + validation
-npm test          # 79 offline end-to-end tests
+npm test          # 105 offline end-to-end tests
 npm run dev       # live preview on 0.0.0.0:3000 (memory DB by default)
 ```
 

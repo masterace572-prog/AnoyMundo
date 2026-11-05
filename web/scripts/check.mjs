@@ -33,7 +33,8 @@ for (const [name, source] of Object.entries(templates)) {
 
 for (const mod of ['../src/config.mjs', '../src/memory-db.mjs', '../src/db.mjs',
   '../src/auth.mjs', '../src/render.mjs', '../src/http.mjs',
-  '../src/licensing.mjs', '../src/app.mjs', '../api/index.js']) {
+  '../src/licensing.mjs', '../src/key-service.mjs', '../src/api-keys.mjs',
+  '../src/app.mjs', '../api/index.js']) {
   try { await import(mod); process.stdout.write(`  ok  module ${mod}\n`); }
   catch (e) { errors.push(`module ${mod}: ${e.stack || e.message}`); }
 }

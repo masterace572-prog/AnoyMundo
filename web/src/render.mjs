@@ -107,6 +107,7 @@ export function renderPage(req, res, name, data = {}) {
     game: flashRaw.game || '',
     duration: flashRaw.duration || '',
     max_devices: flashRaw.max_devices || '',
+    apiKeyPlain: flashRaw.apiKeyPlain || '',
   };
   const old = flashRaw.old || data.old || {};
   const errors = flashRaw.errors || data.errors || {};
@@ -132,7 +133,9 @@ export function renderPage(req, res, name, data = {}) {
     navKeys: on('/keys') && !on('/keys/generate'),
     navGenerate: on('/keys/generate'),
     navSettings: on('/settings'),
-    navDocs: on('/docs') || on('/api-docs'),
+    navApiKeys: on('/api-keys'),
+    navApiDocs: on('/api-docs'),
+    navIntegration: on('/docs'),
     navServer: on('/server'),
     navUsers: on('/admin/manage-users') || on('/admin/user'),
     navReferral: on('/admin/create-referral'),
