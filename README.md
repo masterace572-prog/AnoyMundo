@@ -82,6 +82,9 @@ idempotent hardening migration that must be applied to the project once:
   Origin/Referer, so a malicious page cannot act as a signed-in user. Key lists
   and downloads are scoped to the signed-in reseller's own keys; only the Owner
   sees every key.
+- Session cookies are bound to the account's password hash. Changing a
+  password (in Settings or by the Owner) revokes every older session; the
+  session that made the change is refreshed so the user stays signed in.
 
 **Library releases**: `/lib` shows the current version, suggests the next one,
 and has a **Bump** button plus a separate **Push a link** action that updates

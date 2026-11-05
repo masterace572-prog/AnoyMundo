@@ -373,6 +373,10 @@ try {
   ok(r.status === 400 && /version/i.test(r.body?.error || ''), 'invalid version is rejected with a clear JSON error');
   r = await request('/lib', { method: 'POST', body: { action: 'link', version: '1.3', external_url: 'javascript:alert(1)' } });
   ok(r.status === 400 && /https/.test(r.body?.error || ''), 'non-http external link is rejected');
+  r = await request('/lib', { method: 'POST', body: { version: '1.4', file_name: 'both.zip', content_base64: zip, external_url: 'https://example.com/other.so' } });
+  ok(r.body?.ok === true, 'a release with both a file and a link publishes');
+  r = await request('/api/lib/download');
+  ok(r.status === 200 && r.body.includes('PK'), 'an uploaded file takes precedence over an external link');
 
   // 14. static assets
   r = await request('/assets/css/tailwind.css');

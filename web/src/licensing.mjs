@@ -194,7 +194,10 @@ export async function handleLibDownload(req, res) {
       .eq('is_current', true).maybeSingle();
     if (error) throw new Error(error.message);
     if (!data) return sendText(res, 'No release has been uploaded yet.', 404);
-    if (data.external_url) {
+    // A stored file always wins. Only a release published as a pure link (the
+    // /lib "Push a link" action clears content_base64) redirects, so an old
+    // external URL can never shadow a freshly uploaded file.
+    if (!data.content_base64 && data.external_url) {
       res.statusCode = 302;
       res.setHeader('Location', data.external_url);
       res.setHeader('Cache-Control', 'no-store');

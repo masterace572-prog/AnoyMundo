@@ -425,7 +425,12 @@ async function doSettings(req, res, body, user, targetUrl) {
     const { error } = await db().from('users')
       .update({ password: hashPassword(password), updated_at: nowIso() }).eq('id_users', user.id_users);
     if (error) return fail(req, res, targetUrl, 'Could not save the new password. Please try again.');
-    return redirect(res, targetUrl, { msgSuccess: 'Password updated.' });
+    // Refresh this session so the new password does not immediately sign the
+    // user out; every *other* session for this account is now invalid.
+    const { data: refreshed } = await db().from('users').select('*')
+      .eq('id_users', user.id_users).maybeSingle();
+    if (refreshed) setSession(res, refreshed, !!user.session?.remember);
+    return redirect(res, targetUrl, { msgSuccess: 'Password updated. Other sessions are now signed out.' });
   }
   if (body.fullname_form) {
     const fullname = str(body.fullname);

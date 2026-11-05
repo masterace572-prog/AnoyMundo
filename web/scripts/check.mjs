@@ -113,6 +113,9 @@ if (!/config\.ownerUsername/.test(appSrc) || !/handleFailure/.test(appSrc)) {
 if (!/sameOriginMutation/.test(appSrc) || !/cross_site_blocked/.test(appSrc)) {
   errors.push('app.mjs must block cross-site state-changing GET requests');
 }
+if (!/pv:/.test(src('src/auth.mjs')) || !/session\.pv/.test(src('src/auth.mjs'))) {
+  errors.push('sessions must be bound to the password hash so old sessions are revoked');
+}
 if (!/if \(!user\.isOwner\) query = query\.eq\('registrator', user\.username\);/.test(appSrc)) {
   errors.push('non-owner key lists and downloads must be scoped to their own keys');
 }

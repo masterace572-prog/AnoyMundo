@@ -123,6 +123,9 @@ export function setSession(res, user, remember) {
     iat: now,
     exp: now + ttlMs,
     remember: !!remember,
+    // Bind the cookie to the current password hash. Changing a password (in
+    // Settings or by the Owner) immediately invalidates every older session.
+    pv: String(user.password || '').slice(0, 12),
   };
   appendCookie(res, serializeCookie(SESSION_COOKIE, createSessionToken(payload), { maxAge: Math.floor(ttlMs / 1000) }));
   return payload;
@@ -179,6 +182,9 @@ export async function currentUser(req) {
   if (!user) return null;
   // If an account is renamed, an old cookie must not keep its privileges.
   if (String(user.username) !== String(session.un)) return null;
+  // Sessions issued before this guard had no pv; they expire naturally. Any
+  // newer session is void as soon as the password hash changes.
+  if (session.pv && String(user.password || '').slice(0, 12) !== String(session.pv)) return null;
   if (Number(user.status) !== 1 || Number(user.level) > 3) return null;
   if (user.expiration_date && new Date(user.expiration_date).getTime() < Date.now()) return null;
   const isOwner = Number(user.level) === 1 && user.username === config.ownerUsername;
