@@ -89,8 +89,9 @@
                 </div>
 
                 <div class="field-full">
-                    <button type="submit" class="ui-btn ui-btn--primary auth-submit">Create Account</button>
+                    <button type="submit" class="ui-btn ui-btn--primary auth-submit" data-busy-label="Creating account…">Create Account</button>
                 </div>
+                <p class="auth-hint field-full">Hashing your password can take a few seconds. Please wait — no need to press twice.</p>
             </form>
 
             <div class="auth-footer">
@@ -116,5 +117,6 @@
                 : '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M2.5 12C3.7 7.9 7.5 5 12 5s8.3 2.9 9.5 7c-1.2 4.1-5 7-9.5 7s-8.3-2.9-9.5-7z"></path>';
         }
     </script>
+    <script src="/assets/js/app-ui.js"></script>
 </body>
 </html>

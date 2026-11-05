@@ -26,6 +26,16 @@ responsive desktop sidebar / mobile drawer, self-hosted Inter typography,
 consistent cards, forms, tables and alerts. `scripts/refresh-ui.py` documents
 the one-off conversion of the legacy inline gradient styles.
 
+**Interaction feedback** (`web/public/assets/js/app-ui.js`): every normal form
+submit shows a spinner + a "please wait" label, disables the button, shows a
+thin accent progress strip at the top of the viewport and ignores repeat
+submits — sign-in does a server-side bcrypt check, so a click used to look like
+a dead button. Button-style navigation links get the same treatment. The
+`/lib` uploader (`web/views/lib.hbs`) uses XHR for real byte-level progress:
+reading → uploading → saving → done, with accent / success / danger colours,
+percent, bytes sent and an accessible `role="progressbar"`. Both respect
+`prefers-reduced-motion` and release their state on bfcache restores.
+
 ## Layout
 
 ```

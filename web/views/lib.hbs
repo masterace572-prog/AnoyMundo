@@ -62,57 +62,185 @@
                     <label class="block text-sm font-medium text-gray-700 mb-2">Notes (optional)</label>
                     <input type="text" name="notes" id="lib-notes" class="w-full px-4 py-3 bg-white/50 border border-gray-200 rounded-xl">
                 </div>
-                <button type="submit" id="lib-submit" class="w-full py-3 px-6 text-white font-bold rounded-xl ui-btn ui-btn--primary">Upload</button>
+                <button type="submit" id="lib-submit" class="w-full py-3 px-6 text-white font-bold rounded-xl ui-btn ui-btn--primary" data-busy-label="Uploading…">Upload</button>
             </form>
-            <div id="lib-result" class="mt-4 text-sm"></div>
+
+            <div id="lib-progress" class="anoy-progress" hidden>
+                <div class="anoy-progress__head">
+                    <span class="anoy-progress__message" id="lib-progress-message" aria-live="polite">Preparing upload…</span>
+                    <span class="anoy-progress__percent" id="lib-progress-percent">0%</span>
+                </div>
+                <div class="anoy-progress__track" id="lib-progress-track" role="progressbar"
+                     aria-label="Library upload progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                    <span class="anoy-progress__fill" id="lib-progress-fill"></span>
+                </div>
+                <p class="anoy-progress__hint" id="lib-progress-detail">Keep this tab open until the release is saved.</p>
+            </div>
+            <div id="lib-result" class="mt-4 text-sm" aria-live="polite"></div>
         </div>
     </div>
 </div>
 
 <script>
-document.getElementById('lib-form').addEventListener('submit', async function (e) {
-    e.preventDefault();
-    const button = document.getElementById('lib-submit');
-    const result = document.getElementById('lib-result');
-    const file = document.getElementById('lib-file').files[0];
-    const externalUrl = document.getElementById('lib-url').value.trim();
-    if (!file && !externalUrl) { result.textContent = 'Choose a file or enter an external URL.'; return; }
-    button.disabled = true;
-    result.textContent = 'Uploading, please wait...';
-    try {
-        let content_base64 = '';
-        if (file) {
-            const buffer = await file.arrayBuffer();
-            let binary = '';
-            const bytes = new Uint8Array(buffer);
-            for (let i = 0; i < bytes.length; i += 0x8000) {
-                binary += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
-            }
-            content_base64 = btoa(binary);
-        }
-        const payload = {
-            version: document.getElementById('lib-version').value.trim() || '1.0',
-            file_name: file ? file.name : (externalUrl.split('/').pop() || 'release.zip'),
-            content_base64,
-            external_url: externalUrl,
-            notes: document.getElementById('lib-notes').value.trim()
-        };
-        const response = await fetch('/lib', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
-        const data = await response.json();
-        if (data.ok) {
-            result.innerHTML = '<span class="text-green-700">Uploaded: ' + data.file_name + ' (' + data.file_size + ' bytes)</span>';
-            setTimeout(() => window.location.reload(), 1200);
-        } else {
-            result.innerHTML = '<span class="text-red-700">' + (data.error || 'Upload failed') + '</span>';
-        }
-    } catch (err) {
-        result.innerHTML = '<span class="text-red-700">' + err.message + '</span>';
-    } finally {
-        button.disabled = false;
+/* Real upload progress. XHR gives byte-level upload events; fetch does not. */
+(function () {
+    'use strict';
+    var form = document.getElementById('lib-form');
+    var button = document.getElementById('lib-submit');
+    var result = document.getElementById('lib-result');
+    var progress = document.getElementById('lib-progress');
+    if (!form || !button || !result || !progress) return;
+
+    function ui() { return window.AnoyUI || null; }
+
+    function setProgress(pct, message, detail, state) {
+        var U = ui();
+        if (U && U.setProgress) { U.setProgress(progress, pct, message, detail, state); return; }
+        progress.hidden = false;
+        var fill = document.getElementById('lib-progress-fill');
+        var pctEl = document.getElementById('lib-progress-percent');
+        var msgEl = document.getElementById('lib-progress-message');
+        var p = Math.max(0, Math.min(100, Math.round(pct)));
+        if (fill) fill.style.width = p + '%';
+        if (pctEl) pctEl.textContent = p + '%';
+        if (msgEl) msgEl.textContent = message;
     }
-});
+
+    function busy(on) {
+        var U = ui();
+        if (U && U.busyButton && U.releaseButton) {
+            if (on) U.busyButton(button, 'Uploading…'); else U.releaseButton(button);
+        } else {
+            button.disabled = !!on;
+        }
+    }
+
+    function bytes(n) {
+        var U = ui();
+        return (U && U.humanBytes) ? U.humanBytes(n) : (Math.round((Number(n) || 0) / 1024) + ' KB');
+    }
+
+    /* Server-provided text is always inserted as text, never as HTML. */
+    function status(text, kind) {
+        result.textContent = '';
+        var box = document.createElement('div');
+        box.className = 'ui-status' + (kind ? ' ui-status--' + kind : '');
+        var dot = document.createElement('span');
+        dot.className = 'ui-status__dot';
+        dot.setAttribute('aria-hidden', 'true');
+        var label = document.createElement('span');
+        label.textContent = text;
+        box.appendChild(dot);
+        box.appendChild(label);
+        result.appendChild(box);
+    }
+
+    function encode(file, onProgress) {
+        return new Promise(function (resolve, reject) {
+            var reader = new FileReader();
+            reader.onprogress = function (e) {
+                if (e.lengthComputable && e.total) onProgress(e.loaded / e.total);
+            };
+            reader.onload = function () {
+                var dataUrl = String(reader.result || '');
+                var comma = dataUrl.indexOf(',');
+                resolve(comma >= 0 ? dataUrl.slice(comma + 1) : '');
+            };
+            reader.onerror = function () { reject(new Error('Could not read the selected file.')); };
+            reader.onabort = function () { reject(new Error('Reading the file was cancelled.')); };
+            reader.readAsDataURL(file);
+        });
+    }
+
+    function send(payload, onProgress) {
+        return new Promise(function (resolve, reject) {
+            var xhr = new XMLHttpRequest();
+            xhr.open('POST', '/lib', true);
+            xhr.setRequestHeader('Content-Type', 'application/json');
+            xhr.timeout = 120000;
+            xhr.upload.onprogress = function (e) {
+                if (e.lengthComputable) onProgress(e.loaded, e.total);
+            };
+            xhr.upload.onload = function () { onProgress(1, 1); };
+            xhr.onload = function () {
+                var data = null;
+                try { data = JSON.parse(xhr.responseText); } catch (e) { /* not JSON */ }
+                if (xhr.status >= 200 && xhr.status < 300 && data) resolve(data);
+                else reject(new Error((data && data.error) || ('Upload failed (HTTP ' + xhr.status + ')')));
+            };
+            xhr.onerror = function () { reject(new Error('Network error while uploading.')); };
+            xhr.ontimeout = function () { reject(new Error('The upload timed out. Try a smaller file.')); };
+            xhr.send(JSON.stringify(payload));
+        });
+    }
+
+    form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        if (form.getAttribute('data-anoy-upload-busy') === '1') return;
+
+        var file = document.getElementById('lib-file').files[0];
+        var externalUrl = document.getElementById('lib-url').value.trim();
+        if (!file && !externalUrl) {
+            status('Choose a file or enter an external URL.', 'error');
+            return;
+        }
+
+        form.setAttribute('data-anoy-upload-busy', '1');
+        result.textContent = '';
+        busy(true);
+        setProgress(0, 'Preparing upload…', 'Keep this tab open until the release is saved.', 'working');
+
+        var succeeded = false;
+        var version = document.getElementById('lib-version').value.trim() || '1.0';
+        var notes = document.getElementById('lib-notes').value.trim();
+        var start = file ? 24 : 8;
+
+        var prepare = file
+            ? encode(file, function (frac) {
+                  setProgress(2 + frac * (start - 2), 'Reading file…',
+                      bytes(file.size) + ' selected · ' + file.name, 'working');
+              })
+            : Promise.resolve('');
+
+        prepare.then(function (contentBase64) {
+            setProgress(start, 'Uploading…',
+                file ? ('Sending ' + bytes(file.size)) : 'Saving external URL…', 'working');
+            var payload = {
+                version: version,
+                file_name: file ? file.name : (externalUrl.split('/').pop() || 'release.zip'),
+                content_base64: contentBase64,
+                external_url: externalUrl,
+                notes: notes
+            };
+            return send(payload, function (loaded, total) {
+                var frac = total ? loaded / total : 0;
+                setProgress(start + frac * (94 - start), 'Uploading…',
+                    bytes(loaded) + ' of ' + bytes(total) + ' sent', 'working');
+            });
+        }).then(function (data) {
+            if (!data.ok) throw new Error(data.error || 'Upload failed');
+            setProgress(96, 'Saving release…', 'Writing the new version to the panel.', 'working');
+            return data;
+        }).then(function (data) {
+            succeeded = true;
+            setProgress(100, 'Upload complete', data.file_name + ' · ' + bytes(data.file_size), 'done');
+            /* The button stays locked until reload; stop calling it "Uploading". */
+            var lbl = button.querySelector('.ui-btn__busy-label');
+            if (lbl) lbl.textContent = 'Uploaded';
+            var sp = button.querySelector('.ui-spinner');
+            if (sp) sp.style.display = 'none';
+            status('Uploaded ' + data.file_name + ' (' + bytes(data.file_size) + '). Refreshing…', 'success');
+            window.setTimeout(function () { window.location.reload(); }, 1600);
+        }).catch(function (err) {
+            var message = (err && err.message) ? err.message : 'Upload failed.';
+            setProgress(100, 'Upload failed', message, 'error');
+            status(message, 'error');
+        }).then(function () {
+            /* Keep the button locked on success: the page is about to reload. */
+            if (succeeded) return;
+            form.removeAttribute('data-anoy-upload-busy');
+            busy(false);
+        });
+    });
+})();
 </script>

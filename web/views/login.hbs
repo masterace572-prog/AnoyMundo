@@ -51,7 +51,8 @@
                     <a class="auth-link" href="/register">Create account</a>
                 </div>
 
-                <button type="submit" class="ui-btn ui-btn--primary auth-submit">Sign In</button>
+                <button type="submit" class="ui-btn ui-btn--primary auth-submit" data-busy-label="Signing in…">Sign In</button>
+                <p class="auth-hint">Verifying your account can take a few seconds. Please wait — no need to press twice.</p>
             </form>
 
             <div class="auth-footer">
@@ -64,5 +65,7 @@
             TO BUY PANEL DM HERE :- <a href="{{telegram.url}}" target="_blank" rel="noopener">{{telegram.handle}}</a>
         </p>
     </main>
+
+    <script src="/assets/js/app-ui.js"></script>
 </body>
 </html>
