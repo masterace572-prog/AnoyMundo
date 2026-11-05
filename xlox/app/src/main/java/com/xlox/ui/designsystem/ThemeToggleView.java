@@ -42,9 +42,9 @@ public class ThemeToggleView extends View {
 
     private float progress = 0f; // 0 = light (sun), 1 = dark (moon)
     private boolean dark;
-    private final int accent;
-    private final int iconColour;
-    private final float stroke;
+    private int accent;
+    private int iconColour;
+    private float stroke;
     private SpringAnimation spring;
 
     public ThemeToggleView(Context context) {
