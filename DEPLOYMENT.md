@@ -8,7 +8,7 @@
 | GitHub | `masterace572-prog/AnoyMundo`, branch `arena/b2fac70f-anoymundo` |
 | Vercel project | `anoymundo-panel` — `prj_eV3iBh1EUffuxQSaV6AkIEh0kn4D` (new project) |
 | Vercel team | `masterace572-progs-projects` |
-| Production deploy | `dpl_6GYAYTyv9e2gTiCanFj7tTD478h9` (READY / PROMOTED) |
+| Production deploy | `dpl_4GqPbbe4F8NGwWAaedxxi9VukQfz` (READY / PROMOTED, flat UI) |
 | Root Directory | `web` |
 | Supabase | `anoymundo-panel` — `bwsqenepvfwhfomdhaig` (free, ap-south-1) |
 | Default login | `admin` / `admin123` — **change this immediately** |
@@ -147,8 +147,9 @@ curl -sS -X POST https://anoymundo-panel.vercel.app/connect \
   bcrypt hash.
 - `.github/workflows/live-smoke.yml` — GitHub Actions job that curls the live
   Vercel deployment: health, login with cookie jar, all pages, DataTables,
-  key generation, `/connect` success + rejection, cleanup, logout. Both runs
-  passed (runs `41998471594`, `41998939557`).
+  key generation, `/connect` success + rejection, cleanup, logout, plus the
+  flat-UI asset checks and the escaped-text regressions. Latest passing run:
+  `42003546248` (also `41998471594`, `41998939557`).
 
 ## 6. Post-deploy tasks
 
