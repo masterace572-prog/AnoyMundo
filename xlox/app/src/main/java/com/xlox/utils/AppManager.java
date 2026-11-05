@@ -58,7 +58,7 @@ public class AppManager extends AppCompatActivity {
 
                 if (method == COPY_OBB && showDialog) {
 
-                    progressDialog = new Dialog(ctx, R.style.ThemeOverlay.Ds.Dialog);
+                    progressDialog = new Dialog(ctx, R.style.ThemeOverlay_Ds_Dialog);
                     progressDialog.getWindow().setBackgroundDrawable(
                             new android.graphics.drawable.ColorDrawable(
                                     android.graphics.Color.TRANSPARENT));

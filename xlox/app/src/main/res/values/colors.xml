@@ -8,18 +8,18 @@
     <color name="outline">#DDD9CF</color>
     <color name="text_primary">#1F1E1D</color>
     <color name="text_secondary">#6B6860</color>
-    <color name="text_tertiary">#9C988E</color>
-    <color name="accent">#C96442</color>
-    <color name="accent_pressed">#B5573A</color>
+    <color name="text_tertiary">#706C63</color>
+    <color name="accent">#AD4E2F</color>
+    <color name="accent_pressed">#9C4428</color>
     <color name="on_accent">#FFFFFF</color>
     <color name="accent_subtle">#F3E4DC</color>
     <color name="error">#B3261E</color>
-    <color name="success">#4F7A5B</color>
-    <color name="warning">#9A6B1B</color>
+    <color name="success">#4A7455</color>
+    <color name="warning">#876018</color>
 
     <!-- Derived tokens. Alpha-premultiplied so no API 23 android:alpha is needed. -->
     <color name="ripple">#141F1E1D</color>            <!-- textPrimary at 8% -->
-    <color name="accent_disabled">#61C96442</color>    <!-- accent at 38% -->
+    <color name="accent_disabled">#61AD4E2F</color>    <!-- accent at 38% -->
     <color name="on_accent_disabled">#61FFFFFF</color> <!-- onAccent at 38% -->
     <color name="outline_disabled">#61DDD9CF</color>   <!-- outline at 38% -->
     <color name="transparent">#00000000</color>

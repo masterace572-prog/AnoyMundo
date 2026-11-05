@@ -2,6 +2,10 @@
 <!-- Debug-only QA screen: not part of the release APK and not a product route. -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <application>
+        <!-- QA-only: allow adb to launch the product screens for screenshots.
+             These overrides exist in the debug sourceSet only. -->
+        <activity android:name="com.xlox.MAct" android:exported="true" />
+        <activity android:name="com.xlox.FacebookActivity" android:exported="true" />
         <activity
             android:name="com.xlox.ui.designsystem.DsPreviewActivity"
             android:exported="true"

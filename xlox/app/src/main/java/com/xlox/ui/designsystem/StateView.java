@@ -29,7 +29,7 @@ public class StateView extends LinearLayout {
     private final View loadingRow;
     private final ProgressBar indicator;
     private final ProgressBar progress;
-    private final TextView percent;
+    private final TextView percentText;
     private final TextView detail;
     private final AppCompatButton action;
 
@@ -48,7 +48,7 @@ public class StateView extends LinearLayout {
         loadingRow = findViewById(R.id.stateLoadingRow);
         indicator = findViewById(R.id.stateIndicator);
         progress = findViewById(R.id.stateProgress);
-        percent = findViewById(R.id.statePercent);
+        percentText = findViewById(R.id.statePercent);
         detail = findViewById(R.id.stateDetail);
         action = findViewById(R.id.stateAction);
     }
@@ -69,11 +69,11 @@ public class StateView extends LinearLayout {
         boolean determinate = percent >= 0;
         indicator.setVisibility(determinate ? GONE : VISIBLE);
         progress.setVisibility(determinate ? VISIBLE : GONE);
-        percent.setVisibility(determinate ? VISIBLE : GONE);
+        percentText.setVisibility(determinate ? VISIBLE : GONE);
         if (determinate) {
             progress.setIndeterminate(false);
             progress.setProgress(Math.max(0, Math.min(100, percent)));
-            percent.setText(getContext().getString(R.string.percent, percent));
+            percentText.setText(getContext().getString(R.string.percent, percent));
         }
     }
 

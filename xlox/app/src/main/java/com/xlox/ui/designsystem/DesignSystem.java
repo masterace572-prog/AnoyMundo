@@ -145,7 +145,7 @@ public final class DesignSystem {
     public static Dialog dialog(Context context, CharSequence title, CharSequence message,
                                 CharSequence positive, Runnable onPositive, boolean destructive,
                                 CharSequence negative, Runnable onNegative) {
-        Dialog dialog = new Dialog(context, R.style.ThemeOverlay.Ds.Dialog);
+        Dialog dialog = new Dialog(context, R.style.ThemeOverlay_Ds_Dialog);
         dialog.setContentView(R.layout.ds_dialog);
         Window window = dialog.getWindow();
         if (window != null) {
