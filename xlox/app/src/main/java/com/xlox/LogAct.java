@@ -1,12 +1,11 @@
 package com.xlox;
 
-import androidx.annotation.Nullable;
-import androidx.appcompat.app.AppCompatActivity;
-
 import android.Manifest;
 import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
+import android.graphics.drawable.Drawable;
+import android.graphics.drawable.TransitionDrawable;
 import android.net.ConnectivityManager;
 import android.net.Network;
 import android.net.NetworkCapabilities;
@@ -19,15 +18,23 @@ import android.os.Message;
 import android.provider.Settings;
 import android.text.InputType;
 import android.util.Log;
+import android.view.View;
 import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
+import androidx.annotation.Nullable;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.ContextCompat;
+import androidx.core.splashscreen.SplashScreen;
+
 import com.xlox.ui.ThemeMode;
 import com.xlox.ui.designsystem.DesignSystem;
 import com.xlox.ui.designsystem.DsMotion;
+import com.xlox.ui.designsystem.Haptics;
 import com.xlox.ui.designsystem.PrimaryButton;
+import com.xlox.ui.designsystem.ThemeToggleView;
 import com.xlox.ui.designsystem.Tokens;
 import com.xlox.utils.Prefs;
 
@@ -45,12 +52,14 @@ public class LogAct extends AppCompatActivity {
 
     private EditText textUsername;
     private PrimaryButton btnLogin;
-    private ImageButton themeToggle;
+    private ThemeToggleView themeToggle;
     private ImageButton eyeToggle;
     private LinearLayout mainContainer;
     private LinearLayout loginCard;
     private LinearLayout accessKeyField;
     private TextView accessKeyHelper;
+    private View pasteKey;
+    private TransitionDrawable fieldFocus;
     private boolean isPasswordVisible = false;
 
     private static final int REQUEST_MANAGE_STORAGE_PERMISSION = 100;
@@ -58,18 +67,22 @@ public class LogAct extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        // AndroidX SplashScreen must be installed before super.onCreate().
+        SplashScreen splash = com.xlox.ui.designsystem.Splash.install(this);
         ThemeMode.apply(this);
         super.onCreate(savedInstanceState);
 
         if (iskokofm()) {
             DesignSystem.showMessage(this, getString(R.string.vpn_detected_title),
                     getString(R.string.vpn_detected_message));
+            com.xlox.ui.designsystem.Splash.exit(splash);
             return;
         }
 
         setContentView(R.layout.activity_login);
         ThemeMode.applyWindow(this);
         DesignSystem.applySafeDrawing(findViewById(R.id.loginRoot), true, true, true);
+        com.xlox.ui.designsystem.Splash.exit(splash);
 
         prefs = new Prefs(this);
         checkAndRequestPermissions();
@@ -82,49 +95,73 @@ public class LogAct extends AppCompatActivity {
         loginCard = findViewById(R.id.loginCard);
         accessKeyField = findViewById(R.id.accessKeyField);
         accessKeyHelper = findViewById(R.id.accessKeyHelper);
+        pasteKey = findViewById(R.id.pasteKey);
 
         textUsername.setText(prefs.getSt(USER, ""));
         ThemeMode.decorateToggle(this, themeToggle);
 
+        // Recessed field with a crossfading coral focus ring.
+        fieldFocus = new TransitionDrawable(new Drawable[]{
+                ContextCompat.getDrawable(this, R.drawable.ds_field_rest),
+                ContextCompat.getDrawable(this, R.drawable.ds_field_focus)});
+        fieldFocus.setCrossFadeEnabled(true);
+        accessKeyField.setBackground(fieldFocus);
+        textUsername.setOnFocusChangeListener((v, hasFocus) -> {
+            if (hasFocus) fieldFocus.startTransition((int) DsMotion.STATE);
+            else fieldFocus.reverseTransition((int) DsMotion.STATE);
+        });
+
         eyeToggle.setOnClickListener(v -> {
+            Haptics.toggle(v);
             if (isPasswordVisible) {
                 textUsername.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
-                eyeToggle.setImageResource(R.drawable.ds_ic_visibility);
+                eyeToggle.setImageResource(R.drawable.ds_ic_eye);
                 eyeToggle.setContentDescription(getString(R.string.show_key));
             } else {
                 textUsername.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD);
-                eyeToggle.setImageResource(R.drawable.ds_ic_visibility_off);
+                eyeToggle.setImageResource(R.drawable.ds_ic_eye_off);
                 eyeToggle.setContentDescription(getString(R.string.hide_key));
             }
             isPasswordVisible = !isPasswordVisible;
             textUsername.setSelection(textUsername.getText().length());
         });
 
-        findViewById(R.id.pasteKey).setOnClickListener(v -> {
+        pasteKey.setOnClickListener(v -> {
+            Haptics.tick(v);
             ClipboardManager clipboard = (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
             if (clipboard != null && clipboard.hasPrimaryClip()
                     && clipboard.getPrimaryClip() != null
                     && clipboard.getPrimaryClip().getItemCount() > 0) {
                 CharSequence copiedKey = clipboard.getPrimaryClip().getItemAt(0).coerceToText(this);
-                if (copiedKey != null) {
+                if (copiedKey != null && copiedKey.length() > 0) {
                     textUsername.setText(copiedKey);
                     textUsername.setSelection(textUsername.getText().length());
+                    clearFieldError();
+                    DsMotion.fadeIn(accessKeyField);
+                    return;
                 }
             }
-            clearFieldError();
+            DesignSystem.snackbarError(this, getString(R.string.clipboard_empty));
         });
 
-        findViewById(R.id.buyKey).setOnClickListener(v ->
-                openExternalUrl(getString(R.string.telegram_url)));
+        View buyKeyRow = findViewById(R.id.buyKey);
+        buyKeyRow.setOnClickListener(v -> openExternalUrl(getString(R.string.telegram_url)));
 
         themeToggle.setOnClickListener(v -> ThemeMode.toggle(this));
 
-        DsMotion.fadeIn(loginCard);
+        DsMotion.springScale(findViewById(R.id.logo), 0.82f, 1f);
+        DsMotion.stagger(findViewById(R.id.loginTopBar),
+                findViewById(R.id.emblemContainer),
+                findViewById(R.id.welcomeHeading),
+                findViewById(R.id.premium),
+                loginCard,
+                buyKeyRow,
+                findViewById(R.id.telegramCaption));
 
         btnLogin.setOnClickListener(v -> {
             String userKey = textUsername.getText().toString().trim();
             if (userKey.isEmpty()) {
-                showFieldError();
+                failSignIn(getString(R.string.enter_your_key));
                 return;
             }
             clearFieldError();
@@ -135,32 +172,49 @@ public class LogAct extends AppCompatActivity {
             }
 
             prefs.setSt(USER, userKey);
-            btnLogin.setLoading(true);
+            setAuthenticating(true);
             Login(this, userKey);
         });
+    }
+
+    private void setAuthenticating(boolean active) {
+        btnLogin.setBusy(active);
+        textUsername.setEnabled(!active);
+        eyeToggle.setEnabled(!active);
+        pasteKey.setEnabled(!active);
+    }
+
+    private void failSignIn(String reason) {
+        setAuthenticating(false);
+        Haptics.error(btnLogin);
+        DsMotion.shake(accessKeyField);
+        showFieldError();
+        DesignSystem.snackbarError(this, reason);
     }
 
     private void showFieldError() {
         accessKeyField.setBackgroundResource(R.drawable.ds_field_error);
         accessKeyHelper.setText(R.string.enter_your_key);
-        accessKeyHelper.setTextColor(Tokens.error(this));
+        accessKeyHelper.setTextColor(Tokens.errorInk(this));
     }
 
     private void clearFieldError() {
-        accessKeyField.setBackgroundResource(R.drawable.ds_field);
-        accessKeyHelper.setText(R.string.access_key_hint);
+        accessKeyField.setBackground(fieldFocus);
+        fieldFocus.resetTransition();
+        accessKeyHelper.setText(R.string.access_key_hint_short);
         accessKeyHelper.setTextColor(Tokens.textTertiary(this));
     }
 
     private void Login(final Context m_Context, final String userKey) {
         Handler loginHandler = new Handler(msg -> {
             if (msg.what == 0) {
+                Haptics.success(btnLogin);
                 Intent i = new Intent(m_Context, MAct.class);
                 startActivity(i);
+                overridePendingTransition(R.anim.ds_enter, R.anim.ds_exit);
                 finish();
             } else {
-                btnLogin.reset();
-                DesignSystem.snackbar(LogAct.this, (String) msg.obj);
+                failSignIn(String.valueOf(msg.obj));
             }
             return true;
         });

@@ -1,26 +1,55 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- B.1 design tokens — LIGHT. Every colour in the app resolves from this file. -->
+<!--
+  B.1 / v2 design tokens — LIGHT (warm alabaster).
+  values-night/colors.xml holds the dark-first default with the same names.
+  The only place raw hex values appear.
+-->
 <resources>
-    <color name="background">#F5F4EF</color>
-    <color name="surface">#FAF9F5</color>
+    <!-- Surfaces -->
+    <color name="background">#F6F5F2</color>
+    <color name="surface">#FFFFFF</color>
     <color name="surface_elevated">#FFFFFF</color>
-    <color name="surface_subtle">#ECEAE3</color>
-    <color name="outline">#DDD9CF</color>
-    <color name="text_primary">#1F1E1D</color>
-    <color name="text_secondary">#6B6860</color>
-    <color name="text_tertiary">#706C63</color>
-    <color name="accent">#AD4E2F</color>
-    <color name="accent_pressed">#9C4428</color>
-    <color name="on_accent">#FFFFFF</color>
-    <color name="accent_subtle">#F3E4DC</color>
-    <color name="error">#B3261E</color>
-    <color name="success">#4A7455</color>
-    <color name="warning">#876018</color>
+    <color name="surface_recessed">#EFEEEA</color>
+    <color name="surface_subtle">#F0EFEA</color>
+    <color name="outline">#E5E4E0</color>
+    <color name="hairline">#E5E4E0</color>
+    <color name="hairline_strong">#D8D6D0</color>
+    <color name="top_light">#0FFFFFFF</color>
+    <color name="top_light_soft">#08FFFFFF</color>
 
-    <!-- Derived tokens. Alpha-premultiplied so no API 23 android:alpha is needed. -->
-    <color name="ripple">#141F1E1D</color>            <!-- textPrimary at 8% -->
-    <color name="accent_disabled">#61AD4E2F</color>    <!-- accent at 38% -->
-    <color name="on_accent_disabled">#61FFFFFF</color> <!-- onAccent at 38% -->
-    <color name="outline_disabled">#61DDD9CF</color>   <!-- outline at 38% -->
+    <!-- Type -->
+    <color name="text_primary">#121316</color>
+    <color name="text_secondary">#555961</color>
+    <color name="text_tertiary">#656A71</color>
+    <color name="icon">#555961</color>
+
+    <!-- Accent -->
+    <color name="accent">#E67E53</color>
+    <color name="accent_pressed">#D26B43</color>
+    <color name="accent_ink">#A8441F</color>
+    <color name="on_accent">#14100E</color>
+    <color name="accent_subtle">#1AE67E53</color>
+    <color name="accent_wash">#14E67E53</color>
+
+    <!-- Semantic -->
+    <color name="success">#2ECC71</color>
+    <color name="success_ink">#12703D</color>
+    <color name="success_wash">#1E2ECC71</color>
+    <color name="warning">#F59E0B</color>
+    <color name="warning_ink">#8F5600</color>
+    <color name="warning_wash">#1EF59E0B</color>
+    <color name="error">#E0574F</color>
+    <color name="error_ink">#B2332C</color>
+    <color name="error_wash">#1EE0574F</color>
+
+    <!-- Derived -->
+    <color name="ripple">#14121316</color>
+    <color name="accent_disabled">#61E67E53</color>
+    <color name="on_accent_disabled">#6114100E</color>
+    <color name="outline_disabled">#61E5E4E0</color>
+    <color name="scrim">#660D0E11</color>
     <color name="transparent">#00000000</color>
+
+    <!-- Splash is always obsidian: zero white flash in either appearance. -->
+    <color name="splash_background">#0D0E11</color>
 </resources>

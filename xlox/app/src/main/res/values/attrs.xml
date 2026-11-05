@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Custom attributes for the bespoke design-system components. -->
+<resources>
+    <declare-styleable name="DsSurface">
+        <attr name="dsVariant" format="enum">
+            <enum name="card" value="0" />
+            <enum name="tile" value="1" />
+            <enum name="recessed" value="2" />
+            <enum name="pill" value="3" />
+            <enum name="banner" value="4" />
+        </attr>
+    </declare-styleable>
+</resources>

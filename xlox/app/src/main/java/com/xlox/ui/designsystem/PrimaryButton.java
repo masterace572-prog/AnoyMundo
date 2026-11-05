@@ -1,8 +1,12 @@
 package com.xlox.ui.designsystem;
 
+import android.animation.Animator;
+import android.animation.AnimatorListenerAdapter;
 import android.animation.ValueAnimator;
 import android.content.Context;
+import android.content.res.ColorStateList;
 import android.graphics.Canvas;
+import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.RectF;
 import android.util.AttributeSet;
@@ -13,20 +17,22 @@ import androidx.appcompat.widget.AppCompatButton;
 import com.xlox.R;
 
 /**
- * The single implementation of the Primary button (B.6): 48dp, 10dp radius,
- * disabled at 38%, and loading swaps the label for a 20dp monochrome circular
- * indicator without changing the measured width. No press-scale, no bouncing
- * dots, no progress fill sweep.
+ * The flagship primary action. Fixed height, press-scale physics, a haptic
+ * tap, and a crossfade from the label to a centred 20dp spinner. The label is
+ * never removed from the view, so the measured size cannot change and there
+ * is zero layout shift while an operation is in flight.
  */
 public class PrimaryButton extends AppCompatButton {
 
-    private CharSequence idleLabel;
-    private boolean loading;
-    private float phase;
+    private ColorStateList idleColors;
+    private boolean busy;
+    private float phase;            // 0 = label, 1 = spinner
+    private float spin;
+    private ValueAnimator fade;
     private ValueAnimator spinner;
 
-    private final Paint arcPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final RectF arcRect = new RectF();
+    private final Paint arc = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final RectF bounds = new RectF();
 
     public PrimaryButton(Context context) {
         super(context);
@@ -44,54 +50,74 @@ public class PrimaryButton extends AppCompatButton {
     }
 
     private void init() {
-        arcPaint.setStyle(Paint.Style.STROKE);
-        arcPaint.setStrokeWidth(getResources().getDimension(R.dimen.divider) * 2f);
-        arcPaint.setColor(Tokens.onAccent(getContext()));
-        arcPaint.setStrokeCap(Paint.Cap.ROUND);
+        idleColors = getTextColors();
+        arc.setStyle(Paint.Style.STROKE);
+        arc.setStrokeWidth(Math.max(1f, Tokens.px(getContext(), R.dimen.divider) * 2f));
+        arc.setColor(Tokens.onAccent(getContext()));
+        arc.setStrokeCap(Paint.Cap.ROUND);
+        DsMotion.attachPressScale(this, 0.97f);
     }
 
-    /** Resting label; safe to call while an action is in flight. */
-    public void setLabel(String label) {
-        idleLabel = label;
-        if (!loading) setText(label);
+    public void setLabel(CharSequence label) {
+        setText(label);
     }
 
-    /** Swap the label for the indicator without changing the measured width. */
-    public void setLoading(boolean active) {
-        if (active == loading) return;
-        loading = active;
+    public boolean isBusy() { return busy; }
+
+    /** Crossfade label out / spinner in without touching the measured size. */
+    public void setBusy(boolean active) {
+        if (active == busy) return;
+        busy = active;
         setClickable(!active);
-        if (active) {
-            captureLabel();
-            setText("");
-            startSpinner();
-        } else {
-            stopSpinner();
-            if (idleLabel != null) setText(idleLabel);
+        if (fade != null) fade.cancel();
+        if (!DsMotion.animationsEnabled(getContext())) {
+            phase = active ? 1f : 0f;
+            applyLabelAlpha();
+            if (active) startSpinner(); else stopSpinner();
+            invalidate();
+            return;
         }
-        invalidate();
+        fade = ValueAnimator.ofFloat(phase, active ? 1f : 0f);
+        fade.setDuration(DsMotion.STATE);
+        fade.setInterpolator(DsMotion.interpolator());
+        fade.addUpdateListener(a -> {
+            phase = (Float) a.getAnimatedValue();
+            applyLabelAlpha();
+            invalidate();
+        });
+        if (!active) {
+            fade.addListener(new AnimatorListenerAdapter() {
+                @Override public void onAnimationEnd(Animator animation) {
+                    restoreLabelColor();
+                }
+            });
+        }
+        fade.start();
+        if (active) startSpinner(); else stopSpinner();
     }
 
     public void reset() {
-        setLoading(false);
+        setBusy(false);
         setEnabled(true);
+        setClickable(true);
     }
 
-    public boolean isBusy() {
-        return loading;
+    private void applyLabelAlpha() {
+        int base = idleColors == null
+                ? Tokens.onAccent(getContext())
+                : idleColors.getColorForState(getDrawableState(), idleColors.getDefaultColor());
+        int a = (int) (Color.alpha(base) * (1f - phase));
+        setTextColor(Color.argb(a, Color.red(base), Color.green(base), Color.blue(base)));
     }
 
-    private void captureLabel() {
-        if (idleLabel == null) {
-            CharSequence current = getText();
-            idleLabel = current == null ? "" : current;
-        }
+    private void restoreLabelColor() {
+        if (idleColors != null) setTextColor(idleColors);
     }
 
     private void startSpinner() {
         stopSpinner();
         if (!DsMotion.animationsEnabled(getContext())) {
-            phase = 0f;
+            spin = 0f;
             invalidate();
             return;
         }
@@ -100,7 +126,7 @@ public class PrimaryButton extends AppCompatButton {
         spinner.setRepeatCount(ValueAnimator.INFINITE);
         spinner.setInterpolator(new LinearInterpolator());
         spinner.addUpdateListener(a -> {
-            phase = (Float) a.getAnimatedValue();
+            spin = (Float) a.getAnimatedValue();
             invalidate();
         });
         spinner.start();
@@ -116,18 +142,20 @@ public class PrimaryButton extends AppCompatButton {
     @Override
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
-        if (!loading) return;
-        float size = getResources().getDimension(R.dimen.progress_circular);
+        if (phase <= 0.01f) return;
+        float size = Tokens.px(getContext(), R.dimen.progress_circular);
         float cx = getWidth() / 2f;
         float cy = getHeight() / 2f;
-        float r = size / 2f - arcPaint.getStrokeWidth() / 2f;
-        arcRect.set(cx - r, cy - r, cx + r, cy + r);
-        canvas.drawArc(arcRect, -90f + phase, 270f, false, arcPaint);
+        float r = size / 2f - arc.getStrokeWidth() / 2f;
+        bounds.set(cx - r, cy - r, cx + r, cy + r);
+        arc.setAlpha((int) (255 * phase));
+        canvas.drawArc(bounds, -90f + spin, 270f, false, arc);
     }
 
     @Override
     protected void onDetachedFromWindow() {
         stopSpinner();
+        if (fade != null) fade.cancel();
         super.onDetachedFromWindow();
     }
 }

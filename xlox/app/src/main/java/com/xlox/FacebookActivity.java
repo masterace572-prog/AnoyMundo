@@ -8,13 +8,14 @@ import android.webkit.CookieManager;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
-import android.widget.ProgressBar;
 import android.widget.ImageButton;
+import android.widget.ProgressBar;
 
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.xlox.ui.ThemeMode;
 import com.xlox.ui.designsystem.DesignSystem;
+import com.xlox.ui.designsystem.DsMotion;
 
 public class FacebookActivity extends AppCompatActivity {
 
@@ -36,17 +37,16 @@ public class FacebookActivity extends AppCompatActivity {
         ImageButton back = findViewById(R.id.backButton);
         if (back != null) back.setOnClickListener(v -> onBackPressed());
 
-        WebSettings webSettings = webView.getSettings();
-        webSettings.setJavaScriptEnabled(true);
-        webSettings.setDomStorageEnabled(true);
-        webSettings.setDatabaseEnabled(true);
-        webSettings.setAllowFileAccess(true);
-        webSettings.setCacheMode(WebSettings.LOAD_DEFAULT);
+        WebSettings settings = webView.getSettings();
+        settings.setJavaScriptEnabled(true);
+        settings.setDomStorageEnabled(true);
+        settings.setDatabaseEnabled(true);
+        settings.setAllowFileAccess(true);
+        settings.setCacheMode(WebSettings.LOAD_DEFAULT);
 
-        // Enable cookies for persistent login
-        CookieManager cookieManager = CookieManager.getInstance();
-        cookieManager.setAcceptCookie(true);
-        cookieManager.setAcceptThirdPartyCookies(webView, true);
+        CookieManager cookies = CookieManager.getInstance();
+        cookies.setAcceptCookie(true);
+        cookies.setAcceptThirdPartyCookies(webView, true);
 
         webView.setWebViewClient(new WebViewClient() {
             @Override
@@ -60,15 +60,13 @@ public class FacebookActivity extends AppCompatActivity {
             }
         });
 
+        DsMotion.stagger(findViewById(R.id.webContainer));
         webView.loadUrl(getString(R.string.facebook_login_url));
     }
 
     @Override
     public void onBackPressed() {
-        if (webView.canGoBack()) {
-            webView.goBack();
-        } else {
-            super.onBackPressed();
-        }
+        if (webView.canGoBack()) webView.goBack();
+        else super.onBackPressed();
     }
 }

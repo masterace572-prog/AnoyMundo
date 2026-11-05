@@ -1,25 +1,49 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- B.1 design tokens — DARK. Same names; layouts and drawables never branch. -->
+<!-- B.1 / v2 design tokens — DARK (default). Same names as values/colors.xml. -->
 <resources>
-    <color name="background">#1F1E1D</color>
-    <color name="surface">#262523</color>
-    <color name="surface_elevated">#2B2A27</color>
-    <color name="surface_subtle">#33312E</color>
-    <color name="outline">#3D3B37</color>
-    <color name="text_primary">#F5F4EF</color>
-    <color name="text_secondary">#A8A49B</color>
-    <color name="text_tertiary">#918D84</color>
-    <color name="accent">#D97757</color>
-    <color name="accent_pressed">#E08A6E</color>
-    <color name="on_accent">#1F1E1D</color>
-    <color name="accent_subtle">#3A2C26</color>
-    <color name="error">#E5776A</color>
-    <color name="success">#86B096</color>
-    <color name="warning">#D2A24C</color>
+    <!-- Surfaces -->
+    <color name="background">#0D0E11</color>
+    <color name="surface">#14161B</color>
+    <color name="surface_elevated">#191C23</color>
+    <color name="surface_recessed">#1B1E26</color>
+    <color name="surface_subtle">#171A20</color>
+    <color name="outline">#262934</color>
+    <color name="hairline">#262934</color>
+    <color name="hairline_strong">#333744</color>
+    <color name="top_light">#0FFFFFFF</color>
+    <color name="top_light_soft">#08FFFFFF</color>
 
-    <color name="ripple">#14F5F4EF</color>
-    <color name="accent_disabled">#61D97757</color>
-    <color name="on_accent_disabled">#611F1E1D</color>
-    <color name="outline_disabled">#613D3B37</color>
+    <!-- Type -->
+    <color name="text_primary">#F2F3F5</color>
+    <color name="text_secondary">#A3A9B6</color>
+    <color name="text_tertiary">#8A91A0</color>
+    <color name="icon">#A3A9B6</color>
+
+    <!-- Accent -->
+    <color name="accent">#E67E53</color>
+    <color name="accent_pressed">#D26B43</color>
+    <color name="accent_ink">#F39A78</color>
+    <color name="on_accent">#14100E</color>
+    <color name="accent_subtle">#26E67E53</color>
+    <color name="accent_wash">#14E67E53</color>
+
+    <!-- Semantic -->
+    <color name="success">#2ECC71</color>
+    <color name="success_ink">#2ECC71</color>
+    <color name="success_wash">#1A2ECC71</color>
+    <color name="warning">#F59E0B</color>
+    <color name="warning_ink">#F59E0B</color>
+    <color name="warning_wash">#1AF59E0B</color>
+    <color name="error">#F07167</color>
+    <color name="error_ink">#F07167</color>
+    <color name="error_wash">#1AF07167</color>
+
+    <!-- Derived -->
+    <color name="ripple">#14F2F3F5</color>
+    <color name="accent_disabled">#61E67E53</color>
+    <color name="on_accent_disabled">#6114100E</color>
+    <color name="outline_disabled">#61262934</color>
+    <color name="scrim">#990D0E11</color>
     <color name="transparent">#00000000</color>
+    <color name="splash_background">#0D0E11</color>
 </resources>

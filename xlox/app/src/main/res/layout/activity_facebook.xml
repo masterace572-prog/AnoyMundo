@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Screen 3: WebView. Edge-to-edge with safeDrawing padding on the container. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/facebookRoot"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
@@ -13,19 +14,21 @@
         android:layout_height="@dimen/top_bar_height"
         android:gravity="center_vertical"
         android:orientation="horizontal"
-        android:paddingStart="@dimen/space_8"
-        android:paddingEnd="@dimen/space_12">
+        android:paddingStart="@dimen/space_12"
+        android:paddingEnd="@dimen/screen_padding">
 
         <ImageButton
             android:id="@+id/backButton"
             style="@style/Widget.Ds.IconButton"
             android:layout_width="@dimen/touch_target"
             android:layout_height="@dimen/touch_target"
+            android:background="@drawable/ds_icon_ripple"
             android:contentDescription="@string/back"
-            android:src="@drawable/ds_ic_arrow_back" />
+            android:src="@drawable/ds_ic_arrow_left"
+            app:tint="@color/text_primary" />
 
         <TextView
-            style="@style/TextAppearance.Ds.HeadlineSmall"
+            style="@style/TextAppearance.Ds.TitleLarge"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginStart="@dimen/space_8"
@@ -51,7 +54,7 @@
             android:layout_gravity="center"
             android:contentDescription="@string/page_loading"
             android:indeterminate="true"
-            android:indeterminateTint="@color/text_secondary"
+            android:indeterminateTint="@color/accent"
             android:visibility="gone" />
     </FrameLayout>
 </LinearLayout>

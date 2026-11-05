@@ -55,7 +55,7 @@
             android:windowSoftInputMode="adjustResize"
             android:configChanges="screenSize|orientation"
             android:exported="true"
-            android:theme="@style/AppTheme">
+            android:theme="@style/Theme.App.Splash">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />

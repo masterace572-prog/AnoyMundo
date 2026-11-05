@@ -1,17 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<selector xmlns:android="http://schemas.android.com/apk/res/android">
-    <item android:state_checked="true">
-        <shape android:shape="rectangle">
-            <corners android:radius="@dimen/radius_button" />
-            <solid android:color="@color/accent_subtle" />
-            <stroke android:width="@dimen/divider" android:color="@color/outline" />
-        </shape>
-    </item>
-    <item>
-        <shape android:shape="rectangle">
-            <corners android:radius="@dimen/radius_button" />
-            <solid android:color="@color/transparent" />
-            <stroke android:width="@dimen/divider" android:color="@color/outline" />
-        </shape>
-    </item>
-</selector>
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <solid android:color="@color/surface_recessed" />
+    <corners android:radius="@dimen/radius_pill" />
+    <stroke android:width="@dimen/divider" android:color="@color/hairline" />
+</shape>

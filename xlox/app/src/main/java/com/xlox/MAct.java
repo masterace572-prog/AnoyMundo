@@ -16,7 +16,6 @@ import android.provider.Settings;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
-import android.widget.ImageButton;
 import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
@@ -26,8 +25,10 @@ import androidx.core.content.ContextCompat;
 import com.xlox.ui.ThemeMode;
 import com.xlox.ui.designsystem.DesignSystem;
 import com.xlox.ui.designsystem.DsMotion;
+import com.xlox.ui.designsystem.Haptics;
 import com.xlox.ui.designsystem.PrimaryButton;
 import com.xlox.ui.designsystem.StateView;
+import com.xlox.ui.designsystem.ThemeToggleView;
 import com.xlox.ui.designsystem.Tokens;
 import com.xlox.utils.AppManager;
 import com.xlox.utils.Downtwo;
@@ -63,13 +64,13 @@ public class MAct extends AppCompatActivity {
     private static final String PREF_NAME = "com.xlox.download";
     private static final String PREF_VERSION_KEY = "version";
 
-    // UI
     private StateView downloadBox;
     private StateView statusToggle;
     private View restartButton;
     private TextView appVersionText;
     private TextView creditText;
-    private ImageButton themeToggle;
+    private View safetyBanner;
+    private ThemeToggleView themeToggle;
     private TextView systemReady;
     private View subscriptionRule;
     private TextView subscriptionStatus;
@@ -115,6 +116,7 @@ public class MAct extends AppCompatActivity {
         restartButton = findViewById(R.id.restartButton);
         appVersionText = findViewById(R.id.appVersionText);
         creditText = findViewById(R.id.creditText);
+        safetyBanner = findViewById(R.id.safetyBanner);
         systemReady = findViewById(R.id.systemReady);
         themeToggle = findViewById(R.id.themeToggle);
         subscriptionRule = findViewById(R.id.subscriptionRule);
@@ -152,7 +154,13 @@ public class MAct extends AppCompatActivity {
         startKeyCountdown();
 
         ThemeMode.decorateToggle(this, themeToggle);
-        DsMotion.fadeIn(findViewById(R.id.mainCard));
+        DsMotion.stagger(findViewById(R.id.mainTopBar),
+                findViewById(R.id.mainCard),
+                findViewById(R.id.bentoRow),
+                safetyBanner,
+                findViewById(R.id.statusArea),
+                startBgmi,
+                systemReady);
 
         if (themeToggle != null) {
             themeToggle.setOnClickListener(v -> ThemeMode.toggle(this));
@@ -169,13 +177,13 @@ public class MAct extends AppCompatActivity {
         if (obbButton != null) {
             obbButton.setOnClickListener(v -> openExternalUrl(getString(R.string.telegram_url)));
         }
-
         if (restartButton != null) {
             restartButton.setOnClickListener(v -> restartApp());
         }
-
         if (startBgmi != null) {
             startBgmi.setOnClickListener(v -> {
+                if (launchButton != null && launchButton.isBusy()) return;
+                Haptics.tick(v);
                 if (isUpdateAvailable) {
                     startDownload();
                 } else if (!isGameInstalled) {
@@ -187,7 +195,6 @@ public class MAct extends AppCompatActivity {
                 }
             });
         }
-
         if (startFB != null) {
             startFB.setOnClickListener(v -> openExternalUrl(getString(R.string.telegram_url)));
         }
@@ -203,10 +210,7 @@ public class MAct extends AppCompatActivity {
         applyPanelStatus();
     }
 
-    /**
-     * Display the real "Safe" status and safe text the admin set at /Server,
-     * read from the /connect reply by the native layer. No hardcoded "Safe".
-     */
+    /** Display the real "Safe" status and safe text set in the admin panel. */
     private void applyPanelStatus() {
         String status = getString(R.string.not_available);
         String text = "";
@@ -226,31 +230,29 @@ public class MAct extends AppCompatActivity {
                 deviceStatus.setText(panelStatus);
                 boolean safe = panelStatus.equalsIgnoreCase("Safe")
                         || panelStatus.toLowerCase(Locale.US).contains("safe");
-                deviceStatus.setTextColor(safe ? Tokens.success(this) : Tokens.warning(this));
+                deviceStatus.setTextColor(safe ? Tokens.successInk(this) : Tokens.warningInk(this));
                 if (subscriptionRule != null) {
                     subscriptionRule.setBackgroundColor(
                             safe ? Tokens.success(this) : Tokens.warning(this));
                 }
             }
+            // The safety banner is bound to the live panel "safe text" — it is
+            // hidden when the panel has nothing to say, never filled with mock copy.
             if (creditText != null) {
                 creditText.setText(panelCredit);
-                creditText.setVisibility(panelCredit.isEmpty() ? View.GONE : View.VISIBLE);
+                if (safetyBanner != null) {
+                    safetyBanner.setVisibility(panelCredit.isEmpty() ? View.GONE : View.VISIBLE);
+                }
             }
         });
     }
 
-    /**
-     * Android 15+ 16 KB-page devices and Android 17's read-only System.load()
-     * rule can stop the downloaded library (and therefore the ImGui menu) from
-     * loading. Surface the recorded reason in the UI instead of leaving the
-     * user with a silently missing menu and no clue in logcat.
-     */
     private void showLoaderDiagnostics() {
         Log.i("MAct", "Loader diagnostics: " + LibManager.diagnostics(this));
         String error = LibManager.lastLoadError(this);
         if (error != null && !error.isEmpty()) {
             showStatusToggle(getString(R.string.library_missing), true);
-            DesignSystem.snackbar(this, getString(R.string.diagnostic_detail, error));
+            DesignSystem.snackbarError(this, getString(R.string.diagnostic_detail, error));
             LibManager.clearLoadError(this);
             return;
         }
@@ -259,7 +261,7 @@ public class MAct extends AppCompatActivity {
             String problem = LibManager.alignmentProblem(lib);
             if (problem != null) {
                 showStatusToggle(getString(R.string.library_incompatible), true);
-                DesignSystem.snackbar(this, getString(R.string.diagnostic_detail, problem));
+                DesignSystem.snackbarError(this, getString(R.string.diagnostic_detail, problem));
             }
         }
     }
@@ -308,7 +310,7 @@ public class MAct extends AppCompatActivity {
                     setTimeValues(0, 0, 0, 0);
                     if (subscriptionStatus != null) {
                         subscriptionStatus.setText(R.string.expired);
-                        subscriptionStatus.setTextColor(Tokens.error(MAct.this));
+                        subscriptionStatus.setTextColor(Tokens.errorInk(MAct.this));
                     }
                     if (subscriptionRule != null) {
                         subscriptionRule.setBackgroundColor(Tokens.error(MAct.this));
@@ -318,7 +320,7 @@ public class MAct extends AppCompatActivity {
                 }
                 if (subscriptionStatus != null) {
                     subscriptionStatus.setText(R.string.active);
-                    subscriptionStatus.setTextColor(Tokens.success(MAct.this));
+                    subscriptionStatus.setTextColor(Tokens.successInk(MAct.this));
                 }
                 if (subscriptionRule != null) {
                     subscriptionRule.setBackgroundColor(Tokens.success(MAct.this));
@@ -341,7 +343,6 @@ public class MAct extends AppCompatActivity {
             return numeric < 100000000000L ? numeric * 1000L : numeric;
         } catch (NumberFormatException ignored) {
         }
-
         String[] formats = {"yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", "yyyy-MM-dd HH:mm:ss",
                 "yyyy-MM-dd HH:mm", "yyyy-MM-dd", "dd-MM-yyyy HH:mm:ss",
                 "dd/MM/yyyy HH:mm:ss", "MMM dd, yyyy HH:mm:ss"};
@@ -375,11 +376,7 @@ public class MAct extends AppCompatActivity {
         }
     }
 
-    /**
-     * Real startup workflow. The original version only reset UI flags, so the
-     * app NEVER checked the panel version and never downloaded a missing
-     * library until the user happened to press LAUNCH.
-     */
+    /** Real startup workflow: check the panel version before the user taps Launch. */
     private void startWorkflow() {
         runOnUiThread(() -> {
             if (downloadBox != null) downloadBox.setVisibility(View.GONE);
@@ -410,7 +407,7 @@ public class MAct extends AppCompatActivity {
     }
 
     private void buttonProgress(int percent, String label) {
-        if (launchButton != null) launchButton.setLoading(true);
+        if (launchButton != null) launchButton.setBusy(true);
         if (downloadBox != null) {
             if (downloadBox.getVisibility() != View.VISIBLE) {
                 downloadBox.showLoading(label, percent);
@@ -448,9 +445,7 @@ public class MAct extends AppCompatActivity {
                     hideStatusToggle();
                     updateVersionDisplay();
                     buttonDone();
-                    if (restartButton != null) {
-                        restartButton.setVisibility(View.VISIBLE);
-                    }
+                    if (restartButton != null) restartButton.setVisibility(View.VISIBLE);
                     new Handler(Looper.getMainLooper()).postDelayed(() ->
                             setLaunchButtonText(isGameInstalled
                                     ? getString(R.string.launch) : getString(R.string.install)),
@@ -473,10 +468,8 @@ public class MAct extends AppCompatActivity {
                 });
             }
         });
-
         holder[0].setProgressListener(progress -> runOnUiThread(() ->
                 buttonProgress(progress, getString(R.string.updating))));
-
         holder[0].execute(Downtwo.downloadUrl());
     }
 
@@ -519,10 +512,6 @@ public class MAct extends AppCompatActivity {
         } catch (Exception ignored) {
             isGameInstalled = false;
             if (gameStatus != null) gameStatus.setText(R.string.not_installed);
-            if (deviceStatus != null) {
-                deviceStatus.setText(R.string.not_installed);
-                deviceStatus.setTextColor(Tokens.warning(this));
-            }
             setLaunchButtonText(getString(R.string.install));
             if (startText != null) startText.setText(R.string.install);
         }
@@ -581,6 +570,7 @@ public class MAct extends AppCompatActivity {
             return;
         }
 
+        if (launchButton != null) launchButton.setBusy(true);
         if (!isObbCopied) {
             copyObbFiles();
         } else {
@@ -595,11 +585,8 @@ public class MAct extends AppCompatActivity {
     private void showStatusToggle(String message, boolean isError) {
         if (statusToggle == null) return;
         runOnUiThread(() -> {
-            if (isError) {
-                statusToggle.showError(message);
-            } else {
-                statusToggle.showStatus(message);
-            }
+            if (isError) statusToggle.showError(message);
+            else statusToggle.showStatus(message);
         });
     }
 
@@ -613,10 +600,15 @@ public class MAct extends AppCompatActivity {
             Intent intent = MetaActivityManager.obtainSplashLaunchIntent(PKG_BGMI, this);
             if (intent != null) {
                 startActivity(intent);
+                if (launchButton != null) launchButton.reset();
                 updateButtonState(true);
+            } else if (launchButton != null) {
+                launchButton.reset();
             }
         } catch (Exception e) {
             Log.e("MAct", "Launch error", e);
+            if (launchButton != null) launchButton.reset();
+            showStatusToggle(getString(R.string.launch_failed), true);
         }
     }
 
@@ -625,7 +617,7 @@ public class MAct extends AppCompatActivity {
             MetaActivityManager.killAppByPkg(PKG_BGMI);
             updateButtonState(false);
         } catch (Exception e) {
-            DesignSystem.snackbar(this, getString(R.string.could_not_stop));
+            DesignSystem.snackbarError(this, getString(R.string.could_not_stop));
         }
     }
 
@@ -649,14 +641,9 @@ public class MAct extends AppCompatActivity {
         }
     }
 
-    /**
-     * UI-only wrapper around the sensitive OBB copy. AppManager and the
-     * copyObbFolderAsync(...) call below are unchanged; progress is shown by
-     * the shared StateView and the Primary button.
-     */
+    /** UI-only wrapper around the unchanged OBB copy business logic. */
     private void copyObbFiles() {
         if (obbButton == null) return;
-
         Button btn = (Button) obbButton;
         btn.setEnabled(false);
         buttonProgress(0, getString(R.string.copying));
@@ -676,7 +663,7 @@ public class MAct extends AppCompatActivity {
                         btn.setText(getString(R.string.apply_obb));
                         if (downloadBox != null) downloadBox.setVisibility(View.GONE);
                         if (launchButton != null) launchButton.reset();
-                        DesignSystem.snackbar(MAct.this, getString(R.string.copy_failed));
+                        DesignSystem.snackbarError(MAct.this, getString(R.string.copy_failed));
                     }
                 });
             }
@@ -685,7 +672,7 @@ public class MAct extends AppCompatActivity {
             public void onProgressUpdate(int progress) {
                 runOnUiThread(() -> buttonProgress(progress, getString(R.string.copying)));
             }
-        }, false); // false to hide the default dialog
+        }, false);
     }
 
     private void checkPermissions() {
@@ -694,7 +681,6 @@ public class MAct extends AppCompatActivity {
                 ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, 100);
             }
         }
-
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             if (!Environment.isExternalStorageManager()) {
                 Intent intent = new Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION);

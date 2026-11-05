@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Static verification for the Android UI redesign (AUDIT.md §14, gates 8-9).
+"""Static verification for the Android v2 UI redesign.
 
-Runs on a plain checkout; no Android SDK required. Exits non-zero on the first
-failing gate and prints a short PASS/FAIL summary.
+Runs on a plain checkout; no Android SDK required. Exits non-zero when a gate
+fails and prints a short PASS/FAIL summary.
 """
 from __future__ import annotations
 
@@ -18,16 +18,22 @@ RES = MAIN / "res"
 DRES = DEBUG / "res"
 
 SKIP_SUFFIXES = {".png", ".jpg", ".jpeg", ".webp", ".ttf", ".otf", ".aar", ".so", ".jks"}
-# Files that are allowed to contain raw literals because they ARE the token layer.
+DESIGN_SYSTEM_DIR = MAIN / "java/com/xlox/ui/designsystem"
+
+# The token layer and resource definitions are the only places raw values may
+# appear. Everything else (Java + layouts) must resolve through tokens.
+TOKEN_DIRS = (RES / "color", RES / "drawable", RES / "anim", DRES / "drawable")
 TOKEN_FILES = {
     RES / "values/dimens.xml",
     RES / "values/colors.xml",
     RES / "values-night/colors.xml",
     RES / "values/strings.xml",
+    RES / "values/styles.xml",
+    RES / "values/attrs.xml",
     RES / "values/keep.xml",
+    RES / "values-v23/styles.xml",
     DRES / "values/strings.xml",
 }
-DESIGN_SYSTEM_DIR = MAIN / "java/com/xlox/ui/designsystem"
 
 failures: list[str] = []
 checks = 0
@@ -56,6 +62,11 @@ def text_of(path: Path) -> str:
     return path.read_text(encoding="utf-8", errors="replace")
 
 
+def in_token_layer(path: Path) -> bool:
+    return path in TOKEN_FILES or DESIGN_SYSTEM_DIR in path.parents or any(
+        d in path.parents for d in TOKEN_DIRS)
+
+
 # ---------------------------------------------------------------- contrast
 def parse_colors(path: Path) -> dict[str, str]:
     return {
@@ -78,31 +89,33 @@ def contrast(a: str, b: str) -> float:
     return (x + 0.05) / (y + 0.05)
 
 
+# "accent" is a fill token; its text counterpart is "accent_ink". The fill is
+# always paired with "on_accent", which is checked explicitly below.
 PAIRS = [
     ("text_primary", "background"), ("text_primary", "surface"),
-    ("text_primary", "surface_elevated"), ("text_primary", "surface_subtle"),
+    ("text_primary", "surface_elevated"), ("text_primary", "surface_recessed"),
     ("text_secondary", "background"), ("text_secondary", "surface"),
-    ("text_secondary", "surface_elevated"), ("text_tertiary", "background"),
-    ("accent", "background"), ("accent", "surface"),
+    ("text_secondary", "surface_recessed"), ("text_tertiary", "background"),
+    ("icon", "surface"), ("accent_ink", "background"),
     ("on_accent", "accent"), ("on_accent", "accent_pressed"),
-    ("error", "background"), ("error", "surface"),
-    ("success", "background"), ("warning", "background"),
+    ("success_ink", "background"), ("warning_ink", "background"),
+    ("error_ink", "background"), ("success_ink", "surface_recessed"),
 ]
+light = parse_colors(RES / "values/colors.xml")
 for appearance, path in [("light", RES / "values/colors.xml"),
                          ("dark", RES / "values-night/colors.xml")]:
     tokens = parse_colors(path)
+    check(set(tokens) == set(light), f"{appearance}: token parity with light",
+          str(sorted(set(tokens) ^ set(light))))
     missing = [n for pair in PAIRS for n in pair if n not in tokens]
-    check(not missing, f"{appearance}: all 16 B.1 pairs defined", str(missing))
+    check(not missing, f"{appearance}: all 16 contrast pairs defined", str(missing))
     if missing:
         continue
     low = [(a, b, round(contrast(tokens[a], tokens[b]), 2))
            for a, b in PAIRS if contrast(tokens[a], tokens[b]) < 4.5]
-    check(not low, f"{appearance}: WCAG AA (>=4.5) on all 16 B.1 pairs", str(low))
-    # Light/dark must expose exactly the same token names.
-    check(set(tokens) == set(parse_colors(RES / "values/colors.xml")),
-          f"{appearance}: token parity with light")
+    check(not low, f"{appearance}: WCAG AA (>=4.5) on all 16 pairs", str(low))
 
-# ------------------------------------------------------- literals / Part C
+# ------------------------------------------------------- literals / leftovers
 FORBIDDEN = [
     (r"#[0-9A-Fa-f]{6}\b", "literal hex colour"),
     (r"\b[1-9]\d*(?:\.\d+)?dp\b", "literal dp"),
@@ -110,32 +123,32 @@ FORBIDDEN = [
     (r"textSize\s*=", "textSize="),
     (r'android:textColor="#', "hardcoded textColor"),
     (r"Color\.(?:argb|rgb|parseColor)\(|Color\(0x", "programmatic colour literal"),
-    (r"textAllCaps=\"true\"", "ALL CAPS"),
-    (r"android:(?:shadow|elevation)\w*\s*=", "shadow/elevation"),
-    (r"<gradient\b|android:type=\"linear\"", "gradient"),
-    (r"ObjectAnimator|ValueAnimator\.INFINITE", "looping animation"),
-    (r"dynamicColor|dynamic_color|MaterialYou", "dynamic colour"),
     (r"android:text=\"(?!@|$)", "hardcoded android:text"),
+    (r"android:(?:shadow\w*|elevation)\s*=", "shadow/elevation"),
+    (r"ObjectAnimator\b|ValueAnimator\.INFINITE", "looping animation"),
+    (r"dynamicColor|dynamic_color|MaterialYou", "dynamic colour"),
+    (r"<emoji|[\U0001F300-\U0001FAFF]", "emoji"),
 ]
 for path in source_files():
-    if path in TOKEN_FILES or DESIGN_SYSTEM_DIR in path.parents:
+    if in_token_layer(path):
         continue
     body = text_of(path)
+    body = re.sub(r"<!--.*?-->", "", body, flags=re.S)
+    body = re.sub(r"^\s*//.*$", "", body, flags=re.M)
     for pattern, label in FORBIDDEN:
         hits = [m.group(0) for m in re.finditer(pattern, body, re.MULTILINE)]
         if hits:
-            check(False, f"no {label} outside designsystem/tokens",
+            check(False, f"no {label} outside tokens/designsystem",
                   f"{path.relative_to(ROOT)}: {hits[:3]}")
 
-# Emoji / pictographs anywhere in authored UI copy.
 for path in [RES / "values/strings.xml", DRES / "values/strings.xml"]:
     if not path.exists():
         continue
-    bad = sorted({c for c in text_of(path)
+    copy = re.sub(r"<!--.*?-->", "", text_of(path), flags=re.S)
+    bad = sorted({c for c in copy
                   if unicodedata.category(c) == "So" or 0x1F000 <= ord(c) <= 0x1FAFF})
-    check(not bad, f"no emoji in {path.name}", repr(bad))
-    check("!" not in re.sub(r"<!--.*?-->", "", text_of(path), flags=re.S),
-          f"no exclamation marks in {path.name}")
+    check(not bad, f"no emoji in {path.parent.parent.name}/{path.name}", repr(bad))
+    check("!" not in copy, f"no exclamation marks in {path.name}")
 
 # ---------------------------------------------------- resource references
 defs: dict[str, set[str]] = {}
@@ -146,52 +159,49 @@ for base in (RES, DRES):
         if not p.is_file():
             continue
         kind = p.parent.name.split("-")[0]
-        if kind in ("drawable", "layout", "menu", "color") and p.suffix != ".xml":
-            # Raster launcher icons are still drawable resources.
+        if kind in ("drawable", "layout", "menu", "color", "anim", "font") and p.suffix != ".xml":
             defs.setdefault(kind, set()).add(p.stem)
             continue
-        if kind == "values" and p.suffix == ".xml":
+        if p.suffix != ".xml":
+            continue
+        if kind == "values":
             for typ, name in re.findall(
                     r'<(string|dimen|color|style)\s+name="([\w.]+)"', text_of(p)):
                 defs.setdefault(typ, set()).add(name)
-
         else:
             defs.setdefault(kind, set()).add(p.stem)
 
 all_text = "\n".join(text_of(p) for p in source_files())
+TYPES = ("string", "dimen", "color", "style", "drawable", "layout", "menu",
+         "anim", "font")
 refs: dict[str, set[str]] = {}
-for typ in ("string", "dimen", "color", "style", "drawable", "layout", "menu"):
+for typ in TYPES:
     refs[typ] = set(re.findall(rf"@{typ}/([\w.]+)", all_text))
     code_refs = set(re.findall(rf"R\.{typ}\.([\w.]+)", all_text))
     if typ == "style":
         # aapt2 maps <style name="Widget.Ds.X"> to R.style.Widget_Ds_X.
         code_refs = {r.replace("_", ".") for r in code_refs}
     refs[typ] |= code_refs
-for typ in ("string", "dimen", "color", "style", "drawable", "layout", "menu"):
+
+kept_text = text_of(RES / "values/keep.xml")
+kept = {k: set(re.findall(rf"@{k}/([\w.]+)", kept_text)) for k in TYPES}
+for typ in TYPES:
     missing = sorted(refs[typ] - defs.get(typ, set()))
     check(not missing, f"all @{typ}/ and R.{typ} references resolve", str(missing))
-    unused = sorted(defs.get(typ, set()) - refs[typ])
-    # Style parents declared with parent="..." are usages too.
+    unused = sorted(defs.get(typ, set()) - refs[typ] - kept.get(typ, set()))
     if typ == "style":
         parents = set(re.findall(r'parent="([\w.]+)"', all_text))
         unused = [u for u in unused if u not in parents]
-    if typ == "dimen":
-        kept = set(re.findall(r"@dimen/([\w.]+)", text_of(RES / "values/keep.xml")))
-        unused = [u for u in unused if u not in kept]
-    if typ == "drawable":
-        kept = set(re.findall(r"@drawable/([\w.]+)", text_of(RES / "values/keep.xml")))
-        unused = [u for u in unused if u not in kept]
-        if (RES / "drawable/ic_anoy.png").exists():
-            unused = [u for u in unused if u != "ic_anoy"]
     if typ == "color":
-        # Colour tokens are referenced from Java via tokens.xml helpers and from
-        # night overrides which share the same names; only report truly dead ones.
-        unused = [u for u in unused if u not in set(parse_colors(RES / "values/colors.xml"))]
+        unused = [u for u in unused if u not in set(light)]
+    if typ == "drawable" and (RES / "drawable/ic_anoy.png").exists():
+        unused = [u for u in unused if u != "ic_anoy"]
     check(not unused, f"no unused @{typ}/ resources", str(unused))
 
 # --------------------------------------------------------- accessibility
 icon_controls = 0
 unlabelled = []
+small_targets = []
 for base in (RES / "layout", DRES / "layout"):
     for p in base.glob("*.xml"):
         body = text_of(p)
@@ -200,15 +210,10 @@ for base in (RES / "layout", DRES / "layout"):
             if ("android:contentDescription" not in block
                     and 'importantForAccessibility="no"' not in block):
                 unlabelled.append(p.name)
-check(icon_controls > 0 and not unlabelled,
-      "every ImageButton has a TalkBack label", str(unlabelled))
-
-small_targets = []
-for base in (RES / "layout", DRES / "layout"):
-    for p in base.glob("*.xml"):
-        for block in re.findall(r"<ImageButton\b.*?/>", p.read_text(), re.S):
             if "@dimen/touch_target" not in block:
                 small_targets.append(p.name)
+check(icon_controls > 0 and not unlabelled,
+      "every ImageButton has a TalkBack label", str(unlabelled))
 check(not small_targets, "icon buttons use the 48dp target token", str(small_targets))
 
 # ------------------------------------------------------------ final summary

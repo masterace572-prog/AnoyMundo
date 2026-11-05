@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Lucide monitor-smartphone (ISC, see xlox/licenses/ISC-Lucide.txt). 24dp grid, 1.75dp stroke. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="@dimen/icon_bar"
+    android:height="@dimen/icon_bar"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:fillColor="@android:color/transparent"
+        android:pathData="M18 8V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h8 M10 19v-3.96 3.15 M7 19h5 M 18 12 H 20 A 2 2 0 0 1 22 14 V 20 A 2 2 0 0 1 20 22 H 18 A 2 2 0 0 1 16 20 V 14 A 2 2 0 0 1 18 12 Z"
+        android:strokeColor="@color/icon"
+        android:strokeWidth="1.75"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+</vector>

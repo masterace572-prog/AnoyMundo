@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Lucide clock (ISC, see xlox/licenses/ISC-Lucide.txt). 24dp grid, 1.75dp stroke. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="@dimen/icon_bar"
+    android:height="@dimen/icon_bar"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:fillColor="@android:color/transparent"
+        android:pathData="M 2 12 a 10 10 0 1 0 20 0 a 10 10 0 1 0 -20 0 Z M12 6v6l4 2"
+        android:strokeColor="@color/icon"
+        android:strokeWidth="1.75"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+</vector>

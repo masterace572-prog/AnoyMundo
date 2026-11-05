@@ -1,9 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Dialog: elevated matte surface, tight serif-free headline, right-aligned Text actions. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginStart="@dimen/dialog_inset"
-    android:layout_marginEnd="@dimen/dialog_inset"
     android:background="@drawable/ds_dialog"
     android:orientation="vertical"
     android:padding="@dimen/space_24">
@@ -32,18 +31,15 @@
             android:id="@+id/dialogNegative"
             style="@style/Widget.Ds.Button.Text"
             android:layout_width="wrap_content"
-            android:layout_height="@dimen/button_height"
+            android:layout_height="@dimen/touch_target"
             android:minWidth="@dimen/touch_target"
-            android:text="@string/dismiss"
             android:visibility="gone" />
 
         <androidx.appcompat.widget.AppCompatButton
             android:id="@+id/dialogPositive"
             style="@style/Widget.Ds.Button.Text"
             android:layout_width="wrap_content"
-            android:layout_height="@dimen/button_height"
-            android:layout_marginStart="@dimen/space_8"
-            android:minWidth="@dimen/touch_target"
-            android:text="@string/close" />
+            android:layout_height="@dimen/touch_target"
+            android:minWidth="@dimen/touch_target" />
     </LinearLayout>
 </LinearLayout>

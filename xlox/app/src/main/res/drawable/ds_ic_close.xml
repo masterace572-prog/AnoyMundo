@@ -1,13 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Material Symbols Outlined, 400 weight, grade 0, FILL 0. Apache-2.0 (see xlox/licenses/). -->
+<!-- Lucide x (ISC, see xlox/licenses/ISC-Lucide.txt). 24dp grid, 1.75dp stroke. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="@dimen/icon_bar"
     android:height="@dimen/icon_bar"
-    android:viewportWidth="960"
-    android:viewportHeight="960">
-    <group android:translateY="960">
-        <path
-            android:fillColor="@color/text_secondary"
-            android:pathData="m249-207-42-42 231-231-231-231 42-42 231 231 231-231 42 42-231 231 231 231-42 42-231-231-231 231Z" />
-    </group>
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:fillColor="@android:color/transparent"
+        android:pathData="M18 6 6 18 m6 6 12 12"
+        android:strokeColor="@color/icon"
+        android:strokeWidth="1.75"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
 </vector>

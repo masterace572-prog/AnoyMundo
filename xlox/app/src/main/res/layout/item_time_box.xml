@@ -1,24 +1,28 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Countdown cell used by the hidden legacy controls. No placeholder text. -->
+<!-- One tabular telemetry cell. Used four times inside the hero card. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="0dp"
-    android:layout_height="@dimen/list_item_double"
-    android:layout_weight="1"
-    android:background="@drawable/ds_card"
-    android:gravity="center"
+    android:layout_height="wrap_content"
+    android:background="@drawable/ds_field_rest"
+    android:gravity="center_horizontal"
     android:orientation="vertical"
-    android:padding="@dimen/space_8">
+    android:paddingStart="@dimen/space_4"
+    android:paddingTop="@dimen/space_8"
+    android:paddingEnd="@dimen/space_4"
+    android:paddingBottom="@dimen/space_8">
 
     <TextView
         android:id="@+id/timeValue"
-        style="@style/TextAppearance.Ds.TitleMedium"
+        style="@style/TextAppearance.Ds.Mono.Medium"
         android:layout_width="wrap_content"
-        android:layout_height="wrap_content" />
+        android:layout_height="wrap_content"
+        android:text="@string/not_available" />
 
     <TextView
         android:id="@+id/timeLabel"
-        style="@style/TextAppearance.Ds.Tertiary"
+        style="@style/TextAppearance.Ds.Micro"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="@dimen/space_4" />
+        android:layout_marginTop="@dimen/space_4"
+        android:text="@string/days" />
 </LinearLayout>

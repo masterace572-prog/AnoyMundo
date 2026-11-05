@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Geometric Anoy "A" monogram. 96dp grid, 5dp stroke, single accent colour. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="@dimen/emblem_size"
+    android:height="@dimen/emblem_size"
+    android:viewportWidth="96"
+    android:viewportHeight="96">
+    <path
+        android:fillColor="@android:color/transparent"
+        android:pathData="M28 76 L48 20 L68 76 M36 58 H60 M22 86 H74"
+        android:strokeColor="@color/accent"
+        android:strokeWidth="5"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <path
+        android:fillColor="@color/accent"
+        android:pathData="M70 25 a4.5 4.5 0 1 0 9 0 a4.5 4.5 0 1 0 -9 0" />
+</vector>

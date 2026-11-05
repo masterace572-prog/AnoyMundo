@@ -1,12 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Screen 2: dashboard. One serif headline (top app bar), one accent-filled control. -->
+<!-- Screen 2: bento telemetry dashboard. Every value is bound to the live sources. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/mainRoot"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:clipToPadding="false"
     android:orientation="vertical">
 
+    <!-- Top bar: brand, monospace version pill, appearance switch -->
     <LinearLayout
         android:id="@+id/mainTopBar"
         style="@style/Widget.Ds.TopAppBar"
@@ -14,28 +17,34 @@
         android:layout_height="@dimen/top_bar_height"
         android:gravity="center_vertical"
         android:orientation="horizontal"
-        android:paddingStart="@dimen/space_12"
-        android:paddingEnd="@dimen/space_12">
+        android:paddingStart="@dimen/screen_padding"
+        android:paddingEnd="@dimen/screen_padding">
 
         <TextView
             android:id="@+id/dashboardTitle"
             style="@style/TextAppearance.Ds.HeadlineSmall"
-            android:layout_width="wrap_content"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
+            android:layout_weight="1"
             android:text="@string/app_name" />
 
-        <View
-            android:layout_width="0dp"
-            android:layout_height="@dimen/divider"
-            android:layout_weight="1" />
+        <TextView
+            android:id="@+id/appVersionText"
+            style="@style/TextAppearance.Ds.Mono.Small"
+            android:layout_width="wrap_content"
+            android:layout_height="@dimen/version_pill_height"
+            android:background="@drawable/ds_version_pill"
+            android:gravity="center"
+            android:paddingStart="@dimen/space_8"
+            android:paddingEnd="@dimen/space_8"
+            android:textColor="@color/text_secondary" />
 
-        <ImageButton
+        <com.xlox.ui.designsystem.ThemeToggleView
             android:id="@+id/themeToggle"
-            style="@style/Widget.Ds.IconButton"
-            android:layout_width="@dimen/touch_target"
-            android:layout_height="@dimen/touch_target"
-            android:contentDescription="@string/theme_toggle"
-            android:src="@drawable/ds_ic_dark_mode" />
+            android:layout_width="@dimen/toggle_width"
+            android:layout_height="@dimen/toggle_height"
+            android:layout_marginStart="@dimen/space_12"
+            android:contentDescription="@string/theme_toggle" />
     </LinearLayout>
 
     <ScrollView
@@ -53,242 +62,320 @@
             android:layout_height="wrap_content"
             android:orientation="vertical"
             android:paddingStart="@dimen/screen_padding"
-            android:paddingTop="@dimen/space_24"
+            android:paddingTop="@dimen/space_16"
             android:paddingEnd="@dimen/screen_padding"
             android:paddingBottom="@dimen/space_32">
 
-            <!-- Subscription card -->
-            <LinearLayout
+            <!-- Hero telemetry card -->
+            <com.xlox.ui.designsystem.DsSurface
                 android:id="@+id/mainCard"
-                style="@style/Widget.Ds.Card"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical">
+                android:padding="@dimen/card_padding"
+                app:dsVariant="card">
+
+                <View
+                    android:id="@+id/subscriptionRule"
+                    android:layout_width="match_parent"
+                    android:layout_height="@dimen/status_rule"
+                    android:background="@color/success" />
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/space_16"
                     android:gravity="center_vertical"
                     android:orientation="horizontal">
 
                     <TextView
-                        android:id="@+id/brandHeader"
-                        style="@style/TextAppearance.Ds.TitleMedium"
+                        android:id="@+id/timeLeftLabel"
+                        style="@style/TextAppearance.Ds.Micro"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="@string/subscription" />
+                        android:text="@string/time_left" />
 
-                    <View
-                        android:id="@+id/subscriptionRule"
-                        android:layout_width="@dimen/status_rule"
-                        android:layout_height="@dimen/list_item_single"
-                        android:background="@color/success" />
-
-                    <TextView
-                        android:id="@+id/subscriptionStatus"
-                        style="@style/Widget.Ds.StatusText.Success"
+                    <LinearLayout
+                        android:id="@+id/statusPill"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
+                        android:background="@drawable/ds_status_pill"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal"
+                        android:paddingStart="@dimen/space_12"
+                        android:paddingTop="@dimen/space_4"
+                        android:paddingEnd="@dimen/space_12"
+                        android:paddingBottom="@dimen/space_4">
+
+                        <com.xlox.ui.designsystem.LiveDotView
+                            android:id="@+id/liveDot"
+                            android:layout_width="@dimen/space_12"
+                            android:layout_height="@dimen/space_12"
+                            android:contentDescription="@null"
+                            android:importantForAccessibility="no" />
+
+                        <TextView
+                            android:id="@+id/subscriptionStatus"
+                            style="@style/TextAppearance.Ds.LabelMedium"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="@dimen/space_8"
+                            android:text="@string/active"
+                            android:textColor="@color/success_ink" />
+                    </LinearLayout>
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/timeRemaining"
+                    style="@style/TextAppearance.Ds.Mono.Hero"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/space_12"
+                    android:text="@string/not_available" />
+
+                <!-- Four tabular cells, all bound to the existing countdown -->
+                <LinearLayout
+                    android:id="@+id/timeBoxes"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/space_16"
+                    android:orientation="horizontal">
+
+                    <include
+                        android:id="@+id/daysBox"
+                        layout="@layout/item_time_box"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1" />
+
+                    <include
+                        android:id="@+id/hoursBox"
+                        layout="@layout/item_time_box"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
                         android:layout_marginStart="@dimen/space_8"
-                        android:text="@string/ready" />
+                        android:layout_weight="1" />
+
+                    <include
+                        android:id="@+id/minutesBox"
+                        layout="@layout/item_time_box"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="@dimen/space_8"
+                        android:layout_weight="1" />
+
+                    <include
+                        android:id="@+id/secondsBox"
+                        layout="@layout/item_time_box"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="@dimen/space_8"
+                        android:layout_weight="1" />
                 </LinearLayout>
 
                 <View
                     android:layout_width="match_parent"
                     android:layout_height="@dimen/divider"
                     android:layout_marginTop="@dimen/space_16"
-                    android:layout_marginBottom="@dimen/space_8"
                     android:background="@drawable/ds_divider" />
 
-                <!-- Single-line list rows: leading icon + label + trailing value -->
                 <LinearLayout
-                    style="@style/Widget.Ds.ListRow"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/space_16"
+                    android:gravity="center_vertical"
                     android:orientation="horizontal">
 
                     <ImageView
-                        android:layout_width="@dimen/icon_bar"
-                        android:layout_height="@dimen/icon_bar"
+                        android:id="@+id/calendarIcon"
+                        android:layout_width="@dimen/icon_inline"
+                        android:layout_height="@dimen/icon_inline"
                         android:contentDescription="@null"
                         android:importantForAccessibility="no"
-                        android:src="@drawable/ds_ic_calendar_month" />
+                        android:src="@drawable/ds_ic_calendar"
+                        app:tint="@color/icon" />
 
                     <TextView
-                        style="@style/TextAppearance.Ds.Secondary"
-                        android:layout_width="0dp"
+                        android:id="@+id/expiresLabel"
+                        style="@style/TextAppearance.Ds.Micro"
+                        android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginStart="@dimen/space_12"
-                        android:layout_weight="1"
+                        android:layout_marginStart="@dimen/space_8"
                         android:text="@string/expires" />
 
                     <TextView
                         android:id="@+id/expiryValue"
-                        style="@style/TextAppearance.Ds.BodyMedium"
-                        android:layout_width="wrap_content"
+                        style="@style/TextAppearance.Ds.Mono.Small"
+                        android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:gravity="end"
-                        android:maxLines="1"
-                        android:ellipsize="end"
-                        android:text="@string/not_available" />
+                        android:layout_marginStart="@dimen/space_8"
+                        android:layout_weight="1"
+                        android:text="@string/not_available"
+                        android:textColor="@color/text_secondary" />
                 </LinearLayout>
+            </com.xlox.ui.designsystem.DsSurface>
 
-                <LinearLayout
-                    style="@style/Widget.Ds.ListRow"
-                    android:layout_width="match_parent"
+            <!-- Bento grid: device + security status -->
+            <LinearLayout
+                android:id="@+id/bentoRow"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/space_16"
+                android:orientation="horizontal">
+
+                <com.xlox.ui.designsystem.DsSurface
+                    android:id="@+id/deviceTile"
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal">
+                    android:layout_weight="1"
+                    android:padding="@dimen/tile_padding"
+                    app:dsVariant="tile">
 
                     <ImageView
+                        android:id="@+id/deviceIcon"
                         android:layout_width="@dimen/icon_bar"
                         android:layout_height="@dimen/icon_bar"
                         android:contentDescription="@null"
                         android:importantForAccessibility="no"
-                        android:src="@drawable/ds_ic_schedule" />
+                        android:src="@drawable/ds_ic_device"
+                        app:tint="@color/icon" />
 
                     <TextView
-                        style="@style/TextAppearance.Ds.Secondary"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="@dimen/space_12"
-                        android:layout_weight="1"
-                        android:text="@string/time_left" />
-
-                    <TextView
-                        android:id="@+id/timeRemaining"
-                        style="@style/TextAppearance.Ds.BodyMedium"
+                        android:id="@+id/deviceLabel"
+                        style="@style/TextAppearance.Ds.Micro"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:gravity="end"
-                        android:maxLines="1"
-                        android:ellipsize="end"
-                        android:text="@string/not_available" />
-                </LinearLayout>
-
-                <LinearLayout
-                    android:id="@+id/deviceStatusRow"
-                    style="@style/Widget.Ds.ListRow"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal">
-
-                    <ImageView
-                        android:layout_width="@dimen/icon_bar"
-                        android:layout_height="@dimen/icon_bar"
-                        android:contentDescription="@null"
-                        android:importantForAccessibility="no"
-                        android:src="@drawable/ds_ic_devices" />
-
-                    <TextView
-                        style="@style/TextAppearance.Ds.Secondary"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="@dimen/space_12"
-                        android:layout_weight="1"
+                        android:layout_marginTop="@dimen/space_12"
                         android:text="@string/device" />
 
                     <TextView
                         android:id="@+id/deviceValue"
-                        style="@style/TextAppearance.Ds.BodyMedium"
-                        android:layout_width="wrap_content"
+                        style="@style/TextAppearance.Ds.Mono.Medium"
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:gravity="end"
-                        android:maxLines="1"
+                        android:layout_marginTop="@dimen/space_4"
                         android:ellipsize="end"
+                        android:singleLine="true"
                         android:text="@string/not_available" />
-                </LinearLayout>
+                </com.xlox.ui.designsystem.DsSurface>
 
-                <LinearLayout
-                    style="@style/Widget.Ds.ListRow"
-                    android:layout_width="match_parent"
+                <View
+                    android:layout_width="@dimen/space_12"
+                    android:layout_height="@dimen/divider" />
+
+                <com.xlox.ui.designsystem.DsSurface
+                    android:id="@+id/statusTile"
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal">
+                    android:layout_weight="1"
+                    android:padding="@dimen/tile_padding"
+                    app:dsVariant="tile">
 
                     <ImageView
+                        android:id="@+id/statusIcon"
                         android:layout_width="@dimen/icon_bar"
                         android:layout_height="@dimen/icon_bar"
                         android:contentDescription="@null"
                         android:importantForAccessibility="no"
-                        android:src="@drawable/ds_ic_verified_user" />
+                        android:src="@drawable/ds_ic_shield_check"
+                        app:tint="@color/success_ink" />
 
                     <TextView
-                        style="@style/TextAppearance.Ds.Secondary"
-                        android:layout_width="0dp"
+                        android:id="@+id/statusLabel"
+                        style="@style/TextAppearance.Ds.Micro"
+                        android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginStart="@dimen/space_12"
-                        android:layout_weight="1"
+                        android:layout_marginTop="@dimen/space_12"
                         android:text="@string/status" />
 
                     <TextView
                         android:id="@+id/deviceStatus"
-                        style="@style/Widget.Ds.StatusText"
-                        android:layout_width="wrap_content"
+                        style="@style/TextAppearance.Ds.Mono.Medium"
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:gravity="end"
-                        android:maxLines="1"
+                        android:layout_marginTop="@dimen/space_4"
                         android:ellipsize="end"
-                        android:text="@string/not_available" />
-                </LinearLayout>
-
-                <TextView
-                    android:id="@+id/appVersionText"
-                    style="@style/TextAppearance.Ds.Tertiary"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="@dimen/space_8" />
+                        android:singleLine="true"
+                        android:text="@string/not_available"
+                        android:textColor="@color/success_ink" />
+                </com.xlox.ui.designsystem.DsSurface>
             </LinearLayout>
 
-            <TextView
-                android:id="@+id/creditText"
-                style="@style/TextAppearance.Ds.Secondary"
+            <!-- Safety banner: bound to the live panel "safe text" -->
+            <com.xlox.ui.designsystem.DsSurface
+                android:id="@+id/safetyBanner"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="@dimen/space_16"
-                android:gravity="center"
-                android:visibility="gone" />
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:padding="@dimen/tile_padding"
+                android:visibility="gone"
+                app:dsVariant="banner">
 
+                <ImageView
+                    android:id="@+id/warningIcon"
+                    android:layout_width="@dimen/icon_bar"
+                    android:layout_height="@dimen/icon_bar"
+                    android:contentDescription="@null"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/ds_ic_warning"
+                    app:tint="@color/warning_ink" />
+
+                <TextView
+                    android:id="@+id/creditText"
+                    style="@style/TextAppearance.Ds.BodyMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="@dimen/space_12"
+                    android:layout_weight="1"
+                    android:textColor="@color/warning_ink" />
+            </com.xlox.ui.designsystem.DsSurface>
+
+            <!-- Fixed-height state area: zero layout shift during loading -->
+            <FrameLayout
+                android:id="@+id/statusArea"
+                android:layout_width="match_parent"
+                android:layout_height="@dimen/state_height"
+                android:layout_marginTop="@dimen/space_12">
+
+                <com.xlox.ui.designsystem.StateView
+                    android:id="@+id/downloadBox"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:visibility="gone" />
+
+                <com.xlox.ui.designsystem.StateView
+                    android:id="@+id/statusToggle"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:visibility="gone" />
+            </FrameLayout>
+
+            <!-- Bottom action -->
             <com.xlox.ui.designsystem.PrimaryButton
                 android:id="@+id/startBgmi"
-                style="@style/Widget.Ds.Button.Primary"
+                style="@style/Widget.Ds.Button.Launch"
                 android:layout_width="match_parent"
-                android:layout_height="@dimen/button_height"
-                android:layout_marginTop="@dimen/space_24"
+                android:layout_height="@dimen/launch_button_height"
+                android:layout_marginTop="@dimen/space_12"
                 android:text="@string/launch" />
 
-            <com.xlox.ui.designsystem.StateView
-                android:id="@+id/downloadBox"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="@dimen/space_16"
-                android:background="@drawable/ds_card"
-                android:padding="@dimen/card_padding"
-                android:visibility="gone" />
-
-            <com.xlox.ui.designsystem.StateView
-                android:id="@+id/statusToggle"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="@dimen/space_16"
-                android:background="@drawable/ds_card"
-                android:padding="@dimen/card_padding"
-                android:visibility="gone" />
-
+            <!-- Footer signature -->
             <TextView
                 android:id="@+id/systemReady"
-                style="@style/TextAppearance.Ds.Secondary"
+                style="@style/TextAppearance.Ds.Mono.Small"
                 android:layout_width="wrap_content"
-                android:layout_height="@dimen/touch_target"
+                android:layout_height="wrap_content"
                 android:layout_gravity="center_horizontal"
-                android:layout_marginTop="@dimen/section_gap"
-                android:background="@drawable/ds_button_text"
-                android:clickable="true"
-                android:focusable="true"
-                android:gravity="center"
-                android:minWidth="@dimen/touch_target"
+                android:layout_marginTop="@dimen/space_24"
+                android:background="@drawable/ds_badge"
                 android:paddingStart="@dimen/space_12"
+                android:paddingTop="@dimen/space_8"
                 android:paddingEnd="@dimen/space_12"
-                android:text="@string/telegram_handle" />
+                android:paddingBottom="@dimen/space_8"
+                android:text="@string/telegram_handle"
+                android:textColor="@color/text_tertiary" />
 
             <!-- Legacy IDs kept intact: existing Java binds these on startup.
                  Hidden, zero-sized, and never drawn. -->
@@ -303,12 +390,8 @@
                 <TextView android:id="@+id/gameName" android:layout_width="wrap_content" android:layout_height="wrap_content" />
                 <TextView android:id="@+id/packageName" android:layout_width="wrap_content" android:layout_height="wrap_content" />
                 <TextView android:id="@+id/gameStatus" android:layout_width="wrap_content" android:layout_height="wrap_content" />
-                <LinearLayout android:id="@+id/keyTimeRow" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
-                    <include android:id="@+id/daysBox" layout="@layout/item_time_box" />
-                    <include android:id="@+id/hoursBox" layout="@layout/item_time_box" />
-                    <include android:id="@+id/minutesBox" layout="@layout/item_time_box" />
-                    <include android:id="@+id/secondsBox" layout="@layout/item_time_box" />
-                </LinearLayout>
+                <TextView android:id="@+id/telegramCaption" android:layout_width="wrap_content" android:layout_height="wrap_content" />
+                <LinearLayout android:id="@+id/keyTimeRow" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" />
                 <LinearLayout android:id="@+id/fbCard" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
                     <androidx.appcompat.widget.AppCompatButton android:id="@+id/startFB" android:layout_width="0dp" android:layout_height="@dimen/divider" android:layout_weight="1" />
                     <androidx.appcompat.widget.AppCompatButton android:id="@+id/obbButton" android:layout_width="0dp" android:layout_height="@dimen/divider" android:layout_weight="1" />

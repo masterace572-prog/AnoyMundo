@@ -1,6 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
-<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
-    <corners android:radius="@dimen/radius_card" />
-    <solid android:color="@color/surface_elevated" />
-    <stroke android:width="@dimen/divider" android:color="@color/outline" />
-</shape>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="@color/surface" />
+            <corners android:radius="@dimen/radius_card" />
+            <stroke android:width="@dimen/divider" android:color="@color/hairline" />
+        </shape>
+    </item>
+    <item android:left="@dimen/divider" android:top="@dimen/divider"
+          android:right="@dimen/divider" android:bottom="@dimen/divider">
+        <shape android:shape="rectangle">
+            <corners android:radius="@dimen/radius_card" />
+            <gradient android:angle="270"
+                android:startColor="@color/top_light"
+                android:centerColor="@color/top_light_soft"
+                android:endColor="@color/transparent"
+                android:type="linear" />
+        </shape>
+    </item>
+</layer-list>

@@ -1,11 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Floating snackbar: matte elevated pill with a hairline and a Text action. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:id="@+id/snackbarRoot"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_gravity="bottom"
-    android:layout_marginStart="@dimen/space_16"
-    android:layout_marginEnd="@dimen/space_16"
     android:background="@drawable/ds_snackbar"
     android:gravity="center_vertical"
     android:orientation="horizontal"
@@ -14,19 +12,28 @@
     android:paddingEnd="@dimen/space_8"
     android:paddingBottom="@dimen/space_12">
 
+    <ImageView
+        android:id="@+id/snackbarIcon"
+        android:layout_width="@dimen/icon_inline"
+        android:layout_height="@dimen/icon_inline"
+        android:contentDescription="@null"
+        android:importantForAccessibility="no"
+        android:src="@drawable/ds_ic_info"
+        app:tint="@color/accent_ink" />
+
     <TextView
         android:id="@+id/snackbarText"
         style="@style/TextAppearance.Ds.BodyMedium"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_weight="1"
-        android:textColor="@color/text_primary" />
+        android:layout_marginStart="@dimen/space_12"
+        android:layout_weight="1" />
 
     <androidx.appcompat.widget.AppCompatButton
         android:id="@+id/snackbarAction"
         style="@style/Widget.Ds.Button.Text"
         android:layout_width="wrap_content"
-        android:layout_height="@dimen/button_height"
+        android:layout_height="@dimen/touch_target"
         android:minWidth="@dimen/touch_target"
         android:text="@string/dismiss"
         android:visibility="gone" />

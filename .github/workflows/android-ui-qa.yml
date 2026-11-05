@@ -93,6 +93,7 @@ jobs:
           mkdir -p qa-logs
           cp /tmp/assembleDebug.log qa-logs/assembleDebug.log 2>/dev/null || true
           cp /tmp/lintDebug.log qa-logs/lintDebug.log 2>/dev/null || true
+          cp /tmp/emulator.log qa-logs/emulator.log 2>/dev/null || true
           cp xlox/app/build/intermediates/lint_intermediate_text_report/debug/lint-results-debug.txt qa-logs/lint-results-debug.txt 2>/dev/null || true
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -128,7 +129,10 @@ jobs:
           emulator-options: -no-snapshot-save -no-window -noaudio -no-boot-anim
           working-directory: xlox
           script: |
-            set -euo pipefail
+            # /usr/bin/sh (dash) has no pipefail; keep the script POSIX-clean.
+            exec > /tmp/emulator.log 2>&1
+            set -eu
+            echo "=== emulator QA started ==="
             APK=app/build/outputs/apk/debug/app-debug.apk
             test -f "$APK"
             OUT=../docs/ui-redesign/screenshots
@@ -181,6 +185,23 @@ jobs:
             adb shell wm density reset
 
             ls -lh "$OUT"
+            echo "=== all captures complete ==="
+            tail -40 /tmp/emulator.log
+
+      - name: Commit screenshots to the branch
+        if: success()
+        working-directory: ${{ github.workspace }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -f docs/ui-redesign/screenshots/
+          git diff --cached --quiet && { echo "No screenshot changes"; exit 0; }
+          git commit -m "Add UI QA screenshots [skip ci]" -q
+          for attempt in 1 2 3 4 5; do
+            git pull --rebase origin arena/b2fac70f-anoymundo -q || true
+            git push origin HEAD:arena/b2fac70f-anoymundo && break
+            sleep 6
+          done
 
       - name: Upload screenshots
         if: always()
