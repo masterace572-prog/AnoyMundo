@@ -8,7 +8,7 @@
 | GitHub | `masterace572-prog/AnoyMundo`, branch `arena/b2fac70f-anoymundo` |
 | Vercel project | `anoymundo-panel` — `prj_eV3iBh1EUffuxQSaV6AkIEh0kn4D` (new project) |
 | Vercel team | `masterace572-progs-projects` |
-| Production deploy | `dpl_CbTwxFLGcDxZevTbw3ui93mBPuhZ` (READY / PROMOTED, saldo fix + API docs) |
+| Production deploy | `dpl_4TbcyDbfz7hyRjLFSKawcHnwyc8b` (READY / PROMOTED, `fe4b412`, personal API keys + split docs) |
 | Panel name / Telegram | `Anoy` / `@libAkAudioVisiual` (`BRAND_NAME`, `TELEGRAM_USERNAME`) |
 | Root Directory | `web` |
 | Supabase | `anoymundo-panel` — `bwsqenepvfwhfomdhaig` (free, ap-south-1) |
@@ -153,23 +153,32 @@ curl -sS -X POST https://anoymundo-panel.vercel.app/connect \
 
 - `npm test` — 106 offline end-to-end HTTP tests using an in-memory DB driver
   (login, registration, key CRUD, DataTables, `/connect`, maintenance/feature
-  toggles, referral → reseller, library upload/version, logout), plus UI
-  regression guards: no gradients, no escaped HTML/PHP in notices or form
-  values, responsive viewport, flat CSS and font assets served, the `Anoy`
-  brand and `@libAkAudioVisiual` handle on login, register and `GET /connect`
-  info, the saldo icon-prefix padding fix, and the `/docs` API reference page.
-- `API.md` — the full loader/API reference (also rendered at `/docs`).
+  toggles, referral → reseller, library upload/version, logout), plus the full
+  `/api/v1` create / read / update / reset / delete flow, exact saldo debit,
+  CORS preflight, token revoke and key-only scope guards. UI regression guards:
+  no gradients, no escaped HTML/PHP in notices or form values, responsive
+  viewport, flat CSS and font assets served, the `Anoy` brand and
+  `@libAkAudioVisiual` handle on login, register and `GET /connect` info, the
+  saldo icon-prefix padding fix, and both split documentation pages.
+- `INTEGRATION.md` — loader / C++ integration reference (also rendered at
+  `/docs`). `API.md` — key-management REST reference (also rendered at
+  `/api-docs`). `API_AGENT_PROMPT.md` — copy-paste agent prompt for the
+  API-key-only API.
 - `npm run build` — compiles templates + Tailwind, copies the Inter font,
   parses every template (syntax errors fail the build), validates modules,
   rejects leftover PHP/gradient markup, and verifies the legacy `admin123`
   bcrypt hash.
 - `.github/workflows/live-smoke.yml` — GitHub Actions job that curls the live
-  Vercel deployment: health, login with cookie jar, all pages, DataTables,
-  key generation, `/connect` success + rejection, cleanup, logout, plus the
-  flat-UI asset checks, the escaped-text regressions, the `Anoy` /
-  `@libAkAudioVisiual` branding guards, the saldo icon-padding fix and the
-  `/docs` API reference. Latest passing run: `42008897465`
-  (also `42005719821`, `42003546248`, `41998939557`, `41998471594`).
+  Vercel deployment: health, login with cookie jar, all pages (including
+  `/api-keys`, `/api-docs`, `/docs`), DataTables, key generation, `/connect`
+  success + rejection, cleanup, logout, plus the flat-UI asset checks, the
+  escaped-text regressions, the `Anoy` / `@libAkAudioVisiual` branding guards,
+  the saldo icon-padding fix and the split documentation reference. It also
+  creates a real personal API key, verifies `/api/v1` against the live Supabase
+  DB, confirms saldo drops by exactly ₹10 and revokes the test key.
+  Latest passing run: `42012530573`
+  (also `42008897465`, `42005719821`, `42003546248`, `41998939557`,
+  `41998471594`).
 
 ## 6. Post-deploy tasks
 
