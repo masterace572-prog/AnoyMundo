@@ -115,8 +115,10 @@ broken library-download/load logic was rebuilt (HTTP + ZIP + ELF validation,
 nested-release handling, real startup version check, visible errors).
 [`.github/workflows/build-xlox.yml`](.github/workflows/build-xlox.yml) builds the
 signed release APK and a starter `libbgmi.so` ZIP on GitHub Actions and uploads
-both as the `xlox-apk` artifact. Upload the real loader ZIP at `/lib` (Admin →
-Library) to make `/api/lib/download` live.
+both as the `xlox-apk` artifact and commits the signed APK to
+[`dist/Anoy-XLOX-loader.apk`](dist/Anoy-XLOX-loader.apk). A starter
+`libbgmi.so` ZIP is published to `/lib` so `/api/lib/download` is live; replace
+it with the real library at `/lib` (Admin → Library) before shipping.
 
 ## Security notes
 

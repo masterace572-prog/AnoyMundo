@@ -183,14 +183,36 @@ curl -sS -X POST https://anoymundo-panel.vercel.app/connect \
 ## 6. Post-deploy tasks
 
 1. **Change the seeded admin password** at `/settings`.
-2. **Upload the loader ZIP** at `/lib` (owner only, max 4 MB — Vercel's
-   function body limit is 4.5 MB). For larger files use an external URL.
-   `GET /api/lib/download` then serves it and `/api/lib/version` reports the
-   version.
-3. Point the XLOX loader's `Version()` / `Link()` endpoints at
-   `/api/lib/version` and `/api/lib/download` on this domain (later phase).
+2. **Replace the starter loader ZIP** with the real one at `/lib` (owner only,
+   max 4 MB — Vercel's function body limit is 4.5 MB). For larger files use an
+   external URL. A harmless `libbgmi.so` stub (`xlox-loader.zip`, version
+   `1.0.0`) is already published so the whole download chain works; see below.
+3. ~~Point the XLOX loader at the panel~~ — done, see `xlox/README.md`.
 4. Add a custom domain in Vercel → Settings → Domains and update
-   `PUBLIC_BASE_URL` if you use one.
+   `PUBLIC_BASE_URL` **and** `xlox/app/src/main/jni/panel_config.h` if you use one.
+
+## 6b. XLOX Android loader
+
+`xlox/` contains the extracted `XLOX-Loader-Source.zip` app, integrated with
+`/api/lib/version`, `/api/lib/download` and `POST /connect`. The broken
+library-loading logic was rewritten (HTTP/ZIP/ELF validation, nested-release
+handling, real startup version check, visible errors); all URLs are in
+`xlox/app/src/main/jni/panel_config.h`.
+
+`.github/workflows/build-xlox.yml` builds on `ubuntu-24.04` with the runner's
+Android SDK + pinned NDK `24.0.8215888`, produces a signed release APK, builds
+`xlox-loader.zip` from `loader-stub/bgmi_stub.c`, uploads both as the
+`xlox-apk` artifact, attaches them to a GitHub release and commits them to
+`dist/` on this branch. Latest passing build: `42017396508`
+(release tag `xlox-v1.0.0-run3`, APK sha256
+`be2735f8213b3ef9f5b2101b27f8a4afa120d237928dc9a99d400efae999a3f3`).
+Live smoke run `42018121395` additionally verifies `/api/lib/version` and that
+`/api/lib/download` returns HTTP 200 with a ZIP containing `libbgmi.so`.
+
+> The published `libbgmi.so` is a **no-op placeholder** compiled from
+> `xlox/loader-stub/bgmi_stub.c`; it exists to prove download → extract →
+> `System.load()` works. Upload the real arm64-v8a library as a ZIP at `/lib`
+> before shipping to users.
 
 ## 7. Local development & troubleshooting
 
@@ -209,7 +231,7 @@ To use the real Supabase project locally, put the three required variables in
 | Symptom | Cause / fix |
 |---|---|
 | `env.ok:false` at `/api/health` | `SUPABASE_URL` or `SUPABASE_SERVICE_ROLE_KEY` missing |
-| `schema: 5/12` | `supabase/schema.sql` not applied |
+| `schema: 5/13` | `supabase/schema.sql` not applied |
 | 500 on every page | wrong service key, or `vercel.json` framework not pinned to `null` |
 | login loops | `AUTH_SECRET` differs between deployments; set it explicitly |
 | unstyled pages | `npm run build` didn't run (Tailwind CSS not compiled) |

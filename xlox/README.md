@@ -41,9 +41,11 @@ installs it as `files/loader/libbgmi.so` (plus sibling `.so` dependencies) and
 
 ## Publishing a real loader library
 
-The panel ships with a placeholder `no-release.zip`, so `/api/lib/download`
-returns 404 until an owner uploads something. Build a ZIP whose root contains the
-real arm64-v8a `libbgmi.so`:
+A harmless starter ZIP (`libbgmi.so` compiled from `loader-stub/bgmi_stub.c`)
+is currently published as version `1.0.0`, so `/api/lib/version` returns
+`1.0.0` and `/api/lib/download` returns HTTP 200 with a valid ZIP. Replace it
+with the real arm64-v8a library before shipping. Build a ZIP whose root contains
+the real `libbgmi.so`:
 
 ```bash
 zip -j my-loader.zip libbgmi.so
