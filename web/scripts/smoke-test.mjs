@@ -98,6 +98,8 @@ try {
     'login page shows the Anoy brand (old name removed)');
   ok(/name="viewport"/.test(r.body) && /app\.css/.test(r.body),
     'login page has a responsive viewport and loads the design system');
+  ok(/ios\.css/.test(r.body) && /anoy-theme-toggle/.test(r.body) && /data-theme/.test(r.body),
+    'login page ships the iOS design layer and appearance switch');
   ok(!/linear-gradient|bg-gradient/.test(r.body) && !/ui-alert/.test(r.body),
     'login page is gradient-free and has no stale welcome banner');
   ok(/https:\/\/t\.me\/libAkAudioVisiual/.test(r.body) && /@libAkAudioVisiual/.test(r.body)
@@ -331,6 +333,10 @@ try {
   r = await request('/assets/css/app.css');
   ok(r.status === 200 && !/linear-gradient|radial-gradient/.test(r.body) && r.body.includes('--accent'),
     'flat app.css design system is served without gradients');
+  r = await request('/assets/css/ios.css');
+  ok(r.status === 200 && r.body.includes('[data-theme="dark"]') &&
+    r.body.includes('prefers-color-scheme: dark') && !/linear-gradient|radial-gradient/.test(r.body),
+    'iOS light/dark design layer is served statically without gradients');
   r = await request('/assets/js/app-ui.js');
   ok(r.status === 200 && r.body.includes('table-scroll'), 'responsive table helper is served');
   r = await request('/assets/fonts/inter-latin-wght-normal.woff2');

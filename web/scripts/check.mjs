@@ -86,7 +86,7 @@ for (const view of ['admin_user_edit.hbs', 'admin_referral.hbs']) {
   }
 }
 
-for (const asset of ['public/assets/js/app-ui.js', 'public/assets/fonts/inter-latin-wght-normal.woff2',
+for (const asset of ['public/assets/css/ios.css', 'public/assets/js/app-ui.js', 'public/assets/fonts/inter-latin-wght-normal.woff2',
   'public/assets/fonts/INTER-LICENSE.txt']) {
   if (!fs.existsSync(path.join(root, asset))) errors.push(`missing static asset: ${asset}`);
 }

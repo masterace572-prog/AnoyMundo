@@ -41,6 +41,18 @@ notices instead of full SweetAlert result dialogs, and success flashes are
 promoted to the same small toast. Errors and warnings stay on the page as
 compact banners. Delete confirmations use a smaller `swal-compact` dialog.
 
+**iOS appearance** (`web/public/assets/css/ios.css`): a site-wide light + dark
+design layer with the iOS grouped palette and one blue accent. The appearance
+button in the top bar (and on both auth pages) toggles Light / Dark; the
+segmented control on Settings also offers **System**. The choice is stored in
+`localStorage` (`anoy-appearance`), applied by a small `<head>` script before
+the stylesheets paint, and kept in sync across tabs and with OS changes.
+`window.AnoyUI.setTheme()` / `getTheme()` expose it to custom views. Every text
+field, select, segmented control, checkbox and 51×31 switch is an iOS-style
+control, buttons are 12px blue pills with an in-button spinner while loading
+(switch-only forms show the spinner in the switch track), and secondary copy
+was shortened so screens stay quiet. No gradients and no CDN font dependency.
+
 ## Layout
 
 ```

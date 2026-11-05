@@ -1,0 +1,932 @@
+/* =========================================================================
+   Anoy panel — iOS design layer.
+   Loaded AFTER app.css on every page (layout + the standalone auth pages).
+   Light + dark appearances, one blue accent, SF-style type scale,
+   grouped surfaces, 12px controls, 51x31 switches, segmented selectors,
+   and a spinner inside every busy button. No gradients, no CDN dependency.
+   ========================================================================= */
+
+/* ------------------------------------------------------------ appearance */
+:root {
+  --ios-ease: cubic-bezier(.32, .72, 0, 1);
+  --surface-blur: rgb(255 255 255 / 0.82);
+  --sidebar-blur: rgb(255 255 255 / 0.94);
+  --switch-off: #E9E9ED;
+  --switch-knob: #FFFFFF;
+  --select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%238E8E93' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+}
+
+/* Explicit dark choice wins everywhere. */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --canvas: #000000;
+  --surface: #1C1C1E;
+  --raised: #2C2C2E;
+  --fill: #2C2C2E;
+  --fill-strong: #3A3A3C;
+  --hairline: #38383A;
+  --separator: rgb(84 84 88 / 0.42);
+  --text: #FFFFFF;
+  --muted: #98989D;
+  --faint: #636366;
+  --accent: #0A84FF;
+  --accent-ink: #FFFFFF;
+  --accent-dim: rgb(10 132 255 / 0.20);
+  --success: #30D158;
+  --warning: #FF9F0A;
+  --danger: #FF453A;
+  --shadow: 0 1px 2px rgb(0 0 0 / 0.30), 0 10px 30px rgb(0 0 0 / 0.34);
+  --shadow-raised: 0 1px 2px rgb(0 0 0 / 0.40), 0 16px 40px rgb(0 0 0 / 0.46);
+  --surface-blur: rgb(28 28 30 / 0.82);
+  --sidebar-blur: rgb(28 28 30 / 0.94);
+  --switch-off: #39393D;
+  --switch-knob: #FFFFFF;
+  --select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2398989D' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+}
+
+/* "System" (the default) follows the OS. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --canvas: #000000;
+    --surface: #1C1C1E;
+    --raised: #2C2C2E;
+    --fill: #2C2C2E;
+    --fill-strong: #3A3A3C;
+    --hairline: #38383A;
+    --separator: rgb(84 84 88 / 0.42);
+    --text: #FFFFFF;
+    --muted: #98989D;
+    --faint: #636366;
+    --accent: #0A84FF;
+    --accent-ink: #FFFFFF;
+    --accent-dim: rgb(10 132 255 / 0.20);
+    --success: #30D158;
+    --warning: #FF9F0A;
+    --danger: #FF453A;
+    --shadow: 0 1px 2px rgb(0 0 0 / 0.30), 0 10px 30px rgb(0 0 0 / 0.34);
+    --shadow-raised: 0 1px 2px rgb(0 0 0 / 0.40), 0 16px 40px rgb(0 0 0 / 0.46);
+    --surface-blur: rgb(28 28 30 / 0.82);
+    --sidebar-blur: rgb(28 28 30 / 0.94);
+    --switch-off: #39393D;
+    --switch-knob: #FFFFFF;
+    --select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2398989D' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  }
+}
+
+/* ------------------------------------------------------- type + hierarchy */
+html body.app-body {
+  font-family: var(--font) !important;
+  font-size: 15px !important;
+  letter-spacing: -0.01em;
+  background-color: var(--canvas) !important;
+  color: var(--text) !important;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html body.app-body h1,
+html body.app-body h2,
+html body.app-body h3,
+html body.app-body h4 {
+  color: var(--text) !important;
+  font-family: var(--font) !important;
+  font-weight: 650 !important;
+  letter-spacing: -0.025em !important;
+  line-height: 1.2 !important;
+}
+html body.app-body h1 { font-size: 30px !important; }
+html body.app-body h2 { font-size: 22px !important; }
+html body.app-body h3 { font-size: 17px !important; }
+html body.app-body h4 { font-size: 15px !important; }
+
+/* Converted Tailwind sizes mapped onto the iOS type scale. */
+html body.app-body .app-content .text-4xl { font-size: 30px !important; }
+html body.app-body .app-content .text-3xl { font-size: 26px !important; }
+html body.app-body .app-content .text-2xl { font-size: 22px !important; }
+html body.app-body .app-content .text-xl  { font-size: 20px !important; }
+html body.app-body .app-content .text-lg  { font-size: 17px !important; }
+
+/* Less visual noise: secondary copy is small, quiet and never loud. */
+html body.app-body .app-content .text-gray-500,
+html body.app-body .app-content .text-gray-600,
+html body.app-body .app-content .text-slate-500,
+html body.app-body .app-content .text-slate-600,
+html body.app-body .app-content p.text-sm,
+html body.app-body .app-content small:not(.field-error),
+html body.app-body .app-content .text-xs,
+html body.app-body .app-content li.text-sm {
+  color: var(--muted) !important;
+  font-size: 13px !important;
+  font-weight: 400 !important;
+  line-height: 1.45 !important;
+}
+html body.app-body .app-content .font-bold,
+html body.app-body .app-content .font-semibold { font-weight: 600 !important; }
+html body.app-body .auth-subtitle,
+html body.app-body .auth-hint,
+html body.app-body .auth-legal {
+  color: var(--muted) !important;
+  font-size: 13px !important;
+  line-height: 1.45 !important;
+}
+html body.app-body a { text-decoration-color: var(--separator); }
+html body.app-body a:hover { color: var(--accent) !important; }
+html body.app-body :focus-visible {
+  outline: 2px solid var(--accent) !important;
+  outline-offset: 3px;
+}
+
+/* --------------------------------------------------------- theme controls */
+.anoy-theme-toggle {
+  width: 44px !important; height: 44px !important;
+  min-width: 44px !important; min-height: 44px !important;
+  flex: 0 0 auto;
+  display: grid; place-items: center;
+  padding: 0 !important;
+  background: var(--fill) !important;
+  border: 1px solid var(--hairline) !important;
+  border-radius: 13px !important;
+  color: var(--accent) !important;
+  box-shadow: none !important;
+  cursor: pointer;
+  transition: background-color .2s var(--ios-ease), transform .2s var(--ios-ease);
+}
+.anoy-theme-toggle:hover { background: var(--fill-strong) !important; }
+.anoy-theme-toggle:active { transform: scale(.94); }
+.anoy-theme-toggle svg { width: 19px; height: 19px; }
+html[data-theme-resolved="light"] .anoy-theme-toggle__sun { display: none !important; }
+html[data-theme-resolved="dark"] .anoy-theme-toggle__moon { display: none !important; }
+
+/* iOS segmented control (used for the appearance selector). */
+.ui-segmented {
+  display: inline-flex; align-items: stretch;
+  gap: 2px; padding: 2px;
+  background: var(--fill) !important;
+  border: 1px solid var(--hairline) !important;
+  border-radius: 10px !important;
+  max-width: 100%;
+}
+.ui-segmented > input[type="radio"] {
+  position: absolute !important;
+  width: 1px !important; height: 1px !important;
+  min-width: 0 !important; min-height: 0 !important;
+  opacity: 0 !important;
+  pointer-events: none;
+}
+.ui-segmented > label {
+  display: grid; place-items: center;
+  min-width: 82px; min-height: 32px;
+  padding: 0 14px;
+  border-radius: 8px;
+  color: var(--muted);
+  font-size: 13px; font-weight: 600;
+  letter-spacing: -0.01em;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color .22s var(--ios-ease), color .22s var(--ios-ease),
+              box-shadow .22s var(--ios-ease);
+}
+.ui-segmented > label:hover { color: var(--text); }
+.ui-segmented > input:checked + label {
+  background: var(--surface) !important;
+  color: var(--text) !important;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.12), 0 1px 1px rgb(0 0 0 / 0.04) !important;
+}
+.ui-segmented > input:focus-visible + label {
+  outline: 2px solid var(--accent) !important;
+  outline-offset: 2px;
+}
+.ios-appearance-card { grid-column: 1 / -1 !important; }
+.ios-appearance-card .card-head { margin-bottom: var(--s2) !important; }
+
+/* ------------------------------------------------------------------ shell */
+html body.app-body .app-topbar {
+  background: var(--surface-blur) !important;
+  backdrop-filter: saturate(180%) blur(18px);
+  -webkit-backdrop-filter: saturate(180%) blur(18px);
+  border-bottom: 1px solid var(--separator) !important;
+  box-shadow: none !important;
+}
+html body.app-body .app-sidebar {
+  background: var(--sidebar-blur) !important;
+  backdrop-filter: saturate(180%) blur(18px);
+  -webkit-backdrop-filter: saturate(180%) blur(18px);
+  border-right: 1px solid var(--separator) !important;
+  padding: var(--s4) var(--s2) calc(var(--s3) + env(safe-area-inset-bottom)) !important;
+}
+html body.app-body .app-footer {
+  border-top: 1px solid var(--separator) !important;
+  color: var(--faint) !important;
+  font-size: 12px !important;
+}
+html body.app-body .app-topbar-brand,
+html body.app-body .sidebar-brand { letter-spacing: -0.02em; }
+html body.app-body .app-topbar-saldo { color: var(--accent) !important; }
+
+html body.app-body .brand-mark {
+  width: 36px !important; height: 36px !important;
+  min-width: 36px !important; min-height: 36px !important;
+  background: var(--accent) !important;
+  border: 0 !important;
+  border-radius: 10px !important;
+  color: #FFFFFF !important;
+  box-shadow: 0 2px 8px var(--accent-dim) !important;
+}
+html body.app-body .brand-mark svg { width: 20px; height: 20px; color: #FFFFFF !important; }
+html body.app-body .brand-mark-lg {
+  width: 62px !important; height: 62px !important;
+  min-width: 62px !important; min-height: 62px !important;
+  border-radius: 16px !important;
+}
+html body.app-body .brand-mark-lg svg { width: 32px; height: 32px; }
+
+html body.app-body .sidebar-label {
+  color: var(--faint) !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  letter-spacing: .07em !important;
+  text-transform: uppercase !important;
+}
+html body.app-body .nav-link {
+  border-radius: 11px !important;
+  color: var(--muted) !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  letter-spacing: -0.01em;
+  transition: background-color .2s var(--ios-ease), color .2s var(--ios-ease);
+}
+html body.app-body .nav-link svg { color: var(--faint) !important; }
+html body.app-body .nav-link:hover {
+  background: var(--fill) !important;
+  color: var(--text) !important;
+}
+html body.app-body .nav-link.is-active {
+  background: var(--accent-dim) !important;
+  color: var(--accent) !important;
+  font-weight: 600 !important;
+  box-shadow: none !important;
+}
+html body.app-body .nav-link.is-active span { color: var(--accent) !important; }
+html body.app-body .nav-link.is-active svg { color: var(--accent) !important; }
+html body.app-body .sidebar-avatar {
+  background: var(--accent-dim) !important;
+  color: var(--accent) !important;
+  border-radius: 12px !important;
+}
+html body.app-body .sidebar-account-text small { font-size: 12px !important; }
+html body.app-body .app-menu-toggle,
+html body.app-body .app-topbar-action {
+  width: 44px !important; height: 44px !important;
+  min-width: 44px !important; min-height: 44px !important;
+  background: var(--fill) !important;
+  border: 0 !important;
+  border-radius: 13px !important;
+  color: var(--accent) !important;
+  box-shadow: none !important;
+}
+html body.app-body .app-menu-toggle:hover,
+html body.app-body .app-topbar-action:hover { background: var(--fill-strong) !important; }
+
+/* ------------------------------------------------------------------ cards */
+/* Grouped cards keep their natural height instead of stretching to the
+   tallest card in the row — much quieter on settings-heavy screens. */
+html body.app-body .app-content .grid > .ui-card { align-self: start !important; }
+
+html body.app-body .ui-card {
+  background: var(--surface) !important;
+  border: 1px solid var(--separator) !important;
+  border-radius: 20px !important;
+  box-shadow: var(--shadow) !important;
+  padding: var(--s4) !important;
+}
+html body.app-body .ui-tint {
+  background: var(--fill) !important;
+  border: 0 !important;
+  border-radius: 12px !important;
+}
+html body.app-body .ui-icon,
+html body.app-body .ui-icon-teal,
+html body.app-body .ui-icon-amber,
+html body.app-body .ui-icon-blue {
+  width: 38px !important; height: 38px !important;
+  min-width: 38px !important; min-height: 38px !important;
+  background: var(--accent-dim) !important;
+  border: 0 !important;
+  border-radius: 11px !important;
+  color: var(--accent) !important;
+}
+html body.app-body .ui-icon svg,
+html body.app-body .ui-icon-teal svg,
+html body.app-body .ui-icon-amber svg,
+html body.app-body .ui-icon-blue svg {
+  width: 19px !important; height: 19px !important;
+  color: var(--accent) !important;
+}
+html body.app-body .card-head h2 { font-size: 20px !important; }
+html body.app-body .stat-tile {
+  background: var(--surface) !important;
+  border: 1px solid var(--separator) !important;
+  border-radius: 16px !important;
+  box-shadow: var(--shadow) !important;
+}
+html body.app-body .stat-tile span { color: var(--muted) !important; font-size: 12px !important; }
+html body.app-body .stat-tile strong {
+  color: var(--text) !important;
+  font-size: 24px !important;
+  font-weight: 650 !important;
+  letter-spacing: -0.03em;
+}
+html body.app-body .stat-list li {
+  border-bottom: 1px solid var(--separator) !important;
+  font-size: 14px !important;
+}
+html body.app-body .stat-list li span { color: var(--muted) !important; }
+
+/* ---------------------------------------------------- inputs + selectors */
+html body.app-body .app-content input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]):not([type="submit"]):not([type="button"]):not([type="file"]),
+html body.app-body .app-content select,
+html body.app-body .app-content textarea,
+html body.app-body .auth-form input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]):not([type="submit"]):not([type="button"]):not([type="file"]),
+html body.app-body .auth-form select,
+html body.app-body .auth-form textarea,
+html body.app-body .form-control,
+html body.app-body .input-field {
+  min-height: 46px !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  padding-left: 14px !important;
+  padding-right: 14px !important;
+  background-color: var(--fill) !important;
+  border: 1px solid transparent !important;
+  border-radius: 12px !important;
+  box-shadow: none !important;
+  color: var(--text) !important;
+  font-family: var(--font) !important;
+  font-size: 15px !important;
+  font-weight: 400 !important;
+  letter-spacing: -0.01em;
+  appearance: none;
+  -webkit-appearance: none;
+  transition: background-color .2s var(--ios-ease), border-color .2s var(--ios-ease),
+              box-shadow .2s var(--ios-ease);
+}
+/* Icon-prefixed inputs keep their reserved space (saldo / referral). */
+html body.app-body .app-content .field-prefix > input,
+html body.app-body .auth-form .field-prefix > input {
+  padding-left: 2.875rem !important;
+}
+html body.app-body .app-content textarea,
+html body.app-body .auth-form textarea { padding-top: 12px !important; padding-bottom: 12px !important; }
+html body.app-body .app-content input::placeholder,
+html body.app-body .auth-form input::placeholder,
+html body.app-body .app-content textarea::placeholder,
+html body.app-body .auth-form textarea::placeholder {
+  color: var(--faint) !important;
+  opacity: 1 !important;
+}
+html body.app-body .app-content input[readonly],
+html body.app-body .app-content textarea[readonly] {
+  background-color: var(--fill) !important;
+  color: var(--muted) !important;
+}
+
+/* One blue focus halo, no rainbow rings. */
+html body.app-body .app-content input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]):not([type="submit"]):not([type="button"]):not([type="file"]):focus,
+html body.app-body .app-content select:focus,
+html body.app-body .app-content textarea:focus,
+html body.app-body .auth-form input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]):not([type="submit"]):not([type="button"]):not([type="file"]):focus,
+html body.app-body .auth-form select:focus,
+html body.app-body .auth-form textarea:focus,
+html body.app-body .form-control:focus,
+html body.app-body .input-field:focus {
+  border-color: var(--accent) !important;
+  box-shadow: 0 0 0 3px var(--accent-dim) !important;
+  outline: none !important;
+}
+
+/* Native selects get an iOS disclosure chevron and room for it. */
+html body.app-body .app-content select,
+html body.app-body .auth-form select {
+  background-image: var(--select-chevron) !important;
+  background-repeat: no-repeat !important;
+  background-position: right 14px center !important;
+  background-size: 15px 15px !important;
+  padding-right: 40px !important;
+  cursor: pointer;
+}
+html body.app-body .app-content select option,
+html body.app-body .auth-form select option {
+  background: var(--surface) !important;
+  color: var(--text) !important;
+}
+
+html body.app-body .app-content input[type="file"] {
+  width: 100% !important;
+  min-height: 46px !important;
+  padding: 8px 12px !important;
+  background: var(--fill) !important;
+  border: 1px solid transparent !important;
+  border-radius: 12px !important;
+  color: var(--muted) !important;
+  font-size: 13px !important;
+}
+html body.app-body .app-content input[type="file"]::file-selector-button {
+  appearance: none;
+  margin-right: 12px;
+  padding: 7px 14px;
+  background: var(--accent-dim) !important;
+  border: 0;
+  border-radius: 8px;
+  color: var(--accent) !important;
+  font-family: var(--font);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+html body.app-body .app-content label,
+html body.app-body .auth-form label {
+  color: var(--muted) !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  letter-spacing: -0.01em;
+}
+html body.app-body .field-hint { color: var(--faint) !important; font-size: 12px !important; }
+html body.app-body .field-error { color: var(--danger) !important; font-size: 12px !important; }
+
+/* ----------------------------------------------------- checkboxes + switches */
+html body.app-body input[type="checkbox"] { accent-color: var(--accent) !important; }
+/* iOS checkbox: rounded square, blue when checked, white checkmark. */
+html body.app-body .checkbox-row input[type="checkbox"],
+html body.app-body .app-content input#check[type="checkbox"] {
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  width: 22px !important; height: 22px !important;
+  min-width: 22px !important; min-height: 22px !important;
+  margin: 0 !important; padding: 0 !important;
+  background-color: var(--surface) !important;
+  background-image: none !important;
+  border: 1.5px solid var(--faint) !important;
+  border-radius: 7px !important;
+  cursor: pointer;
+  transition: background-color .2s var(--ios-ease), border-color .2s var(--ios-ease);
+}
+html body.app-body .checkbox-row input[type="checkbox"]:checked,
+html body.app-body .app-content input#check[type="checkbox"]:checked {
+  background-color: var(--accent) !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23FFFFFF' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 12l5 5L20 6'/%3E%3C/svg%3E") !important;
+  background-repeat: no-repeat !important;
+  background-position: center !important;
+  background-size: 13px 13px !important;
+  border-color: var(--accent) !important;
+}
+html body.app-body .checkbox-row input[type="checkbox"]:focus-visible,
+html body.app-body .app-content input#check[type="checkbox"]:focus-visible {
+  box-shadow: 0 0 0 3px var(--accent-dim) !important;
+}
+html body.app-body .checkbox-row { color: var(--muted) !important; font-size: 13px !important; }
+
+html body.app-body .ui-switch {
+  min-height: 52px !important;
+  padding: var(--s1) var(--s3) !important;
+  background: var(--surface) !important;
+  border: 1px solid var(--separator) !important;
+  border-radius: 14px !important;
+  box-shadow: var(--shadow) !important;
+  gap: var(--s2) !important;
+  transition: border-color .2s var(--ios-ease), background-color .2s var(--ios-ease);
+}
+html body.app-body .ui-switch:hover { background: var(--fill) !important; }
+html body.app-body .ui-switch__label {
+  color: var(--text) !important;
+  font-size: 15px !important;
+  font-weight: 500 !important;
+  letter-spacing: -0.01em;
+  order: -1;
+}
+html body.app-body .ui-switch__track {
+  width: 51px !important; height: 31px !important;
+  background: var(--switch-off) !important;
+  border: 0 !important;
+  border-radius: 999px !important;
+  transition: background-color .25s var(--ios-ease);
+}
+html body.app-body .ui-switch__thumb {
+  top: 2px !important; left: 2px !important;
+  width: 27px !important; height: 27px !important;
+  background: var(--switch-knob) !important;
+  border-radius: 50% !important;
+  box-shadow: 0 2px 5px rgb(0 0 0 / 0.20), 0 0 1px rgb(0 0 0 / 0.12) !important;
+  transition: left .25s var(--ios-ease), transform .25s var(--ios-ease);
+}
+html body.app-body .ui-switch > input:checked ~ .ui-switch__track {
+  background: var(--accent) !important;
+  border-color: transparent !important;
+}
+html body.app-body .ui-switch > input:checked ~ .ui-switch__track .ui-switch__thumb {
+  background: var(--switch-knob) !important;
+  left: 22px !important;
+}
+html body.app-body .ui-switch > input:focus-visible ~ .ui-switch__track {
+  outline: 2px solid var(--accent) !important;
+  outline-offset: 3px;
+}
+
+/* Legacy .switch markup gets the same iOS control. */
+html body.app-body .slider {
+  inset: 9px 0 !important;
+  height: 31px !important;
+  background-color: var(--switch-off) !important;
+  border: 0 !important;
+  border-radius: 999px !important;
+}
+html body.app-body .slider::before {
+  left: 2px !important; bottom: 2px !important;
+  width: 27px !important; height: 27px !important;
+  background: var(--switch-knob) !important;
+  box-shadow: 0 2px 5px rgb(0 0 0 / 0.20) !important;
+}
+html body.app-body .switch input:checked + .slider { background-color: var(--accent) !important; }
+html body.app-body .switch input:checked + .slider::before {
+  background: var(--switch-knob) !important;
+  transform: translateX(20px) !important;
+}
+
+/* A switch-only form still shows a spinner while it saves. */
+html body.app-body .ui-switch.is-busy { opacity: .72; }
+.ui-spinner--switch {
+  position: absolute; top: 50%; left: 50%;
+  width: 14px !important; height: 14px !important;
+  margin: -7px 0 0 -7px;
+  border-width: 2px !important;
+  color: #FFFFFF !important;
+  z-index: 2;
+}
+
+/* ----------------------------------------------------------- buttons + spinner */
+html body.app-body .ui-btn,
+html body.app-body .btn,
+html body.app-body .btn-default,
+html body.app-body input[type="submit"],
+html body.app-body input[type="button"] {
+  display: inline-flex !important;
+  align-items: center; justify-content: center;
+  gap: 8px !important;
+  min-height: 46px !important;
+  padding: 0 18px !important;
+  background-color: var(--fill) !important;
+  background-image: none !important;
+  border: 1px solid transparent !important;
+  border-radius: 12px !important;
+  box-shadow: none !important;
+  color: var(--text) !important;
+  font-family: var(--font) !important;
+  font-size: 15px !important;
+  font-weight: 600 !important;
+  letter-spacing: -0.015em;
+  line-height: 1.2 !important;
+  text-decoration: none !important;
+  white-space: nowrap;
+  transition: background-color .2s var(--ios-ease), color .2s var(--ios-ease),
+              transform .18s var(--ios-ease), box-shadow .2s var(--ios-ease),
+              filter .2s var(--ios-ease) !important;
+}
+html body.app-body .ui-btn:not(.is-busy):hover,
+html body.app-body .btn:not(.is-busy):hover,
+html body.app-body .btn-default:not(.is-busy):hover {
+  background-color: var(--fill-strong) !important;
+  border-color: transparent !important;
+  color: var(--text) !important;
+  filter: none !important;
+}
+html body.app-body .ui-btn:not(.is-busy):active,
+html body.app-body .btn:not(.is-busy):active { transform: scale(.975) !important; }
+
+html body.app-body .ui-btn--primary,
+html body.app-body .ui-btn--primary:not(.is-busy):hover,
+html body.app-body .ui-btn--primary:focus-visible {
+  background-color: var(--accent) !important;
+  border-color: var(--accent) !important;
+  color: var(--accent-ink) !important;
+  box-shadow: 0 2px 8px var(--accent-dim) !important;
+  filter: none !important;
+}
+html body.app-body .ui-btn--primary:not(.is-busy):hover { filter: brightness(.94) !important; }
+html body.app-body .ui-btn--danger,
+html body.app-body .ui-btn--danger:not(.is-busy):hover {
+  background-color: var(--danger) !important;
+  border-color: var(--danger) !important;
+  color: #FFFFFF !important;
+}
+html body.app-body .ui-btn svg,
+html body.app-body .btn svg { width: 18px; height: 18px; color: inherit !important; }
+
+/* Compact row actions and icon-only controls stay 44px targets. */
+html body.app-body .row-action {
+  min-height: 44px !important;
+  padding: 0 14px !important;
+  background-color: var(--fill) !important;
+  border: 1px solid transparent !important;
+  border-radius: 9px !important;
+  color: var(--text) !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  text-decoration: none !important;
+}
+html body.app-body .row-action:hover { background-color: var(--fill-strong) !important; }
+html body.app-body .row-action--danger { color: var(--danger) !important; }
+html body.app-body .quick-action {
+  border-radius: 10px !important;
+  font-size: 13px !important;
+  color: var(--accent) !important;
+}
+html body.app-body .quick-action svg { color: var(--accent) !important; }
+
+/* Busy: spinner + short label, button stays fully legible. */
+html body.app-body .ui-btn.is-busy,
+html body.app-body .row-action.is-busy,
+html body.app-body a.ui-btn.is-busy {
+  opacity: 1 !important;
+  filter: none !important;
+  transform: none !important;
+  pointer-events: none;
+  cursor: progress !important;
+}
+html body.app-body .ui-btn.is-busy.ui-btn--primary {
+  background-color: var(--accent) !important;
+  color: var(--accent-ink) !important;
+}
+html body.app-body .ui-btn__busy-label { font-size: 15px; font-weight: 600; }
+html body.app-body .ui-spinner {
+  display: inline-block !important;
+  flex: 0 0 auto;
+  width: 16px !important; height: 16px !important;
+  border: 2px solid currentColor !important;
+  border-right-color: transparent !important;
+  border-radius: 50% !important;
+  opacity: .95 !important;
+  animation: anoy-spin .68s linear infinite !important;
+  will-change: transform;
+}
+
+/* ----------------------------------------------------------------- tables */
+html body.app-body .app-content table,
+html body.app-body .app-content table.dataTable {
+  border-collapse: separate !important;
+  border-spacing: 0 !important;
+  background: var(--surface) !important;
+  border: 1px solid var(--separator) !important;
+  border-radius: 16px !important;
+  box-shadow: var(--shadow) !important;
+  overflow: hidden;
+}
+html body.app-body .app-content thead th {
+  background: var(--fill) !important;
+  border-bottom: 1px solid var(--separator) !important;
+  color: var(--muted) !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+}
+html body.app-body .app-content tbody td {
+  border-bottom: 1px solid var(--separator) !important;
+  color: var(--text) !important;
+  font-size: 14px !important;
+}
+html body.app-body .app-content tbody tr:hover { background: var(--fill) !important; }
+html body.app-body .app-content .dataTables_wrapper,
+html body.app-body .app-content .table-scroll { border-radius: 16px !important; }
+html body.app-body .dataTables_wrapper .dataTables_filter input,
+html body.app-body .dataTables_wrapper .dataTables_length select {
+  min-height: 38px !important;
+  padding-left: 12px !important;
+  padding-right: 12px !important;
+  background-color: var(--fill) !important;
+  border: 1px solid transparent !important;
+  border-radius: 10px !important;
+  color: var(--text) !important;
+  font-size: 13px !important;
+}
+html body.app-body .dataTables_wrapper .dataTables_length select {
+  background-image: var(--select-chevron) !important;
+  background-repeat: no-repeat !important;
+  background-position: right 9px center !important;
+  background-size: 13px !important;
+  padding-right: 30px !important;
+  appearance: none;
+  -webkit-appearance: none;
+}
+html body.app-body .dataTables_wrapper .dataTables_paginate .paginate_button {
+  min-width: 34px !important; min-height: 34px !important;
+  border-radius: 9px !important;
+  border: 0 !important;
+  color: var(--muted) !important;
+  font-size: 13px !important;
+}
+html body.app-body .dataTables_wrapper .dataTables_paginate .paginate_button.current,
+html body.app-body .dataTables_wrapper .dataTables_paginate .paginate_button.current:hover {
+  background: var(--accent) !important;
+  border: 0 !important;
+  color: #FFFFFF !important;
+}
+html body.app-body .badge,
+html body.app-body .status-pill {
+  background: var(--accent-dim) !important;
+  border: 0 !important;
+  border-radius: 999px !important;
+  color: var(--accent) !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  padding: 4px 11px !important;
+}
+html body.app-body .status-pill--danger {
+  background: rgb(255 59 48 / 0.12) !important;
+  color: var(--danger) !important;
+}
+html body.app-body .key-token {
+  background: var(--fill) !important;
+  border: 1px solid var(--separator) !important;
+  border-radius: 8px !important;
+  color: var(--text) !important;
+  padding: 3px 8px !important;
+}
+
+/* -------------------------------------------------- alerts / toasts / dialogs */
+html body.app-body .ui-alert {
+  background: var(--surface) !important;
+  border: 1px solid var(--separator) !important;
+  border-left: 3px solid var(--accent) !important;
+  border-radius: 12px !important;
+  box-shadow: var(--shadow) !important;
+  font-size: 13px !important;
+}
+html body.app-body .ui-alert--danger { border-left-color: var(--danger) !important; }
+html body.app-body .ui-alert--success { border-left-color: var(--success) !important; }
+html body.app-body .ui-alert--warning { border-left-color: var(--warning) !important; }
+html body.app-body .ui-alert-close { border-radius: 8px !important; color: var(--muted) !important; }
+
+html body.app-body .anoy-toast {
+  background: var(--surface) !important;
+  border: 1px solid var(--separator) !important;
+  border-left: 3px solid var(--accent) !important;
+  border-radius: 14px !important;
+  box-shadow: var(--shadow-raised) !important;
+  color: var(--text) !important;
+  font-size: 13px !important;
+}
+html body.app-body .anoy-toast--success { border-left-color: var(--success) !important; }
+html body.app-body .anoy-toast--error { border-left-color: var(--danger) !important; }
+html body.app-body .anoy-toast--warning { border-left-color: var(--warning) !important; }
+html body.app-body .anoy-toast--info { border-left-color: var(--accent) !important; }
+html body.app-body .anoy-toast__dot { display: none !important; }
+html body.app-body .anoy-toast__close { border-radius: 8px !important; color: var(--faint) !important; }
+
+html body.app-body .anoy-progress {
+  background: var(--surface) !important;
+  border: 1px solid var(--separator) !important;
+  border-left: 3px solid var(--accent) !important;
+  border-radius: 14px !important;
+  box-shadow: var(--shadow) !important;
+}
+html body.app-body .anoy-progress__track { background: var(--fill) !important; border: 0 !important; }
+html body.app-body .anoy-progress__fill { background: var(--accent) !important; }
+html body.app-body .anoy-progress__percent { color: var(--accent) !important; }
+html body.app-body .anoy-progress.is-error { border-left-color: var(--danger) !important; }
+html body.app-body .anoy-progress.is-error .anoy-progress__fill {
+  background: var(--danger) !important;
+  animation: none !important;
+}
+html body.app-body .anoy-progress.is-error .anoy-progress__percent { color: var(--danger) !important; }
+html body.app-body .anoy-progress.is-done { border-left-color: var(--success) !important; }
+html body.app-body .anoy-progress.is-done .anoy-progress__fill {
+  background: var(--success) !important;
+  animation: none !important;
+}
+html body.app-body .anoy-progress.is-done .anoy-progress__percent { color: var(--success) !important; }
+
+html body.app-body .swal2-popup {
+  background: var(--surface) !important;
+  border: 1px solid var(--separator) !important;
+  border-radius: 20px !important;
+  box-shadow: var(--shadow-raised) !important;
+}
+html body.app-body .swal2-title { color: var(--text) !important; font-size: 18px !important; font-weight: 650 !important; }
+html body.app-body .swal2-html-container { color: var(--muted) !important; font-size: 13px !important; }
+html body.app-body .swal2-confirm {
+  background: var(--accent) !important;
+  border: 0 !important;
+  border-radius: 11px !important;
+  color: #FFFFFF !important;
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  box-shadow: none !important;
+}
+html body.app-body .swal2-confirm.swal-confirm-danger { background: var(--danger) !important; }
+html body.app-body .swal2-cancel {
+  background: var(--fill) !important;
+  border: 0 !important;
+  border-radius: 11px !important;
+  color: var(--text) !important;
+  font-size: 14px !important;
+  font-weight: 600 !important;
+}
+html body.app-body .swal2-toast {
+  background: var(--surface) !important;
+  border: 1px solid var(--separator) !important;
+  border-radius: 14px !important;
+  color: var(--text) !important;
+}
+html body.app-body .swal2-close { color: var(--muted) !important; }
+
+/* ------------------------------------------------------------- auth pages */
+html body.app-body.auth-body { background-color: var(--canvas) !important; }
+html body.app-body .auth-shell { position: relative; }
+html body.app-body .auth-card {
+  position: relative;
+  background: var(--surface) !important;
+  border: 1px solid var(--separator) !important;
+  border-radius: 24px !important;
+  box-shadow: var(--shadow-raised) !important;
+  padding: var(--s5) !important;
+}
+html body.app-body .auth-header { margin-bottom: var(--s5) !important; }
+html body.app-body .auth-eyebrow {
+  color: var(--accent) !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  letter-spacing: .08em !important;
+  text-transform: uppercase !important;
+}
+html body.app-body .auth-title { font-size: 28px !important; letter-spacing: -0.03em !important; }
+html body.app-body .auth-form { gap: var(--s3) !important; }
+html body.app-body .auth-row { font-size: 13px !important; }
+html body.app-body .auth-link { color: var(--accent) !important; font-weight: 600 !important; text-decoration: none !important; }
+html body.app-body .auth-link:hover { text-decoration: underline !important; }
+html body.app-body .auth-footer { border-top: 1px solid var(--separator) !important; font-size: 13px !important; }
+html body.app-body .auth-legal a { color: var(--accent) !important; }
+html body.app-body .password-toggle { color: var(--muted) !important; border-radius: 8px !important; }
+.anoy-theme-toggle.auth-theme {
+  position: absolute; top: 14px; right: 14px;
+  z-index: 2;
+}
+.app-topbar-guest { position: relative !important; }
+.app-topbar-guest .anoy-theme-toggle { position: absolute; right: 16px; top: 10px; }
+
+/* ------------------------------------------------------------- code / docs */
+html body.app-body .doc-code {
+  background: var(--fill) !important;
+  border: 1px solid var(--separator) !important;
+  border-radius: 12px !important;
+  color: var(--text) !important;
+}
+html body.app-body .doc-inline {
+  background: var(--accent-dim) !important;
+  color: var(--accent) !important;
+  border-radius: 6px !important;
+}
+html body.app-body .doc-note {
+  background: var(--fill) !important;
+  border-radius: 12px !important;
+}
+
+/* --------------------------------------------------------------- motion */
+/* A single, gentle entrance: nothing flashes or bounces. */
+@keyframes ios-fade-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+html body.app-body .app-content > .ui-card,
+html body.app-body .app-content .ui-card {
+  animation: ios-fade-up .42s var(--ios-ease) both;
+}
+html body.app-body .auth-card { animation: ios-fade-up .42s var(--ios-ease) both; }
+
+@media (prefers-reduced-motion: reduce) {
+  html body.app-body .app-content .ui-card,
+  html body.app-body .auth-card { animation: none !important; }
+  /* The ring stays visible but stops spinning. */
+  html body.app-body .ui-spinner {
+    animation: none !important;
+    border-right-color: currentColor !important;
+  }
+}
+
+/* ------------------------------------------------------------ breakpoints */
+@media (max-width: 640px) {
+  html body.app-body .ui-card { padding: var(--s3) !important; border-radius: 18px !important; }
+  html body.app-body .auth-card { padding: var(--s4) !important; }
+  html body.app-body .ui-segmented { width: 100%; }
+  html body.app-body .ui-segmented > label { flex: 1 1 0; min-width: 0; padding: 0 8px; }
+  html body.app-body .stat-tile strong { font-size: 22px !important; }
+  /* Data tables become iOS-style grouped cards, not cramped grids. */
+  html body.app-body .app-content tbody tr {
+    background: var(--surface) !important;
+    border: 1px solid var(--separator) !important;
+    border-radius: 16px !important;
+    box-shadow: var(--shadow) !important;
+  }
+}
+
+@media print {
+  html body.app-body .app-content .ui-card { animation: none !important; }
+}

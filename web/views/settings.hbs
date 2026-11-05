@@ -9,7 +9,7 @@
     <!-- Page Header -->
     <div class="mb-8 animate-fade-in-up">
         <h1 class="text-4xl font-bold text-gray-800 mb-2">Account Settings</h1>
-        <p class="text-gray-600">Manage your account preferences and security settings</p>
+        <p class="text-gray-600">Account &amp; security</p>
     </div>
 
     <!-- Message Status -->
@@ -18,6 +18,20 @@
     </div>
     
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Appearance: iOS segmented selector, affects the whole site. -->
+        <div class="ui-card ios-appearance-card">
+            <div class="card-head"><h2>Appearance</h2></div>
+            <div class="ui-segmented" role="radiogroup" aria-label="Appearance">
+                <input type="radio" name="appearance" id="appearance-system" value="system">
+                <label for="appearance-system">System</label>
+                <input type="radio" name="appearance" id="appearance-light" value="light">
+                <label for="appearance-light">Light</label>
+                <input type="radio" name="appearance" id="appearance-dark" value="dark">
+                <label for="appearance-dark">Dark</label>
+            </div>
+        </div>
+
+
         <!-- Change Password Card -->
         <div class="ui-card rounded-2xl p-8 animate-fade-in-left" style="animation-delay: 0.2s">
             <div class="flex items-center mb-6">
@@ -28,7 +42,7 @@
                 </div>
                 <div>
                     <h2 class="text-2xl font-bold text-gray-800">Change Password</h2>
-                    <p class="text-sm text-gray-600">Update your password to keep your account secure</p>
+                    <p class="text-sm text-gray-600">Change your password</p>
                 </div>
             </div>
             
@@ -113,7 +127,7 @@
                 </div>
                 <div>
                     <h2 class="text-2xl font-bold text-gray-800">Account Information</h2>
-                    <p class="text-sm text-gray-600">Update your personal details</p>
+                    <p class="text-sm text-gray-600">Your details</p>
                 </div>
             </div>
             
@@ -189,26 +203,7 @@
                 </div>
                 <h3 class="text-lg font-bold text-gray-800">Security Tips</h3>
             </div>
-            <ul class="space-y-2 text-sm text-gray-600">
-                <li class="flex items-start">
-                    <svg class="w-4 h-4 mr-2 text-green-500 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
-                    </svg>
-                    Use a strong, unique password
-                </li>
-                <li class="flex items-start">
-                    <svg class="w-4 h-4 mr-2 text-green-500 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
-                    </svg>
-                    Change password regularly
-                </li>
-                <li class="flex items-start">
-                    <svg class="w-4 h-4 mr-2 text-green-500 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
-                    </svg>
-                    Never share your credentials
-                </li>
-            </ul>
+            <p class="text-sm text-gray-600">Use a strong password. Never share it.</p>
         </div>
         
         <!-- Account Stats Card -->

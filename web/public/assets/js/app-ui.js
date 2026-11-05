@@ -186,6 +186,16 @@
     return true;
   }
 
+  /* Switch-only forms have no submit button, so the spinner lives in the
+     switch track instead. Keeps every tap on a control visibly loading. */
+  function releaseSwitchBusy(form) {
+    Array.prototype.forEach.call(form.querySelectorAll('.ui-switch.is-busy'), function (sw) {
+      sw.classList.remove('is-busy');
+      var sp = sw.querySelector('.ui-spinner--switch');
+      if (sp && sp.parentNode) sp.parentNode.removeChild(sp);
+    });
+  }
+
   function releaseAll() {
     Array.prototype.forEach.call(
       document.querySelectorAll('[data-anoy-busy="1"]'), releaseButton);
@@ -194,6 +204,7 @@
         form.removeAttribute('data-anoy-busy');
         form.classList.remove('is-submitting');
       }
+      releaseSwitchBusy(form);
     });
     hidePageProgress();
   }
@@ -249,7 +260,30 @@
       return;
     }
     var btn = submitterOf(form, e);
-    if (!btn) return;
+    if (!btn) {
+      /* A form made only of switches still needs loading feedback. */
+      var sw = form.querySelector('.ui-switch');
+      form.setAttribute('data-anoy-busy', '1');
+      form.classList.add('is-submitting');
+      if (sw) {
+        var track = sw.querySelector('.ui-switch__track');
+        if (track) {
+          var swSpinner = makeSpinner();
+          swSpinner.className = 'ui-spinner ui-spinner--switch';
+          track.appendChild(swSpinner);
+          sw.classList.add('is-busy');
+        }
+      }
+      showPageProgress();
+      addTimer(function () {
+        if (form.getAttribute('data-anoy-busy') !== '1') return;
+        form.removeAttribute('data-anoy-busy');
+        form.classList.remove('is-submitting');
+        releaseSwitchBusy(form);
+        hidePageProgress();
+      }, RELEASE_AFTER_MS);
+      return;
+    }
     form.setAttribute('data-anoy-busy', '1');
     form.classList.add('is-submitting');
     busyButton(btn);
@@ -306,6 +340,89 @@
     if (n < 1024) return n + ' B';
     if (n < 1024 * 1024) return (n / 1024).toFixed(1) + ' KB';
     return (n / (1024 * 1024)).toFixed(2) + ' MB';
+  }
+
+  /* ------------------------------------------------------------------ *
+   * Appearance: System / Light / Dark.
+   * One preference (localStorage) is shared by every page. The top-bar
+   * button toggles Light <-> Dark; the Settings segmented control can also
+   * return to System. An inline script in <head> applies the theme before
+   * the stylesheets paint, so there is never a flash of the wrong colours.
+   * ------------------------------------------------------------------ */
+  var THEME_KEY = 'anoy-appearance';
+
+  function readTheme() {
+    try {
+      var m = window.localStorage.getItem(THEME_KEY) || 'system';
+      return (m === 'light' || m === 'dark') ? m : 'system';
+    } catch (e) { return 'system'; }
+  }
+
+  function systemDark() {
+    return !!(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+  }
+
+  function resolvedTheme(mode) {
+    return mode === 'system' ? (systemDark() ? 'dark' : 'light') : mode;
+  }
+
+  function syncAppearanceControls(mode) {
+    var resolved = resolvedTheme(mode);
+    Array.prototype.forEach.call(
+      document.querySelectorAll('input[name="appearance"]'), function (radio) {
+        radio.checked = radio.value === mode;
+      });
+    Array.prototype.forEach.call(
+      document.querySelectorAll('[data-theme-toggle]'), function (btn) {
+        var label = resolved === 'dark' ? 'Switch to light appearance' : 'Switch to dark appearance';
+        btn.setAttribute('aria-label', label);
+        btn.setAttribute('title', label);
+      });
+  }
+
+  function setTheme(mode, persist) {
+    var m = (mode === 'light' || mode === 'dark') ? mode : 'system';
+    var resolved = resolvedTheme(m);
+    var root = document.documentElement;
+    root.setAttribute('data-theme', m);
+    root.setAttribute('data-theme-resolved', resolved);
+    root.style.colorScheme = resolved;
+    var meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute('content', resolved === 'dark' ? '#000000' : '#F2F2F7');
+    if (persist !== false) {
+      try { window.localStorage.setItem(THEME_KEY, m); } catch (e) { /* private mode */ }
+    }
+    syncAppearanceControls(m);
+    return m;
+  }
+
+  function initAppearance() {
+    setTheme(readTheme(), false);
+    document.addEventListener('click', function (e) {
+      var node = e.target;
+      var btn = node && node.closest ? node.closest('[data-theme-toggle]') : null;
+      if (!btn) return;
+      e.preventDefault();
+      setTheme(resolvedTheme(readTheme()) === 'dark' ? 'light' : 'dark', true);
+    });
+    document.addEventListener('change', function (e) {
+      var radio = e.target;
+      if (!radio || radio.name !== 'appearance') return;
+      if (!/^(system|light|dark)$/.test(radio.value)) return;
+      setTheme(radio.value, true);
+    });
+    if (window.matchMedia) {
+      var mq = window.matchMedia('(prefers-color-scheme: dark)');
+      var onSystemChange = function () {
+        if (readTheme() === 'system') setTheme('system', false);
+      };
+      if (mq.addEventListener) mq.addEventListener('change', onSystemChange);
+      else if (mq.addListener) mq.addListener(onSystemChange);
+    }
+    /* Another tab changing the preference updates this one immediately. */
+    window.addEventListener('storage', function (e) {
+      if (e.key === THEME_KEY) setTheme(readTheme(), false);
+    });
   }
 
   /* ------------------------------------------------------------------ *
@@ -398,8 +515,14 @@
     showPageProgress: showPageProgress,
     hidePageProgress: hidePageProgress,
     humanBytes: humanBytes,
-    toast: toast
+    toast: toast,
+    setTheme: setTheme,
+    getTheme: readTheme
   };
+
+  /* Runs as soon as this file loads: the head script already set the theme,
+     this wires the controls and keeps the OS setting in sync. */
+  initAppearance();
 
   function init() {
     wrapTables();

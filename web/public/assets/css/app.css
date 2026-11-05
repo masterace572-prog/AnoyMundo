@@ -1,12 +1,11 @@
-@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap');
-
 /* =========================================================================
-   Anoy panel — flat design system.
+   Anoy panel — flat design system (iOS light palette).
    One canvas, one accent, one type scale, one spacing scale (8/12/16/24/32/48).
    Loaded last so it normalises the converted Bootstrap + Tailwind markup.
+   The dark palette + iOS component layer live in ios.css, loaded afterwards.
    ========================================================================= */
 
-/* Local fallback; IBM Plex Sans / IBM Plex Mono are the primary UI faces. */
+/* Self-hosted fallback for non-Apple devices; SF Pro / system UI comes first. */
 @font-face {
   font-family: "Inter Variable";
   font-style: normal;
@@ -16,32 +15,37 @@
 }
 
 :root {
-  color-scheme: dark;
+  color-scheme: light;
 
-  --canvas: #0E0E0C;
-  --surface: #161614;
-  --raised: #22221C;
-  --hairline: #2C2C26;
+  /* iOS grouped backgrounds */
+  --canvas: #F2F2F7;
+  --surface: #FFFFFF;
+  --raised: #FFFFFF;
+  --fill: #E9E9ED;
+  --fill-strong: #DEDEE3;
+  --hairline: #E4E4E9;
+  --separator: rgb(60 60 67 / 0.12);
 
-  --text: #F4F1E8;
-  --muted: #A39E90;
-  --faint: #746F64;
+  --text: #1C1C1E;
+  --muted: #6D6D72;
+  --faint: #8E8E93;
 
-  --accent: #D6E35A;
-  --accent-ink: #1A1C08;
-  --accent-dim: rgb(214 227 90 / 0.12);
-  --success: #A7D97C;
-  --warning: #E7C56A;
-  --danger: #E15A48;
+  --accent: #007AFF;
+  --accent-ink: #FFFFFF;
+  --accent-dim: rgb(0 122 255 / 0.12);
+  --success: #248A3D;
+  --warning: #B25E00;
+  --danger: #FF3B30;
 
-  --font: "IBM Plex Sans", "Inter Variable", Inter, ui-sans-serif, system-ui,
-    -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, "SF Mono", Menlo,
-    Consolas, monospace;
+  --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display",
+    "Inter Variable", Inter, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
 
-  --radius: 12px;
-  --radius-sm: 8px;
-  --shadow: 0 0 0 1px rgb(255 255 255 / 0.08);
+  --radius: 20px;
+  --radius-sm: 12px;
+  --radius-pill: 999px;
+  --shadow: 0 1px 2px rgb(0 0 0 / 0.04), 0 8px 24px rgb(0 0 0 / 0.05);
+  --shadow-raised: 0 1px 2px rgb(0 0 0 / 0.06), 0 12px 32px rgb(0 0 0 / 0.10);
 
   --s1: 8px;
   --s2: 12px;
