@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Countdown cell used by the hidden legacy controls. No placeholder text. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="@dimen/space_0"
+    android:layout_width="0dp"
     android:layout_height="@dimen/list_item_double"
     android:layout_weight="1"
     android:background="@drawable/ds_card"

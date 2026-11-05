@@ -89,7 +89,7 @@
     <string name="version_check_failed">Version check failed: %1$s</string>
     <string name="no_loader_release">No loader release uploaded in the panel yet</string>
     <string name="download_http_failed">Loader download failed with HTTP %1$d</string>
-    <string name="invalid_loader_zip">Panel did not return a valid loader ZIP (%1$d bytes)</string>
+    <string name="invalid_loader_zip">Panel did not return a valid loader ZIP. Received size: %1$d</string>
     <string name="staging_failed">Cannot create staging directory</string>
     <string name="no_elf_in_zip">Loader ZIP has no libbgmi.so or lib.so ELF library</string>
     <string name="install_lib_failed">Could not install the loader library</string>

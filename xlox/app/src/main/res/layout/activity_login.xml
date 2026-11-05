@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Screen 1: sign in. One serif headline (top app bar), one accent-filled control. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/loginRoot"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/background"
     android:clipToPadding="false"
     android:orientation="vertical">
 
@@ -26,7 +26,7 @@
             android:text="@string/app_name" />
 
         <View
-            android:layout_width="@dimen/space_0"
+            android:layout_width="0dp"
             android:layout_height="@dimen/divider"
             android:layout_weight="1" />
 
@@ -42,7 +42,7 @@
     <ScrollView
         android:id="@+id/loginScroll"
         android:layout_width="match_parent"
-        android:layout_height="@dimen/space_0"
+        android:layout_height="0dp"
         android:layout_weight="1"
         android:clipToPadding="false"
         android:fillViewport="true"
@@ -103,11 +103,12 @@
                     <EditText
                         android:id="@+id/userkey"
                         style="@style/Widget.Ds.TextField"
-                        android:layout_width="@dimen/space_0"
+                        android:layout_width="0dp"
                         android:layout_height="match_parent"
                         android:layout_weight="1"
                         android:inputType="textPassword"
-                        android:nextFocusForward="@id/login" />
+                        android:nextFocusForward="@id/login"
+                        tools:ignore="Autofill" />
 
                     <ImageButton
                         android:id="@+id/eyeToggle"

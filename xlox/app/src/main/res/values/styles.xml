@@ -85,7 +85,7 @@
     <style name="ThemeOverlay.Ds.Dialog" parent="ThemeOverlay.MaterialComponents.Dialog">
         <item name="android:windowBackground">@drawable/ds_dialog</item>
         <item name="android:backgroundDimEnabled">true</item>
-        <item name="android:windowElevation">@dimen/space_0</item>
+        <item name="android:windowElevation">0dp</item>
         <item name="colorSurface">@color/surface_elevated</item>
         <item name="colorOnSurface">@color/text_primary</item>
         <item name="colorControlHighlight">@color/ripple</item>
@@ -262,7 +262,7 @@
         <item name="itemTextColor">@color/ds_nav_item_tint</item>
         <item name="itemBackground">@color/transparent</item>
         <item name="itemRippleColor">@color/ripple</item>
-        <item name="elevation">@dimen/space_0</item>
+        <item name="elevation">0dp</item>
     </style>
 
     <style name="Widget.Ds.Tabs" parent="Widget.MaterialComponents.TabLayout">
@@ -278,7 +278,6 @@
 
     <style name="Widget.Ds.Switch" parent="Widget.AppCompat.CompoundButton.Switch">
         <item name="android:thumbTint">@color/ds_control_tint</item>
-        <item name="android:trackTint">@color/ds_control_tint</item>
         <item name="android:textAppearance">@style/TextAppearance.Ds.BodyMedium</item>
     </style>
     <style name="Widget.Ds.CheckBox" parent="Widget.AppCompat.CompoundButton.CheckBox">

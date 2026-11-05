@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- 8dp spacing scale + component geometry. The ONLY place with dp/sp values. -->
 <resources>
-    <dimen name="space_0">0dp</dimen>
     <dimen name="space_4">4dp</dimen>
     <dimen name="space_8">8dp</dimen>
     <dimen name="space_12">12dp</dimen>

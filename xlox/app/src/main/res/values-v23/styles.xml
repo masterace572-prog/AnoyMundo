@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- android:trackTint was added in API 23; the base style in values/ omits it. -->
+<resources>
+    <style name="Widget.Ds.Switch" parent="Widget.AppCompat.CompoundButton.Switch">
+        <item name="android:thumbTint">@color/ds_control_tint</item>
+        <item name="android:trackTint">@color/ds_control_tint</item>
+        <item name="android:textAppearance">@style/TextAppearance.Ds.BodyMedium</item>
+    </style>
+</resources>

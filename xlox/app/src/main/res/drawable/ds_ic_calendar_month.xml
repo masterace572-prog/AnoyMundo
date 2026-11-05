@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Material Symbols Outlined, 400 weight, grade 0, FILL 0. Apache-2.0 (see xlox/licenses/). -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:ignore="VectorPath"
     android:width="@dimen/icon_bar"
     android:height="@dimen/icon_bar"
     android:viewportWidth="960"

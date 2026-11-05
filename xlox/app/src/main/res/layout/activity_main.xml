@@ -4,7 +4,6 @@
     android:id="@+id/mainRoot"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/background"
     android:clipToPadding="false"
     android:orientation="vertical">
 
@@ -26,7 +25,7 @@
             android:text="@string/app_name" />
 
         <View
-            android:layout_width="@dimen/space_0"
+            android:layout_width="0dp"
             android:layout_height="@dimen/divider"
             android:layout_weight="1" />
 
@@ -42,7 +41,7 @@
     <ScrollView
         android:id="@+id/mainScroll"
         android:layout_width="match_parent"
-        android:layout_height="@dimen/space_0"
+        android:layout_height="0dp"
         android:layout_weight="1"
         android:clipToPadding="false"
         android:fillViewport="true"
@@ -75,7 +74,7 @@
                     <TextView
                         android:id="@+id/brandHeader"
                         style="@style/TextAppearance.Ds.TitleMedium"
-                        android:layout_width="@dimen/space_0"
+                        android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:text="@string/subscription" />
@@ -118,7 +117,7 @@
 
                     <TextView
                         style="@style/TextAppearance.Ds.Secondary"
-                        android:layout_width="@dimen/space_0"
+                        android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="@dimen/space_12"
                         android:layout_weight="1"
@@ -150,7 +149,7 @@
 
                     <TextView
                         style="@style/TextAppearance.Ds.Secondary"
-                        android:layout_width="@dimen/space_0"
+                        android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="@dimen/space_12"
                         android:layout_weight="1"
@@ -183,7 +182,7 @@
 
                     <TextView
                         style="@style/TextAppearance.Ds.Secondary"
-                        android:layout_width="@dimen/space_0"
+                        android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="@dimen/space_12"
                         android:layout_weight="1"
@@ -215,7 +214,7 @@
 
                     <TextView
                         style="@style/TextAppearance.Ds.Secondary"
-                        android:layout_width="@dimen/space_0"
+                        android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="@dimen/space_12"
                         android:layout_weight="1"
@@ -295,12 +294,12 @@
                  Hidden, zero-sized, and never drawn. -->
             <LinearLayout
                 android:id="@+id/legacyControls"
-                android:layout_width="@dimen/space_0"
-                android:layout_height="@dimen/space_0"
+                android:layout_width="0dp"
+                android:layout_height="0dp"
                 android:orientation="vertical"
                 android:visibility="gone">
                 <TextView android:id="@+id/startText" android:layout_width="wrap_content" android:layout_height="wrap_content" />
-                <ImageView android:id="@+id/actionIcon" android:layout_width="wrap_content" android:layout_height="wrap_content" />
+                <ImageView android:id="@+id/actionIcon" android:layout_width="wrap_content" android:layout_height="wrap_content" android:contentDescription="@null" android:importantForAccessibility="no" />
                 <TextView android:id="@+id/gameName" android:layout_width="wrap_content" android:layout_height="wrap_content" />
                 <TextView android:id="@+id/packageName" android:layout_width="wrap_content" android:layout_height="wrap_content" />
                 <TextView android:id="@+id/gameStatus" android:layout_width="wrap_content" android:layout_height="wrap_content" />
@@ -311,8 +310,8 @@
                     <include android:id="@+id/secondsBox" layout="@layout/item_time_box" />
                 </LinearLayout>
                 <LinearLayout android:id="@+id/fbCard" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
-                    <androidx.appcompat.widget.AppCompatButton android:id="@+id/startFB" android:layout_width="@dimen/space_0" android:layout_height="@dimen/divider" android:layout_weight="1" />
-                    <androidx.appcompat.widget.AppCompatButton android:id="@+id/obbButton" android:layout_width="@dimen/space_0" android:layout_height="@dimen/divider" android:layout_weight="1" />
+                    <androidx.appcompat.widget.AppCompatButton android:id="@+id/startFB" android:layout_width="0dp" android:layout_height="@dimen/divider" android:layout_weight="1" />
+                    <androidx.appcompat.widget.AppCompatButton android:id="@+id/obbButton" android:layout_width="0dp" android:layout_height="@dimen/divider" android:layout_weight="1" />
                 </LinearLayout>
                 <androidx.appcompat.widget.AppCompatButton android:id="@+id/restartButton" android:layout_width="@dimen/divider" android:layout_height="@dimen/divider" android:text="@string/clear_data" />
             </LinearLayout>

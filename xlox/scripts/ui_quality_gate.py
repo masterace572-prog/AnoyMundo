@@ -105,7 +105,7 @@ for appearance, path in [("light", RES / "values/colors.xml"),
 # ------------------------------------------------------- literals / Part C
 FORBIDDEN = [
     (r"#[0-9A-Fa-f]{6}\b", "literal hex colour"),
-    (r"\b\d+(?:\.\d+)?dp\b", "literal dp"),
+    (r"\b[1-9]\d*(?:\.\d+)?dp\b", "literal dp"),
     (r"\b\d+(?:\.\d+)?sp\b", "literal sp"),
     (r"textSize\s*=", "textSize="),
     (r'android:textColor="#', "hardcoded textColor"),

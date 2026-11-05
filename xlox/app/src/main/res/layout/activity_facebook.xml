@@ -4,7 +4,6 @@
     android:id="@+id/facebookRoot"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/background"
     android:clipToPadding="false"
     android:orientation="vertical">
 
@@ -23,8 +22,7 @@
             android:layout_width="@dimen/touch_target"
             android:layout_height="@dimen/touch_target"
             android:contentDescription="@string/back"
-            android:src="@drawable/ds_ic_arrow_back"
-            android:tint="@color/text_primary" />
+            android:src="@drawable/ds_ic_arrow_back" />
 
         <TextView
             style="@style/TextAppearance.Ds.HeadlineSmall"
@@ -37,7 +35,7 @@
     <FrameLayout
         android:id="@+id/webContainer"
         android:layout_width="match_parent"
-        android:layout_height="@dimen/space_0"
+        android:layout_height="0dp"
         android:layout_weight="1"
         android:clipToPadding="false">
 
