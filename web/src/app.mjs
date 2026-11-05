@@ -640,6 +640,37 @@ async function doLibUpload(req, res, body, user) {
 // or any unexpected exception must never show a raw stack trace, never strand
 // the user outside the panel, and never claim an action succeeded.
 // ---------------------------------------------------------------------------
+/**
+ * Legacy GET endpoints that change data. Modern browsers tell us the request
+ * context (Sec-Fetch-Site); Origin/Referer covers older ones. CLI/API callers
+ * send neither header and keep working. A cross-site page can no longer delete
+ * or reset keys just by getting a signed-in user to load an image or a link.
+ */
+const MUTATING_GET = new Set([
+  '/keys/reset', '/keys/resetall', '/keys/deleteexp', '/keys/deleteunused',
+]);
+
+function isMutatingGet(lp) {
+  return MUTATING_GET.has(lp) || lp.startsWith('/admin/user/delete/');
+}
+
+function sameOriginMutation(req) {
+  const h = req.headers || {};
+  const fetchSite = String(h['sec-fetch-site'] || '').toLowerCase();
+  if (fetchSite && fetchSite !== 'same-origin' && fetchSite !== 'none') return false;
+  const source = String(h.origin || h.referer || '');
+  if (!source) return true; // non-browser clients
+  let sourceHost;
+  try { sourceHost = new URL(source).host; } catch { return false; }
+  const allowed = new Set();
+  for (const raw of [h['x-forwarded-host'], h.host, config.publicBaseUrl]) {
+    if (!raw) continue;
+    try { allowed.add(new URL(/^https?:/.test(String(raw)) ? String(raw) : `https://${raw}`).host); }
+    catch { /* ignore malformed host */ }
+  }
+  return allowed.has(sourceHost);
+}
+
 function errorPage(title, message, ref) {
   const safeRef = escapeHtml(ref);
   return `<!doctype html><html lang="en" data-theme="light"><head><meta charset="utf-8">
@@ -695,6 +726,14 @@ export async function handle(req, res) {
     const lp = p.toLowerCase();
     const method = (req.method || 'GET').toUpperCase();
     const body = method === 'POST' || method === 'PUT' || method === 'PATCH' ? await parseBody(req) : {};
+
+    // State-changing legacy GETs must originate from the panel itself.
+    if (method === 'GET' && isMutatingGet(lp) && !sameOriginMutation(req)) {
+      return sendJson(res, {
+        ok: false, status: false, code: 'cross_site_blocked',
+        error: 'This action must be started from the panel. Nothing was changed.',
+      }, 403);
+    }
 
     // --------------------------- public endpoints ---------------------------
     if (lp === '/api/health' || lp === '/health') return handleHealth(res, q.get('rpc') === '1');
@@ -805,7 +844,9 @@ export async function handle(req, res) {
 
     // --------------------------------- keys ---------------------------------
     if (lp === '/keys') {
-      const { data } = await db().from('keys_code').select('user_key');
+      let query = db().from('keys_code').select('user_key');
+      if (!user.isOwner) query = query.eq('registrator', user.username);
+      const { data } = await query;
       const keyList = (data || []).map((k) => k.user_key);
       return page(req, res, 'keys_list', { user, title: 'Keys', keyList });
     }
@@ -864,7 +905,9 @@ export async function handle(req, res) {
       return redirect(res, '/keys', { msgSuccess: refundMessage(result) });
     }
     if (lp === '/keys/download') {
-      const { data } = await db().from('keys_code').select('user_key');
+      let query = db().from('keys_code').select('user_key');
+      if (!user.isOwner) query = query.eq('registrator', user.username);
+      const { data } = await query;
       const text = (data || []).map((r) => r.user_key).join('\n');
       res.setHeader('Content-Disposition', 'attachment; filename="Allkeys.txt"');
       return sendText(res, text);

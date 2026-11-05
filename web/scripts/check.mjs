@@ -110,6 +110,12 @@ const appSrc = src('src/app.mjs');
 if (!/config\.ownerUsername/.test(appSrc) || !/handleFailure/.test(appSrc)) {
   errors.push('app.mjs must bind the Owner identity and use the friendly error handler');
 }
+if (!/sameOriginMutation/.test(appSrc) || !/cross_site_blocked/.test(appSrc)) {
+  errors.push('app.mjs must block cross-site state-changing GET requests');
+}
+if (!/if \(!user\.isOwner\) query = query\.eq\('registrator', user\.username\);/.test(appSrc)) {
+  errors.push('non-owner key lists and downloads must be scoped to their own keys');
+}
 if (/Charged once per request|charged once, not per key|Please top up to your beloved admin/.test(appSrc + src('views/keys_generate.hbs'))) {
   errors.push('outdated pricing copy is still present');
 }

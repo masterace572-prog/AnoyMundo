@@ -319,6 +319,10 @@ try {
   ok(r.body?.registered === true && r.body?.reset === true && r.body?.devices_total === 0, 'GET /keys/reset clears devices');
   r = await request('/keys/resetAll?userkey=admin-2-f7VwE&reset=1');
   ok(r.body?.deleted === true, 'GET /keys/resetAll deletes a key');
+  r = await request('/keys/resetAll?userkey=admin-2-f7VwE&reset=1', { headers: { 'sec-fetch-site': 'cross-site' } });
+  ok(r.status === 403 && r.body?.code === 'cross_site_blocked', 'cross-site key deletion is blocked');
+  r = await request('/keys/reset?userkey=' + encodeURIComponent(generatedKey) + '&reset=1', { headers: { Referer: 'https://evil.example/attack' } });
+  ok(r.status === 403, 'a foreign Referer cannot reset devices');
 
   // 12. referral -> registration -> reseller login
   r = await request('/admin/create-referral', { method: 'POST', body: new URLSearchParams({ set_saldo: '500', accExpire: '30', accLevel: '3' }) });

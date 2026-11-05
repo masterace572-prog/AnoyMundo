@@ -77,6 +77,11 @@ idempotent hardening migration that must be applied to the project once:
 - All unexpected errors now render an in-panel iOS error page, a compact flash
   on the form they came from, or JSON for API routes — never a raw Vercel stack
   trace. Mutating handlers check database errors and report clear messages.
+- Legacy state-changing GET endpoints (`/keys/reset*`, bulk deletes, user
+  deletion) now reject cross-site requests using `Sec-Fetch-Site` and
+  Origin/Referer, so a malicious page cannot act as a signed-in user. Key lists
+  and downloads are scoped to the signed-in reseller's own keys; only the Owner
+  sees every key.
 
 **Library releases**: `/lib` shows the current version, suggests the next one,
 and has a **Bump** button plus a separate **Push a link** action that updates
