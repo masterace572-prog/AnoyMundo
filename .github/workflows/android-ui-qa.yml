@@ -13,7 +13,7 @@ on:
       - 'docs/ui-redesign/**'
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: android-ui-qa-${{ github.ref }}
@@ -71,14 +71,35 @@ jobs:
       - name: Build debug APK
         run: |
           chmod +x gradlew
-          ./gradlew :app:assembleDebug --no-daemon --stacktrace
+          set -o pipefail
+          ./gradlew :app:assembleDebug --no-daemon --stacktrace 2>&1 | tee /tmp/assembleDebug.log
           ls -lh app/build/outputs/apk/debug/
 
       - name: Android Lint (debug)
-        run: ./gradlew :app:lintDebug --no-daemon --stacktrace
+        run: |
+          set -o pipefail
+          ./gradlew :app:lintDebug --no-daemon --stacktrace 2>&1 | tee /tmp/lintDebug.log
 
       - name: Resource and literal quality gates
         run: python3 scripts/ui_quality_gate.py
+
+      - name: Publish failure logs to the branch
+        if: failure()
+        working-directory: ${{ github.workspace }}
+        run: |
+          mkdir -p qa-logs
+          cp /tmp/assembleDebug.log qa-logs/assembleDebug.log 2>/dev/null || true
+          cp /tmp/lintDebug.log qa-logs/lintDebug.log 2>/dev/null || true
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -f qa-logs/
+          git diff --cached --quiet && { echo "No new logs"; exit 0; }
+          git commit -m "QA failure logs for run ${{ github.run_number }} [skip ci]" -q
+          for attempt in 1 2 3 4 5; do
+            git pull --rebase origin arena/b2fac70f-anoymundo -q || true
+            git push origin HEAD:arena/b2fac70f-anoymundo && break
+            sleep 6
+          done
 
       - name: Upload lint and gate reports
         if: always()
