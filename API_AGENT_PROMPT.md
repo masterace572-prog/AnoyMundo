@@ -100,8 +100,10 @@ Response `201`:
   "saldo_before": 2147384644, "saldo_after": 2147384564, "charged": 80 }
 ```
 
-**Saldo rules:** `price = price_per_device(duration) × max_devices × count`.
-The balance is debited atomically before keys are written; on a write failure it
+**Saldo rules:** `price = price_per_device(duration) × max_devices`, charged
+ONCE per `POST /keys` request (the panel's original bulk-generation pricing —
+`count` creates that many keys for the same single fee; it does NOT multiply
+the price). The balance is debited atomically before keys are written; on a write failure it
 is refunded. `402 insufficient_balance` means nothing was created and the
 balance did not change. Deleting a key does NOT refund. List/read/update/reset
 are free. Generated keys look like `<username>-<duration>-<5 chars>` and
@@ -142,7 +144,8 @@ retry once. A `404 key_not_found` also means "not your key".
 1. A dashboard showing current **saldo** (from `/me`) and the API key name.
 2. A **Create key** form: game (from `/pricing`), duration (from `/pricing`),
    `max_devices`, `count`, optional `custom_key`, with a live **price preview**
-   computed as `price_per_device × max_devices × count`. Confirm before submit,
+   computed as `price_per_device × max_devices` (one fee per request, not per
+   key). Confirm before submit,
    then show the returned `user_key` values with a copy button plus the charged
    amount and new balance.
 3. A **keys table** from `/keys`: user_key, game, duration, max_devices, status

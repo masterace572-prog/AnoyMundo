@@ -52,7 +52,7 @@ excluded.
 cd web
 npm install
 npm run build       # generates templates + compiles Tailwind, validates all modules
-npm test            # 105 end-to-end HTTP tests using an in-memory DB
+npm test            # 106 end-to-end HTTP tests using an in-memory DB
 npm run dev         # http://localhost:3000  (DB_DRIVER=memory)
 ```
 
@@ -102,8 +102,9 @@ SHA-256 hash. Send them as `X-API-Key` on every `/api/v1/*` request. The API is
 scoped to **licence keys only**: it can create, list, read, update, reset and
 delete keys — never mod name, status/floating text, features, maintenance or
 users. Creating a key through the API uses the exact same pricing and saldo
-debit as the panel (`price = price_per_device × max_devices × count`, with a
-conditional atomic debit and automatic refund on failure).
+debit as the panel (`price = price_per_device × max_devices`, one fee per
+generation request, with a conditional atomic debit and automatic refund on
+failure).
 
 ## Security notes
 

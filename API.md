@@ -166,7 +166,7 @@ curl -sS 'https://anoymundo-panel.vercel.app/api/v1/keys?limit=20&offset=0&game=
 | `game` | no | default `PUBG`; must be one of `/api/v1/pricing` → `games` |
 | `duration` | **yes** | one of `2, 5, 24, 72, 168, 336, 720` (hours) |
 | `max_devices` | **yes** | integer 1–100 |
-| `count` | no | 1–100, default `1`. Total charge is `price × count`. |
+| `count` | no | 1–100, default `1`. Bulk generation is charged once per request (legacy panel behaviour). |
 | `custom_key` | no | 4–19 chars, `[A-Za-z0-9_-]+`, only when `count = 1` |
 
 ```bash
@@ -197,9 +197,14 @@ HTTP `201 Created`. Generated keys look like `<username>-<duration>-<5 chars>`.
 ### Saldo / charging rules
 
 ```
-price            = price_per_device(duration) × max_devices × count
+price            = price_per_device(duration) × max_devices   (one fee per request)
 new_saldo        = current_saldo − price
 ```
+
+This is exactly the panel's original pricing rule: a generation **request**
+costs `price × max_devices`, and `count` simply creates that many keys for the
+one fee (legacy bulk generation). It is shared by the panel and `/api/v1`, so
+the price shown in the panel and the debit from the API can never differ.
 
 - The balance is read fresh, then debited with an **optimistic conditional
   update** (`WHERE saldo = previously_read_value`) so two concurrent requests

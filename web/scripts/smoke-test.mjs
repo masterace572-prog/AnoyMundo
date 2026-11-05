@@ -220,6 +220,14 @@ try {
   r = await request('/api/v1/keys', { method: 'POST', headers: H,
     body: { game: 'PUBG', duration: 2, max_devices: 1, custom_key: 'x' } });
   ok(r.status === 400 && r.body?.error?.code === 'invalid_request', 'invalid custom_key is rejected');
+  r = await request('/api/v1/keys', { method: 'POST', headers: H,
+    body: { game: 'PUBG', duration: 2, max_devices: 1, count: 3 } });
+  ok(r.status === 201 && r.body?.keys?.length === 3 && r.body?.price === 10
+    && r.body?.saldo_after === saldoBefore - 20,
+    'bulk count keeps the legacy one-fee-per-request pricing (docs and panel agree)');
+  for (const bulk of r.body?.keys || []) {
+    await request(`/api/v1/keys/${bulk.user_key}`, { method: 'DELETE', headers: H });
+  }
   r = await request('/api/v1/keys', { method: 'POST', headers: { 'X-API-Key': 'amk_wrong' },
     body: { game: 'PUBG', duration: 2, max_devices: 1 } });
   ok(r.status === 401 && r.body?.error?.code === 'invalid_api_key', 'revoked/unknown API key is rejected');

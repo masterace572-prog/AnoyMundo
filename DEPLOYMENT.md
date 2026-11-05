@@ -129,7 +129,7 @@ No secret is committed to git (`.env*` is ignored).
 | `GET /docs` | in-panel **integration** reference (connect URL, mod name, status/floating text, expiry, C++ example) |
 | `GET /api-docs` | in-panel **key-management API** reference (`/api/v1/*`, personal API keys) |
 | `GET /api-keys` | create / revoke / delete personal API keys (token shown once) |
-| `POST /api/v1/keys` | create licence keys with `X-API-Key`; charges saldo (`price × max_devices × count`) |
+| `POST /api/v1/keys` | create licence keys with `X-API-Key`; charges saldo (`price_per_device × max_devices`, one fee per request) |
 | `GET /api/v1/keys` | list only the caller's keys (`limit`, `offset`, `game`, `status`) |
 | `GET /api/v1/me`, `GET /api/v1/pricing` | account saldo + duration pricing |
 | Saldo inputs on `/admin/user/1`, `/admin/create-referral` | `field-prefix` wrapper + `padding-left: 2.875rem !important` — typed digits never hide behind the currency icon |
@@ -151,7 +151,7 @@ curl -sS -X POST https://anoymundo-panel.vercel.app/connect \
 
 ## 5. Automated tests
 
-- `npm test` — 105 offline end-to-end HTTP tests using an in-memory DB driver
+- `npm test` — 106 offline end-to-end HTTP tests using an in-memory DB driver
   (login, registration, key CRUD, DataTables, `/connect`, maintenance/feature
   toggles, referral → reseller, library upload/version, logout), plus UI
   regression guards: no gradients, no escaped HTML/PHP in notices or form
@@ -189,7 +189,7 @@ curl -sS -X POST https://anoymundo-panel.vercel.app/connect \
 cd web
 npm install
 npm run build     # prebuild + validation
-npm test          # 105 offline end-to-end tests
+npm test          # 106 offline end-to-end tests
 npm run dev       # live preview on 0.0.0.0:3000 (memory DB by default)
 ```
 
