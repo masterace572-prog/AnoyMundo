@@ -106,28 +106,30 @@ export async function handleHealth(res) {
     },
   };
   let ok = envOk;
-  try {
-    const { error } = await db().from('onoff').select('id').eq('id', 1).maybeSingle();
-    if (error) throw new Error(error.message);
-    checks.database = { ok: true, detail: `connected · ${sqlDateTime()}` };
-  } catch (e) {
+  const [database, libChannel] = await Promise.all([
+    db().from('onoff').select('id').eq('id', 1).maybeSingle().then((r) => r).catch((e) => ({ error: e })),
+    db().from('client_release').select('version,file_name,is_current').eq('is_current', true).maybeSingle()
+      .then((r) => r).catch((e) => ({ error: e })),
+  ]);
+  if (database.error) {
     ok = false;
-    checks.database = { ok: false, detail: e.message };
+    checks.database = { ok: false, detail: database.error.message };
+  } else {
+    checks.database = { ok: true, detail: `connected · ${sqlDateTime()}` };
   }
-  try {
-    const { data, error } = await db().from('client_release')
-      .select('version,file_name,is_current').eq('is_current', true).maybeSingle();
-    if (error) throw new Error(error.message);
-    checks.lib_channel = { ok: true, detail: data ? `version ${data.version} (${data.file_name})` : 'no release uploaded' };
-  } catch (e) {
-    checks.lib_channel = { ok: false, detail: e.message };
+  if (libChannel.error) {
+    checks.lib_channel = { ok: false, detail: libChannel.error.message };
+  } else {
+    checks.lib_channel = {
+      ok: true,
+      detail: libChannel.data ? `version ${libChannel.data.version} (${libChannel.data.file_name})` : 'no release uploaded',
+    };
   }
   try {
     const expected = ['users', 'keys_code', 'history', 'referral_code', 'feature', 'modname', 'onoff', '_ftext', 'credit', 'lib', 'client_release', 'auth_attempt'];
-    let present = 0;
-    for (const table of expected) {
-      try { await countRows(table); present += 1; } catch { /* missing table */ }
-    }
+    // Parallel round trips keep the health probe fast on a cold lambda.
+    const results = await Promise.all(expected.map((table) => countRows(table).catch(() => null)));
+    const present = results.filter((n) => n !== null).length;
     checks.schema = { ok: present === expected.length, detail: `${present}/${expected.length} expected tables present` };
     if (present !== expected.length) ok = false;
   } catch (e) {

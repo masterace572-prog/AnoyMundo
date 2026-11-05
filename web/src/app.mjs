@@ -530,6 +530,13 @@ export async function handle(req, res) {
     if (lp === '/api/lib/info') return handleLibInfo(res);
     if (lp === '/connect' || lp === '/api/connect') {
       if (method === 'POST') return handleConnect(req, res, body);
+      // Some loaders (and deployment checks) use a query-string GET instead
+      // of a form POST. Same validation, same JSON contract.
+      if (q.has('game') && q.has('user_key') && q.has('serial')) {
+        return handleConnect(req, res, {
+          game: q.get('game'), user_key: q.get('user_key'), serial: q.get('serial'),
+        });
+      }
       return handleConnectInfo(res);
     }
 
