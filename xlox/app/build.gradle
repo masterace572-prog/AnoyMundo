@@ -4,7 +4,8 @@ plugins {
 
 android {
     namespace 'com.xlox'
-    compileSdk 34
+    // API 36 is needed for android:pageSizeCompat (added in API 36).
+    compileSdk 36
 
     signingConfigs {
         release {

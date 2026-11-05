@@ -115,14 +115,24 @@ adb shell getconf PAGE_SIZE            # 4096 or 16384
 adb logcat -s Load BoxApplication LibManager MAct DawnLoad:V *:E
 ```
 
-**Immediate workaround without a rebuild:** on a 16 KB device, open
-**Settings → Apps → [loader] → Advanced → Run app with page size compat mode**
-and turn it on. It is only shown when the kernel uses 16 KB pages. Via ADB:
+The APK now declares `android:pageSizeCompat="enabled"` on `<application>`.
+On 16 KB devices this forces the linker's page-agnostic compatibility mode
+(which also allows a 4 KB-aligned **downloaded** `libbgmi.so` to load), and it
+suppresses the "app isn't 16 KB compatible" launch warning. It is ignored on
+4 KB devices. `compileSdk` is 36 because the attribute was added in API 36;
+`targetSdk` stays 28 deliberately (raising it breaks the hidden-API bypass).
+
+If your ROM overrides the manifest setting, you can also turn compatibility on
+at **Settings → Apps → [loader] → Advanced → Run app with page size compat
+mode** (only shown when the kernel uses 16 KB pages), or via ADB:
 
 ```bash
 adb shell setprop bionic.linker.16kb.app_compat.enabled true
 adb shell setprop pm.16kb.app_compat.disabled false
 ```
+
+Treat compatibility mode as a bridge, not a substitute for a real 16 KB build
+of your injected library.
 
 Note: `mundo-release.aar` still ships two prebuilt libraries that are 4 KB
 aligned (`libmmkv.so`, plus `libLizard.so`/`libmsaoaidsec.so` which are already
@@ -146,8 +156,9 @@ it, but the loader is now safe if `targetSdk` is ever raised.
 Previously a failed load was only written to logcat, so the user saw a missing
 menu with no explanation. `BoxApplication` now logs the SDK level, ABI, real
 page size, ELF alignment and the exact `dlopen` error, stores the last failure
-in `com.xlox.download/load_error`, and `MAct` shows it in the status toggle and
-a Toast when you return to the app. It also tolerates virtual game-process
+in `filesDir/loader_error.txt` (readable across the virtual and UI processes),
+and `MAct` shows it in the status toggle and a Toast when you return to the
+app. It also tolerates virtual game-process
 names with a suffix, which some newer Android builds report.
 
 `ENABLE_IMGUI` is a leftover `public static boolean` from the original source
@@ -157,8 +168,8 @@ field via JNI to decide whether to draw the menu, set it after a successful
 
 ## Building
 
-Local (requires JDK 17, Android SDK platform 34, build-tools 34.0.0 and NDK
-24.0.8215888):
+Local (requires JDK 17, Android SDK platforms 34 and 36, build-tools 34.0.0
+and NDK 24.0.8215888):
 
 ```bash
 cd xlox

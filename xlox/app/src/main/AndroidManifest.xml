@@ -41,6 +41,7 @@
 
     <application
         android:requestLegacyExternalStorage="true"
+        android:pageSizeCompat="enabled"
         android:name=".BoxApplication"
         android:allowBackup="true"
         android:icon="@drawable/logo_transparent"
