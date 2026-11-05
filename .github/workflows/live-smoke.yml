@@ -59,7 +59,7 @@ jobs:
           [ "$status" = "302" ] && pass "POST /login (legacy bcrypt hash) -> 302" || fail "login: $status"
           grep -q 'am_session' "$JAR" && pass "signed session cookie issued" || fail "session cookie"
 
-          for route in dashboard keys keys/generate settings Server admin/manage-users admin/create-referral lib; do
+          for route in dashboard docs keys keys/generate settings Server admin/manage-users admin/create-referral lib; do
             code=$(curl -sS --max-time 30 -o /dev/null -w '%{http_code}' -b "$JAR" -c "$JAR" "$BASE/$route")
             [ "$code" = "200" ] && pass "GET /$route -> 200" || fail "/$route returned $code"
           done
@@ -67,6 +67,18 @@ jobs:
           uicss=$(curl -sS --max-time 30 "$BASE/assets/css/app.css")
           [ -n "$uicss" ] && ! echo "$uicss" | grep -q 'linear-gradient' \
             && pass "flat app.css is served with no gradients" || fail "app.css contains gradients or is empty"
+          echo "$uicss" | grep -Fq '.field-prefix > input' \
+            && echo "$uicss" | grep -Fq 'padding-left: 2.875rem' \
+            && pass "app.css reserves saldo icon padding" || fail "saldo icon padding fix missing"
+
+          edit=$(curl -sS --max-time 30 -b "$JAR" -c "$JAR" "$BASE/admin/user/1")
+          echo "$edit" | grep -Fq 'field-prefix' \
+            && pass "edit-user saldo input has the icon-spacing wrapper" || fail "saldo wrapper missing"
+
+          docs=$(curl -sS --max-time 30 -b "$JAR" -c "$JAR" "$BASE/docs")
+          echo "$docs" | grep -q 'API docs' && echo "$docs" | grep -Fq 'curl_easy_perform' \
+            && echo "$docs" | grep -Fq 'expired_date' && echo "$docs" | grep -Fq 'mod_status' \
+            && pass "GET /docs serves the API reference with the C++ example" || fail "docs page content"
 
           font=$(curl -sS --max-time 30 -o /dev/null -w '%{http_code}' "$BASE/assets/fonts/inter-latin-wght-normal.woff2")
           [ "$font" = "200" ] && pass "self-hosted Inter font -> 200" || fail "font: $font"
@@ -120,3 +132,5 @@ jobs:
 # Re-run live checks against the flat-UI production deployment.
 
 # Re-run live checks against the Anoy / @libAkAudioVisiual production release.
+
+# Re-run live checks against the saldo fix + API docs release.
