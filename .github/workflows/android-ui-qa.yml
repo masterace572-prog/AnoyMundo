@@ -77,8 +77,11 @@ jobs:
 
       - name: Android Lint (debug)
         run: |
-          set -o pipefail
           ./gradlew :app:lintDebug --no-daemon --stacktrace 2>&1 | tee /tmp/lintDebug.log
+          rc=${PIPESTATUS[0]}
+          echo "=== FULL LINT TEXT REPORT ===" >> /tmp/lintDebug.log
+          cat app/build/intermediates/lint_intermediate_text_report/debug/lint-results-debug.txt >> /tmp/lintDebug.log 2>/dev/null || true
+          exit $rc
 
       - name: Resource and literal quality gates
         run: python3 scripts/ui_quality_gate.py
@@ -90,6 +93,7 @@ jobs:
           mkdir -p qa-logs
           cp /tmp/assembleDebug.log qa-logs/assembleDebug.log 2>/dev/null || true
           cp /tmp/lintDebug.log qa-logs/lintDebug.log 2>/dev/null || true
+          cp xlox/app/build/intermediates/lint_intermediate_text_report/debug/lint-results-debug.txt qa-logs/lint-results-debug.txt 2>/dev/null || true
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -f qa-logs/
