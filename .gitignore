@@ -15,7 +15,6 @@ npm-debug.log*
 # in the git checkout, before any build step runs. Rebuild with `npm run build`.
 
 # ---- Android / XLOX build outputs (APKs are release artifacts, not source) --
-dist/
 xlox/.gradle/
 xlox/build/
 xlox/app/build/
@@ -24,8 +23,8 @@ xlox/.externalNativeBuild/
 xlox/local.properties
 xlox/libbgmi.so
 xlox/xlox-loader.zip
-*.apk
-*.apk.idsig
+xlox/**/*.apk
+xlox/**/*.apk.idsig
 
 # ---- OS / editor -----------------------------------------------------------
 .DS_Store

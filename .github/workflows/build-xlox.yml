@@ -20,7 +20,7 @@ on:
       - '.github/workflows/build-xlox.yml'
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: build-xlox-${{ github.ref }}
@@ -131,6 +131,30 @@ jobs:
             dist/xlox-loader.zip
           retention-days: 30
           if-no-files-found: error
+
+      # The sandbox cannot reach actions artifact storage, so also publish a
+      # durable download link and place the deliverables on this branch.
+      - name: Publish APK as a GitHub release
+        working-directory: ${{ github.workspace }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="xlox-v1.0.0-run${{ github.run_number }}"
+          gh release create "$TAG" \
+            dist/Anoy-XLOX-loader.apk dist/xlox-loader.zip \
+            --title "Anoy XLOX loader – build ${{ github.run_number }}" \
+            --notes "Signed arm64-v8a release APK built from ${{ github.sha }}. APK sha256: $APK_SHA256" \
+            || echo "Release $TAG already exists, artifacts remain attached to the workflow run"
+
+      - name: Commit deliverables to the working branch
+        working-directory: ${{ github.workspace }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -f dist/Anoy-XLOX-loader.apk dist/xlox-loader.zip
+          git diff --cached --quiet && { echo "No deliverable changes"; exit 0; }
+          git commit -m "Add built XLOX loader APK (build ${{ github.run_number }}) [skip ci]"
+          git push origin HEAD:arena/b2fac70f-anoymundo
 
       - name: Check the panel lib + version endpoints
         run: |
