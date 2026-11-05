@@ -8,10 +8,10 @@
     </div>
     
     <!-- Keys List Card -->
-    <div class="glass-card rounded-2xl p-6 sm:p-8 animate-fade-in-up">
+    <div class="ui-card rounded-2xl p-6 sm:p-8 animate-fade-in-up">
         <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
             <div class="flex items-center">
-                <div class="gradient-bg w-12 h-12 rounded-xl flex items-center justify-center mr-4">
+                <div class="ui-icon w-12 h-12 rounded-xl flex items-center justify-center mr-4">
                     <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"></path>
                     </svg>
@@ -29,7 +29,7 @@
             
             <!-- Actions Dropdown -->
             <div class="relative">
-                <button id="actions-menu-btn" class="px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg hover:from-purple-500 hover:to-pink-500 transition-all flex items-center space-x-2">
+                <button id="actions-menu-btn" class="px-4 py-2 text-white rounded-lg transition-all flex items-center space-x-2 ui-btn">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"></path>
                     </svg>
@@ -38,7 +38,7 @@
                 
                 <div id="actions-menu" class="hidden absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-2xl border border-gray-100 z-10">
                     <div class="py-2">
-                        <a href="/keys/generate" class="flex items-center space-x-3 px-4 py-3 hover:bg-gradient-to-r hover:from-purple-50 hover:to-pink-50 transition-all">
+                        <a href="/keys/generate" class="flex items-center space-x-3 px-4 py-3 transition-all">
                             <svg class="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
                             </svg>
@@ -47,14 +47,14 @@
                         
                         <div class="border-t border-gray-100 my-2"></div>
                         
-                        <a href="/keys/deleteExp" class="flex items-center space-x-3 px-4 py-3 hover:bg-gradient-to-r hover:from-red-50 hover:to-pink-50 transition-all">
+                        <a href="/keys/deleteExp" class="flex items-center space-x-3 px-4 py-3 transition-all">
                             <svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
                             </svg>
                             <span class="text-gray-700 font-medium">Delete Expired Keys</span>
                         </a>
                         
-                        <a href="/keys/deleteUnused" class="flex items-center space-x-3 px-4 py-3 hover:bg-gradient-to-r hover:from-orange-50 hover:to-yellow-50 transition-all">
+                        <a href="/keys/deleteUnused" class="flex items-center space-x-3 px-4 py-3 transition-all">
                             <svg class="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path>
                             </svg>
@@ -87,42 +87,6 @@
         {{/if}}
     </div>
 </div>
-
-<style>
-    @keyframes fadeInUp {
-        from {
-            opacity: 0;
-            transform: translateY(30px);
-        }
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
-    
-    .animate-fade-in-up {
-        animation: fadeInUp 0.6s ease-out forwards;
-    }
-    
-    .glass-card {
-        background: rgba(255, 255, 255, 0.95);
-        backdrop-filter: blur(10px);
-        border: 1px solid rgba(255, 255, 255, 0.3);
-        box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
-    }
-    
-    .gradient-bg {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    }
-    
-    .key-sensi {
-        filter: blur(5px);
-        transition: filter 0.3s;
-    }
-</style>
-
-
-
 
 <link rel="stylesheet" href="https://cdn.datatables.net/1.10.25/css/dataTables.bootstrap5.min.css">
 

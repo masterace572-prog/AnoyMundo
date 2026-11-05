@@ -13,6 +13,10 @@ Handlebars.registerHelper('lt', (a, b) => Number(a) < Number(b));
 Handlebars.registerHelper('and', (...args) => args.slice(0, -1).every(Boolean));
 Handlebars.registerHelper('or', (...args) => args.slice(0, -1).some(Boolean));
 Handlebars.registerHelper('json', (value) => JSON.stringify(value ?? null));
+Handlebars.registerHelper('alertClass', (type) => {
+  const allowed = ['success', 'warning', 'danger', 'info'];
+  return `ui-alert--${allowed.includes(String(type)) ? String(type) : 'info'}`;
+});
 
 Handlebars.registerPartial('header', templates.header);
 Handlebars.registerPartial('msgStatus', templates.msgStatus);
@@ -108,8 +112,26 @@ export function renderPage(req, res, name, data = {}) {
   const errors = flashRaw.errors || data.errors || {};
   const form = { ...(data.form || {}), ...old };
 
+  let currentPath = '/';
+  try {
+    currentPath = new URL(req.url || '/', 'http://localhost').pathname.toLowerCase();
+  } catch { /* keep the default */ }
+  currentPath = currentPath.replace(/\/+$/, '') || '/';
+  const on = (prefix, exact = false) => (exact
+    ? currentPath === prefix
+    : currentPath === prefix || currentPath.startsWith(prefix + '/'));
+
   const base = {
     brand: config.brand,
+    currentPath,
+    navDashboard: on('/dashboard', true) || currentPath === '/' || currentPath === '/login',
+    navKeys: on('/keys') && !on('/keys/generate'),
+    navGenerate: on('/keys/generate'),
+    navSettings: on('/settings'),
+    navServer: on('/server'),
+    navUsers: on('/admin/manage-users') || on('/admin/user'),
+    navReferral: on('/admin/create-referral'),
+    navLib: on('/lib'),
     year: new Date().getUTCFullYear(),
     title: data.title || 'Panel',
     now: sqlDateTime(),
@@ -129,7 +151,9 @@ export function renderPage(req, res, name, data = {}) {
     ...data,
   };
   // data overrides above, but keep the derived collections coherent
-  base.user = user;
+  base.user = user
+    ? { ...user, initial: String(user.displayName || user.username || 'U').trim().charAt(0).toUpperCase() }
+    : null;
   base.flash = { ...flash, ...(data.flash || {}) };
   base.old = { ...old, ...(data.old || {}) };
   base.errors = { ...errors, ...(data.errors || {}) };

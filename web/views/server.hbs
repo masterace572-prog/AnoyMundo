@@ -11,9 +11,9 @@
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <!-- Server Maintenance Card -->
         {{#if (neq user.level 2)}}
-        <div class="glass-card rounded-2xl p-6 sm:p-8 animate-fade-in-up">
+        <div class="ui-card rounded-2xl p-6 sm:p-8 animate-fade-in-up">
             <div class="flex items-center mb-6">
-                <div class="gradient-bg w-12 h-12 rounded-xl flex items-center justify-center mr-4">
+                <div class="ui-icon w-12 h-12 rounded-xl flex items-center justify-center mr-4">
                     <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01"></path>
                     </svg>
@@ -29,7 +29,7 @@
                         Current Status: <span class="text-purple-600 font-semibold">{{onoff.status}}</span>
                     </label>
                     
-                    <div class="flex items-center justify-between p-4 bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl">
+                    <div class="flex items-center justify-between p-4 rounded-xl ui-tint">
                         <span class="text-gray-800 font-medium">Maintenance Mode</span>
                         <label class="relative inline-flex items-center cursor-pointer">
                             <input type="checkbox" name="radios" value="on" class="sr-only peer" {{#if (eq onoff.status "on")}} checked {{/if}}>
@@ -50,7 +50,7 @@
                     ></textarea>
                 </div>
                 
-                <button type="submit" class="w-full py-3 px-6 bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold rounded-xl hover:from-purple-500 hover:to-pink-500 transition-all duration-300 shadow-lg">
+                <button type="submit" class="w-full py-3 px-6 text-white font-bold rounded-xl transition-all duration-300 shadow-lg ui-btn">
                     Update Settings
                 </button>
             </form>
@@ -58,9 +58,9 @@
         {{/if}}
         
         <!-- Mod Features Card -->
-        <div class="glass-card rounded-2xl p-6 sm:p-8 animate-fade-in-up" style="animation-delay: 0.1s">
+        <div class="ui-card rounded-2xl p-6 sm:p-8 animate-fade-in-up" style="animation-delay: 0.1s">
             <div class="flex items-center mb-6">
-                <div class="gradient-bg-3 w-12 h-12 rounded-xl flex items-center justify-center mr-4">
+                <div class="ui-icon ui-icon-amber w-12 h-12 rounded-xl flex items-center justify-center mr-4">
                     <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path>
                     </svg>
@@ -73,7 +73,7 @@
                 
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <!-- ESP -->
-                    <div class="flex items-center justify-between p-3 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg">
+                    <div class="flex items-center justify-between p-3 rounded-lg ui-tint">
                         <span class="text-gray-800 font-medium text-sm">ESP</span>
                         <label class="relative inline-flex items-center cursor-pointer">
                             <input type="checkbox" name="ESP" value="on" class="sr-only peer" {{#if (eq feature.esp "on")}} checked {{/if}}>
@@ -82,7 +82,7 @@
                     </div>
                     
                     <!-- Items -->
-                    <div class="flex items-center justify-between p-3 bg-gradient-to-r from-green-50 to-teal-50 rounded-lg">
+                    <div class="flex items-center justify-between p-3 rounded-lg ui-tint">
                         <span class="text-gray-800 font-medium text-sm">Items</span>
                         <label class="relative inline-flex items-center cursor-pointer">
                             <input type="checkbox" name="Item" value="on" class="sr-only peer" {{#if (eq feature.item "on")}} checked {{/if}}>
@@ -91,7 +91,7 @@
                     </div>
                     
                     <!-- AIM Bot -->
-                    <div class="flex items-center justify-between p-3 bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg">
+                    <div class="flex items-center justify-between p-3 rounded-lg ui-tint">
                         <span class="text-gray-800 font-medium text-sm">Aim-Bot</span>
                         <label class="relative inline-flex items-center cursor-pointer">
                             <input type="checkbox" name="AIM" value="on" class="sr-only peer" {{#if (eq feature.aim "on")}} checked {{/if}}>
@@ -100,7 +100,7 @@
                     </div>
                     
                     <!-- Silent Aim -->
-                    <div class="flex items-center justify-between p-3 bg-gradient-to-r from-orange-50 to-yellow-50 rounded-lg">
+                    <div class="flex items-center justify-between p-3 rounded-lg ui-tint">
                         <span class="text-gray-800 font-medium text-sm">Silent Aim</span>
                         <label class="relative inline-flex items-center cursor-pointer">
                             <input type="checkbox" name="SilentAim" value="on" class="sr-only peer" {{#if (eq feature.silentaim "on")}} checked {{/if}}>
@@ -109,7 +109,7 @@
                     </div>
                     
                     <!-- Bullet Track -->
-                    <div class="flex items-center justify-between p-3 bg-gradient-to-r from-red-50 to-pink-50 rounded-lg">
+                    <div class="flex items-center justify-between p-3 rounded-lg ui-tint">
                         <span class="text-gray-800 font-medium text-sm">Bullet Track</span>
                         <label class="relative inline-flex items-center cursor-pointer">
                             <input type="checkbox" name="BulletTrack" value="on" class="sr-only peer" {{#if (eq feature.bullettrack "on")}} checked {{/if}}>
@@ -118,7 +118,7 @@
                     </div>
                     
                     <!-- Memory -->
-                    <div class="flex items-center justify-between p-3 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-lg">
+                    <div class="flex items-center justify-between p-3 rounded-lg ui-tint">
                         <span class="text-gray-800 font-medium text-sm">Memory</span>
                         <label class="relative inline-flex items-center cursor-pointer">
                             <input type="checkbox" name="Memory" value="on" class="sr-only peer" {{#if (eq feature.memory "on")}} checked {{/if}}>
@@ -127,7 +127,7 @@
                     </div>
                     
                     <!-- Floating Texts -->
-                    <div class="flex items-center justify-between p-3 bg-gradient-to-r from-teal-50 to-cyan-50 rounded-lg">
+                    <div class="flex items-center justify-between p-3 rounded-lg ui-tint">
                         <span class="text-gray-800 font-medium text-sm">Floating Texts</span>
                         <label class="relative inline-flex items-center cursor-pointer">
                             <input type="checkbox" name="Floating" value="on" class="sr-only peer" {{#if (eq feature.floating "on")}} checked {{/if}}>
@@ -136,7 +136,7 @@
                     </div>
                     
                     <!-- Settings -->
-                    <div class="flex items-center justify-between p-3 bg-gradient-to-r from-gray-50 to-slate-50 rounded-lg">
+                    <div class="flex items-center justify-between p-3 rounded-lg ui-tint">
                         <span class="text-gray-800 font-medium text-sm">Settings</span>
                         <label class="relative inline-flex items-center cursor-pointer">
                             <input type="checkbox" name="Setting" value="on" class="sr-only peer" {{#if (eq feature.setting "on")}} checked {{/if}}>
@@ -145,16 +145,16 @@
                     </div>
                 </div>
                 
-                <button type="submit" class="w-full py-3 px-6 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold rounded-xl hover:from-blue-500 hover:to-indigo-500 transition-all duration-300 shadow-lg mt-6">
+                <button type="submit" class="w-full py-3 px-6 text-white font-bold rounded-xl transition-all duration-300 shadow-lg mt-6 ui-btn">
                     Update Features
                 </button>
             </form>
         </div>
         
         <!-- Change Mod Name Card -->
-        <div class="glass-card rounded-2xl p-6 sm:p-8 animate-fade-in-up" style="animation-delay: 0.2s">
+        <div class="ui-card rounded-2xl p-6 sm:p-8 animate-fade-in-up" style="animation-delay: 0.2s">
             <div class="flex items-center mb-6">
-                <div class="gradient-bg-2 w-12 h-12 rounded-xl flex items-center justify-center mr-4">
+                <div class="ui-icon ui-icon-teal w-12 h-12 rounded-xl flex items-center justify-center mr-4">
                     <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
                     </svg>
@@ -178,16 +178,16 @@
                     >
                 </div>
                 
-                <button type="submit" class="w-full py-3 px-6 bg-gradient-to-r from-pink-600 to-red-600 text-white font-bold rounded-xl hover:from-pink-500 hover:to-red-500 transition-all duration-300 shadow-lg">
+                <button type="submit" class="w-full py-3 px-6 text-white font-bold rounded-xl transition-all duration-300 shadow-lg ui-btn">
                     Update Mod Name
                 </button>
             </form>
         </div>
         
         <!-- Change Floating Text Card -->
-        <div class="glass-card rounded-2xl p-6 sm:p-8 animate-fade-in-up" style="animation-delay: 0.3s">
+        <div class="ui-card rounded-2xl p-6 sm:p-8 animate-fade-in-up" style="animation-delay: 0.3s">
             <div class="flex items-center mb-6">
-                <div class="gradient-bg-4 w-12 h-12 rounded-xl flex items-center justify-center mr-4">
+                <div class="ui-icon ui-icon-blue w-12 h-12 rounded-xl flex items-center justify-center mr-4">
                     <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"></path>
                     </svg>
@@ -203,7 +203,7 @@
                         Current Status: <span class="text-green-600 font-semibold">{{ftext._status}}</span>
                     </label>
                     
-                    <div class="flex items-center justify-between p-4 bg-gradient-to-r from-green-50 to-teal-50 rounded-xl">
+                    <div class="flex items-center justify-between p-4 rounded-xl ui-tint">
                         <span class="text-gray-800 font-medium">Safe Mode</span>
                         <label class="relative inline-flex items-center cursor-pointer">
                             <input type="checkbox" name="_ftextr" value="Safe" class="sr-only peer" {{#if (eq ftext._status "Safe")}} checked {{/if}}>
@@ -225,51 +225,11 @@
                     >
                 </div>
                 
-                <button type="submit" class="w-full py-3 px-6 bg-gradient-to-r from-green-600 to-teal-600 text-white font-bold rounded-xl hover:from-green-500 hover:to-teal-500 transition-all duration-300 shadow-lg">
+                <button type="submit" class="w-full py-3 px-6 text-white font-bold rounded-xl transition-all duration-300 shadow-lg ui-btn">
                     Update Floating Text
                 </button>
             </form>
         </div>
     </div>
 </div>
-
-<style>
-    @keyframes fadeInUp {
-        from {
-            opacity: 0;
-            transform: translateY(30px);
-        }
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
-    
-    .animate-fade-in-up {
-        animation: fadeInUp 0.6s ease-out forwards;
-    }
-    
-    .glass-card {
-        background: rgba(255, 255, 255, 0.95);
-        backdrop-filter: blur(10px);
-        border: 1px solid rgba(255, 255, 255, 0.3);
-        box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
-    }
-    
-    .gradient-bg {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    }
-    
-    .gradient-bg-2 {
-        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-    }
-    
-    .gradient-bg-3 {
-        background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-    }
-    
-    .gradient-bg-4 {
-        background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
-    }
-</style>
 

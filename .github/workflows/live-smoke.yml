@@ -48,6 +48,23 @@ jobs:
             [ "$code" = "200" ] && pass "GET /$route -> 200" || fail "/$route returned $code"
           done
 
+          uicss=$(curl -sS --max-time 30 "$BASE/assets/css/app.css")
+          [ -n "$uicss" ] && ! echo "$uicss" | grep -q 'linear-gradient' \
+            && pass "flat app.css is served with no gradients" || fail "app.css contains gradients or is empty"
+
+          font=$(curl -sS --max-time 30 -o /dev/null -w '%{http_code}' "$BASE/assets/fonts/inter-latin-wght-normal.woff2")
+          [ "$font" = "200" ] && pass "self-hosted Inter font -> 200" || fail "font: $font"
+
+          settings=$(curl -sS --max-time 30 -b "$JAR" -c "$JAR" "$BASE/settings")
+          ! echo "$settings" | grep -q '<?=\|old(.fullname.)' \
+            && pass "settings has no untranslated PHP" || fail "settings leaked PHP source"
+          echo "$settings" | grep -q 'name="fullname"' \
+            && pass "settings fullname input renders" || fail "settings fullname input missing"
+
+          generate=$(curl -sS --max-time 30 -b "$JAR" -c "$JAR" "$BASE/keys/generate")
+          echo "$generate" | grep -q 'Total Saldo' && ! echo "$generate" | grep -q '&lt;i class\|bi-wallet' \
+            && pass "saldo notice is plain text" || fail "saldo notice shows escaped HTML"
+
           keys=$(curl -sS --max-time 30 -b "$JAR" -c "$JAR" "$BASE/keys/api?draw=1&start=0&length=10")
           echo "$keys" | grep -q 'recordsTotal' && pass "GET /keys/api -> DataTables JSON" || fail "keys api: $keys"
 

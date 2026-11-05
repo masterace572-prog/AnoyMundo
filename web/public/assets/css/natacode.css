@@ -1,26 +1,21 @@
-@import url('https://fonts.googleapis.com/css2?family=Poppins&display=swap');
-@import url('https://cdnjs.cloudflare.com/ajax/libs/limonte-sweetalert2/11.1.0/sweetalert2.min.css');
+/* Legacy static assets kept from the original CI4 panel.
+   Typography, colours and layout now live in app.css (loaded afterwards). */
 @import url("https://cdn.jsdelivr.net/npm/bootstrap-icons@1.5.0/font/bootstrap-icons.css");
+@import url("https://cdnjs.cloudflare.com/ajax/libs/limonte-sweetalert2/11.1.0/sweetalert2.min.css");
 
-body {
-    background-color: whitesmoke;
-    font-family: 'Poppins', sans-serif !important;
-}
+/* The old body background, container width and Poppins font were removed:
+   the flat design system in app.css owns those. */
 
-.container {
-    max-width: 1140px;
+.key-sensi {
+    filter: blur(3px);
 }
 
 .btn-default {
     background-color: #1b6ec2;
-    color: white;
+    color: #fff;
 }
 
 .btn-default:hover {
-    background-color: dodgerblue;
-    color: whitesmoke;
-}
-
-.key-sensi {
-    filter: blur(3px);
+    background-color: #3a8ee6;
+    color: #fff;
 }

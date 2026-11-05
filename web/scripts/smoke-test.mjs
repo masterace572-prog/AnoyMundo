@@ -95,6 +95,13 @@ try {
   r = await request('/');
   ok(r.status === 200 && /Sign In/.test(r.body), 'GET / renders the original login page');
   ok(/𝙋𝙍𝙄𝙉𝘾𝙀 𝙋𝘼𝙋𝘼 𝙁𝙄𝙇𝙀/.test(r.body), 'login page keeps original PRINCE PAPA FILE branding');
+  ok(/name="viewport"/.test(r.body) && /app\.css/.test(r.body),
+    'login page has a responsive viewport and loads the design system');
+  ok(!/linear-gradient|bg-gradient/.test(r.body) && !/ui-alert/.test(r.body),
+    'login page is gradient-free and has no stale welcome banner');
+  r = await request('/register');
+  ok(r.status === 200 && /Create Account/.test(r.body), 'GET /register renders the flat sign-up form');
+  ok(!/linear-gradient|bg-gradient/.test(r.body), 'register page is gradient-free');
   r = await request('/dashboard');
   ok(r.status === 302 && r.location === '/login', 'protected page redirects anonymous visitor to /login');
 
@@ -118,7 +125,19 @@ try {
     r = await request(route);
     ok(r.status === 200, `GET ${route} renders (${r.status})`);
     if (r.status !== 200) console.error(String(r.body).slice(0, 300));
+    ok(/name="viewport"/.test(r.body) && !/linear-gradient|bg-gradient/.test(r.body),
+      `GET ${route} is responsive and gradient-free`);
   }
+
+  // Regression: the two "code showing as text" bugs reported by the user.
+  r = await request('/keys/generate');
+  ok(/Total Saldo/.test(r.body) && !/&lt;i class|bi-wallet|&lt;strong&gt;/.test(r.body),
+    'saldo notice is plain text, not escaped HTML');
+  r = await request('/settings');
+  ok(!/<\?=|&lt;\?=|old\('fullname'\)/.test(r.body),
+    'settings fullname field contains no PHP source code');
+  ok(/name="fullname"[\s\S]{0,400}value="admin"/.test(r.body),
+    'settings fullname field is prefilled with the saved value');
 
   // 6. DataTables API
   r = await request('/keys/api?draw=3&start=0&length=10&order%5B0%5D%5Bcolumn%5D=0&order%5B0%5D%5Bdir%5D=desc');
@@ -209,6 +228,13 @@ try {
   // 14. static assets
   r = await request('/assets/css/tailwind.css');
   ok(r.status === 200 && r.body.includes('.bg-purple-600'), 'compiled Tailwind CSS is served statically');
+  r = await request('/assets/css/app.css');
+  ok(r.status === 200 && !/linear-gradient|radial-gradient/.test(r.body) && r.body.includes('--accent'),
+    'flat app.css design system is served without gradients');
+  r = await request('/assets/js/app-ui.js');
+  ok(r.status === 200 && r.body.includes('table-scroll'), 'responsive table helper is served');
+  r = await request('/assets/fonts/inter-latin-wght-normal.woff2');
+  ok(r.status === 200, 'self-hosted Inter font is served statically');
 
   // 15. logout
   r = await request('/logout');

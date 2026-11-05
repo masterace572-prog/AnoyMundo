@@ -53,7 +53,7 @@ function page(req, res, name, data = {}) {
 }
 
 function fail(req, res, url, message, errors = {}, old = {}) {
-  return redirect(res, url, { msgDanger: `<strong>Failed</strong> ${message}`, errors, old });
+  return redirect(res, url, { msgDanger: `Failed: ${message}`, errors, old });
 }
 
 async function logAttempt(username, ip, ok) {
@@ -247,7 +247,7 @@ async function doRegister(req, res, body) {
   if (!errors.referral) {
     const { data, error } = await db().from('referral_code').select('*').eq('code', codeHash(referral)).maybeSingle();
     if (error || !data) errors.referral = 'Wrong referral, please try again.';
-    else if (data.used_by) errors.referral = `Wrong referral, code has been used &middot; ${data.used_by}.`;
+    else if (data.used_by) errors.referral = `Wrong referral, code has been used · ${data.used_by}.`;
     else if (data.acc_expiration && new Date(data.acc_expiration).getTime() < Date.now()) errors.referral = 'This referral code has expired.';
     else code = data;
   }
@@ -578,7 +578,7 @@ export async function handle(req, res) {
     if (lp === '/keys/generate') {
       if (method === 'POST') return doGenerate(req, res, body, user);
       const message = Number(user.saldo) > 0
-        ? { text: `<i class="bi bi-wallet"></i> Total Saldo ₹${user.saldo}`, type: 'success' }
+        ? { text: `Total Saldo ₹${Number(user.saldo).toLocaleString('en-IN')}`, type: 'success' }
         : { text: 'Please top up to your beloved admin.', type: 'warning' };
       return page(req, res, 'keys_generate', {
         user, title: 'Generate', pageMessage: message,
@@ -639,7 +639,7 @@ export async function handle(req, res) {
     // ------------------------------- settings ------------------------------
     if (lp === '/settings') {
       if (method === 'POST') return doSettings(req, res, body, user, '/settings');
-      return page(req, res, 'settings', { user, title: 'Settings' });
+      return page(req, res, 'settings', { user, title: 'Settings', form: { fullname: user.fullname || '' } });
     }
 
     // ---------------------------- server settings --------------------------
@@ -708,7 +708,7 @@ export async function handle(req, res) {
     }
 
     // -------------------------------- 404 -----------------------------------
-    return sendHtml(res, `<!doctype html><html><head><meta charset="utf-8"><title>404 - ${escapeHtml(config.brand)}</title><link rel="stylesheet" href="/assets/css/tailwind.css"></head><body class="bg-slate-100"><div class="max-w-lg mx-auto mt-24 p-8 bg-white rounded-2xl shadow text-center"><h1 class="text-3xl font-bold text-purple-700 mb-2">404</h1><p class="text-gray-600 mb-6">Page not found: ${escapeHtml(p)}</p><a href="/dashboard" class="px-4 py-2 bg-purple-600 text-white rounded-lg">Back to dashboard</a></div></body></html>`, 404);
+    return sendHtml(res, `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>404 - ${escapeHtml(config.brand)}</title><link rel="stylesheet" href="/assets/css/tailwind.css"><link rel="stylesheet" href="/assets/css/app.css"></head><body class="app-body"><main class="auth-shell"><div class="auth-card" style="text-align:center"><span class="brand-mark brand-mark-lg" aria-hidden="true">404</span><h1 class="auth-title">Page not found</h1><p class="auth-subtitle">${escapeHtml(p)}</p><div style="margin-top:24px"><a href="/dashboard" class="ui-btn auth-submit">Back to dashboard</a></div></div></main></body></html>`, 404);
   } catch (error) {
     console.error('[anoymundo] request failed:', error);
     if (!res.headersSent) {

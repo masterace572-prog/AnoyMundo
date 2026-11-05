@@ -245,6 +245,7 @@ def convert(text, name):
     text = re.sub(r"<\?= form_dropdown\(\[.*?'name' => '(\w+)'.*?\],.*?\) \?>",
                   lambda m: "{{{selects." + m.group(1) + "}}}", text, flags=re.S)
     # old() ?: fallbacks -> server-computed form values
+    text = re.sub(r"<\?= old\('(\w+)'\) \?: \(\$\w+->\w+ \?: ''\) \?>", r"{{form.\1}}", text)
     text = re.sub(r"<\?= old\('(\w+)'\) \?: \$(\w+)->(\w+) \?>", r"{{form.\1}}", text)
     text = re.sub(r"<\?= old\('(\w+)'\) \?>", r"{{form.\1}}", text)
     # Conditional expressions inside attributes / labels
@@ -292,7 +293,7 @@ def main():
             continue
         out = convert(p.read_text(encoding="utf-8", errors="replace"), dst)
         (OUT / dst).write_text(out, encoding="utf-8")
-        leftover = re.findall(r"<\?[^>]*\?>", out)
+        leftover = re.findall(r"<\?.*?\?>", out, flags=re.S)
         print(f"{dst:22s} {len(out):6d} chars, {len(leftover):3d} leftover php tags")
         for tag in sorted(set(leftover))[:8]:
             print("    ", tag[:110])

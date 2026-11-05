@@ -13,13 +13,16 @@ See [DEPLOYMENT.md](DEPLOYMENT.md) for the full setup and verification record.
 | Database | MySQL / MariaDB | Supabase Postgres (free tier) |
 | Sessions | files in `writable/session/` | signed, stateless HTTP-only cookie |
 | Templates | CodeIgniter PHP views | Handlebars (converted 1:1) |
-| Styling | Tailwind Play CDN + local CSS | Tailwind compiled to static CSS |
+| Styling | Tailwind Play CDN + local CSS | static Tailwind + flat `app.css` design system, self-hosted Inter |
 | Library upload | writes `TumharaPapaDARK/lib.so` to disk | stored in Supabase `client_release` |
 | Deployment | paid shared hosting | GitHub → Vercel (free) |
 
-The original UI is preserved: **PRINCE PAPA FILE** branding, purple/pink
-gradients, glass cards, the original page layouts, DataTables, SweetAlert2 and
-all original routes.
+The original **PRINCE PAPA FILE** branding, page layouts, DataTables,
+SweetAlert2 and every original route are preserved. The visuals were refreshed
+into a flat, gradient-free design system (`web/public/assets/css/app.css`):
+responsive desktop sidebar / mobile drawer, self-hosted Inter typography,
+consistent cards, forms, tables and alerts. `scripts/refresh-ui.py` documents
+the one-off conversion of the legacy inline gradient styles.
 
 ## Layout
 
@@ -47,7 +50,7 @@ excluded.
 cd web
 npm install
 npm run build       # generates templates + compiles Tailwind, validates all modules
-npm test            # 53 end-to-end HTTP tests using an in-memory DB
+npm test            # 71 end-to-end HTTP tests using an in-memory DB
 npm run dev         # http://localhost:3000  (DB_DRIVER=memory)
 ```
 

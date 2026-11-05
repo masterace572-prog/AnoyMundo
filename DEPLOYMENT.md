@@ -38,6 +38,27 @@ function. `npm run build` compiles the Handlebars templates and Tailwind CSS
 before the function is bundled; both generated files are also committed so the
 bundle never depends on build ordering.
 
+## 1b. UI design system
+
+`web/public/assets/css/app.css` is the single source of visual styling, loaded
+after Bootstrap, Tailwind and the legacy `natacode.css`. It provides:
+
+- **No gradients** — solid indigo/teal/amber/blue accents, light neutral
+  surfaces, thin borders and subtle shadows.
+- **Typography** — self-hosted Inter variable font (`public/assets/fonts/`,
+  copied from `@fontsource-variable/inter` by `npm run prebuild`), a single
+  type scale, tabular figures for numbers, tighter heading tracking.
+- **Responsive shell** — 252px sticky sidebar on desktop, off-canvas drawer +
+  top bar under 960px, single-column grids/tables under 640px. Wide tables are
+  wrapped in a horizontal scroll container by `public/assets/js/app-ui.js`.
+- **Consistent components** — `.ui-card`, `.ui-btn`, `.ui-icon`, `.ui-tint`,
+  `.ui-alert`, uniform inputs/selects/tables, focus rings and reduced-motion
+  support.
+
+All flash/error messages are plain text, so no markup is ever rendered as
+visible code. `scripts/check.mjs` fails the build if a view reintroduces PHP
+tags, gradients or escaped HTML in messages.
+
 ## 2. Supabase
 
 Applied `supabase/schema.sql` as migration `anoymundo_panel_schema`. It creates
@@ -89,16 +110,18 @@ No secret is committed to git (`.env*` is ignored).
 | Check | Result |
 |---|---|
 | `GET /api/health` | `{"ok":true,...,"schema":"12/12 expected tables present"}` |
-| `GET /` and `/login` | original PRINCE PAPA FILE login page |
-| `GET /register` | original registration page |
+| `GET /` and `/login` | flat PRINCE PAPA FILE sign-in page |
+| `GET /register` | responsive two-column sign-up form |
 | `POST /login` (`admin`/`admin123`) | 302 → `/dashboard`, signed `am_session` cookie |
-| `/dashboard`, `/keys`, `/keys/generate`, `/settings`, `/Server`, `/admin/*`, `/lib` | 200, original layout |
+| `/dashboard`, `/keys`, `/keys/generate`, `/settings`, `/Server`, `/admin/*`, `/lib` | 200, responsive sidebar layout, no gradients, no leaked PHP/HTML |
 | `GET /keys/api`, `GET /admin/api/users` | DataTables JSON from Supabase |
 | `POST /keys/generate` | creates a key, deducts saldo, writes history |
 | `POST /connect` | `status:true` + `real`, `token`, `modname`, 8 feature flags, expiry fields |
 | `POST /connect` with bad key | `{"status":false,"reason":"USER OR GAME NOT REGISTERED"}` |
 | `GET /api/lib/version` | plain-text `1.0` |
 | `GET /assets/css/tailwind.css` | compiled CSS, no CDN dependency |
+| `GET /assets/css/app.css` | flat design system (no gradients) |
+| `GET /assets/fonts/inter-latin-wght-normal.woff2` | self-hosted Inter variable font |
 | `GET /logout` | clears session |
 
 `/connect` accepts both the original form POST and a query-string GET
@@ -113,11 +136,15 @@ curl -sS -X POST https://anoymundo-panel.vercel.app/connect \
 
 ## 5. Automated tests
 
-- `npm test` — 53 offline end-to-end HTTP tests using an in-memory DB driver
+- `npm test` — 71 offline end-to-end HTTP tests using an in-memory DB driver
   (login, registration, key CRUD, DataTables, `/connect`, maintenance/feature
-  toggles, referral → reseller, library upload/version, logout).
-- `npm run build` — compiles templates + Tailwind, validates every template and
-  module, verifies the legacy `admin123` bcrypt hash.
+  toggles, referral → reseller, library upload/version, logout), plus UI
+  regression guards: no gradients, no escaped HTML/PHP in notices or form
+  values, responsive viewport, flat CSS and font assets served.
+- `npm run build` — compiles templates + Tailwind, copies the Inter font,
+  parses every template (syntax errors fail the build), validates modules,
+  rejects leftover PHP/gradient markup, and verifies the legacy `admin123`
+  bcrypt hash.
 - `.github/workflows/live-smoke.yml` — GitHub Actions job that curls the live
   Vercel deployment: health, login with cookie jar, all pages, DataTables,
   key generation, `/connect` success + rejection, cleanup, logout. Both runs
@@ -141,7 +168,7 @@ curl -sS -X POST https://anoymundo-panel.vercel.app/connect \
 cd web
 npm install
 npm run build     # prebuild + validation
-npm test          # 53 offline end-to-end tests
+npm test          # 71 offline end-to-end tests
 npm run dev       # live preview on 0.0.0.0:3000 (memory DB by default)
 ```
 

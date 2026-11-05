@@ -15,12 +15,15 @@ Handlebars.registerHelper('lt', () => true);
 Handlebars.registerHelper('and', () => true);
 Handlebars.registerHelper('or', () => true);
 Handlebars.registerHelper('json', () => '');
+Handlebars.registerHelper('alertClass', () => 'ui-alert--info');
 
 const { templates } = await import('../src/templates.generated.mjs');
 Handlebars.registerPartial('header', templates.header);
 Handlebars.registerPartial('msgStatus', templates.msgStatus);
 for (const [name, source] of Object.entries(templates)) {
   try {
+    // Handlebars.compile is lazy, so parse explicitly to catch syntax errors.
+    Handlebars.parse(source);
     Handlebars.compile(source);
     process.stdout.write(`  ok  template ${name}\n`);
   } catch (e) {
@@ -47,6 +50,32 @@ try {
 const css = path.join(root, 'public', 'assets', 'css', 'tailwind.css');
 if (!fs.existsSync(css) || fs.statSync(css).size < 1000) errors.push('compiled Tailwind CSS is missing or too small');
 else process.stdout.write(`  ok  tailwind.css (${(fs.statSync(css).size / 1024).toFixed(0)} KB)\n`);
+
+// ---- UI regression guards -------------------------------------------------
+const viewsDir = path.join(root, 'views');
+const leaked = [];
+for (const file of fs.readdirSync(viewsDir).filter((f) => f.endsWith('.hbs'))) {
+  const source = fs.readFileSync(path.join(viewsDir, file), 'utf8');
+  if (/<\?|&lt;\?|linear-gradient|bg-gradient|glass-card|gradient-bg/.test(source)) {
+    leaked.push(`${file}: untranslated PHP or gradient markup`);
+  }
+}
+if (leaked.length) errors.push(...leaked);
+else process.stdout.write('  ok  views contain no PHP tags and no gradients\n');
+
+const appSource = fs.readFileSync(path.join(root, 'src', 'app.mjs'), 'utf8');
+if (/<i class|<strong>|&middot;/.test(appSource)) errors.push('server messages still contain HTML markup');
+else process.stdout.write('  ok  flash/error messages are plain text\n');
+
+const uiCss = path.join(root, 'public', 'assets', 'css', 'app.css');
+if (!fs.existsSync(uiCss) || fs.statSync(uiCss).size < 5000) errors.push('app.css design system is missing');
+else if (/linear-gradient|radial-gradient/.test(fs.readFileSync(uiCss, 'utf8'))) errors.push('app.css contains a gradient');
+else process.stdout.write(`  ok  app.css flat design system (${(fs.statSync(uiCss).size / 1024).toFixed(0)} KB)\n`);
+
+for (const asset of ['public/assets/js/app-ui.js', 'public/assets/fonts/inter-latin-wght-normal.woff2',
+  'public/assets/fonts/INTER-LICENSE.txt']) {
+  if (!fs.existsSync(path.join(root, asset))) errors.push(`missing static asset: ${asset}`);
+}
 
 if (errors.length) {
   console.error('\n[check] FAILED:');
