@@ -26,11 +26,27 @@ jobs:
           echo "$health" | grep -q '"ok":true' && [ "$(echo "$health" | grep -o '12/12')" = "12/12" ] \
             && pass "GET /api/health (Supabase + 12 tables)" || fail "health: $health"
 
-          curl -sS --max-time 30 "$BASE/" | grep -q 'Sign In' \
-            && pass "GET / renders the original login page" || fail "login page"
+          home=$(curl -sS --max-time 30 "$BASE/")
+          echo "$home" | grep -q 'Sign In' && pass "GET / renders the login page" || fail "login page"
+          echo "$home" | grep -q '>Anoy</' && echo "$home" | grep -q '<title>Anoy' \
+            && ! echo "$home" | grep -q '𝙋' \
+            && pass "login page shows the Anoy panel name (old brand removed)" || fail "login page panel name"
+          echo "$home" | grep -q '@libAkAudioVisiual' \
+            && echo "$home" | grep -q 'https://t.me/libAkAudioVisiual' \
+            && ! echo "$home" | grep -qi 'aalyanmods\|aloneboy_boss' \
+            && pass "login page uses @libAkAudioVisiual (old handles removed)" || fail "login page Telegram handle"
 
-          curl -sS --max-time 30 "$BASE/register" | grep -q 'Create Account' \
-            && pass "GET /register renders" || fail "register page"
+          reg=$(curl -sS --max-time 30 "$BASE/register")
+          echo "$reg" | grep -q 'Create Account' && pass "GET /register renders" || fail "register page"
+          echo "$reg" | grep -q '@libAkAudioVisiual' \
+            && echo "$reg" | grep -q 'https://t.me/libAkAudioVisiual' \
+            && ! echo "$reg" | grep -qi 'aalyanmods\|aloneboy_boss' \
+            && pass "register page uses @libAkAudioVisiual" || fail "register page Telegram handle"
+
+          info=$(curl -sS --max-time 30 "$BASE/connect")
+          echo "$info" | grep -q '"_client":"Anoy"' \
+            && echo "$info" | grep -q '"author":"@libAkAudioVisiual"' \
+            && pass "GET /connect info reports Anoy + @libAkAudioVisiual" || fail "connect info: $info"
 
           ver=$(curl -sS --max-time 30 "$BASE/api/lib/version" | tr -d '\n')
           [ -n "$ver" ] && pass "GET /api/lib/version -> $ver" || fail "lib version"
@@ -102,3 +118,5 @@ jobs:
 # Re-run verification against the final production deployment.
 
 # Re-run live checks against the flat-UI production deployment.
+
+# Re-run live checks against the Anoy / @libAkAudioVisiual production release.
