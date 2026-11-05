@@ -36,6 +36,11 @@ reading → uploading → saving → done, with accent / success / danger colour
 percent, bytes sent and an accessible `role="progressbar"`. Both respect
 `prefers-reduced-motion` and release their state on bfcache restores.
 
+Quick actions (create / delete / reset key) use compact `AnoyUI.toast()`
+notices instead of full SweetAlert result dialogs, and success flashes are
+promoted to the same small toast. Errors and warnings stay on the page as
+compact banners. Delete confirmations use a smaller `swal-compact` dialog.
+
 ## Layout
 
 ```

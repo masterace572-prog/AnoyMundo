@@ -308,6 +308,88 @@
     return (n / (1024 * 1024)).toFixed(2) + ' MB';
   }
 
+  /* ------------------------------------------------------------------ *
+   * Compact toast notifications. Used for quick actions (create / delete
+   * key) instead of a full-screen SweetAlert modal or a wide flash banner.
+   * No CDN dependency, so it also works when SweetAlert/jQuery are blocked.
+   * ------------------------------------------------------------------ */
+  function toastHost() {
+    var host = document.getElementById('anoy-toasts');
+    if (host) return host;
+    host = document.createElement('div');
+    host.id = 'anoy-toasts';
+    host.className = 'anoy-toasts';
+    host.setAttribute('aria-live', 'polite');
+    document.body.appendChild(host);
+    return host;
+  }
+
+  /* duration 0 keeps the toast on screen until dismiss() is called. */
+  function toast(message, kind, duration) {
+    var type = kind || 'info';
+    var host = toastHost();
+    var el = document.createElement('div');
+    el.className = 'anoy-toast anoy-toast--' + type;
+    el.setAttribute('role', type === 'error' ? 'alert' : 'status');
+
+    var dot = document.createElement('span');
+    dot.className = 'anoy-toast__dot';
+    dot.setAttribute('aria-hidden', 'true');
+    var text = document.createElement('span');
+    text.className = 'anoy-toast__text';
+    text.textContent = String(message == null ? '' : message);
+    var close = document.createElement('button');
+    close.type = 'button';
+    close.className = 'anoy-toast__close';
+    close.setAttribute('aria-label', 'Dismiss notification');
+    close.textContent = '×';
+
+    el.appendChild(dot);
+    el.appendChild(text);
+    el.appendChild(close);
+    host.appendChild(el);
+
+    var timer = null;
+    function dismiss() {
+      if (timer) { window.clearTimeout(timer); timer = null; }
+      if (!el.parentNode) return;
+      el.classList.add('is-leaving');
+      window.setTimeout(function () {
+        if (el.parentNode) el.parentNode.removeChild(el);
+      }, 180);
+    }
+    function update(msg, newKind) {
+      text.textContent = String(msg == null ? '' : msg);
+      if (newKind) {
+        el.className = 'anoy-toast anoy-toast--' + newKind;
+        el.setAttribute('role', newKind === 'error' ? 'alert' : 'status');
+      }
+    }
+    close.addEventListener('click', dismiss);
+    var ms = duration === 0 ? 0 : (duration || 3200);
+    if (ms > 0) timer = window.setTimeout(dismiss, ms);
+    return { element: el, dismiss: dismiss, update: update };
+  }
+
+  /* Success flashes (e.g. "key generated") become small toasts. Errors and
+     warnings stay on the page as compact banners so they cannot be missed. */
+  function promoteFlashToasts() {
+    Array.prototype.forEach.call(
+      document.querySelectorAll('.ui-alert[data-flash="success"]'), function (el) {
+        var body = el.querySelector('.ui-alert-body');
+        var message = body ? body.textContent : el.textContent;
+        message = (message || '').replace(/\s+/g, ' ').trim();
+        if (!message) return;
+        toast(message, 'success');
+        el.hidden = true;
+        var wrap = el.parentElement;
+        if (wrap && (wrap.classList.contains('mb-6') || wrap.classList.contains('mb-4')) &&
+            !wrap.querySelector('.ui-alert:not([hidden]), input, button:not(.ui-alert-close)')) {
+          wrap.style.display = 'none';
+        }
+      });
+  }
+
   /* Small public API so views with custom async forms stay consistent. */
   window.AnoyUI = {
     busyButton: busyButton,
@@ -315,7 +397,8 @@
     setProgress: setProgress,
     showPageProgress: showPageProgress,
     hidePageProgress: hidePageProgress,
-    humanBytes: humanBytes
+    humanBytes: humanBytes,
+    toast: toast
   };
 
   function init() {
@@ -324,6 +407,7 @@
     formatSaldo();
     formatExpiry();
     hideEmptySlots();
+    promoteFlashToasts();
 
     document.addEventListener('submit', onFormSubmit, false);
     document.addEventListener('click', onButtonLinkClick, false);

@@ -151,8 +151,8 @@
                         render: function(data, type, row, meta) {
                             var key = row.user_key;
                             return '<div class="row-actions">' +
-                                '<button type="button" class="row-action" title="Reset key" onclick="resetUserKey(\'' + key + '\')">Reset</button> ' +
-                                '<button type="button" class="row-action row-action--danger" title="Delete key" onclick="resetUserKey1(\'' + key + '\')">Delete</button> ' +
+                                '<button type="button" class="row-action" title="Reset key" onclick="resetUserKey(\'' + key + '\', this)">Reset</button> ' +
+                                '<button type="button" class="row-action row-action--danger" title="Delete key" onclick="resetUserKey1(\'' + key + '\', this)">Delete</button> ' +
                                 '<a class="row-action" title="Edit key information" href="' + window.location.origin + '/keys/' + row.id + '">Edit</a>' +
                                 '</div>';
                         }
@@ -182,111 +182,97 @@
         });
     });
 
-    function resetUserKey1(keys) {
-        Swal.fire({
-            title: 'Are you sure?',
-            text: "You won't be able to revert this!",
+    /* Compact notifications for delete / reset instead of full-screen modals. */
+    function notify(message, kind) {
+        if (window.AnoyUI && window.AnoyUI.toast) {
+            window.AnoyUI.toast(message, kind || 'info');
+        } else if (window.Swal) {
+            Swal.fire(message, '', kind || 'info');
+        }
+    }
+
+    function startAction(btn) {
+        if (btn && window.AnoyUI && window.AnoyUI.busyButton) {
+            window.AnoyUI.busyButton(btn, 'Working…');
+        }
+        return (window.AnoyUI && window.AnoyUI.toast)
+            ? window.AnoyUI.toast('Working…', 'info', 0) : null;
+    }
+
+    function endAction(btn, pending) {
+        if (pending) pending.dismiss();
+        if (btn && window.AnoyUI && window.AnoyUI.releaseButton) {
+            window.AnoyUI.releaseButton(btn);
+        }
+    }
+
+    function confirmAction(title, confirmText) {
+        return Swal.fire({
+            title: title,
             icon: 'warning',
             showCancelButton: true,
-            customClass: { confirmButton: 'swal-confirm-danger' },
+            customClass: { popup: 'swal-compact', confirmButton: 'swal-confirm-danger' },
             confirmButtonColor: '#E15A48',
             cancelButtonColor: '#22221C',
-            confirmButtonText: 'Yes, delete'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                Toast.fire({
-                    icon: 'info',
-                    title: 'Please wait...'
-                })
-
-                var base_url = window.location.origin;
-                var api_url = `${base_url}/keys/resetAll`;
-                $.getJSON(api_url, {
-                        userkey: keys,
-                        reset: 1
-                    },
-                    function(data, textStatus, jqXHR) {
-                        if (textStatus == 'success') {
-                            if (data.registered) {
-                                if (data.deleted || data.reset) {
-                                    $(`#devMax-${keys}`).html(`0/${data.devices_max}`);
-                                    Swal.fire(
-                                        'Reset!',
-                                        'Your device key has been reset.',
-                                        'success'
-                                    )
-                                } else {
-                                    Swal.fire(
-                                        'Failed!',
-                                        data.devices_total ? "You don't have any access to this user." : "User key devices already reset.",
-                                        data.devices_total ? 'error' : 'warning'
-                                    )
-                                }
-                            } else {
-                                Swal.fire(
-                                    'Failed!',
-                                    "User key no longer exists.",
-                                    'error'
-                                )
-                            }
-                        }
-                    }
-                );
-            }
+            confirmButtonText: confirmText
         });
     }
 
-    function resetUserKey(keys) {
-        Swal.fire({
-            title: 'Are you sure?',
-            text: "You won't be able to revert this!",
-            icon: 'warning',
-            showCancelButton: true,
-            customClass: { confirmButton: 'swal-confirm-danger' },
-            confirmButtonColor: '#E15A48',
-            cancelButtonColor: '#22221C',
-            confirmButtonText: 'Yes, reset'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                Toast.fire({
-                    icon: 'info',
-                    title: 'Please wait...'
-                })
-
-                var base_url = window.location.origin;
-                var api_url = `${base_url}/keys/reset`;
-                $.getJSON(api_url, {
-                        userkey: keys,
-                        reset: 1
-                    },
-                    function(data, textStatus, jqXHR) {
-                        if (textStatus == 'success') {
-                            if (data.registered) {
-                                if (data.deleted || data.reset) {
-                                    $(`#devMax-${keys}`).html(`0/${data.devices_max}`);
-                                    Swal.fire(
-                                        'Reset!',
-                                        'Your device key has been reset.',
-                                        'success'
-                                    )
-                                } else {
-                                    Swal.fire(
-                                        'Failed!',
-                                        data.devices_total ? "You don't have any access to this user." : "User key devices already reset.",
-                                        data.devices_total ? 'error' : 'warning'
-                                    )
-                                }
-                            } else {
-                                Swal.fire(
-                                    'Failed!',
-                                    "User key no longer exists.",
-                                    'error'
-                                )
-                            }
+    function resetUserKey1(keys, btn) {
+        confirmAction('Delete this key?', 'Yes, delete').then((result) => {
+            if (!result.isConfirmed) return;
+            var pending = startAction(btn);
+            var api_url = `${window.location.origin}/keys/resetAll`;
+            $.getJSON(api_url, { userkey: keys, reset: 1 }, function (data, textStatus) {
+                endAction(btn, pending);
+                if (textStatus == 'success') {
+                    if (data.registered) {
+                        if (data.deleted || data.reset) {
+                            $(`#devMax-${keys}`).html(`0/${data.devices_max}`);
+                            notify('Key deleted', 'success');
+                        } else {
+                            notify(data.devices_total
+                                ? "You don't have any access to this user."
+                                : 'User key devices already reset.',
+                                data.devices_total ? 'error' : 'warning');
                         }
+                    } else {
+                        notify('User key no longer exists.', 'error');
                     }
-                );
-            }
+                }
+            }).fail(function () {
+                endAction(btn, pending);
+                notify('Could not reach the server.', 'error');
+            });
+        });
+    }
+
+    function resetUserKey(keys, btn) {
+        confirmAction('Reset devices?', 'Yes, reset').then((result) => {
+            if (!result.isConfirmed) return;
+            var pending = startAction(btn);
+            var api_url = `${window.location.origin}/keys/reset`;
+            $.getJSON(api_url, { userkey: keys, reset: 1 }, function (data, textStatus) {
+                endAction(btn, pending);
+                if (textStatus == 'success') {
+                    if (data.registered) {
+                        if (data.deleted || data.reset) {
+                            $(`#devMax-${keys}`).html(`0/${data.devices_max}`);
+                            notify('Devices reset', 'success');
+                        } else {
+                            notify(data.devices_total
+                                ? "You don't have any access to this user."
+                                : 'User key devices already reset.',
+                                data.devices_total ? 'error' : 'warning');
+                        }
+                    } else {
+                        notify('User key no longer exists.', 'error');
+                    }
+                }
+            }).fail(function () {
+                endAction(btn, pending);
+                notify('Could not reach the server.', 'error');
+            });
         });
     }
 </script>

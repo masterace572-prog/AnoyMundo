@@ -10,18 +10,18 @@
         
         <!-- Success Key Display -->
         {{#if flash.user_key}}
-            <div class="ui-card rounded-2xl p-8 mb-6 animate-fade-in-up">
-                <div class="flex items-center mb-6">
-                    <div class="ui-icon w-16 h-16 rounded-xl flex items-center justify-center mr-4">
-                        <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div class="ui-card key-result mb-4 animate-fade-in-up">
+                <div class="key-result__head">
+                    <div class="ui-icon">
+                        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                         </svg>
                     </div>
-                    <h2 class="text-3xl font-bold text-gray-800">Key Generated Successfully!</h2>
+                    <h2 class="key-result__title">Key Generated Successfully!</h2>
                 </div>
                 
-                <div class="space-y-4 rounded-xl p-6 ui-tint">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="space-y-3 rounded-xl p-4 ui-tint">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                         <div>
                             <p class="text-sm text-gray-600">Game</p>
                             <p class="text-lg font-semibold text-gray-800">{{flash.game}}</p>
@@ -36,9 +36,9 @@
                         </div>
                     </div>
                     
-                    <div class="mt-6">
+                    <div class="mt-4">
                         <p class="text-sm text-gray-600 mb-2">License Key</p>
-                        <div class="flex items-center space-x-3 bg-white rounded-lg p-4">
+                        <div class="flex items-center space-x-3 p-3 key-result__key">
                             <textarea id="mytext" rows="3" class="flex-1 bg-transparent font-mono text-sm font-bold text-purple-600 resize-none" readonly>{{flash.user_key}}</textarea>
                             <button onclick="copyText()" class="px-4 py-2 text-white rounded-lg transition-all ui-btn">
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

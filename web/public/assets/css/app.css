@@ -585,22 +585,25 @@ input[type="submit"], input[type="button"],
 .quick-action svg { width: 16px; height: 16px; color: var(--faint); flex: 0 0 auto; }
 
 /* ---------------------------------------------------------------- alerts */
+/* Compact by default: a short status line, not a full-width banner. Errors
+   and warnings stay here; success flashes are promoted to a small toast. */
 .ui-alert {
-  display: flex; align-items: flex-start; gap: var(--s2);
-  padding: var(--s2) var(--s3);
-  margin: 0 0 var(--s4);
+  display: inline-flex; align-items: center; gap: var(--s2);
+  width: fit-content; max-width: 100%;
+  padding: var(--s1) var(--s2);
+  margin: 0 0 var(--s2);
   border: 1px solid var(--hairline) !important;
   border-left: 2px solid var(--muted);
-  border-radius: var(--radius);
+  border-radius: var(--radius-sm);
   background: var(--raised) !important;
   background-image: none !important;
   color: var(--text);
-  font-size: 14px; line-height: 1.5;
+  font-size: 13px; line-height: 1.4;
 }
 .ui-alert p { font-weight: 500; }
 .ui-alert strong { font-weight: 600; }
-.ui-alert-icon { flex: 0 0 auto; display: grid; place-items: center; margin-top: 2px; }
-.ui-alert-icon svg { width: 20px; height: 20px; color: var(--muted); }
+.ui-alert-icon { flex: 0 0 auto; display: grid; place-items: center; }
+.ui-alert-icon svg { width: 16px; height: 16px; color: var(--muted); }
 .ui-alert-body { flex: 1 1 auto; min-width: 0; }
 .ui-alert-close {
   flex: 0 0 auto;
@@ -608,9 +611,9 @@ input[type="submit"], input[type="button"],
   display: grid; place-items: center;
   border: 0 !important; background: transparent !important;
   color: var(--muted) !important;
-  font-size: 24px; line-height: 1;
+  font-size: 22px; line-height: 1;
   border-radius: var(--radius-sm);
-  margin: -8px -8px -8px 0;
+  margin: -12px -10px -12px 0;
 }
 .ui-alert-close:hover { background: var(--hairline) !important; color: var(--text) !important; }
 .ui-alert--danger { border-left-color: var(--danger) !important; color: var(--danger) !important; }
@@ -1023,6 +1026,25 @@ input[type="submit"], input[type="button"],
 .swal2-icon.swal2-error { border-color: var(--danger) !important; color: var(--danger) !important; }
 .swal2-toast { background: var(--raised) !important; color: var(--text) !important; border: 1px solid var(--hairline) !important; }
 
+/* Delete / reset confirmation: still a modal, but small. */
+.swal2-popup.swal-compact {
+  width: min(100% - 32px, 22rem) !important;
+  max-width: min(100% - 32px, 22rem) !important;
+  padding: var(--s3) !important;
+  border-radius: var(--radius) !important;
+}
+.swal-compact .swal2-title { font-size: 17px !important; margin: 0 0 var(--s1) !important; }
+.swal-compact .swal2-html-container { font-size: 13px !important; margin: 0 !important; }
+.swal-compact .swal2-icon {
+  width: 36px !important; height: 36px !important;
+  margin: 0 auto var(--s2) !important;
+  font-size: 14px !important;
+}
+.swal-compact .swal2-actions { margin: var(--s3) 0 0 !important; gap: var(--s1) !important; }
+.swal-compact .swal2-confirm, .swal-compact .swal2-cancel {
+  font-size: 14px !important; padding: var(--s1) var(--s2) !important;
+}
+
 /* ------------------------------------------------------------ auth pages */
 .auth-shell {
   min-height: 100dvh;
@@ -1216,6 +1238,81 @@ input[type="submit"], input[type="button"],
   text-align: center;
 }
 
+/* Compact generated-key result: the key stays readable, the celebration
+   header does not take half the screen. */
+.key-result { padding: var(--s3) !important; }
+.key-result__head {
+  display: flex; align-items: center; gap: var(--s2);
+  margin-bottom: var(--s2);
+}
+.key-result__title { font-size: 16px !important; font-weight: 600 !important; }
+.key-result .ui-tint { padding: var(--s3) !important; }
+.key-result .ui-tint p { margin-bottom: var(--s1); }
+.key-result__key {
+  background: var(--canvas);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-sm);
+}
+
+/* ------------------------------------------------- compact toast notices */
+/* Replaces full-screen SweetAlert result dialogs for create / delete keys. */
+.anoy-toasts {
+  position: fixed;
+  top: calc(var(--topbar-h) + env(safe-area-inset-top) + var(--s2));
+  right: calc(var(--s3) + env(safe-area-inset-right));
+  z-index: 10000;
+  display: flex; flex-direction: column; gap: var(--s1);
+  width: min(320px, calc(100vw - 32px));
+  pointer-events: none;
+}
+.anoy-toast {
+  pointer-events: auto;
+  display: flex; align-items: center; gap: var(--s2);
+  min-height: 36px;
+  padding: var(--s1) var(--s2);
+  background: var(--raised);
+  border: 1px solid var(--hairline);
+  border-left: 2px solid var(--muted);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.35);
+  color: var(--text);
+  font-size: 13px; line-height: 1.35;
+  animation: anoy-toast-in .18s ease-out;
+}
+.anoy-toast__dot {
+  flex: 0 0 auto; width: 8px; height: 8px;
+  border-radius: 50%; background: var(--muted);
+}
+.anoy-toast__text { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
+.anoy-toast__close {
+  flex: 0 0 auto;
+  width: 24px; height: 24px;
+  /* The global 44px control target would otherwise make this pill 60px tall. */
+  min-width: 24px !important; min-height: 24px !important;
+  padding: 0 !important;
+  display: grid; place-items: center;
+  border: 0 !important; border-radius: 4px !important;
+  background: transparent !important; color: var(--muted) !important;
+  font-size: 18px; line-height: 1;
+}
+.anoy-toast__close:hover { background: var(--hairline) !important; color: var(--text) !important; }
+.anoy-toast.is-leaving {
+  opacity: 0; transform: translateY(-4px);
+  transition: opacity .16s ease, transform .16s ease;
+}
+.anoy-toast--info { border-left-color: var(--accent) !important; }
+.anoy-toast--info .anoy-toast__dot { background: var(--accent); }
+.anoy-toast--success { border-left-color: var(--success) !important; }
+.anoy-toast--success .anoy-toast__dot { background: var(--success); }
+.anoy-toast--error { border-left-color: var(--danger) !important; }
+.anoy-toast--error .anoy-toast__dot { background: var(--danger); }
+.anoy-toast--warning { border-left-color: var(--warning) !important; }
+.anoy-toast--warning .anoy-toast__dot { background: var(--warning); }
+@keyframes anoy-toast-in {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: none; }
+}
+
 /* ------------------------------------------------------------ breakpoints */
 @media (max-width: 960px) {
   .app-layout { display: block; }
@@ -1300,6 +1397,11 @@ input[type="submit"], input[type="button"],
   .auth-shell { justify-content: flex-start; }
   .app-footer-meta { display: none; }
   .stat-tile strong { font-size: 20px; }
+  .anoy-toasts {
+    left: calc(var(--s2) + env(safe-area-inset-left));
+    right: calc(var(--s2) + env(safe-area-inset-right));
+    width: auto;
+  }
   .dataTables_wrapper .dataTables_length,
   .dataTables_wrapper .dataTables_filter { margin-bottom: var(--s2) !important; }
 }

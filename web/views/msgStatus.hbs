@@ -7,7 +7,7 @@
     <button type="button" class="ui-alert-close" onclick="this.closest('.ui-alert').remove()" aria-label="Dismiss">&times;</button>
 </div>
 {{else}}{{#if flash.success}}
-<div class="ui-alert ui-alert--success" role="status">
+<div class="ui-alert ui-alert--success" role="status" data-flash="success">
     <span class="ui-alert-icon" aria-hidden="true">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
     </span>
