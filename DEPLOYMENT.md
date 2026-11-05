@@ -8,7 +8,7 @@
 | GitHub | `masterace572-prog/AnoyMundo`, branch `arena/b2fac70f-anoymundo` |
 | Vercel project | `anoymundo-panel` — `prj_eV3iBh1EUffuxQSaV6AkIEh0kn4D` (new project) |
 | Vercel team | `masterace572-progs-projects` |
-| Production deploy | `dpl_3qWJ9j8Due7qVTKcTQoTauGx3H6m` (READY / PROMOTED, `Anoy` rebrand) |
+| Production deploy | `dpl_CbTwxFLGcDxZevTbw3ui93mBPuhZ` (READY / PROMOTED, saldo fix + API docs) |
 | Panel name / Telegram | `Anoy` / `@libAkAudioVisiual` (`BRAND_NAME`, `TELEGRAM_USERNAME`) |
 | Root Directory | `web` |
 | Supabase | `anoymundo-panel` — `bwsqenepvfwhfomdhaig` (free, ap-south-1) |
@@ -122,6 +122,7 @@ No secret is committed to git (`.env*` is ignored).
 | `GET /connect` (no params) | `{"web_info":{"_client":"Anoy",...},"web__dev":{"author":"@libAkAudioVisiual","telegram":"https://t.me/libAkAudioVisiual"}}` |
 | `POST /connect` with bad key | `{"status":false,"reason":"USER OR GAME NOT REGISTERED"}` |
 | `GET /docs` | in-panel API reference (connect URL, fields, C++ example), `Anoy · API docs` |
+| Saldo inputs on `/admin/user/1`, `/admin/create-referral` | `field-prefix` wrapper + `padding-left: 2.875rem !important` — typed digits never hide behind the currency icon |
 | `GET /api/lib/version` | plain-text `1.0` |
 | `GET /assets/css/tailwind.css` | compiled CSS, no CDN dependency |
 | `GET /assets/css/app.css` | flat design system (no gradients) |
@@ -155,9 +156,10 @@ curl -sS -X POST https://anoymundo-panel.vercel.app/connect \
 - `.github/workflows/live-smoke.yml` — GitHub Actions job that curls the live
   Vercel deployment: health, login with cookie jar, all pages, DataTables,
   key generation, `/connect` success + rejection, cleanup, logout, plus the
-  flat-UI asset checks, the escaped-text regressions and the `Anoy` /
-  `@libAkAudioVisiual` branding guards. Latest passing run: `42005719821`
-  (also `42003546248`, `41998939557`, `41998471594`).
+  flat-UI asset checks, the escaped-text regressions, the `Anoy` /
+  `@libAkAudioVisiual` branding guards, the saldo icon-padding fix and the
+  `/docs` API reference. Latest passing run: `42008897465`
+  (also `42005719821`, `42003546248`, `41998939557`, `41998471594`).
 
 ## 6. Post-deploy tasks
 
