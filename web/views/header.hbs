@@ -9,6 +9,7 @@
         </span>
         <span>{{brand}}</span>
     </a>
+    <span class="app-topbar-saldo" data-saldo="{{user.saldo}}" aria-label="Available balance">₹{{user.saldo}}</span>
     <a href="/logout" class="app-topbar-action" aria-label="Log out">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
     </a>
@@ -23,14 +24,6 @@
         </span>
         <span class="sidebar-brand-text">{{brand}}</span>
     </a>
-
-    <div class="sidebar-account">
-        <span class="sidebar-avatar" aria-hidden="true">{{user.initial}}</span>
-        <span class="sidebar-account-text">
-            <strong>{{user.displayName}}</strong>
-            <small>{{user.levelName}}</small>
-        </span>
-    </div>
 
     <nav class="sidebar-nav">
         <p class="sidebar-label">Workspace</p>
@@ -89,9 +82,16 @@
     </nav>
 
     <div class="sidebar-footer">
+        <div class="sidebar-account">
+            <span class="sidebar-avatar" aria-hidden="true">{{user.initial}}</span>
+            <span class="sidebar-account-text">
+                <strong>{{user.displayName}}</strong>
+                <small>{{user.levelName}}</small>
+            </span>
+        </div>
         <div class="sidebar-balance">
             <span>Available balance</span>
-            <strong>₹{{user.saldo}}</strong>
+            <strong data-saldo="{{user.saldo}}">₹{{user.saldo}}</strong>
         </div>
         <a href="/logout" class="nav-link nav-logout">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>

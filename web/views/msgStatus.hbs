@@ -30,12 +30,4 @@
     <div class="ui-alert-body"><p>{{pageMessage.text}}</p></div>
     <button type="button" class="ui-alert-close" onclick="this.closest('.ui-alert').remove()" aria-label="Dismiss">&times;</button>
 </div>
-{{else}}{{#if user}}
-<div class="ui-alert ui-alert--info" role="status">
-    <span class="ui-alert-icon" aria-hidden="true">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M14 10h4.8a2 2 0 011.8 2.9l-3.5 7A2 2 0 0115.3 21h-4c-.2 0-.3 0-.5-.1L7 20m7-10V5a2 2 0 00-2-2h-.1a.9.9 0 00-.9.9c0 .7-.2 1.4-.6 2L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5"></path></svg>
-    </span>
-    <div class="ui-alert-body"><p>Welcome back, <strong>{{user.displayName}}</strong>.</p></div>
-    <button type="button" class="ui-alert-close" onclick="this.closest('.ui-alert').remove()" aria-label="Dismiss">&times;</button>
-</div>
-{{/if}}{{/if}}{{/if}}{{/if}}{{/if}}
+{{/if}}{{/if}}{{/if}}{{/if}}

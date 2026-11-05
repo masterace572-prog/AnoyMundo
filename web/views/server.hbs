@@ -29,13 +29,11 @@
                         Current Status: <span class="text-purple-600 font-semibold">{{onoff.status}}</span>
                     </label>
                     
-                    <div class="flex items-center justify-between p-4 rounded-xl ui-tint">
-                        <span class="text-gray-800 font-medium">Maintenance Mode</span>
-                        <label class="relative inline-flex items-center cursor-pointer">
-                            <input type="checkbox" name="radios" value="on" class="sr-only peer" {{#if (eq onoff.status "on")}} checked {{/if}}>
-                            <div class="w-14 h-7 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-purple-600"></div>
+                    <label class="ui-switch">
+                            <input type="checkbox" name="radios" value="on" {{#if (eq onoff.status "on")}} checked {{/if}}>
+                            <span class="ui-switch__track" aria-hidden="true"><span class="ui-switch__thumb"></span></span>
+                            <span class="ui-switch__label">Maintenance Mode</span>
                         </label>
-                    </div>
                 </div>
                 
                 <div>
@@ -50,7 +48,7 @@
                     ></textarea>
                 </div>
                 
-                <button type="submit" class="w-full py-3 px-6 text-white font-bold rounded-xl transition-all duration-300 shadow-lg ui-btn">
+                <button type="submit" class="w-full py-3 px-6 text-white font-bold rounded-xl transition-all duration-300 shadow-lg ui-btn ui-btn--primary">
                     Update Settings
                 </button>
             </form>
@@ -60,7 +58,7 @@
         <!-- Mod Features Card -->
         <div class="ui-card rounded-2xl p-6 sm:p-8 animate-fade-in-up" style="animation-delay: 0.1s">
             <div class="flex items-center mb-6">
-                <div class="ui-icon ui-icon-amber w-12 h-12 rounded-xl flex items-center justify-center mr-4">
+                <div class="ui-icon ui-icon w-12 h-12 rounded-xl flex items-center justify-center mr-4">
                     <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path>
                     </svg>
@@ -73,79 +71,63 @@
                 
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <!-- ESP -->
-                    <div class="flex items-center justify-between p-3 rounded-lg ui-tint">
-                        <span class="text-gray-800 font-medium text-sm">ESP</span>
-                        <label class="relative inline-flex items-center cursor-pointer">
-                            <input type="checkbox" name="ESP" value="on" class="sr-only peer" {{#if (eq feature.esp "on")}} checked {{/if}}>
-                            <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                    <label class="ui-switch">
+                            <input type="checkbox" name="ESP" value="on" {{#if (eq feature.esp "on")}} checked {{/if}}>
+                            <span class="ui-switch__track" aria-hidden="true"><span class="ui-switch__thumb"></span></span>
+                            <span class="ui-switch__label">ESP</span>
                         </label>
-                    </div>
                     
                     <!-- Items -->
-                    <div class="flex items-center justify-between p-3 rounded-lg ui-tint">
-                        <span class="text-gray-800 font-medium text-sm">Items</span>
-                        <label class="relative inline-flex items-center cursor-pointer">
-                            <input type="checkbox" name="Item" value="on" class="sr-only peer" {{#if (eq feature.item "on")}} checked {{/if}}>
-                            <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-green-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
+                    <label class="ui-switch">
+                            <input type="checkbox" name="Item" value="on" {{#if (eq feature.item "on")}} checked {{/if}}>
+                            <span class="ui-switch__track" aria-hidden="true"><span class="ui-switch__thumb"></span></span>
+                            <span class="ui-switch__label">Items</span>
                         </label>
-                    </div>
                     
                     <!-- AIM Bot -->
-                    <div class="flex items-center justify-between p-3 rounded-lg ui-tint">
-                        <span class="text-gray-800 font-medium text-sm">Aim-Bot</span>
-                        <label class="relative inline-flex items-center cursor-pointer">
-                            <input type="checkbox" name="AIM" value="on" class="sr-only peer" {{#if (eq feature.aim "on")}} checked {{/if}}>
-                            <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+                    <label class="ui-switch">
+                            <input type="checkbox" name="AIM" value="on" {{#if (eq feature.aim "on")}} checked {{/if}}>
+                            <span class="ui-switch__track" aria-hidden="true"><span class="ui-switch__thumb"></span></span>
+                            <span class="ui-switch__label">Aim-Bot</span>
                         </label>
-                    </div>
                     
                     <!-- Silent Aim -->
-                    <div class="flex items-center justify-between p-3 rounded-lg ui-tint">
-                        <span class="text-gray-800 font-medium text-sm">Silent Aim</span>
-                        <label class="relative inline-flex items-center cursor-pointer">
-                            <input type="checkbox" name="SilentAim" value="on" class="sr-only peer" {{#if (eq feature.silentaim "on")}} checked {{/if}}>
-                            <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-orange-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-orange-600"></div>
+                    <label class="ui-switch">
+                            <input type="checkbox" name="SilentAim" value="on" {{#if (eq feature.silentaim "on")}} checked {{/if}}>
+                            <span class="ui-switch__track" aria-hidden="true"><span class="ui-switch__thumb"></span></span>
+                            <span class="ui-switch__label">Silent Aim</span>
                         </label>
-                    </div>
                     
                     <!-- Bullet Track -->
-                    <div class="flex items-center justify-between p-3 rounded-lg ui-tint">
-                        <span class="text-gray-800 font-medium text-sm">Bullet Track</span>
-                        <label class="relative inline-flex items-center cursor-pointer">
-                            <input type="checkbox" name="BulletTrack" value="on" class="sr-only peer" {{#if (eq feature.bullettrack "on")}} checked {{/if}}>
-                            <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-red-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-red-600"></div>
+                    <label class="ui-switch">
+                            <input type="checkbox" name="BulletTrack" value="on" {{#if (eq feature.bullettrack "on")}} checked {{/if}}>
+                            <span class="ui-switch__track" aria-hidden="true"><span class="ui-switch__thumb"></span></span>
+                            <span class="ui-switch__label">Bullet Track</span>
                         </label>
-                    </div>
                     
                     <!-- Memory -->
-                    <div class="flex items-center justify-between p-3 rounded-lg ui-tint">
-                        <span class="text-gray-800 font-medium text-sm">Memory</span>
-                        <label class="relative inline-flex items-center cursor-pointer">
-                            <input type="checkbox" name="Memory" value="on" class="sr-only peer" {{#if (eq feature.memory "on")}} checked {{/if}}>
-                            <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                    <label class="ui-switch">
+                            <input type="checkbox" name="Memory" value="on" {{#if (eq feature.memory "on")}} checked {{/if}}>
+                            <span class="ui-switch__track" aria-hidden="true"><span class="ui-switch__thumb"></span></span>
+                            <span class="ui-switch__label">Memory</span>
                         </label>
-                    </div>
                     
                     <!-- Floating Texts -->
-                    <div class="flex items-center justify-between p-3 rounded-lg ui-tint">
-                        <span class="text-gray-800 font-medium text-sm">Floating Texts</span>
-                        <label class="relative inline-flex items-center cursor-pointer">
-                            <input type="checkbox" name="Floating" value="on" class="sr-only peer" {{#if (eq feature.floating "on")}} checked {{/if}}>
-                            <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-teal-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-teal-600"></div>
+                    <label class="ui-switch">
+                            <input type="checkbox" name="Floating" value="on" {{#if (eq feature.floating "on")}} checked {{/if}}>
+                            <span class="ui-switch__track" aria-hidden="true"><span class="ui-switch__thumb"></span></span>
+                            <span class="ui-switch__label">Floating Texts</span>
                         </label>
-                    </div>
                     
                     <!-- Settings -->
-                    <div class="flex items-center justify-between p-3 rounded-lg ui-tint">
-                        <span class="text-gray-800 font-medium text-sm">Settings</span>
-                        <label class="relative inline-flex items-center cursor-pointer">
-                            <input type="checkbox" name="Setting" value="on" class="sr-only peer" {{#if (eq feature.setting "on")}} checked {{/if}}>
-                            <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-gray-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gray-600"></div>
+                    <label class="ui-switch">
+                            <input type="checkbox" name="Setting" value="on" {{#if (eq feature.setting "on")}} checked {{/if}}>
+                            <span class="ui-switch__track" aria-hidden="true"><span class="ui-switch__thumb"></span></span>
+                            <span class="ui-switch__label">Settings</span>
                         </label>
-                    </div>
                 </div>
                 
-                <button type="submit" class="w-full py-3 px-6 text-white font-bold rounded-xl transition-all duration-300 shadow-lg mt-6 ui-btn">
+                <button type="submit" class="w-full py-3 px-6 text-white font-bold rounded-xl transition-all duration-300 shadow-lg mt-6 ui-btn ui-btn--primary">
                     Update Features
                 </button>
             </form>
@@ -154,7 +136,7 @@
         <!-- Change Mod Name Card -->
         <div class="ui-card rounded-2xl p-6 sm:p-8 animate-fade-in-up" style="animation-delay: 0.2s">
             <div class="flex items-center mb-6">
-                <div class="ui-icon ui-icon-teal w-12 h-12 rounded-xl flex items-center justify-center mr-4">
+                <div class="ui-icon ui-icon w-12 h-12 rounded-xl flex items-center justify-center mr-4">
                     <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
                     </svg>
@@ -178,7 +160,7 @@
                     >
                 </div>
                 
-                <button type="submit" class="w-full py-3 px-6 text-white font-bold rounded-xl transition-all duration-300 shadow-lg ui-btn">
+                <button type="submit" class="w-full py-3 px-6 text-white font-bold rounded-xl transition-all duration-300 shadow-lg ui-btn ui-btn--primary">
                     Update Mod Name
                 </button>
             </form>
@@ -187,7 +169,7 @@
         <!-- Change Floating Text Card -->
         <div class="ui-card rounded-2xl p-6 sm:p-8 animate-fade-in-up" style="animation-delay: 0.3s">
             <div class="flex items-center mb-6">
-                <div class="ui-icon ui-icon-blue w-12 h-12 rounded-xl flex items-center justify-center mr-4">
+                <div class="ui-icon ui-icon w-12 h-12 rounded-xl flex items-center justify-center mr-4">
                     <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"></path>
                     </svg>
@@ -203,13 +185,11 @@
                         Current Status: <span class="text-green-600 font-semibold">{{ftext._status}}</span>
                     </label>
                     
-                    <div class="flex items-center justify-between p-4 rounded-xl ui-tint">
-                        <span class="text-gray-800 font-medium">Safe Mode</span>
-                        <label class="relative inline-flex items-center cursor-pointer">
-                            <input type="checkbox" name="_ftextr" value="Safe" class="sr-only peer" {{#if (eq ftext._status "Safe")}} checked {{/if}}>
-                            <div class="w-14 h-7 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-green-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-green-600"></div>
+                    <label class="ui-switch">
+                            <input type="checkbox" name="_ftextr" value="Safe" {{#if (eq ftext._status "Safe")}} checked {{/if}}>
+                            <span class="ui-switch__track" aria-hidden="true"><span class="ui-switch__thumb"></span></span>
+                            <span class="ui-switch__label">Safe Mode</span>
                         </label>
-                    </div>
                 </div>
                 
                 <div>
@@ -225,7 +205,7 @@
                     >
                 </div>
                 
-                <button type="submit" class="w-full py-3 px-6 text-white font-bold rounded-xl transition-all duration-300 shadow-lg ui-btn">
+                <button type="submit" class="w-full py-3 px-6 text-white font-bold rounded-xl transition-all duration-300 shadow-lg ui-btn ui-btn--primary">
                     Update Floating Text
                 </button>
             </form>

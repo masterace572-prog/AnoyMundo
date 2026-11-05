@@ -1,170 +1,175 @@
-
-
-
 <div class="container-fluid px-4 py-6">
-    <!-- Message Status -->
-    <div class="mb-6">
-        {{> msgStatus}}
-    </div>
-    
-    <!-- Keys List Card -->
-    <div class="ui-card rounded-2xl p-6 sm:p-8 animate-fade-in-up">
-        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
-            <div class="flex items-center">
-                <div class="ui-icon w-12 h-12 rounded-xl flex items-center justify-center mr-4">
-                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"></path>
+    <div class="mb-6">{{> msgStatus}}</div>
+
+    <div class="ui-card">
+        <div class="card-head" style="flex-wrap:wrap;justify-content:space-between">
+            <div style="display:flex;align-items:center;gap:12px;min-width:0">
+                <h2>Keys registered</h2>
+                <button type="button" id="blur-out" class="row-action">
+                    <svg class="w-4 h-4 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"></path>
                     </svg>
-                </div>
-                <div>
-                    <h2 class="text-2xl font-bold text-gray-800">Keys Registered</h2>
-                    <button id="blur-out" class="text-sm text-gray-600 hover:text-purple-600 transition-colors mt-1">
-                        <svg class="w-4 h-4 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"></path>
-                        </svg>
-                        Eye Protect
-                    </button>
-                </div>
+                    Eye Protect
+                </button>
             </div>
-            
-            <!-- Actions Dropdown -->
-            <div class="relative">
-                <button id="actions-menu-btn" class="px-4 py-2 text-white rounded-lg transition-all flex items-center space-x-2 ui-btn">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+
+            <div class="relative" style="position:relative">
+                <button type="button" id="actions-menu-btn" class="ui-btn">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"></path>
                     </svg>
                     <span>Actions</span>
                 </button>
-                
-                <div id="actions-menu" class="hidden absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-2xl border border-gray-100 z-10">
-                    <div class="py-2">
-                        <a href="/keys/generate" class="flex items-center space-x-3 px-4 py-3 transition-all">
-                            <svg class="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-                            </svg>
-                            <span class="text-gray-700 font-medium">Generate Key</span>
-                        </a>
-                        
-                        <div class="border-t border-gray-100 my-2"></div>
-                        
-                        <a href="/keys/deleteExp" class="flex items-center space-x-3 px-4 py-3 transition-all">
-                            <svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                            </svg>
-                            <span class="text-gray-700 font-medium">Delete Expired Keys</span>
-                        </a>
-                        
-                        <a href="/keys/deleteUnused" class="flex items-center space-x-3 px-4 py-3 transition-all">
-                            <svg class="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path>
-                            </svg>
-                            <span class="text-gray-700 font-medium">Delete Unused Keys</span>
-                        </a>
-                    </div>
+
+                <div id="actions-menu" class="hidden actions-menu" style="position:absolute;right:0;top:100%;margin-top:8px;z-index:10">
+                    <a href="/keys/generate" class="actions-menu-link">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
+                        <span>Generate key</span>
+                    </a>
+                    <a href="/keys/deleteExp" class="actions-menu-link">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                        <span>Delete expired keys</span>
+                    </a>
+                    <a href="/keys/deleteUnused" class="actions-menu-link">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path></svg>
+                        <span>Delete unused keys</span>
+                    </a>
                 </div>
             </div>
         </div>
-        
-        <!-- DataTable -->
+
         {{#if keyList}}
-            <div class="overflow-x-auto">
-                <table id="datatable" class="w-full">
-                    <thead>
-                        <tr class="border-b-2 border-gray-200">
-                            <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">#</th>
-                            <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Game</th>
-                            <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">User Keys</th>
-                            <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Devices</th>
-                            <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Duration</th>
-                            <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Expired</th>
-                            <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Action</th>
-                        </tr>
-                    </thead>
-                </table>
-            </div>
+        <p id="keys-loading" class="table-loading" role="status">Loading keys</p>
+        <div class="table-scroll">
+            <table id="datatable" class="w-full">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Game</th>
+                        <th>User key</th>
+                        <th>Devices</th>
+                        <th>Duration</th>
+                        <th>Expired</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+            </table>
+        </div>
         {{else}}
-            <p class="text-center text-gray-500 py-8">Nothing keys to show</p>
+        <p class="field-hint">No keys to show</p>
         {{/if}}
     </div>
 </div>
 
 <link rel="stylesheet" href="https://cdn.datatables.net/1.10.25/css/dataTables.bootstrap5.min.css">
-
-
-
 <script src="https://cdn.datatables.net/1.10.25/js/jquery.dataTables.min.js"></script>
 <script src="https://cdn.datatables.net/1.10.25/js/dataTables.bootstrap5.min.js"></script>
 <script>
     // Actions menu toggle
     const actionsBtn = document.getElementById('actions-menu-btn');
     const actionsMenu = document.getElementById('actions-menu');
-    
+
     if (actionsBtn && actionsMenu) {
         actionsBtn.addEventListener('click', () => {
             actionsMenu.classList.toggle('hidden');
         });
-        
+
         document.addEventListener('click', (e) => {
             if (!actionsBtn.contains(e.target) && !actionsMenu.contains(e.target)) {
                 actionsMenu.classList.add('hidden');
             }
         });
     }
-    
+
     $(document).ready(function() {
-        var table = $('#datatable').DataTable({
-            processing: true,
-            serverSide: true,
-            order: [[0, "desc"]],
-            ajax: "/keys/api",
-            columns: [{
-                    data: 'id',
-                    name: 'id_keys'
-                },
-                {
-                    data: 'game',
-                },
-                {
-                    data: 'user_key',
-                    render: function(data, type, row, meta) {
-                        var is_valid = (row.status == 'Active') ? "text-success" : "text-danger";
-                        return `<span class="${is_valid} keyBlur key-sensi">${(row.user_key ? row.user_key : '&mdash;')}</span> `;
+        var loading = document.getElementById('keys-loading');
+        var labels = ['ID', 'Game', 'User key', 'Devices', 'Duration', 'Expired', 'Actions'];
+
+        if ($('#datatable').length) {
+            $('#datatable').DataTable({
+                processing: false,
+                serverSide: true,
+                autoWidth: false,
+                order: [[0, "desc"]],
+                ajax: {
+                    url: "/keys/api",
+                    error: function () {
+                        if (loading) {
+                            loading.textContent = 'Could not load keys. Refresh the page to try again.';
+                            loading.className = 'table-error';
+                        }
                     }
                 },
-                {
-                    data: 'devices',
-                    render: function(data, type, row, meta) {
-                        var totalDevice = (row.devices ? row.devices : 0);
-                        return `<span id="devMax-${row.user_key}">${totalDevice}/${row.max_devices}</span>`;
-                    }
+                language: {
+                    processing: 'Loading keys',
+                    search: 'Search',
+                    searchPlaceholder: 'Search keys',
+                    lengthMenu: 'Show _MENU_ keys',
+                    info: 'Showing _START_ to _END_ of _TOTAL_ keys',
+                    infoEmpty: 'No keys yet',
+                    infoFiltered: '(filtered from _MAX_ keys)',
+                    zeroRecords: 'No keys match your search',
+                    emptyTable: 'No keys to show'
                 },
-                {
-                    data: 'duration',
-                    render: function(data, type, row, meta) {
-                        return row.duration;
+                columns: [{
+                        data: 'id',
+                        name: 'id_keys',
+                        className: 'cell-mono'
+                    },
+                    {
+                        data: 'game'
+                    },
+                    {
+                        data: 'user_key',
+                        render: function(data, type, row, meta) {
+                            var value = row.user_key ? row.user_key : '&mdash;';
+                            return '<span class="key-token keyBlur key-sensi">' + value + '</span>';
+                        }
+                    },
+                    {
+                        data: 'devices',
+                        render: function(data, type, row, meta) {
+                            var totalDevice = (row.devices ? row.devices : 0);
+                            return '<span id="devMax-' + row.user_key + '" class="cell-mono">' + totalDevice + '/' + row.max_devices + '</span>';
+                        }
+                    },
+                    {
+                        data: 'duration',
+                        render: function(data, type, row, meta) {
+                            return row.duration;
+                        }
+                    },
+                    {
+                        data: 'expired',
+                        name: 'expired_date',
+                        render: function(data, type, row, meta) {
+                            return row.expired ? '<span class="status-pill cell-nowrap">' + row.expired + '</span>' : '(not started yet)';
+                        }
+                    },
+                    {
+                        data: null,
+                        render: function(data, type, row, meta) {
+                            var key = row.user_key;
+                            return '<div class="row-actions">' +
+                                '<button type="button" class="row-action" title="Reset key" onclick="resetUserKey(\'' + key + '\')">Reset</button> ' +
+                                '<button type="button" class="row-action row-action--danger" title="Delete key" onclick="resetUserKey1(\'' + key + '\')">Delete</button> ' +
+                                '<a class="row-action" title="Edit key information" href="' + window.location.origin + '/keys/' + row.id + '">Edit</a>' +
+                                '</div>';
+                        }
                     }
+                ],
+                createdRow: function(row) {
+                    $(row).children('td').each(function(i) {
+                        $(this).attr('data-label', labels[i] || '');
+                    });
                 },
-                {
-                    data: 'expired',
-                    name: 'expired_date',
-                    render: function(data, type, row, meta) {
-                        return row.expired ? `<span class="badge text-dark">${row.expired}</span>` : '(not started yet)';
-                    }
-                },
-                {
-                  data: null,
-                    render: function(data, type, row, meta) {
-                        var btnReset = `<button class="btn btn-outline-danger btn-sm" onclick="resetUserKey('${row.user_key}')"
-                        data-bs-toggle="tooltip" data-bs-placement="left" title="Reset key?"><i class="bi bi-bootstrap-reboot"></i></button>`;
-                        var btnalterOne = `<button class="btn btn-outline-warning btn-sm" onclick="resetUserKey1('${row.user_key}')"
-                        data-bs-toggle="tooltip" data-bs-placement="left" title="DELETE KEY?"><i class="bi bi-trash-fill"></i></button>`;
-                        var btnEdits = `<a href="${window.location.origin}/keys/${row.id}" class="btn btn-outline-info btn-sm"
-                        data-bs-toggle="tooltip" data-bs-placement="left" title="Edit key information?"><i class="bi bi-person"></i></a>`;
-                        return `<div class="d-grid gap-2 d-md-block">${btnReset} ${btnalterOne} ${btnEdits}</div>`;
-                    }
+                initComplete: function() {
+                    if (loading) loading.remove();
                 }
-            ]
-        });
+            });
+        } else if (loading) {
+            loading.remove();
+        }
 
         $("#blur-out").click(function() {
             if ($(".keyBlur").hasClass("key-sensi")) {
@@ -176,16 +181,17 @@
             }
         });
     });
-    
+
     function resetUserKey1(keys) {
         Swal.fire({
             title: 'Are you sure?',
             text: "You won't be able to revert this!",
             icon: 'warning',
             showCancelButton: true,
-            confirmButtonColor: '#3085d6',
-            cancelButtonColor: '#d33',
-            confirmButtonText: 'Yes, Delete'
+            customClass: { confirmButton: 'swal-confirm-danger' },
+            confirmButtonColor: '#E15A48',
+            cancelButtonColor: '#22221C',
+            confirmButtonText: 'Yes, delete'
         }).then((result) => {
             if (result.isConfirmed) {
                 Toast.fire({
@@ -229,15 +235,16 @@
             }
         });
     }
-    
+
     function resetUserKey(keys) {
         Swal.fire({
             title: 'Are you sure?',
             text: "You won't be able to revert this!",
             icon: 'warning',
             showCancelButton: true,
-            confirmButtonColor: '#3085d6',
-            cancelButtonColor: '#d33',
+            customClass: { confirmButton: 'swal-confirm-danger' },
+            confirmButtonColor: '#E15A48',
+            cancelButtonColor: '#22221C',
             confirmButtonText: 'Yes, reset'
         }).then((result) => {
             if (result.isConfirmed) {
