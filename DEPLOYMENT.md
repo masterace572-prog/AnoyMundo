@@ -121,6 +121,7 @@ No secret is committed to git (`.env*` is ignored).
 | `POST /connect` | `status:true` + `real`, `token`, `modname`, 8 feature flags, expiry fields |
 | `GET /connect` (no params) | `{"web_info":{"_client":"Anoy",...},"web__dev":{"author":"@libAkAudioVisiual","telegram":"https://t.me/libAkAudioVisiual"}}` |
 | `POST /connect` with bad key | `{"status":false,"reason":"USER OR GAME NOT REGISTERED"}` |
+| `GET /docs` | in-panel API reference (connect URL, fields, C++ example), `Anoy · API docs` |
 | `GET /api/lib/version` | plain-text `1.0` |
 | `GET /assets/css/tailwind.css` | compiled CSS, no CDN dependency |
 | `GET /assets/css/app.css` | flat design system (no gradients) |
@@ -139,13 +140,14 @@ curl -sS -X POST https://anoymundo-panel.vercel.app/connect \
 
 ## 5. Automated tests
 
-- `npm test` — 74 offline end-to-end HTTP tests using an in-memory DB driver
+- `npm test` — 79 offline end-to-end HTTP tests using an in-memory DB driver
   (login, registration, key CRUD, DataTables, `/connect`, maintenance/feature
   toggles, referral → reseller, library upload/version, logout), plus UI
   regression guards: no gradients, no escaped HTML/PHP in notices or form
-  values, responsive viewport, flat CSS and font assets served, plus the
-  `Anoy` brand and `@libAkAudioVisiual` handle on login, register and
-  `GET /connect` info.
+  values, responsive viewport, flat CSS and font assets served, the `Anoy`
+  brand and `@libAkAudioVisiual` handle on login, register and `GET /connect`
+  info, the saldo icon-prefix padding fix, and the `/docs` API reference page.
+- `API.md` — the full loader/API reference (also rendered at `/docs`).
 - `npm run build` — compiles templates + Tailwind, copies the Inter font,
   parses every template (syntax errors fail the build), validates modules,
   rejects leftover PHP/gradient markup, and verifies the legacy `admin123`
@@ -175,7 +177,7 @@ curl -sS -X POST https://anoymundo-panel.vercel.app/connect \
 cd web
 npm install
 npm run build     # prebuild + validation
-npm test          # 74 offline end-to-end tests
+npm test          # 79 offline end-to-end tests
 npm run dev       # live preview on 0.0.0.0:3000 (memory DB by default)
 ```
 

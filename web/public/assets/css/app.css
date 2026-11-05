@@ -369,6 +369,30 @@ button:disabled { opacity: .55; cursor: not-allowed; }
 .app-content select { appearance: auto; padding-right: .75rem; }
 .app-content .input-field { border-width: 1px !important; }
 
+/* Inputs with a leading icon (the saldo / currency fields).
+   The global form rule above uses the `padding` shorthand, which wins over
+   Tailwind's `.pl-10` utility and left the typed digits underneath the icon.
+   Reserve the icon's width here with a stronger selector. */
+.app-content .field-prefix { position: relative; }
+.app-content .field-prefix > input,
+.auth-form .field-prefix > input { padding-left: 2.875rem !important; }
+.app-content .field-prefix__icon,
+.auth-form .field-prefix__icon {
+  position: absolute;
+  inset: 0 auto 0 0;
+  display: flex;
+  align-items: center;
+  padding-left: .875rem;
+  color: var(--muted);
+  pointer-events: none;
+  z-index: 1;
+}
+/* Number spinners sit at the right edge; keep the last digits clear too. */
+.app-content .field-prefix > input[type="number"],
+.auth-form .field-prefix > input[type="number"] { padding-right: 2.25rem !important; }
+.app-content .field-prefix__icon svg,
+.auth-form .field-prefix__icon svg { width: 20px; height: 20px; flex: 0 0 auto; }
+
 /* Unify the legacy purple/pink accents with the new indigo accent. */
 .app-content .text-purple-600,
 .app-content .text-purple-700,
@@ -409,6 +433,40 @@ button:disabled { opacity: .55; cursor: not-allowed; }
 .app-content tbody tr:last-child td { border-bottom: 0; }
 .app-content tbody tr:hover { background: var(--surface-2); }
 .app-content .overflow-x-auto { max-width: 100%; }
+
+/* --------------------------------------------------------------- API docs */
+.doc-section { margin-bottom: 28px; }
+.doc-section > h2 { font-size: 1.15rem; font-weight: 700; margin: 0 0 6px; }
+.doc-section > p { color: var(--muted); font-size: 13.5px; margin: 0 0 14px; }
+.doc-code {
+  display: block;
+  overflow-x: auto;
+  padding: 16px 18px;
+  margin: 0 0 14px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font: 12.5px/1.65 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  white-space: pre;
+  tab-size: 2;
+}
+.doc-code code { font: inherit; color: inherit; background: none; padding: 0; }
+.doc-inline {
+  padding: 2px 6px; border-radius: 5px;
+  background: var(--surface-3);
+  font: 12.5px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  overflow-wrap: anywhere;
+}
+.doc-url {
+  display: block; width: 100%; box-sizing: border-box;
+  padding: 12px 14px; margin: 0 0 14px;
+  background: var(--accent-soft); border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--accent); font: 600 13px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  overflow-wrap: anywhere;
+}
+.doc-note { padding: 12px 14px; border-left: 3px solid var(--accent); background: var(--surface-2); font-size: 13.5px; }
 
 .dataTables_wrapper { width: 100%; max-width: 100%; overflow-x: auto; font-size: 13.5px; }
 .dataTables_wrapper .dataTables_length,

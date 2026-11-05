@@ -51,6 +51,12 @@
             <span>Settings</span>
         </a>
 
+        <p class="sidebar-label">Developer</p>
+        <a href="/docs" class="nav-link {{#if navDocs}}is-active{{/if}}">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.5C10.5 5 8 4.5 4 4.5v14c4 0 6.5.5 8 2 1.5-1.5 4-2 8-2v-14c-4 0-6.5.5-8 2zm0 0v14"></path></svg>
+            <span>API docs</span>
+        </a>
+
         {{#if user.isAdmin}}
         <p class="sidebar-label">Administration</p>
         <a href="/Server" class="nav-link {{#if navServer}}is-active{{/if}}">

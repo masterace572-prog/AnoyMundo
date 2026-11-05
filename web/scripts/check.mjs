@@ -72,6 +72,19 @@ if (!fs.existsSync(uiCss) || fs.statSync(uiCss).size < 5000) errors.push('app.cs
 else if (/linear-gradient|radial-gradient/.test(fs.readFileSync(uiCss, 'utf8'))) errors.push('app.css contains a gradient');
 else process.stdout.write(`  ok  app.css flat design system (${(fs.statSync(uiCss).size / 1024).toFixed(0)} KB)\n`);
 
+// The global form padding shorthand overrides Tailwind's pl-* utilities, so
+// icon-prefixed inputs (saldo) need an explicit, stronger padding rule.
+const uiCssSource = fs.existsSync(uiCss) ? fs.readFileSync(uiCss, 'utf8') : '';
+if (!/\.field-prefix > input[\s\S]{0,160}padding-left:\s*2\.875rem\s*!important/.test(uiCssSource)) {
+  errors.push('app.css is missing the icon-prefix input padding fix (saldo digits overlap the icon)');
+} else process.stdout.write('  ok  saldo icon-prefix padding fix present\n');
+for (const view of ['admin_user_edit.hbs', 'admin_referral.hbs']) {
+  const src = fs.readFileSync(path.join(viewsDir, view), 'utf8');
+  if (!/class="relative field-prefix"/.test(src) || !/class="field-prefix__icon"/.test(src)) {
+    errors.push(`${view} is missing the field-prefix wrapper/icon classes`);
+  }
+}
+
 for (const asset of ['public/assets/js/app-ui.js', 'public/assets/fonts/inter-latin-wght-normal.woff2',
   'public/assets/fonts/INTER-LICENSE.txt']) {
   if (!fs.existsSync(path.join(root, asset))) errors.push(`missing static asset: ${asset}`);

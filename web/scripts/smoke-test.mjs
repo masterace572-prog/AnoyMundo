@@ -150,6 +150,28 @@ try {
   ok(/name="fullname"[\s\S]{0,400}value="admin"/.test(r.body),
     'settings fullname field is prefilled with the saved value');
 
+  // Regression: typed saldo digits must not sit underneath the currency icon.
+  r = await request('/admin/user/1');
+  ok(r.status === 200 && /class="relative field-prefix"/.test(r.body)
+    && /class="field-prefix__icon"/.test(r.body),
+    'edit-user saldo input reserves space for its currency icon');
+  r = await request('/admin/create-referral');
+  ok(/class="relative field-prefix"/.test(r.body),
+    'referral set-saldo input reserves space for its currency icon');
+  r = await request('/assets/css/app.css');
+  ok(/\.field-prefix > input[\s\S]{0,160}padding-left:\s*2\.875rem\s*!important/.test(r.body),
+    'app.css gives icon-prefixed inputs enough left padding');
+
+  // In-panel API docs page.
+  r = await request('/docs');
+  ok(r.status === 200 && /API docs/.test(r.body) && /POST [^<]*\/connect/.test(r.body)
+    && /Use in C\+\+/.test(r.body) && /curl_easy_perform/.test(r.body)
+    && /expired_date/.test(r.body) && /mod_status/.test(r.body) && /Floating/.test(r.body)
+    && !/linear-gradient|bg-gradient/.test(r.body),
+    'GET /docs renders the API reference with connect fields and a C++ example');
+  ok(/<title>Anoy · API docs<\/title>/.test(r.body) && /nav-link is-active/.test(r.body),
+    'docs page uses the Anoy title and highlights its sidebar link');
+
   // 6. DataTables API
   r = await request('/keys/api?draw=3&start=0&length=10&order%5B0%5D%5Bcolumn%5D=0&order%5B0%5D%5Bdir%5D=desc');
   ok(r.body?.draw === 3 && r.body?.recordsTotal === 2 && r.body?.data?.length === 2,

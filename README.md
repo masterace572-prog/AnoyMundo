@@ -52,7 +52,7 @@ excluded.
 cd web
 npm install
 npm run build       # generates templates + compiles Tailwind, validates all modules
-npm test            # 74 end-to-end HTTP tests using an in-memory DB
+npm test            # 79 end-to-end HTTP tests using an in-memory DB
 npm run dev         # http://localhost:3000  (DB_DRIVER=memory)
 ```
 
@@ -85,6 +85,14 @@ Setting`, `expired_date`, `EXP`, `exdate`, `device`, `rng`.
 Other endpoints: `GET /api/health`, `GET /api/lib/version`,
 `GET /api/lib/download`, `GET /keys/api`, `GET /admin/api/users`,
 `GET /keys/reset`, `GET /keys/resetAll`, all legacy page routes.
+
+**Full API reference:** [`API.md`](API.md) — connect URL, request parameters,
+every response field (`modname`, `mod_status` / status text, `credit` / floating
+text, mod feature flags, `expired_date` / `EXP` / `exdate`, `device`, `rng`),
+error and maintenance text, token verification, expiry/device behaviour and a
+C++ (libcurl + nlohmann/json) example. The same reference is available inside
+the panel at **`/docs`** (login required, linked in the sidebar under
+*Developer*).
 
 ## Security notes
 

@@ -52,6 +52,16 @@ function page(req, res, name, data = {}) {
   return sendHtml(res, renderPage(req, res, name, data));
 }
 
+/** Canonical public origin used by the in-panel API docs examples. */
+function publicBase(req) {
+  if (config.baseUrl) return String(config.baseUrl).replace(/\/+$/, '');
+  const h = req.headers || {};
+  const host = String(h['x-forwarded-host'] || h.host || 'localhost:3000').split(',')[0].trim();
+  const local = /^(localhost|127\.0\.0\.1)(:|$)/.test(host);
+  const proto = String(h['x-forwarded-proto'] || (local ? 'http' : 'https')).split(',')[0].trim();
+  return `${proto}://${host}`;
+}
+
 function fail(req, res, url, message, errors = {}, old = {}) {
   return redirect(res, url, { msgDanger: `Failed: ${message}`, errors, old });
 }
@@ -566,6 +576,11 @@ export async function handle(req, res) {
     if (lp === '/dashboard' || lp === '/dbg') {
       const { stats, history } = await dashboardData(user);
       return page(req, res, 'dashboard', { user, title: 'Dashboard', stats, history });
+    }
+
+    // ------------------------------- api docs ------------------------------
+    if (lp === '/docs' || lp === '/api-docs') {
+      return page(req, res, 'api_docs', { user, title: 'API docs', apiBase: publicBase(req) });
     }
 
     // --------------------------------- keys ---------------------------------

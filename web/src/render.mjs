@@ -132,6 +132,7 @@ export function renderPage(req, res, name, data = {}) {
     navKeys: on('/keys') && !on('/keys/generate'),
     navGenerate: on('/keys/generate'),
     navSettings: on('/settings'),
+    navDocs: on('/docs') || on('/api-docs'),
     navServer: on('/server'),
     navUsers: on('/admin/manage-users') || on('/admin/user'),
     navReferral: on('/admin/create-referral'),
