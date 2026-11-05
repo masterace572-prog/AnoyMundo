@@ -49,7 +49,17 @@ jobs:
             && pass "GET /connect info reports Anoy + @libAkAudioVisiual" || fail "connect info: $info"
 
           ver=$(curl -sS --max-time 30 "$BASE/api/lib/version" | tr -d '\n')
-          [ -n "$ver" ] && pass "GET /api/lib/version -> $ver" || fail "lib version"
+          [ -n "$ver" ] && echo "$ver" | grep -Eq '^[0-9]+\.[0-9]+' \
+            && pass "GET /api/lib/version -> $ver" || fail "lib version: $ver"
+
+          LIBZIP=$(mktemp)
+          libcode=$(curl -sS --max-time 30 -o "$LIBZIP" -w '%{http_code}' "$BASE/api/lib/download")
+          [ "$libcode" = "200" ] && [ "$(head -c 2 "$LIBZIP")" = "PK" ] \
+            && pass "GET /api/lib/download serves a real ZIP (HTTP 200)" \
+            || fail "lib download: HTTP $libcode, $(head -c 80 "$LIBZIP")"
+          unzip -l "$LIBZIP" | grep -Fq 'libbgmi.so' \
+            && pass "published loader ZIP contains libbgmi.so (XLOX app can load it)" \
+            || fail "loader ZIP has no libbgmi.so"
 
           css=$(curl -sS --max-time 30 -o /dev/null -w '%{http_code}' "$BASE/assets/css/tailwind.css")
           [ "$css" = "200" ] && pass "GET /assets/css/tailwind.css -> 200" || fail "static CSS: $css"
@@ -206,3 +216,5 @@ jobs:
 # Re-run live checks against the API-key release.
 
 # Final re-run against the personal API-key production deployment.
+
+# Re-run live checks after publishing the XLOX loader release.
