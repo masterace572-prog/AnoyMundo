@@ -31,36 +31,6 @@
                     <li><span>Unused keys</span><strong>{{stats.inactive}}</strong></li>
                 </ul>
             </section>
-
-            <section class="ui-card">
-                <div class="card-head"><h2>Recent history</h2></div>
-                <div class="table-scroll">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>ID</th>
-                                <th>Type</th>
-                                <th>Code</th>
-                                <th>Duration</th>
-                                <th>Devices</th>
-                                <th>Time</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {{#each history}}
-                            <tr>
-                                <td class="cell-mono">#3812{{this.id_history}}</td>
-                                <td>{{this.parts.[0]}}</td>
-                                <td><span class="key-token">{{this.parts.[1]}}**</span></td>
-                                <td>{{this.durationLabel}}</td>
-                                <td>{{this.parts.[3]}} Devices</td>
-                                <td class="cell-nowrap">{{this.createdHuman}}</td>
-                            </tr>
-                            {{/each}}
-                        </tbody>
-                    </table>
-                </div>
-            </section>
         </div>
 
         <section class="ui-card stack-start">
