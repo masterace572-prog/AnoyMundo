@@ -1,0 +1,4 @@
+
+rootProject.name = "AnoyXLOX"
+include ':app'
+project(':app').projectDir = file('app')

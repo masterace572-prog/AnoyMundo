@@ -106,6 +106,18 @@ debit as the panel (`price = price_per_device × max_devices`, one fee per
 generation request, with a conditional atomic debit and automatic refund on
 failure).
 
+## XLOX Android loader
+
+[`xlox/`](xlox/README.md) holds the extracted `XLOX-Loader-Source.zip` app,
+integrated with this panel: `GET /api/lib/version`, `GET /api/lib/download` and
+`POST /connect`, with all URLs in `xlox/app/src/main/jni/panel_config.h`. The
+broken library-download/load logic was rebuilt (HTTP + ZIP + ELF validation,
+nested-release handling, real startup version check, visible errors).
+[`.github/workflows/build-xlox.yml`](.github/workflows/build-xlox.yml) builds the
+signed release APK and a starter `libbgmi.so` ZIP on GitHub Actions and uploads
+both as the `xlox-apk` artifact. Upload the real loader ZIP at `/lib` (Admin →
+Library) to make `/api/lib/download` live.
+
 ## Security notes
 
 - All 13 tables have RLS enabled with **no public policies**; only the

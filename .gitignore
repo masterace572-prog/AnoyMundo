@@ -14,6 +14,19 @@ npm-debug.log*
 # Generated assets are committed too: Vercel function bundling must find them
 # in the git checkout, before any build step runs. Rebuild with `npm run build`.
 
+# ---- Android / XLOX build outputs (APKs are release artifacts, not source) --
+dist/
+xlox/.gradle/
+xlox/build/
+xlox/app/build/
+xlox/.cxx/
+xlox/.externalNativeBuild/
+xlox/local.properties
+xlox/libbgmi.so
+xlox/xlox-loader.zip
+*.apk
+*.apk.idsig
+
 # ---- OS / editor -----------------------------------------------------------
 .DS_Store
 Thumbs.db

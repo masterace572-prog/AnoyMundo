@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="280dp"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:gravity="center"
+    android:padding="24dp"
+    android:background="@drawable/bg_light_dialog">
+
+    <!-- Logo -->
+    <ImageView
+        android:id="@+id/loadingIcon"
+        android:layout_width="56dp"
+        android:layout_height="56dp"
+        android:src="@drawable/logo_transparent"
+        android:layout_marginBottom="14dp"/>
+
+    <!-- Title -->
+    <TextView
+        android:id="@+id/loadingText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Logging in..."
+        android:textSize="17sp"
+        android:textStyle="bold"
+        android:textColor="#1A1A2E"
+        android:layout_marginBottom="18dp"/>
+
+    <!-- Progress -->
+    <ProgressBar
+        android:id="@+id/progressBar"
+        style="?android:attr/progressBarStyleHorizontal"
+        android:layout_width="match_parent"
+        android:layout_height="8dp"
+        android:max="100"
+        android:indeterminate="false"
+        android:progressDrawable="@drawable/bg_light_progress"/>
+
+    <!-- Progress Text -->
+    <TextView
+        android:id="@+id/progressText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Please wait..."
+        android:textSize="13sp"
+        android:textColor="#8A8FA0"
+        android:textStyle="bold"
+        android:layout_marginTop="10dp"/>
+
+    <!-- OK BUTTON -->
+    <Button
+        android:id="@+id/okButton"
+        android:layout_width="match_parent"
+        android:layout_height="46dp"
+        android:text="OK"
+        android:textAllCaps="true"
+        android:textSize="14sp"
+        android:textStyle="bold"
+        android:textColor="#FFFFFF"
+        android:background="@drawable/bg_light_ok_button"
+        android:visibility="gone"
+        android:layout_marginTop="16dp"
+        android:stateListAnimator="@null"/>
+
+</LinearLayout>
