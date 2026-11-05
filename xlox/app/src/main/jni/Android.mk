@@ -9,6 +9,12 @@ LOCAL_CFLAGS += -fno-rtti -fno-exceptions -fpermissive
 LOCAL_CPPFLAGS += -Wno-error=format-security -fvisibility=hidden -ffunction-sections -fdata-sections -w -Werror -s -std=c++17
 LOCAL_CPPFLAGS += -Wno-error=c++11-narrowing -fms-extensions -fno-rtti -fno-exceptions -fpermissive
 LOCAL_LDFLAGS += -Wl,--gc-sections,--strip-all
+# Android 15+ devices can boot with 16 KB memory pages. The linker refuses to
+# dlopen() any ELF whose PT_LOAD p_align is smaller than the device page size,
+# so libXloX.so (and every other native lib we build) must be 16 KB aligned.
+# NDK r24 does not do this by default; these two flags make lld emit 0x4000
+# LOAD segments and a correctly aligned GNU_RELRO tail.
+LOCAL_LDFLAGS += -Wl,-z,max-page-size=16384 -Wl,-z,common-page-size=16384
 LOCAL_ARM_MODE := arm
 
 LOCAL_C_INCLUDES := $(LOCAL_PATH)/

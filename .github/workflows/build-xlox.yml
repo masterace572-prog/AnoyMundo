@@ -98,7 +98,11 @@ jobs:
           SDK="${ANDROID_HOME:-$ANDROID_SDK_ROOT}"
           CLANG="$SDK/ndk/24.0.8215888/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android21-clang"
           test -x "$CLANG" || { echo "NDK clang not found at $CLANG"; exit 1; }
-          "$CLANG" -shared -fPIC -O2 -o libbgmi.so loader-stub/bgmi_stub.c -llog
+          # 16 KB ELF alignment is mandatory for Android 15+ devices that boot
+          # with 16 KB memory pages; a 4 KB-aligned stub would fail dlopen().
+          "$CLANG" -shared -fPIC -O2 \
+            -Wl,-z,max-page-size=16384 -Wl,-z,common-page-size=16384 \
+            -o libbgmi.so loader-stub/bgmi_stub.c -llog
           head -c 4 libbgmi.so | od -An -tx1
           zip -j xlox-loader.zip libbgmi.so
           unzip -l xlox-loader.zip
@@ -121,6 +125,18 @@ jobs:
             || echo "v2/v3 signature only (no v1 jar signature, still valid)"
           test -f ../dist/xlox-loader.zip
           echo "APK sha256 = $APK_SHA256"
+
+      - name: Verify 16 KB ELF alignment (Android 15 / 17 devices)
+        run: |
+          # Report every native library. The two prebuilt libs inside
+          # mundo-release.aar ship 4 KB-aligned and cannot be relinked here,
+          # so they are reported but do not fail the build (see README).
+          python3 scripts/check_elf_alignment.py \
+            ../dist/Anoy-XLOX-loader.apk ../dist/xlox-loader.zip || true
+          # Hard requirement: everything we build ourselves must be 16 KB.
+          unzip -p ../dist/Anoy-XLOX-loader.apk lib/arm64-v8a/libXloX.so > /tmp/libXloX.so
+          python3 scripts/check_elf_alignment.py --fail-on-unaligned \
+            /tmp/libXloX.so ../dist/xlox-loader.zip
 
       - name: Upload APK and loader ZIP
         uses: actions/upload-artifact@v4

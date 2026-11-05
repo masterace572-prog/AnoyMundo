@@ -50,6 +50,7 @@ public class BoxApplication extends Application
     public void onCreate() {
         super.onCreate();
         gApp = this;
+        Log.i(TAG, "Loader diagnostics: " + LibManager.diagnostics(this));
         try {
             MetaActivationManager.activateSdk(getSdkKey());
         } catch (Throwable e) {
@@ -65,14 +66,16 @@ public class BoxApplication extends Application
      */
     @Override
     public void onCreate(String processName, String processName2) {
-        if (!GAME_PROCESS.equals(processName) && !GAME_PROCESS.equals(processName2)) {
+        Log.i(LOAD_TAG, "Virtual process started: " + processName + " / " + processName2
+                + " — " + LibManager.diagnostics(this));
+        if (!isGameProcess(processName) && !isGameProcess(processName2)) {
             Log.d(LOAD_TAG, "Ignoring non-game process: " + processName);
             return;
         }
 
         ENABLE_IMGUI = false;
+        Context ctx = gApp != null ? gApp : this;
         try {
-            Context ctx = gApp != null ? gApp : this;
             File loaderDir = LibManager.loaderDir(ctx);
             File lib = LibManager.libFile(ctx);
             if (!LibManager.isElf(lib)) {
@@ -84,18 +87,66 @@ public class BoxApplication extends Application
                 }
             }
 
+            Log.i(LOAD_TAG, "Loader diagnostics: " + LibManager.diagnostics(ctx));
+
             if (!LibManager.isElf(lib)) {
-                Log.e(LOAD_TAG, "libbgmi.so NOT FOUND or invalid at " + lib.getAbsolutePath()
-                        + " — open the app once so it can download the panel release");
+                String message = "libbgmi.so NOT FOUND or invalid at " + lib.getAbsolutePath()
+                        + " — open the app once so it can download the panel release";
+                Log.e(LOAD_TAG, message);
+                LibManager.recordLoadError(ctx, message);
                 return;
             }
-            LibManager.setPermissions(lib);
+
+            // Android 15+ 16 KB-page devices reject 4 KB-aligned ELF files.
+            // Report it explicitly rather than letting the menu silently vanish.
+            String alignment = LibManager.alignmentProblem(lib);
+            if (alignment != null) {
+                Log.e(LOAD_TAG, "ELF alignment: " + alignment);
+            }
+
+            // Android 17 (API 37) refuses System.load() on a writable file.
+            // The old code deliberately made the library writable here.
+            if (!LibManager.makeReadOnly(lib)) {
+                Log.w(LOAD_TAG, "Could not mark " + lib.getName() + " read-only; "
+                        + "Android 17 may reject System.load()");
+            }
+
             System.load(lib.getAbsolutePath());
             Log.i(LOAD_TAG, "libbgmi.so LOADED from " + lib.getAbsolutePath());
+            LibManager.recordLoadSuccess(ctx, lib.getAbsolutePath());
         } catch (UnsatisfiedLinkError e) {
-            Log.e(LOAD_TAG, "libbgmi.so could not be dlopen'd", e);
-        } catch (Exception e) {
-            Log.e(LOAD_TAG, "Library load error", e);
+            String message = describeLoadFailure(ctx, e);
+            Log.e(LOAD_TAG, message, e);
+            LibManager.recordLoadError(ctx, message);
+        } catch (Throwable e) {
+            String message = "libbgmi.so load error: " + e;
+            Log.e(LOAD_TAG, message, e);
+            LibManager.recordLoadError(ctx, message);
         }
+    }
+
+    /**
+     * Some newer Android builds report the virtualised game process with a
+     * suffix or a rewritten name. Accept those variants so the library is
+     * still injected; unrelated processes are still ignored.
+     */
+    private static boolean isGameProcess(String name) {
+        if (name == null) return false;
+        return name.equals(GAME_PROCESS)
+                || name.startsWith(GAME_PROCESS + ":")
+                || name.contains("pubg.imobile");
+    }
+
+    /** Turn the raw linker error into an actionable, user-facing reason. */
+    private String describeLoadFailure(Context ctx, UnsatisfiedLinkError error) {
+        String raw = error == null ? "" : String.valueOf(error.getMessage());
+        File lib = LibManager.libFile(ctx);
+        String alignment = LibManager.alignmentProblem(lib);
+        if (alignment != null) return alignment + " (linker: " + raw + ")";
+        if (raw.contains("writable")) {
+            return "Android 17 refused a writable native library. Update to the "
+                    + "latest loader build (it marks libbgmi.so read-only). Linker: " + raw;
+        }
+        return "libbgmi.so could not be dlopen'd: " + raw;
     }
 }

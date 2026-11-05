@@ -197,6 +197,38 @@ public class MAct extends AppCompatActivity {
         startWorkflow();
     }
 
+    @Override
+    protected void onResume() {
+        super.onResume();
+        showLoaderDiagnostics();
+    }
+
+    /**
+     * Android 15+ 16 KB-page devices and Android 17's read-only System.load()
+     * rule can stop the downloaded library (and therefore the ImGui menu) from
+     * loading. Surface the recorded reason in the UI instead of leaving the
+     * user with a silently missing menu and no clue in logcat.
+     */
+    private void showLoaderDiagnostics() {
+        Log.i("MAct", "Loader diagnostics: " + LibManager.diagnostics(this));
+        String error = LibManager.lastLoadError(this);
+        if (error != null && !error.isEmpty()) {
+            showStatusToggle("LIB NOT LOADED", true);
+            Toast.makeText(this, error, Toast.LENGTH_LONG).show();
+            // Shown once; a repeated failure writes the file again.
+            LibManager.clearLoadError(this);
+            return;
+        }
+        File lib = LibManager.libFile(this);
+        if (lib.isFile()) {
+            String problem = LibManager.alignmentProblem(lib);
+            if (problem != null) {
+                showStatusToggle("LIB NOT 16 KB COMPATIBLE", true);
+                Toast.makeText(this, problem, Toast.LENGTH_LONG).show();
+            }
+        }
+    }
+
     private void startPageAnimation() {
         View logoGlow = findViewById(R.id.logoGlow);
         View mainLogo = findViewById(R.id.mainLogo);

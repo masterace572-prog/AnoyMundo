@@ -67,6 +67,94 @@ For a harmless end-to-end test, `loader-stub/bgmi_stub.c` compiles a tiny
 `xlox-loader.zip`. It proves the download/extract/load chain but is **not** a
 game library — replace it with the real one.
 
+## Android 16 / 17 (API 36 / 37): "lib not loaded / ImGui menu does not show"
+
+If the same APK works on an older phone but the menu disappears on a newer
+one, check these three things in order. They are the only OS changes between
+Android 15 and Android 17 that affect a downloaded, injected `.so`.
+
+### 1. 16 KB memory pages (applies to **all** apps, any `targetSdk`)
+
+Android 15+ devices can boot with 16 KB pages. The linker refuses to
+`dlopen()` an ELF whose `PT_LOAD p_align` is smaller than the page size:
+
+```
+dlopen failed: "libbgmi.so" program alignment (4096) cannot be smaller
+than system page size (16384)
+```
+
+The result is exactly "the lib did not load and the menu never appeared".
+This repository used NDK r24, which links 4 KB-aligned binaries by default.
+`Android.mk` now passes `-Wl,-z,max-page-size=16384` and
+`-Wl,-z,common-page-size=16384`, and the starter ZIP is built with the same
+flags. CI fails the build if `libXloX.so` or `libbgmi.so` regresses.
+
+**Your real `libbgmi.so` must be rebuilt too.** A 4 KB-aligned library in the
+panel's release ZIP will still fail on a 16 KB device even with a fixed APK:
+
+```bash
+aarch64-linux-android21-clang -shared -fPIC -O2 \
+  -Wl,-z,max-page-size=16384 -Wl,-z,common-page-size=16384 \
+  -o libbgmi.so your-loader.c
+zip -j my-loader.zip libbgmi.so
+# then upload my-loader.zip at /lib (Admin -> Library)
+```
+
+Check any `.so`, APK, AAR or loader ZIP with the bundled script (Python 3,
+no dependencies):
+
+```bash
+python3 scripts/check_elf_alignment.py my-loader.zip
+python3 scripts/check_elf_alignment.py --fail-on-unaligned ../dist/Anoy-XLOX-loader.apk
+```
+
+On the device, confirm the page size and capture the exact linker error:
+
+```bash
+adb shell getconf PAGE_SIZE            # 4096 or 16384
+adb logcat -s Load BoxApplication LibManager MAct DawnLoad:V *:E
+```
+
+**Immediate workaround without a rebuild:** on a 16 KB device, open
+**Settings → Apps → [loader] → Advanced → Run app with page size compat mode**
+and turn it on. It is only shown when the kernel uses 16 KB pages. Via ADB:
+
+```bash
+adb shell setprop bionic.linker.16kb.app_compat.enabled true
+adb shell setprop pm.16kb.app_compat.disabled false
+```
+
+Note: `mundo-release.aar` still ships two prebuilt libraries that are 4 KB
+aligned (`libmmkv.so`, plus `libLizard.so`/`libmsaoaidsec.so` which are already
+compliant). `libmmkv.so` is Tencent MMKV built with clang 9; no class in this
+project references it, but it cannot be relinked without the MMKV source. If
+your device has 16 KB backcompat disabled globally (Android 17 supports
+`bionic.linker.16kb.app_compat.enabled=fatal`), that AAR must be replaced with
+a 16 KB-compatible build. The loader now reports this in logcat on startup.
+
+### 2. Android 17 Safer Native Dynamic Code Loading
+
+For apps targeting API 37, anything passed to `System.load()` must be
+**read-only**. The old code called `setWritable(true)` on `libbgmi.so` right
+before loading it — the exact failing case. `LibManager.makeReadOnly()` now
+chmods it to `0444`, and `setPermissions()` no longer makes `.so` files
+writable. This app targets API 28, so the change does not currently apply to
+it, but the loader is now safe if `targetSdk` is ever raised.
+
+### 3. Visible diagnostics
+
+Previously a failed load was only written to logcat, so the user saw a missing
+menu with no explanation. `BoxApplication` now logs the SDK level, ABI, real
+page size, ELF alignment and the exact `dlopen` error, stores the last failure
+in `com.xlox.download/load_error`, and `MAct` shows it in the status toggle and
+a Toast when you return to the app. It also tolerates virtual game-process
+names with a suffix, which some newer Android builds report.
+
+`ENABLE_IMGUI` is a leftover `public static boolean` from the original source
+that this codebase never sets to `true`. If your injected library reads that
+field via JNI to decide whether to draw the menu, set it after a successful
+`System.load()` in `BoxApplication.onCreate(String, String)`.
+
 ## Building
 
 Local (requires JDK 17, Android SDK platform 34, build-tools 34.0.0 and NDK

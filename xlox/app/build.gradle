@@ -27,8 +27,10 @@ android {
         // behaviour; raising targetSdk breaks its hidden-API bypass.
         //noinspection OldTargetApi,EditedTargetSdkVersion,ExpiredTargetSdkVersion
         targetSdk 28
-        versionCode 2
-        versionName '1.0.0'
+        // 1.0.1: 16 KB page-size support (Android 15+/17) + read-only
+        // System.load() so the injected library works on API 37 devices.
+        versionCode 3
+        versionName '1.0.1'
 
         vectorDrawables {
             useSupportLibrary true
