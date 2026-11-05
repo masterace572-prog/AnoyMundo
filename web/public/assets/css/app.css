@@ -54,6 +54,10 @@
 
 *, *::before, *::after { box-sizing: border-box; }
 
+/* The converted views still use the HTML hidden attribute. Author rules for
+   inputs must never bring those fields back into the layout. */
+[hidden] { display: none !important; }
+
 html {
   -webkit-text-size-adjust: 100%;
   overflow-x: clip;

@@ -145,35 +145,37 @@
 </div>
 
 <script>
-    $(document).ready(function() {
+    /* Estimation display only. Plain DOM so it still works when the optional
+       CDN script is unavailable; the same prices and form fields as before. */
+    (function () {
         var price = JSON.parse('{{{priceJson}}}');
-        getPrice(price);
-        $("#max_devices, #duration, #game").change(function() {
-            getPrice(price);
-        });
-        function getPrice(price) {
-            var device = $("#max_devices").val();
-            var durate = $("#duration").val();
-            var gprice = price[durate];
-            if (gprice != NaN) {
-                var result = (device * gprice);
-                $("#estimation").val('₹' + result + ' charged once, not per key.');
+        var deviceEl = document.getElementById('max_devices');
+        var durationEl = document.getElementById('duration');
+        var gameEl = document.getElementById('game');
+        var estimation = document.getElementById('estimation');
+        function getPrice() {
+            var device = Number(deviceEl && deviceEl.value);
+            var durate = durationEl && durationEl.value;
+            var gprice = Number(price[durate]);
+            if (isFinite(gprice) && isFinite(device)) {
+                estimation.value = '₹' + (device * gprice) + ' charged once, not per key.';
             } else {
-                $("#estimation").val('Estimation error');
+                estimation.value = 'Estimation error';
             }
         }
-    });
+        if (estimation) {
+            getPrice();
+            [deviceEl, durationEl, gameEl].forEach(function (el) {
+                if (el) el.addEventListener('change', getPrice);
+            });
+        }
+    })();
 
     function fupi(obj) {
-        if($(obj).is(":checked")){
-            document.getElementById("custom-key-section").style.display = "block";
-            document.getElementById("bulk-section").style.display = "none";
-            document.getElementById("textinput").value = "custom";
-        } else {
-            document.getElementById("custom-key-section").style.display = "none";
-            document.getElementById("bulk-section").style.display = "block";
-            document.getElementById("textinput").value = "auto";
-        }
+        var on = !!obj.checked;
+        document.getElementById("custom-key-section").style.display = on ? "block" : "none";
+        document.getElementById("bulk-section").style.display = on ? "none" : "block";
+        document.getElementById("textinput").value = on ? "custom" : "auto";
     }
     
     function copyText() {
