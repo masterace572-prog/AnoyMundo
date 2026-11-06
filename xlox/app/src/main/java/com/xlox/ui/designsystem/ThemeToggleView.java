@@ -99,11 +99,20 @@ public class ThemeToggleView extends View {
             return;
         }
         if (spring != null) spring.cancel();
-        spring = new SpringAnimation(this, PROGRESS, target);
-        spring.setSpring(new SpringForce()
+        // A bare SpringForce has an UNSET final position; installing it makes
+        // SpringAnimation.sanityCheck() throw at start(). Keep the rest
+        // position on the force and never let a cosmetic spring abort a screen.
+        SpringForce force = new SpringForce(target)
                 .setStiffness(SpringForce.STIFFNESS_MEDIUM)
-                .setDampingRatio(SpringForce.DAMPING_RATIO_NO_BOUNCY));
-        spring.start();
+                .setDampingRatio(SpringForce.DAMPING_RATIO_NO_BOUNCY);
+        try {
+            spring = new SpringAnimation(this, PROGRESS);
+            spring.setSpring(force);
+            spring.start();
+        } catch (RuntimeException e) {
+            progress = target;
+            invalidate();
+        }
     }
 
     @Override

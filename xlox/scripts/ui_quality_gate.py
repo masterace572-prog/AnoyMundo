@@ -240,10 +240,17 @@ check(not bad_paths, "every Lucide vector pathData parses", str(bad_paths))
 # ---------------------------------------------------- spring animation sanity
 # A bare SpringForce has an UNSET (Double.MAX_VALUE) rest position; installing
 # it on a SpringAnimation throws at start() and crashes every screen launch.
-motion = DESIGN_SYSTEM_DIR / "DsMotion.java"
-motion_text = text_of(motion) if motion.exists() else ""
-check("new SpringForce(finalPosition)" in motion_text,
-      "every spring force has an explicit final position")
+bare_forces = []
+motion_text = ""
+for p in sorted(DESIGN_SYSTEM_DIR.glob("*.java")):
+    body = text_of(p)
+    if p.name == "DsMotion.java":
+        motion_text = body
+    for match in re.finditer(r"new\s+SpringForce\(([^)]*)\)", body):
+        if not match.group(1).strip():
+            bare_forces.append(p.name)
+check(not bare_forces, "every spring force has an explicit final position",
+      str(bare_forces))
 check("startSpring(" in motion_text,
       "spring starts are wrapped in a non-fatal fallback")
 
