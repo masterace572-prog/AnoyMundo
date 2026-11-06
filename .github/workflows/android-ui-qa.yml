@@ -102,24 +102,65 @@ jobs:
           echo "PRE-EMULATOR: workflow reached the emulator step at $(date -u +%H:%M:%S)" > qa-logs/emulator.log
 
       - name: Emulator screenshots (light / dark / font scale / small width)
-        uses: reactivecircus/android-emulator-runner@v2
-        with:
-          api-level: 33
-          target: google_apis
-          arch: x86_64
-          profile: pixel_5
-          avd-name: ui_qa_avd
-          force-avd-creation: false
-          disable-animations: true
-          emulator-options: -no-snapshot-save -no-window -noaudio -no-boot-anim
-          working-directory: xlox
-          # The runner executes each line of `script` as a separate sh -c
-          # command; all multi-line capture logic lives in the script file.
-          script: sh scripts/ui_screenshots.sh
+        working-directory: xlox
+        run: |
+          set -eu
+          mkdir -p ../qa-logs
+          exec > ../qa-logs/emulator-boot.log 2>&1
+          SDK="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-/usr/local/lib/android/sdk}}"
+          export PATH="$SDK/platform-tools:$SDK/emulator:$SDK/cmdline-tools/latest/bin:$PATH"
+          AVD=ui_qa_avd
+          echo "=== manual emulator QA at $(date -u) ==="
+          echo "SDK=$SDK"
+          if [ -w /dev/kvm ]; then echo "KVM=yes"; else echo "KVM=no (software acceleration)"; fi
+          adb start-server || true
+
+          echo "no" | avdmanager create avd --force -n "$AVD" \
+            --package 'system-images;android-33;google_apis;x86_64' \
+            --device 'pixel_5' || echo "WARN: avdmanager create returned nonzero"
+          ls -la "${ANDROID_AVD_HOME:-$HOME/.android/avd}" || true
+
+          OPTS="-port 5554 -avd $AVD -no-snapshot-save -no-snapstorage -no-window -noaudio -no-boot-anim -gpu swiftshader_indirect"
+          if [ ! -w /dev/kvm ]; then OPTS="$OPTS -accel off"; fi
+          echo "launching: emulator $OPTS"
+          nohup emulator $OPTS > ../qa-logs/emulator-stdout.log 2>&1 &
+          EMU_PID=$!
+          echo "emulator pid=$EMU_PID"
+
+          booted=0
+          for i in $(seq 1 180); do
+            if ! kill -0 "$EMU_PID" 2>/dev/null; then
+              echo "FATAL: emulator process exited before boot"
+              break
+            fi
+            state=$(adb -s emulator-5554 shell getprop sys.boot_completed 2>/dev/null | tr -d '\r' || true)
+            if [ "$state" = "1" ]; then booted=1; break; fi
+            sleep 5
+          done
+          echo "booted=$booted after $((i-1)) checks"
+          if [ "$booted" != "1" ]; then
+            echo "=== emulator stdout ==="; cat ../qa-logs/emulator-stdout.log 2>/dev/null || true
+            echo "=== adb devices ==="; adb devices 2>/dev/null || true
+            kill "$EMU_PID" 2>/dev/null || true
+            exit 1
+          fi
+
+          # Settle the system server, then freeze animations for stable captures.
+          sleep 5
+          adb -s emulator-5554 shell input keyevent 82 || true
+          adb shell settings put global window_animation_scale 0.0 || true
+          adb shell settings put global transition_animation_scale 0.0 || true
+          adb shell settings put global animator_duration_scale 0.0 || true
+
+          sh scripts/ui_screenshots.sh
+          kill "$EMU_PID" 2>/dev/null || true
+          echo "=== emulator QA complete ==="
 
       - name: Surface emulator diagnostics
         if: always()
         run: |
+          echo "=== qa-logs/emulator-boot.log ==="
+          cat qa-logs/emulator-boot.log 2>/dev/null || echo "(no emulator boot log)"
           echo "=== qa-logs/emulator-trace.txt ==="
           cat qa-logs/emulator-trace.txt 2>/dev/null || echo "(no emulator trace)"
           python3 - <<'PY'
@@ -139,7 +180,8 @@ jobs:
         if: success()
         working-directory: ${{ github.workspace }}
         run: |
-          rm -f qa-logs/emulator.log qa-logs/emulator-trace.txt
+          git checkout -- qa-logs/ 2>/dev/null || true
+          rm -f qa-logs/emulator-trace.txt qa-logs/emulator-boot.log qa-logs/emulator-stdout.log
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -f docs/ui-redesign/screenshots/
