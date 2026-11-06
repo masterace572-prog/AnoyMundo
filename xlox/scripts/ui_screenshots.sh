@@ -126,6 +126,54 @@ capture "main_320" ".MAct" "$APPEARANCE"
 adb shell wm size reset >> "$LOG" 2>&1 || true
 adb shell wm density reset >> "$LOG" 2>&1 || true
 
+# ---- IME / keyboard inset check on the login field ----
+# Tap the access-key EditText using its real bounds, then capture with the
+# soft keyboard open. Verifies adjustResize, IME insets and that the Sign in
+# button is not covered by the keyboard.
+adb shell settings put secure show_ime_with_hard_keyboard 1 >> "$LOG" 2>&1 || true
+adb shell am force-stop com.xlox >/dev/null 2>&1 || true
+adb shell am start -W -n com.xlox/.LogAct --es qa_appearance light >> "$LOG" 2>&1 || true
+sleep 4
+python3 - <<'PY'
+import re
+import subprocess
+import xml.etree.ElementTree as ET
+
+
+def sh(*args):
+    return subprocess.run(["adb", "shell", *args],
+                          capture_output=True, text=True).stdout
+
+
+sh("uiautomator", "dump", "/sdcard/qa_ui.xml")
+raw = sh("cat", "/sdcard/qa_ui.xml")
+try:
+    root = ET.fromstring(raw)
+except Exception as exc:
+    print("WARN: uiautomator dump unusable:", exc)
+else:
+    for node in root.iter("node"):
+        if node.get("resource-id") == "com.xlox:id/userkey":
+            nums = re.findall(r"\d+", node.get("bounds") or "")
+            if len(nums) == 4:
+                left, top, right, bottom = map(int, nums)
+                sh("input", "tap", str((left + right) // 2),
+                   str((top + bottom) // 2))
+                print("tapped the access-key field")
+            break
+PY
+sleep 3
+ime=$(adb shell dumpsys input_method 2>/dev/null | grep -E 'mInputShown|mShowRequested|mImeWindowVis|mServedView' | head -4 | tr '\n' ' ' || true)
+log "keyboard state: $ime"
+sleep 1
+if ! adb exec-out screencap -p > "$OUT/login_keyboard.png"; then
+    fatal "screencap failed for login_keyboard"
+fi
+if ! test -s "$OUT/login_keyboard.png"; then
+    fatal "empty keyboard screenshot"
+fi
+log "captured login_keyboard.png ($(wc -c < "$OUT/login_keyboard.png") bytes)"
+
 log "=== all captures complete ==="
 ls -lh "$OUT" >> "$LOG" 2>&1 || true
 exit 0

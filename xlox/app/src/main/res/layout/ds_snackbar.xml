@@ -6,6 +6,7 @@
     android:layout_height="wrap_content"
     android:background="@drawable/ds_snackbar"
     android:gravity="center_vertical"
+    android:accessibilityLiveRegion="polite"
     android:orientation="horizontal"
     android:paddingStart="@dimen/space_16"
     android:paddingTop="@dimen/space_12"
