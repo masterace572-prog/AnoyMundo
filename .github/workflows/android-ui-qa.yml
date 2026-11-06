@@ -230,6 +230,17 @@ jobs:
 
           files = sorted(Path('docs/ui-redesign/screenshots').glob('*.png'))
           print('screenshot count:', len(files))
+          expected = {
+              'login_light.png', 'login_dark.png', 'main_light.png', 'main_dark.png',
+              'facebook_light.png', 'facebook_dark.png',
+              'components_light.png', 'components_dark.png',
+              'login_font_130.png', 'main_font_130.png',
+              'login_320.png', 'main_320.png',
+          }
+          missing = sorted(expected - {f.name for f in files})
+          if missing:
+              print('::error::missing required screenshots:', missing)
+              sys.exit(1)
           if len(files) < 12:
               print('::error::expected 12 screenshots, found', len(files))
               sys.exit(1)
@@ -245,13 +256,30 @@ jobs:
               seen[h] = f.name
           print('duplicate frames:', dups)
           if dups:
-              print('::warning::duplicate frames: ' + str(dups))
+              print('::error::duplicate frames: ' + str(dups))
+              sys.exit(1)
           light = Path('docs/ui-redesign/screenshots/login_light.png')
           dark = Path('docs/ui-redesign/screenshots/login_dark.png')
           ll, dd = first_row(light), first_row(dark)
           print('top-row luminance: light=%.1f dark=%.1f' % (ll, dd))
           if abs(ll - dd) < 60:
               print('::error::light and dark screenshots are not visually distinct')
+              sys.exit(1)
+
+          # Every capture must actually show the app (not the launcher or a
+          # crash-to-home screen), and no com.xlox crash may be in logcat.
+          trace_path = Path('qa-logs/emulator-trace.txt')
+          trace = trace_path.read_text(errors='replace') if trace_path.exists() else ''
+          focus = [l for l in trace.splitlines() if l.startswith('focus for ')]
+          bad_focus = [l for l in focus if 'com.xlox' not in l]
+          print('focus lines:', len(focus))
+          if len(focus) < 12 or bad_focus:
+              print('::error::app was not foreground for every capture:', bad_focus[:4])
+              sys.exit(1)
+          lc = Path('qa-logs/logcat.txt')
+          lc_text = lc.read_text(errors='replace') if lc.exists() else ''
+          if 'FATAL EXCEPTION' in lc_text and 'Process: com.xlox' in lc_text:
+              print('::error::com.xlox crashed while capturing screenshots')
               sys.exit(1)
           print('::notice::screenshot validation passed')
           PY
@@ -266,10 +294,13 @@ jobs:
           git diff --cached --quiet && { echo "No screenshot changes"; exit 0; }
           git commit -m "Add UI QA screenshots [skip ci]" -q
           pushed=0
-          for attempt in 1 2 3 4 5; do
-            git pull --rebase origin arena/b2fac70f-anoymundo -q || true
+          for attempt in $(seq 1 12); do
+            git fetch origin arena/b2fac70f-anoymundo -q || true
+            git rebase --abort 2>/dev/null || true
+            git rebase origin/arena/b2fac70f-anoymundo -q || true
             if git push origin HEAD:arena/b2fac70f-anoymundo; then pushed=1; break; fi
-            sleep 6
+            echo "publish attempt $attempt failed; retrying"
+            sleep 5
           done
           [ "$pushed" = 1 ] || { echo "FATAL: could not publish QA logs"; exit 1; }
 
@@ -296,9 +327,11 @@ jobs:
           git diff --cached --quiet && { echo "No new logs"; exit 0; }
           git commit -m "QA failure logs for run ${{ github.run_number }} [skip ci]" -q
           pushed=0
-          for attempt in 1 2 3 4 5; do
-            git pull --rebase origin arena/b2fac70f-anoymundo -q || true
+          for attempt in $(seq 1 12); do
+            git fetch origin arena/b2fac70f-anoymundo -q || true
+            git rebase --abort 2>/dev/null || true
+            git rebase origin/arena/b2fac70f-anoymundo -q || true
             if git push origin HEAD:arena/b2fac70f-anoymundo; then pushed=1; break; fi
-            sleep 6
+            sleep 5
           done
           [ "$pushed" = 1 ] || { echo "FATAL: could not publish QA logs"; exit 1; }

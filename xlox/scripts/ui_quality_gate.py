@@ -198,6 +198,45 @@ for typ in TYPES:
         unused = [u for u in unused if u != "ic_anoy"]
     check(not unused, f"no unused @{typ}/ resources", str(unused))
 
+# --------------------------------------------------- vector path grammar
+# Android's PathParser rejects malformed argument counts at *inflation* time,
+# which lint does not always catch. Validate every pathData command here.
+_CMD = set("MmLlHhVvCcSsQqTtAaZz")
+_ARITY = {"M": 2, "L": 2, "T": 2, "H": 1, "V": 1,
+          "C": 6, "S": 4, "Q": 4, "A": 7, "Z": 0}
+_NUM = re.compile(r"[-+]?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?")
+
+
+def path_error(data: str):
+    tokens = re.findall(r"[MmLlHhVvCcSsQqTtAaZz]|[-+]?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?", data)
+    i, cmd = 0, None
+    while i < len(tokens):
+        if tokens[i] in _CMD:
+            cmd = tokens[i].upper()
+            i += 1
+            if cmd == "Z":
+                continue
+        if cmd is None:
+            return "number before any command"
+        need = _ARITY[cmd]
+        if i + need > len(tokens) or any(t in _CMD for t in tokens[i:i + need]):
+            return f"{cmd} needs {need} floats near {''.join(tokens[max(0, i - 1):i + need])}"
+        i += need
+        if cmd == "M":
+            cmd = "L"
+        elif cmd == "m":
+            cmd = "l"
+    return None
+
+
+bad_paths = []
+for p in sorted((RES / "drawable").glob("ds_ic_*.xml")):
+    for data in re.findall(r'android:pathData="([^"]*)"', p.read_text()):
+        err = path_error(data)
+        if err:
+            bad_paths.append(f"{p.name}: {err}")
+check(not bad_paths, "every Lucide vector pathData parses", str(bad_paths))
+
 # --------------------------------------------------------- accessibility
 icon_controls = 0
 unlabelled = []

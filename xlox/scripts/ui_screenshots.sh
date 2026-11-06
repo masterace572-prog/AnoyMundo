@@ -15,6 +15,7 @@ APK=app/build/outputs/apk/debug/app-debug.apk
 
 mkdir -p ../qa-logs "$OUT"
 : > "$LOG"
+: > ../qa-logs/logcat.txt
 
 log() { echo "$*"; echo "$*" >> "$LOG"; }
 fatal() { echo "::error::$*"; log "FATAL: $*"; exit 1; }
@@ -75,7 +76,7 @@ capture() {
     adb shell am broadcast -a android.intent.action.CLOSE_SYSTEM_DIALOGS >/dev/null 2>&1 || true
     focus=$(adb shell dumpsys window 2>/dev/null | grep -m1 'mCurrentFocus' || true)
     log "focus for $name: $focus"
-    adb logcat -d -t 400 2>/dev/null | grep -E 'AndroidRuntime|FATAL EXCEPTION|Process: com.xlox|Unable to start activity|InflateException' >> ../qa-logs/logcat.txt || true
+    adb logcat -d -t 400 2>/dev/null | grep -E 'FATAL EXCEPTION|Process: com\.xlox|Unable to start activity ComponentInfo\{com\.xlox|Drawable com\.xlox|at com\.xlox\.' >> ../qa-logs/logcat.txt || true
     sleep 1
     if ! adb exec-out screencap -p > "$OUT/$name.png"; then
         fatal "screencap failed for $name"
