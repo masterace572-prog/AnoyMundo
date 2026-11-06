@@ -1,9 +1,9 @@
-=== manual emulator QA at Fri Nov  6 09:18:11 UTC 2026 ===
+=== manual emulator QA at Fri Nov  6 09:28:26 UTC 2026 ===
 SDK=/usr/local/lib/android/sdk
 === /dev/kvm before ===
-crw-rw---- 1 root kvm 10, 232 Nov  6 09:14 /dev/kvm
+crw-rw---- 1 root kvm 10, 232 Nov  6 09:25 /dev/kvm
 === /dev/kvm after ===
-crw-rw-rw- 1 root kvm 10, 232 Nov  6 09:14 /dev/kvm
+crw-rw-rw- 1 root kvm 10, 232 Nov  6 09:25 /dev/kvm
 KVM=yes
 * daemon not running; starting now at tcp:5037
 * daemon started successfully
@@ -12,15 +12,15 @@ Loading local repository...                                                     
 Auto-selecting single ABI x86_64
 === AVD directory ===
 total 16
-drwxr-xr-x 3 runner runner 4096 Nov  6 09:18 .
-drwxr-x--- 3 runner runner 4096 Nov  6 09:18 ..
-drwxr-xr-x 2 runner runner 4096 Nov  6 09:18 ui_qa_avd.avd
--rw-r--r-- 1 runner runner   86 Nov  6 09:18 ui_qa_avd.ini
+drwxr-xr-x 3 runner runner 4096 Nov  6 09:28 .
+drwxr-x--- 3 runner runner 4096 Nov  6 09:28 ..
+drwxr-xr-x 2 runner runner 4096 Nov  6 09:28 ui_qa_avd.avd
+-rw-r--r-- 1 runner runner   86 Nov  6 09:28 ui_qa_avd.ini
 === emulator -list-avds ===
 ui_qa_avd
 launching: emulator -port 5554 -avd ui_qa_avd -no-snapshot-save -no-snapstorage -no-window -noaudio -no-boot-anim -gpu swiftshader_indirect
-emulator pid=2867
-booted=1 after 8 checks
+emulator pid=3151
+booted=1 after 10 checks
 Broadcasting: Intent { act=android.intent.action.CLOSE_SYSTEM_DIALOGS flg=0x400000 }
 Broadcast completed: result=0
 === emulator QA started ===
@@ -31,21 +31,33 @@ ABI-neutral install ok: Serving...
 All files should be loaded. Notifying the device.
 Performing Incremental Install
 Success
-Install command complete in 775 ms
+Install command complete in 3825 ms
 appearance set to light
-captured login_light.png (142399 bytes)
-captured main_light.png (125213 bytes)
-captured facebook_light.png (119087 bytes)
-captured components_light.png (1354248 bytes)
+focus for login_light:   mCurrentFocus=Window{acdcbfe u0 com.xlox/com.xlox.LogAct}
+captured login_light.png (139407 bytes)
+focus for main_light:   mCurrentFocus=Window{815a6b4 u0 com.xlox/com.xlox.MAct}
+captured main_light.png (106120 bytes)
+focus for facebook_light:   mCurrentFocus=Window{1470379 u0 com.xlox/com.xlox.FacebookActivity}
+captured facebook_light.png (119109 bytes)
+focus for components_light:   mCurrentFocus=Window{d1ff8e6 u0 com.google.android.apps.nexuslauncher/com.google.android.apps.nexuslauncher.NexusLauncherActivity}
+captured components_light.png (1354430 bytes)
 appearance set to dark
-captured login_dark.png (161429 bytes)
-captured main_dark.png (166999 bytes)
-captured facebook_dark.png (119258 bytes)
-captured components_dark.png (1352162 bytes)
+focus for login_dark:   mCurrentFocus=Window{7ad9f5c u0 com.xlox/com.xlox.LogAct}
+captured login_dark.png (157848 bytes)
+focus for main_dark:   mCurrentFocus=Window{5472af8 u0 com.xlox/com.xlox.MAct}
+captured main_dark.png (148849 bytes)
+focus for facebook_dark:   mCurrentFocus=Window{9da2b26 u0 com.xlox/com.xlox.FacebookActivity}
+captured facebook_dark.png (122849 bytes)
+focus for components_dark:   mCurrentFocus=Window{74238b4 u0 com.google.android.apps.nexuslauncher/com.google.android.apps.nexuslauncher.NexusLauncherActivity}
+captured components_dark.png (1352252 bytes)
 appearance set to light
-captured login_font_130.png (159539 bytes)
-captured main_font_130.png (132148 bytes)
-captured login_320.png (28619 bytes)
-captured main_320.png (30143 bytes)
+focus for login_font_130:   mCurrentFocus=Window{549990d u0 com.xlox/com.xlox.LogAct}
+captured login_font_130.png (156511 bytes)
+focus for main_font_130:   mCurrentFocus=Window{987983c u0 com.xlox/com.xlox.MAct}
+captured main_font_130.png (117669 bytes)
+focus for login_320:   mCurrentFocus=Window{8cfa2f7 u0 com.xlox/com.xlox.LogAct}
+captured login_320.png (28326 bytes)
+focus for main_320:   mCurrentFocus=Window{23b1df5 u0 com.xlox/com.xlox.MAct}
+captured main_320.png (25436 bytes)
 === all captures complete ===
 === emulator QA complete ===

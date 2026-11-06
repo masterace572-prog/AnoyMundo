@@ -1,0 +1,89 @@
+11-06 09:30:52.006  6433  6433 I AndroidRuntime: VM exiting with result code 0, cleanup skipped.
+11-06 09:30:52.081  6450  6450 I AndroidRuntime: VM exiting with result code 0, cleanup skipped.
+11-06 09:31:34.431  7525  7525 I AndroidRuntime: VM exiting with result code 0, cleanup skipped.
+11-06 09:31:36.220  7653  7653 D AndroidRuntime: Shutting down VM
+11-06 09:31:36.223  7653  7653 E AndroidRuntime: FATAL EXCEPTION: main
+11-06 09:31:36.223  7653  7653 E AndroidRuntime: Process: com.xlox, PID: 7653
+11-06 09:31:36.223  7653  7653 E AndroidRuntime: java.lang.RuntimeException: Unable to start activity ComponentInfo{com.xlox/com.xlox.ui.designsystem.DsPreviewActivity}: android.view.InflateException: Binary XML file line #407 in com.xlox:layout/ds_preview: Binary XML file line #407 in com.xlox:layout/ds_preview: Error inflating class ImageView
+11-06 09:31:36.223  7653  7653 E AndroidRuntime: 	at android.app.ActivityThread.performLaunchActivity(ActivityThread.java:3645)
+11-06 09:31:36.223  7653  7653 E AndroidRuntime: 	at android.app.ActivityThread.handleLaunchActivity(ActivityThread.java:3782)
+11-06 09:31:36.223  7653  7653 E AndroidRuntime: 	at android.app.servertransaction.LaunchActivityItem.execute(LaunchActivityItem.java:101)
+11-06 09:31:36.223  7653  7653 E AndroidRuntime: 	at android.app.servertransaction.TransactionExecutor.executeCallbacks(TransactionExecutor.java:138)
+11-06 09:31:36.223  7653  7653 E AndroidRuntime: 	at android.app.servertransaction.TransactionExecutor.execute(TransactionExecutor.java:95)
+11-06 09:31:36.223  7653  7653 E AndroidRuntime: 	at android.app.ActivityThread$H.handleMessage(ActivityThread.java:2307)
+11-06 09:31:36.223  7653  7653 E AndroidRuntime: 	at android.os.Handler.dispatchMessage(Handler.java:106)
+11-06 09:31:36.223  7653  7653 E AndroidRuntime: 	at android.os.Looper.loopOnce(Looper.java:201)
+11-06 09:31:36.223  7653  7653 E AndroidRuntime: 	at android.os.Looper.loop(Looper.java:288)
+11-06 09:31:36.223  7653  7653 E AndroidRuntime: 	at android.app.ActivityThread.main(ActivityThread.java:7924)
+11-06 09:31:36.223  7653  7653 E AndroidRuntime: 	at java.lang.reflect.Method.invoke(Native Method)
+11-06 09:31:36.223  7653  7653 E AndroidRuntime: 	at com.android.internal.os.RuntimeInit$MethodAndArgsCaller.run(RuntimeInit.java:548)
+11-06 09:31:36.223  7653  7653 E AndroidRuntime: 	at com.android.internal.os.ZygoteInit.main(ZygoteInit.java:936)
+11-06 09:31:36.223  7653  7653 E AndroidRuntime: Caused by: android.view.InflateException: Binary XML file line #407 in com.xlox:layout/ds_preview: Binary XML file line #407 in com.xlox:layout/ds_preview: Error inflating class ImageView
+11-06 09:31:36.223  7653  7653 E AndroidRuntime: Caused by: android.view.InflateException: Binary XML file line #407 in com.xlox:layout/ds_preview: Error inflating class ImageView
+11-06 09:31:36.223  7653  7653 E AndroidRuntime: Caused by: android.content.res.Resources$NotFoundException: Drawable com.xlox:drawable/ds_ic_package with resource ID #0x7f0700b0
+11-06 09:31:36.223  7653  7653 E AndroidRuntime: Caused by: android.content.res.Resources$NotFoundException: File res/drawable/ds_ic_package.xml from drawable resource ID #0x7f0700b0
+11-06 09:31:36.223  7653  7653 E AndroidRuntime: 	at android.content.res.ResourcesImpl.loadDrawableForCookie(ResourcesImpl.java:879)
+11-06 09:31:36.223  7653  7653 E AndroidRuntime: 	at android.content.res.ResourcesImpl.loadDrawable(ResourcesImpl.java:673)
+11-06 09:31:36.223  7653  7653 E AndroidRuntime: 	at android.content.res.Resources.loadDrawable(Resources.java:1002)
+11-06 09:31:36.223  7653  7653 E AndroidRuntime: 	at android.content.res.TypedArray.getDrawableForDensity(TypedArray.java:1017)
+11-06 09:31:36.223  7653  7653 E AndroidRuntime: 	at android.content.res.TypedArray.getDrawable(TypedArray.java:991)
+11-06 09:31:36.223  7653  7653 E AndroidRuntime: 	at android.widget.ImageView.<init>(ImageView.java:205)
+11-06 09:31:36.223  7653  7653 E AndroidRuntime: 	at android.widget.ImageView.<init>(ImageView.java:191)
+11-06 09:31:36.223  7653  7653 E AndroidRuntime: 	at androidx.appcompat.widget.AppCompatImageView.<init>(AppCompatImageView.java:78)
+11-06 09:31:36.223  7653  7653 E AndroidRuntime: 	at androidx.appcompat.widget.AppCompatImageView.<init>(AppCompatImageView.java:73)
+11-06 09:31:36.223  7653  7653 E AndroidRuntime: 	at androidx.appcompat.app.AppCompatViewInflater.createImageView(AppCompatViewInflater.java:233)
+11-06 09:31:36.223  7653  7653 E AndroidRuntime: 	at androidx.appcompat.app.AppCompatViewInflater.createView(AppCompatViewInflater.java:152)
+11-06 09:31:36.223  7653  7653 E AndroidRuntime: 	at androidx.appcompat.app.AppCompatDelegateImpl.createView(AppCompatDelegateImpl.java:1678)
+11-06 09:31:36.223  7653  7653 E AndroidRuntime: 	at androidx.appcompat.app.AppCompatDelegateImpl.onCreateView(AppCompatDelegateImpl.java:1729)
+11-06 09:31:36.223  7653  7653 E AndroidRuntime: 	at android.view.LayoutInflater.tryCreateView(LayoutInflater.java:1065)
+11-06 09:31:36.223  7653  7653 E AndroidRuntime: 	at android.view.LayoutInflater.createViewFromTag(LayoutInflater.java:1001)
+11-06 09:31:36.223  7653  7653 E AndroidRuntime: 	at android.view.LayoutInflater.createViewFromTag(LayoutInflater.java:965)
+11-06 09:31:36.223  7653  7653 E AndroidRuntime: 	at android.view.LayoutInflater.rInflate(LayoutInflater.java:1127)
+11-06 09:31:36.223  7653  7653 E AndroidRuntime: 	at android.view.LayoutInflater.rInflateChildren(LayoutInflater.java:1088)
+11-06 09:31:36.223  7653  7653 E AndroidRuntime: 	at android.view.LayoutInflater.rInflate(LayoutInflater.java:1130)
+11-06 09:31:36.223  7653  7653 E AndroidRuntime: 	at android.view.LayoutInflater.rInflateChildren(LayoutInflater.java:1088)
+11-06 09:31:36.223  7653  7653 E AndroidRuntime: 	at android.view.LayoutInflater.rInflate(LayoutInflater.java:1130)
+11-06 09:31:36.223  7653  7653 E AndroidRuntime: 	at android.view.LayoutInflater.rInflateChildren(LayoutInflater.java:1088)
+11-06 09:31:36.223  7653  7653 E AndroidRuntime: 	at android.view.LayoutInflater.rInflate(LayoutInflater.java:1130)
+11-06 09:31:36.223  7653  7653 E AndroidRuntime: 	at android.view.LayoutInflater.rInflateChildren(LayoutInflater.java:1088)
+11-06 09:31:36.223  7653  7653 E AndroidRuntime: 	at android.view.LayoutInflater.inflate(LayoutInflater.java:686)
+11-06 09:31:36.223  7653  7653 E AndroidRuntime: 	at android.view.LayoutInflater.inflate(LayoutInflater.java:538)
+11-06 09:31:36.223  7653  7653 E AndroidRuntime: 	at android.view.LayoutInflater.inflate(LayoutInflater.java:485)
+11-06 09:31:36.223  7653  7653 E AndroidRuntime: 	at androidx.appcompat.app.AppCompatDelegateImpl.setContentView(AppCompatDelegateImpl.java:775)
+11-06 09:31:36.226  7653  7653 E AndroidRuntime: 	at androidx.appcompat.app.AppCompatActivity.setContentView(AppCompatActivity.java:197)
+11-06 09:31:36.226  7653  7653 E AndroidRuntime: 	at com.xlox.ui.designsystem.DsPreviewActivity.onCreate(DsPreviewActivity.java:20)
+11-06 09:31:36.226  7653  7653 E AndroidRuntime: 	at android.app.Activity.performCreate(Activity.java:8342)
+11-06 09:31:36.226  7653  7653 E AndroidRuntime: 	at android.app.Activity.performCreate(Activity.java:8321)
+11-06 09:31:36.226  7653  7653 E AndroidRuntime: 	at android.app.Instrumentation.callActivityOnCreate(Instrumentation.java:1417)
+11-06 09:31:36.226  7653  7653 E AndroidRuntime: 	at android.app.ActivityThread.performLaunchActivity(ActivityThread.java:3626)
+11-06 09:31:36.226  7653  7653 E AndroidRuntime: 	at android.app.ActivityThread.handleLaunchActivity(ActivityThread.java:3782)
+11-06 09:31:36.226  7653  7653 E AndroidRuntime: 	at android.app.servertransaction.LaunchActivityItem.execute(LaunchActivityItem.java:101)
+11-06 09:31:36.226  7653  7653 E AndroidRuntime: 	at android.app.servertransaction.TransactionExecutor.executeCallbacks(TransactionExecutor.java:138)
+11-06 09:31:36.226  7653  7653 E AndroidRuntime: 	at android.app.servertransaction.TransactionExecutor.execute(TransactionExecutor.java:95)
+11-06 09:31:36.226  7653  7653 E AndroidRuntime: 	at android.app.ActivityThread$H.handleMessage(ActivityThread.java:2307)
+11-06 09:31:36.226  7653  7653 E AndroidRuntime: 	at android.os.Handler.dispatchMessage(Handler.java:106)
+11-06 09:31:36.226  7653  7653 E AndroidRuntime: 	at android.os.Looper.loopOnce(Looper.java:201)
+11-06 09:31:36.226  7653  7653 E AndroidRuntime: 	at android.os.Looper.loop(Looper.java:288)
+11-06 09:31:36.226  7653  7653 E AndroidRuntime: 	at android.app.ActivityThread.main(ActivityThread.java:7924)
+11-06 09:31:36.226  7653  7653 E AndroidRuntime: 	at java.lang.reflect.Method.invoke(Native Method)
+11-06 09:31:36.226  7653  7653 E AndroidRuntime: 	at com.android.internal.os.RuntimeInit$MethodAndArgsCaller.run(RuntimeInit.java:548)
+11-06 09:31:36.226  7653  7653 E AndroidRuntime: 	at com.android.internal.os.ZygoteInit.main(ZygoteInit.java:936)
+11-06 09:31:36.226  7653  7653 E AndroidRuntime: Caused by: java.lang.IllegalArgumentException: M needs to be followed by a multiple of 2 floats. However, 1 float(s) are found. Failure occurred at position 131 of path: M11 21.73a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73z M12 22V12 M 3.29 L 7 L 12 L 12 L 20.71 L 7 m7.5 4.27 9 5.15
+11-06 09:31:36.226  7653  7653 E AndroidRuntime: 	at android.util.PathParser.nCreatePathDataFromString(Native Method)
+11-06 09:31:36.226  7653  7653 E AndroidRuntime: 	at android.util.PathParser.-$$Nest$smnCreatePathDataFromString(Unknown Source:0)
+11-06 09:31:36.226  7653  7653 E AndroidRuntime: 	at android.util.PathParser$PathData.<init>(PathParser.java:79)
+11-06 09:31:36.226  7653  7653 E AndroidRuntime: 	at android.graphics.drawable.VectorDrawable$VFullPath.updateStateFromTypedArray(VectorDrawable.java:2043)
+11-06 09:31:36.226  7653  7653 E AndroidRuntime: 	at android.graphics.drawable.VectorDrawable$VFullPath.inflate(VectorDrawable.java:1994)
+11-06 09:31:36.226  7653  7653 E AndroidRuntime: 	at android.graphics.drawable.VectorDrawable.inflateChildElements(VectorDrawable.java:840)
+11-06 09:31:36.226  7653  7653 E AndroidRuntime: 	at android.graphics.drawable.VectorDrawable.inflate(VectorDrawable.java:738)
+11-06 09:31:36.226  7653  7653 E AndroidRuntime: 	at android.graphics.drawable.DrawableInflater.inflateFromXmlForDensity(DrawableInflater.java:141)
+11-06 09:31:36.226  7653  7653 E AndroidRuntime: 	at android.graphics.drawable.Drawable.createFromXmlInnerForDensity(Drawable.java:1394)
+11-06 09:31:36.226  7653  7653 E AndroidRuntime: 	at android.graphics.drawable.Drawable.createFromXmlForDensity(Drawable.java:1355)
+11-06 09:31:36.226  7653  7653 E AndroidRuntime: 	at android.content.res.ResourcesImpl.loadXmlDrawable(ResourcesImpl.java:911)
+11-06 09:31:36.226  7653  7653 E AndroidRuntime: 	at android.content.res.ResourcesImpl.loadDrawableForCookie(ResourcesImpl.java:865)
+11-06 09:31:36.226  7653  7653 E AndroidRuntime: 	... 45 more
+11-06 09:32:01.537  8143  8143 I AndroidRuntime: VM exiting with result code 0, cleanup skipped.
+11-06 09:32:01.607  8160  8160 I AndroidRuntime: VM exiting with result code 0, cleanup skipped.
+11-06 09:32:03.754  8196  8196 I AndroidRuntime: VM exiting with result code 0, cleanup skipped.
+11-06 09:32:03.868  8213  8213 I AndroidRuntime: VM exiting with result code 0, cleanup skipped.
+11-06 09:32:03.945  8230  8230 I AndroidRuntime: VM exiting with result code 0, cleanup skipped.
