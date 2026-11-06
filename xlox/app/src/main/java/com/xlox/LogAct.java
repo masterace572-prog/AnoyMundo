@@ -71,17 +71,23 @@ public class LogAct extends AppCompatActivity {
         ThemeMode.apply(this);
         super.onCreate(savedInstanceState);
 
+        // The splash owns the system bars until its view is removed; restore
+        // the palette-aware icon contrast as soon as it has gone.
+        Runnable restoreBars = () -> {
+            if (!isFinishing() && !isDestroyed()) ThemeMode.applyWindow(this);
+        };
+
         if (iskokofm()) {
             DesignSystem.showMessage(this, getString(R.string.vpn_detected_title),
                     getString(R.string.vpn_detected_message));
-            com.xlox.ui.designsystem.Splash.exit(splash);
+            com.xlox.ui.designsystem.Splash.exit(splash, restoreBars);
             return;
         }
 
         setContentView(R.layout.activity_login);
         ThemeMode.applyWindow(this);
         DesignSystem.applySafeDrawing(findViewById(R.id.loginRoot), true, true, true);
-        com.xlox.ui.designsystem.Splash.exit(splash);
+        com.xlox.ui.designsystem.Splash.exit(splash, restoreBars);
 
         prefs = new Prefs(this);
         checkAndRequestPermissions();
@@ -173,6 +179,14 @@ public class LogAct extends AppCompatActivity {
             setAuthenticating(true);
             Login(this, userKey);
         });
+    }
+
+    @Override
+    public void onWindowFocusChanged(boolean hasFocus) {
+        super.onWindowFocusChanged(hasFocus);
+        // Safety net in case a platform splash implementation never delivers
+        // an exit-animation callback.
+        if (hasFocus) ThemeMode.applyWindow(this);
     }
 
     private void setAuthenticating(boolean active) {

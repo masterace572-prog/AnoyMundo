@@ -228,6 +228,61 @@ jobs:
               px = line[(w // 2) * bpp:(w // 2) * bpp + 3]
               return sum(px) / 3
 
+          def rows(path, count):
+              """Decode the first PNG scanlines with the stdlib (all filters)."""
+              data = path.read_bytes()
+              pos, idat, w, h, ctype = 8, b'', 0, 0, 0
+              while pos < len(data):
+                  ln = struct.unpack('>I', data[pos:pos + 4])[0]
+                  typ = data[pos + 4:pos + 8]
+                  chunk = data[pos + 8:pos + 8 + ln]
+                  pos += 12 + ln
+                  if typ == b'IHDR':
+                      w, h, _depth, ctype = struct.unpack('>IIBB', chunk[:10])
+                  elif typ == b'IDAT':
+                      idat += chunk
+                  elif typ == b'IEND':
+                      break
+              bpp = {0: 1, 2: 3, 3: 1, 4: 2, 6: 4}.get(ctype, 3)
+              raw = zlib.decompress(idat)
+              stride = w * bpp
+              prev, off, out = bytearray(stride), 0, []
+              for _y in range(min(count, h)):
+                  filt = raw[off]
+                  off += 1
+                  line = bytearray(raw[off:off + stride])
+                  off += stride
+                  for x in range(stride):
+                      a = line[x - bpp] if x >= bpp else 0
+                      b = prev[x]
+                      c = prev[x - bpp] if x >= bpp else 0
+                      if filt == 1:
+                          line[x] = (line[x] + a) & 255
+                      elif filt == 2:
+                          line[x] = (line[x] + b) & 255
+                      elif filt == 3:
+                          line[x] = (line[x] + ((a + b) // 2)) & 255
+                      elif filt == 4:
+                          pp = a + b - c
+                          pa, pb, pc = abs(pp - a), abs(pp - b), abs(pp - c)
+                          pr = a if pa <= pb and pa <= pc else (b if pb <= pc else c)
+                          line[x] = (line[x] + pr) & 255
+                  out.append(line)
+                  prev = line
+              return w, bpp, out
+
+          def icon_pixels(path, dark_icons):
+              """Count legible status-bar icon pixels in the top 80 rows."""
+              w, bpp, lines = rows(path, 80)
+              total = 0
+              for line in lines:
+                  for x in range(w):
+                      px = line[x * bpp:x * bpp + 3]
+                      lum = sum(px) / 3
+                      if (dark_icons and lum < 120) or (not dark_icons and lum > 180):
+                          total += 1
+              return total
+
           files = sorted(Path('docs/ui-redesign/screenshots').glob('*.png'))
           print('screenshot count:', len(files))
           expected = {
@@ -266,6 +321,22 @@ jobs:
               print('::error::light and dark screenshots are not visually distinct')
               sys.exit(1)
 
+          # System-bar icon contrast: light palettes need dark icons, dark
+          # palettes need light icons. Catches a splash theme leaking white
+          # icons onto a cream status bar.
+          bar_bad = []
+          for f in files:
+              if '320' in f.name:
+                  continue  # 320x640 frames have a shorter status bar
+              want_dark = not f.name.endswith('_dark.png')
+              n = icon_pixels(f, want_dark)
+              if n < 200:
+                  bar_bad.append((f.name, n))
+          print('status-bar icon pixel counts:', [(f.name, icon_pixels(f, not f.name.endswith('_dark.png'))) for f in files if '320' not in f.name])
+          if bar_bad:
+              print('::error::status bar icons lack contrast:', bar_bad)
+              sys.exit(1)
+
           # Every capture must actually show the app (not the launcher or a
           # crash-to-home screen), and no com.xlox crash may be in logcat.
           trace_path = Path('qa-logs/emulator-trace.txt')
@@ -291,18 +362,12 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -f docs/ui-redesign/screenshots/ qa-logs/
-          git diff --cached --quiet && { echo "No screenshot changes"; exit 0; }
-          git commit -m "Add UI QA screenshots [skip ci]" -q
-          pushed=0
-          for attempt in $(seq 1 12); do
-            git fetch origin arena/b2fac70f-anoymundo -q || true
-            git rebase --abort 2>/dev/null || true
-            git rebase origin/arena/b2fac70f-anoymundo -q || true
-            if git push origin HEAD:arena/b2fac70f-anoymundo; then pushed=1; break; fi
-            echo "publish attempt $attempt failed; retrying"
-            sleep 5
-          done
-          [ "$pushed" = 1 ] || { echo "FATAL: could not publish QA logs"; exit 1; }
+          if git diff --cached --quiet; then
+            echo "No screenshot changes"
+          else
+            git commit -m "Add UI QA screenshots [skip ci]" -q
+            echo "Screenshot commit created"
+          fi
 
       - name: Upload screenshots
         if: always()
@@ -313,25 +378,29 @@ jobs:
           if-no-files-found: warn
           retention-days: 30
 
-      - name: Publish failure logs to the branch
-        if: failure()
+      - name: Publish QA artifacts to the branch
+        if: always()
         working-directory: ${{ github.workspace }}
         run: |
+          set -u
           mkdir -p qa-logs
+          exec > >(tee qa-logs/publish.log) 2>&1
           cp /tmp/assembleDebug.log qa-logs/assembleDebug.log 2>/dev/null || true
           cp /tmp/lintDebug.log qa-logs/lintDebug.log 2>/dev/null || true
           cp xlox/app/build/intermediates/lint_intermediate_text_report/debug/lint-results-debug.txt qa-logs/lint-results-debug.txt 2>/dev/null || true
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -f qa-logs/
-          git diff --cached --quiet && { echo "No new logs"; exit 0; }
-          git commit -m "QA failure logs for run ${{ github.run_number }} [skip ci]" -q
+          git add -f qa-logs/ docs/ui-redesign/screenshots/
+          if ! git diff --cached --quiet; then
+            git commit -m "QA logs for run ${{ github.run_number }} [skip ci]" -q
+          fi
           pushed=0
-          for attempt in $(seq 1 12); do
-            git fetch origin arena/b2fac70f-anoymundo -q || true
-            git rebase --abort 2>/dev/null || true
-            git rebase origin/arena/b2fac70f-anoymundo -q || true
+          for attempt in $(seq 1 15); do
             if git push origin HEAD:arena/b2fac70f-anoymundo; then pushed=1; break; fi
-            sleep 5
+            echo "publish attempt $attempt: syncing with remote"
+            git fetch origin arena/b2fac70f-anoymundo -q || true
+            git merge --abort 2>/dev/null || true
+            git merge --no-edit FETCH_HEAD -q || echo "WARN: merge failed, will retry"
+            sleep 4
           done
-          [ "$pushed" = 1 ] || { echo "FATAL: could not publish QA logs"; exit 1; }
+          [ "$pushed" = 1 ] || { echo "FATAL: could not publish QA artifacts"; exit 1; }
