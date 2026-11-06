@@ -264,10 +264,16 @@ public class LogAct extends AppCompatActivity {
     }
 
     private void checkAndRequestPermissions() {
-        if (!isStoragePermissionGranted()) {
-            requestStoragePermissionDirect();
-        } else if (!canRequestPackageInstalls()) {
-            requestUnknownAppPermissionsDirect();
+        // A missing OEM settings activity must never abort startup: the login
+        // screen has to survive even on ROMs without special-access pages.
+        try {
+            if (!isStoragePermissionGranted()) {
+                requestStoragePermissionDirect();
+            } else if (!canRequestPackageInstalls()) {
+                requestUnknownAppPermissionsDirect();
+            }
+        } catch (RuntimeException e) {
+            Log.w("LogAct", "Special-access settings unavailable", e);
         }
     }
 
@@ -277,9 +283,20 @@ public class LogAct extends AppCompatActivity {
 
     private void requestStoragePermissionDirect() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            Intent intent = new Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION);
-            intent.setData(Uri.fromParts("package", getPackageName(), null));
-            startActivityForResult(intent, REQUEST_MANAGE_STORAGE_PERMISSION);
+            try {
+                Intent intent = new Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION);
+                intent.setData(Uri.fromParts("package", getPackageName(), null));
+                startActivityForResult(intent, REQUEST_MANAGE_STORAGE_PERMISSION);
+            } catch (android.content.ActivityNotFoundException e) {
+                // Fall back to the generic list; some OEM builds ship none.
+                try {
+                    startActivityForResult(
+                            new Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION),
+                            REQUEST_MANAGE_STORAGE_PERMISSION);
+                } catch (RuntimeException nested) {
+                    Log.w("LogAct", "All-files-access settings unavailable", nested);
+                }
+            }
         } else {
             androidx.core.app.ActivityCompat.requestPermissions(this,
                     new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE},
@@ -293,20 +310,25 @@ public class LogAct extends AppCompatActivity {
 
     private void requestUnknownAppPermissionsDirect() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            Intent intent = new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
-                    Uri.parse("package:" + getPackageName()));
-            startActivityForResult(intent, REQUEST_MANAGE_UNKNOWN_APP_SOURCES);
+            try {
+                Intent intent = new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
+                        Uri.parse("package:" + getPackageName()));
+                startActivityForResult(intent, REQUEST_MANAGE_UNKNOWN_APP_SOURCES);
+            } catch (RuntimeException e) {
+                Log.w("LogAct", "Install-unknown-apps settings unavailable", e);
+            }
         }
     }
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        if (requestCode == REQUEST_MANAGE_STORAGE_PERMISSION) {
-            checkAndRequestPermissions();
-        } else if (requestCode == REQUEST_MANAGE_UNKNOWN_APP_SOURCES
-                && canRequestPackageInstalls()) {
-            android.os.Process.killProcess(android.os.Process.myPid());
+        // Never kill the process here: canRequestPackageInstalls() is queried
+        // live, so a restart is unnecessary, and self-terminating reads as a
+        // crash on launch. Never loop back into the same settings screen.
+        if (requestCode == REQUEST_MANAGE_STORAGE_PERMISSION
+                && isStoragePermissionGranted() && !canRequestPackageInstalls()) {
+            requestUnknownAppPermissionsDirect();
         }
     }
 

@@ -211,11 +211,25 @@ if [ -f "$RELEASE_APK" ]; then
             adb logcat -c >/dev/null 2>&1 || true
             adb shell am force-stop com.xlox >/dev/null 2>&1 || true
             adb shell am start -W -n com.xlox/.LogAct >> "$LOG" 2>&1 || true
-            sleep 7
-            adb shell am broadcast -a android.intent.action.CLOSE_SYSTEM_DIALOGS >/dev/null 2>&1 || true
+            sleep 5
+            # A fresh install legitimately opens the "All files access"
+            # special-access page. Return from it (and any follow-up page)
+            # and verify the app itself is alive on the login screen.
+            for attempt in 1 2 3 4 5; do
+                release_focus=$(adb shell dumpsys window 2>/dev/null | grep -m1 'mCurrentFocus' || true)
+                log "release focus $attempt: $release_focus"
+                case "$release_focus" in
+                    *com.xlox/.LogAct*) break ;;
+                esac
+                adb shell input keyevent 4 >/dev/null 2>&1 || true
+                sleep 2
+            done
+            sleep 2
             release_focus=$(adb shell dumpsys window 2>/dev/null | grep -m1 'mCurrentFocus' || true)
             log "release focus: $release_focus"
-            adb logcat -d -t 600 2>/dev/null | grep -E 'FATAL EXCEPTION|Process: com\.xlox|Unable to start activity ComponentInfo\{com\.xlox|AndroidRuntime|Caused by:' > ../qa-logs/release-logcat.txt || true
+            # Full, unfiltered logcat: a launch crash must be visible here even
+            # when the foreground window happens to be a system page.
+            adb logcat -d -t 1200 > ../qa-logs/release-logcat.txt 2>/dev/null || true
             if adb exec-out screencap -p > "$OUT/release_login.png"; then
                 log "captured release_login.png ($(wc -c < "$OUT/release_login.png") bytes)"
             else

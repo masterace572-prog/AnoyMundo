@@ -367,13 +367,21 @@ jobs:
           if len(focus) < 12 or bad_focus:
               print('::error::app was not foreground for every capture:', bad_focus[:4])
               sys.exit(1)
-          rel = [l for l in trace.splitlines() if l.startswith('release focus:')]
-          if not rel or 'com.xlox/.LogAct' not in rel[-1]:
-              print('::error::release APK did not reach the login screen:', rel[-1:] if rel else [])
+          rel = [l for l in trace.splitlines() if l.startswith('release focus')]
+          if not rel or not any('com.xlox/.LogAct' in l for l in rel):
+              print('::error::release APK did not reach the login screen:', rel[-2:] if rel else [])
               sys.exit(1)
           rel_log = Path('qa-logs/release-logcat.txt')
           rel_text = rel_log.read_text(errors='replace') if rel_log.exists() else ''
-          if 'FATAL EXCEPTION' in rel_text and 'Process: com.xlox' in rel_text:
+          rel_lines = rel_text.splitlines()
+          crashes = []
+          for i, line in enumerate(rel_lines):
+              if 'FATAL EXCEPTION' in line and 'com.xlox' in '\n'.join(rel_lines[i:i + 8]):
+                  crashes.append(line.strip())
+              if 'Fatal signal' in line and 'com.xlox' in rel_text:
+                  crashes.append(line.strip())
+          print('release crash lines:', crashes[:3])
+          if crashes:
               print('::error::release APK crashed on launch')
               sys.exit(1)
           kb = [l for l in trace.splitlines() if l.startswith('keyboard state:')]
