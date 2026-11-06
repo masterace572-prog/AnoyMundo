@@ -81,6 +81,15 @@ jobs:
           rc=${PIPESTATUS[0]}
           echo "=== FULL LINT TEXT REPORT ===" >> /tmp/lintDebug.log
           cat app/build/intermediates/lint_intermediate_text_report/debug/lint-results-debug.txt >> /tmp/lintDebug.log 2>/dev/null || true
+          python3 - <<'PY'
+          import pathlib, re, sys
+          p = pathlib.Path('app/build/intermediates/lint_intermediate_text_report/debug/lint-results-debug.txt')
+          text = p.read_text(errors='replace') if p.exists() else ''
+          found = re.findall(r'(\d+) errors?, (\d+) warnings?', text)
+          print('lint summary:', found[-1] if found else 'missing')
+          if not found or any(int(v) for v in found[-1]):
+              sys.exit('::error::lint reported errors or warnings')
+          PY
           exit $rc
 
       - name: Resource and literal quality gates
@@ -384,7 +393,6 @@ jobs:
         run: |
           set -u
           mkdir -p qa-logs
-          exec > >(tee qa-logs/publish.log) 2>&1
           cp /tmp/assembleDebug.log qa-logs/assembleDebug.log 2>/dev/null || true
           cp /tmp/lintDebug.log qa-logs/lintDebug.log 2>/dev/null || true
           cp xlox/app/build/intermediates/lint_intermediate_text_report/debug/lint-results-debug.txt qa-logs/lint-results-debug.txt 2>/dev/null || true
