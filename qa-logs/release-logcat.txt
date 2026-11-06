@@ -1,470 +1,384 @@
---------- beginning of main
-11-06 20:49:50.692   988   988 D CarrierSvcBindHelper: onPackageModified: com.xlox
-11-06 20:49:50.712   988   988 D CarrierSvcBindHelper: No carrier app for: 0
-11-06 20:49:50.714  7011  8639 I Dck     : doesDeviceHaveSupportedWirelessCapabilities: wccSysProp:0, wccMendel:3, deviceWccOverride:false [CONTEXT service_id=289 ]
-11-06 20:49:50.714  7011  8639 I Dck     : isDckModuleEligible: isAtLeastR:true, hasWccSupport:false, downloadAllowed:false [CONTEXT service_id=289 ]
-11-06 20:49:50.714  7011  8639 W Dck     : Dck module not eligible for asynchronous downloading [CONTEXT service_id=289 ]
 --------- beginning of system
-11-06 20:49:50.730   486   690 D CompatibilityChangeReporter: Compat change id reported: 161252188; UID 10175; state: DISABLED
-11-06 20:49:50.734  7011  7061 I incfs-mounts: [incfs] Loaded incremental-fs mount info: 1 instances, 2 mount points
-11-06 20:49:50.737  6966  8667 I Fitness : OnPackageChangedOperation got intent: Intent { act=android.intent.action.PACKAGE_CHANGED dat=package: flg=0x5000010 pkg=com.google.android.gms cmp=com.google.android.gms/.chimera.PersistentIntentOperationService (has extras) } [CONTEXT service_id=17 ]
-11-06 20:49:50.741   988   988 D ImsResolver: maybeAddedImsService, packageName: com.xlox
-11-06 20:49:50.750  7011  7011 D BoundBrokerSvc: onUnbind: Intent { act=com.google.android.gms.common.BIND_SHARED_PREFS pkg=com.google.android.gms }
-11-06 20:49:50.761   486   519 I ActivityManager: Force stopping com.xlox appid=10175 user=0: from pid 8748
-11-06 20:49:50.763   988   988 D CarrierSvcBindHelper: onHandleForceStop: [com.xlox]
-11-06 20:49:50.763   988   988 D CarrierSvcBindHelper: No carrier app for: 0
-11-06 20:49:50.774   486  1678 I ActivityManager: Background started FGS: Allowed [callingPackage: com.google.android.apps.wellbeing; callingUid: 10115; uidState: BTOP; intent: Intent { cmp=com.google.android.apps.wellbeing/com.google.apps.tiktok.concurrent.InternalForegroundService (has extras) }; code:BACKGROUND_ACTIVITY_PERMISSION; tempAllowListReason:<null>; targetSdkVersion:33; callerTargetSdkVersion:33; startForegroundCount:0; bindFromPackage:null]
-11-06 20:49:50.788  6966  7003 W ChimeraUtils: Module com.google.android.gms.nearby_en missing resource null(0)
-11-06 20:49:50.804  6966  8673 I Fitness : FitCleanupIntentOperation received Intent android.intent.action.PACKAGE_CHANGED [CONTEXT service_id=17 ]
-11-06 20:49:50.809  6966  7003 W ChimeraUtils: Module com.google.android.gms.nearby_en missing resource null(0)
-11-06 20:49:50.812   486  1854 I ActivityTaskManager: START u0 {flg=0x10000000 cmp=com.xlox/.LogAct} from uid 2000
-11-06 20:49:50.814   486  1854 D CompatibilityChangeReporter: Compat change id reported: 265464455; UID 10175; state: DISABLED
-11-06 20:49:50.814   486  1854 D CompatibilityChangeReporter: Compat change id reported: 265452344; UID 10175; state: DISABLED
-11-06 20:49:50.814   486  1854 D CompatibilityChangeReporter: Compat change id reported: 266124927; UID 10175; state: DISABLED
-11-06 20:49:50.814   486  1854 D CompatibilityChangeReporter: Compat change id reported: 265451093; UID 10175; state: DISABLED
-11-06 20:49:50.814   486  1854 D CompatibilityChangeReporter: Compat change id reported: 265456536; UID 10175; state: DISABLED
-11-06 20:49:50.814   486  1854 D CompatibilityChangeReporter: Compat change id reported: 255940284; UID 10175; state: DISABLED
-11-06 20:49:50.814   486  1854 D CompatibilityChangeReporter: Compat change id reported: 236283604; UID 10175; state: DISABLED
-11-06 20:49:50.814   486  1854 D CompatibilityChangeReporter: Compat change id reported: 263959004; UID 10175; state: DISABLED
-11-06 20:49:50.814   486  1854 D CompatibilityChangeReporter: Compat change id reported: 264304459; UID 10175; state: DISABLED
-11-06 20:49:50.814   486  1854 D CompatibilityChangeReporter: Compat change id reported: 264301586; UID 10175; state: DISABLED
-11-06 20:49:50.814   486  1854 D CompatibilityChangeReporter: Compat change id reported: 254631730; UID 10175; state: DISABLED
-11-06 20:49:50.814   486  1854 D CompatibilityChangeReporter: Compat change id reported: 273509367; UID 10175; state: DISABLED
-11-06 20:49:50.814   486  1854 D CompatibilityChangeReporter: Compat change id reported: 263259275; UID 10175; state: DISABLED
-11-06 20:49:50.815   486  1854 I incfs-mounts: [incfs] Loaded incremental-fs mount info: 1 instances, 2 mount points
-11-06 20:49:50.816   486  1854 D CompatibilityChangeReporter: Compat change id reported: 194480991; UID 10175; state: ENABLED
-11-06 20:49:50.817   486  1854 D CompatibilityChangeReporter: Compat change id reported: 174042980; UID 10175; state: DISABLED
-11-06 20:49:50.820   486  1854 D CompatibilityChangeReporter: Compat change id reported: 184838306; UID 10175; state: DISABLED
-11-06 20:49:50.820   486  1854 D CompatibilityChangeReporter: Compat change id reported: 185004937; UID 10175; state: DISABLED
-11-06 20:49:50.820   486  1854 D CompatibilityChangeReporter: Compat change id reported: 181136395; UID 10175; state: DISABLED
-11-06 20:49:50.820   486  1854 D CompatibilityChangeReporter: Compat change id reported: 174042936; UID 10175; state: DISABLED
-11-06 20:49:50.821   486  1854 D CompatibilityChangeReporter: Compat change id reported: 197654537; UID 10175; state: DISABLED
-11-06 20:49:50.821   486  1854 V SplashScreenExceptionList: SplashScreen checking exception for package com.xlox (target sdk:28) -> false
-11-06 20:49:50.821   486  1854 D CompatibilityChangeReporter: Compat change id reported: 205907456; UID 10175; state: DISABLED
-11-06 20:49:50.831   486   525 D CompatibilityChangeReporter: Compat change id reported: 135634846; UID 10175; state: DISABLED
-11-06 20:49:50.831   486   525 D CompatibilityChangeReporter: Compat change id reported: 177438394; UID 10175; state: DISABLED
-11-06 20:49:50.831   486   525 D CompatibilityChangeReporter: Compat change id reported: 135772972; UID 10175; state: DISABLED
-11-06 20:49:50.831   486   534 D CompatibilityChangeReporter: Compat change id reported: 143937733; UID 10175; state: DISABLED
-11-06 20:49:50.836   288   288 D Zygote  : Forked child process 8758
-11-06 20:49:50.842   486   534 I ActivityManager: Start proc 8758:com.xlox/u0a175 for next-top-activity {com.xlox/com.xlox.LogAct}
-11-06 20:49:50.848   764   807 I incfs-mounts: [incfs] Loaded incremental-fs mount info: 1 instances, 2 mount points
-11-06 20:49:50.863  8758  8758 I com.xlox: Using CollectorTypeCC GC.
-11-06 20:49:50.864  8758  8758 W com.xlox: Unexpected CPU variant for x86: x86_64.
-11-06 20:49:50.864  8758  8758 W com.xlox: Known variants: atom, sandybridge, silvermont, kabylake, default
-11-06 20:49:50.868  6966  6966 D BoundBrokerSvc: onBind: Intent { act=com.google.android.gms.nearby.exposurenotification.START dat=chimera-action:/... cmp=com.google.android.gms/.chimera.PersistentApiServiceNoInstantApps }
-11-06 20:49:50.869  6966  6966 D BoundBrokerSvc: Loading bound service for intent: Intent { act=com.google.android.gms.nearby.exposurenotification.START dat=chimera-action:/... cmp=com.google.android.gms/.chimera.PersistentApiServiceNoInstantApps }
-11-06 20:49:50.870   375   401 I adbd    : jdwp connection from 8758
-11-06 20:49:50.896   764   799 W Looper  : Slow delivery took 35ms wmshell.main h=android.os.Handler c=com.android.wm.shell.common.ExecutorUtils$$ExternalSyntheticLambda1@45eef6a m=0
-11-06 20:49:50.899  7011  7018 I gle.android.gms: Background young concurrent copying GC freed 177614(7463KB) AllocSpace objects, 66(3096KB) LOS objects, 41% free, 14MB/24MB, paused 29.592ms,16us total 132.004ms
-11-06 20:49:50.907   764   808 D SplashScreenView: Build android.window.SplashScreenView{abb3c0c V.E...... ......ID 0,0-0,0}
-11-06 20:49:50.907   764   808 D SplashScreenView: Icon: view: android.widget.ImageView{b4c6955 V.ED..... ......I. 0,0-0,0 #10204dd android:id/splashscreen_icon_view} drawable: com.android.wm.shell.startingsurface.SplashscreenIconDrawableFactory$ImmobileIconDrawable@f5a6c5b size: 528
-11-06 20:49:50.907   764   808 D SplashScreenView: Branding: view: android.view.View{fe60cf8 G.ED..... ......I. 0,0-0,0 #10204dc android:id/splashscreen_branding_view} drawable: null size w: 0 h: 0
-11-06 20:49:50.907  7011  7079 I Icing   : Usage reports ok 0, Failed Usage reports 0, indexed 0, rejected 0
-11-06 20:49:50.908   764   818 W Parcel  : Expecting binder but got null!
-11-06 20:49:50.910  7011  7079 I Icing   : Indexing com.google.android.gms-internal.3p:MobileApplication from com.google.android.gms
-11-06 20:49:50.912   486  2452 D CoreBackPreview: Window{b3a00c1 u0 Splash Screen com.xlox}: Setting back callback OnBackInvokedCallbackInfo{mCallback=android.window.IOnBackInvokedCallback$Stub$Proxy@f3c7fa7, mPriority=0}
-11-06 20:49:50.915   764   799 W Looper  : Drained
-11-06 20:49:50.917   764   764 D TileServices: Couldn't find tile for ComponentInfo{com.google.android.apps.wellbeing/com.google.android.apps.wellbeing.focusmode.quicksettings.FocusModeTileService}
-11-06 20:49:50.929  8758  8758 D CompatibilityChangeReporter: Compat change id reported: 171979766; UID 10175; state: DISABLED
-11-06 20:49:50.933  1025  1025 D MainContentCaptureSession: Flushing 1 event(s) for act:com.google.android.apps.nexuslauncher/.NexusLauncherActivity [state=2 (ACTIVE), disabled=false], reason=FULL
-11-06 20:49:50.973  5045  8666 W Role    : Default holder doesn't have required signing certificate: com.google.android.apps.work.clouddpc:23962F4B43B9857638EA66F4D419518EAE282491ACDA4B94707BD59003C45E58
-11-06 20:49:51.069  8758  8758 D ApplicationLoaders: Returning zygote-cached class loader: /system/framework/android.test.base.jar
-11-06 20:49:51.070   486  2452 D CompatibilityChangeReporter: Compat change id reported: 168419799; UID 10085; state: DISABLED
-11-06 20:49:51.071   486  2452 D CompatibilityChangeReporter: Compat change id reported: 273564678; UID 10085; state: DISABLED
-11-06 20:49:51.081  8758  8758 W ziparchive: Unable to open '/data/app/~~Hc4K8cTdKaGEeP7sW7pKmQ==/com.xlox-AfJg2BX0LqG7qtZrRM5aTQ==/base.dm': No such file or directory
-11-06 20:49:51.082  8758  8758 W ziparchive: Unable to open '/data/app/~~Hc4K8cTdKaGEeP7sW7pKmQ==/com.xlox-AfJg2BX0LqG7qtZrRM5aTQ==/base.dm': No such file or directory
-11-06 20:49:51.177  8758  8758 D nativeloader: Configuring classloader-namespace for other apk /data/app/~~Hc4K8cTdKaGEeP7sW7pKmQ==/com.xlox-AfJg2BX0LqG7qtZrRM5aTQ==/base.apk. target_sdk_version=28, uses_libraries=, library_path=/data/app/~~Hc4K8cTdKaGEeP7sW7pKmQ==/com.xlox-AfJg2BX0LqG7qtZrRM5aTQ==/lib/x86_64, permitted_path=/data:/mnt/expand:/data/user/0/com.xlox
-11-06 20:49:51.188  6966  8069 W ChimeraUtils: Module com.google.android.gms.nearby_en missing resource null(0)
-11-06 20:49:51.192  6966  8069 W ChimeraUtils: Module com.google.android.gms.nearby_en missing resource null(0)
-11-06 20:49:51.291   486   886 W Binder  : Caught a RuntimeException from the binder stub implementation.
-11-06 20:49:51.291   486   886 W Binder  : java.lang.ArrayIndexOutOfBoundsException: Array index out of range: 0
-11-06 20:49:51.291   486   886 W Binder  : 	at android.util.ArraySet.valueAt(ArraySet.java:422)
-11-06 20:49:51.291   486   886 W Binder  : 	at com.android.server.contentcapture.ContentCapturePerUserService$ContentCaptureServiceRemoteCallback.updateContentCaptureOptions(ContentCapturePerUserService.java:733)
-11-06 20:49:51.291   486   886 W Binder  : 	at com.android.server.contentcapture.ContentCapturePerUserService$ContentCaptureServiceRemoteCallback.setContentCaptureWhitelist(ContentCapturePerUserService.java:646)
-11-06 20:49:51.291   486   886 W Binder  : 	at android.service.contentcapture.IContentCaptureServiceCallback$Stub.onTransact(IContentCaptureServiceCallback.java:115)
-11-06 20:49:51.291   486   886 W Binder  : 	at android.os.Binder.execTransactInternal(Binder.java:1285)
-11-06 20:49:51.291   486   886 W Binder  : 	at android.os.Binder.execTransact(Binder.java:1244)
-11-06 20:49:51.306  8758  8758 V GraphicsEnvironment: ANGLE Developer option for 'com.xlox' set to: 'default'
-11-06 20:49:51.309  8758  8758 V GraphicsEnvironment: ANGLE GameManagerService for com.xlox: false
-11-06 20:49:51.309  8758  8758 V GraphicsEnvironment: Neither updatable production driver nor prerelease driver is supported.
-11-06 20:49:51.316  8758  8758 D NetworkSecurityConfig: No Network Security Config specified, using platform default
-11-06 20:49:51.317  8758  8758 D NetworkSecurityConfig: No Network Security Config specified, using platform default
-11-06 20:49:51.321  8758  8758 E BoxApplication: libXloX.so failed to load
-11-06 20:49:51.321  8758  8758 E BoxApplication: java.lang.UnsatisfiedLinkError: dlopen failed: library "libXloX.so" not found
-11-06 20:49:51.321  8758  8758 E BoxApplication: 	at java.lang.Runtime.loadLibrary0(Runtime.java:1077)
-11-06 20:49:51.321  8758  8758 E BoxApplication: 	at java.lang.Runtime.loadLibrary0(Runtime.java:998)
-11-06 20:49:51.321  8758  8758 E BoxApplication: 	at java.lang.System.loadLibrary(System.java:1661)
-11-06 20:49:51.321  8758  8758 E BoxApplication: 	at com.xlox.BoxApplication.<clinit>(Unknown Source:2)
-11-06 20:49:51.321  8758  8758 E BoxApplication: 	at java.lang.Class.newInstance(Native Method)
-11-06 20:49:51.321  8758  8758 E BoxApplication: 	at android.app.AppComponentFactory.instantiateApplication(AppComponentFactory.java:76)
-11-06 20:49:51.321  8758  8758 E BoxApplication: 	at androidx.core.app.CoreComponentFactory.instantiateApplication(Unknown Source:0)
-11-06 20:49:51.321  8758  8758 E BoxApplication: 	at android.app.Instrumentation.newApplication(Instrumentation.java:1243)
-11-06 20:49:51.321  8758  8758 E BoxApplication: 	at android.app.LoadedApk.makeApplicationInner(LoadedApk.java:1458)
-11-06 20:49:51.321  8758  8758 E BoxApplication: 	at android.app.LoadedApk.makeApplicationInner(LoadedApk.java:1395)
-11-06 20:49:51.321  8758  8758 E BoxApplication: 	at android.app.ActivityThread.handleBindApplication(ActivityThread.java:6772)
-11-06 20:49:51.321  8758  8758 E BoxApplication: 	at android.app.ActivityThread.-$$Nest$mhandleBindApplication(Unknown Source:0)
-11-06 20:49:51.321  8758  8758 E BoxApplication: 	at android.app.ActivityThread$H.handleMessage(ActivityThread.java:2133)
-11-06 20:49:51.321  8758  8758 E BoxApplication: 	at android.os.Handler.dispatchMessage(Handler.java:106)
-11-06 20:49:51.321  8758  8758 E BoxApplication: 	at android.os.Looper.loopOnce(Looper.java:201)
-11-06 20:49:51.321  8758  8758 E BoxApplication: 	at android.os.Looper.loop(Looper.java:288)
-11-06 20:49:51.321  8758  8758 E BoxApplication: 	at android.app.ActivityThread.main(ActivityThread.java:7924)
-11-06 20:49:51.321  8758  8758 E BoxApplication: 	at java.lang.reflect.Method.invoke(Native Method)
-11-06 20:49:51.321  8758  8758 E BoxApplication: 	at com.android.internal.os.RuntimeInit$MethodAndArgsCaller.run(RuntimeInit.java:548)
-11-06 20:49:51.321  8758  8758 E BoxApplication: 	at com.android.internal.os.ZygoteInit.main(ZygoteInit.java:936)
-11-06 20:49:51.418   486   591 I RoleService: Granting default roles...
-11-06 20:49:51.518   486  2510 D PackageManager: Instant App installer not found with android.intent.action.INSTALL_INSTANT_APP_PACKAGE
-11-06 20:49:51.519   486  2510 D PackageManager: Clear ephemeral installer activity
-11-06 20:49:51.568   355   378 W TransactionTracing: Could not find layer handle 0x7c16f99a0650
-11-06 20:49:51.568   355   378 W TransactionTracing: Could not find layer handle 0x7c16f99a27b0
-11-06 20:49:51.569   355   378 W TransactionTracing: Could not find layer handle 0x7c16f99a1fd0
-11-06 20:49:51.575  7011  7079 I Icing   : Indexing done com.google.android.gms-internal.3p:MobileApplication
-11-06 20:49:51.634  1025  1025 D MainContentCaptureSession: Flushing 2 event(s) for act:com.google.android.apps.nexuslauncher/.NexusLauncherActivity [state=2 (ACTIVE), disabled=false], reason=VIEW_TREE_APPEARING
-11-06 20:49:51.634  1025  1025 D MainContentCaptureSession: Flushing 2 event(s) for act:com.google.android.apps.nexuslauncher/.NexusLauncherActivity [state=2 (ACTIVE), disabled=false], reason=VIEW_TREE_APPEARED
-11-06 20:49:51.711  5045  8666 W Role    : Default holder doesn't have required signing certificate: com.google.android.apps.work.clouddpc:23962F4B43B9857638EA66F4D419518EAE282491ACDA4B94707BD59003C45E58
-11-06 20:49:51.717   486  2217 W system_server: Long monitor contention with owner binder:486_9 (886) at void com.android.server.am.ActivityManagerService.finishReceiver(android.os.IBinder, int, java.lang.String, android.os.Bundle, boolean, int)(ActivityManagerService.java:14660) waiters=0 in boolean com.android.server.am.ActivityManagerService.stopServiceToken(android.content.ComponentName, android.os.IBinder, int) for 254ms
-11-06 20:49:51.719   486   522 W system_server: Long monitor contention with owner binder:486_9 (886) at void com.android.server.am.ActivityManagerService.finishReceiver(android.os.IBinder, int, java.lang.String, android.os.Bundle, boolean, int)(ActivityManagerService.java:14660) waiters=1 in int com.android.server.am.ActivityManagerService.broadcastIntentWithFeature(android.app.IApplicationThread, java.lang.String, android.content.Intent, java.lang.String, android.content.IIntentReceiver, int, java.lang.String, android.os.Bundle, java.lang.String[], java.lang.String[], java.lang.String[], int, android.os.Bundle, boolean, boolean, int) for 273ms
-11-06 20:49:51.720   486   522 W Looper  : Slow dispatch took 275ms android.fg h=com.android.server.DropBoxManagerService$DropBoxManagerBroadcastHandler c=null m=2
-11-06 20:49:51.728  8758  8758 I BoxApplication: Loader diagnostics: sdk=33 abi=x86_64 page=4096 lib=missing align=-1 writable=false lastError=
-11-06 20:49:51.728  8758  8758 E com.xlox: No implementation found for java.lang.String com.xlox.BoxApplication.getSdkKey() (tried Java_com_xlox_BoxApplication_getSdkKey and Java_com_xlox_BoxApplication_getSdkKey__)
-11-06 20:49:51.738   486  1499 D CompatibilityChangeReporter: Compat change id reported: 135634846; UID 10175; state: DISABLED
-11-06 20:49:51.739   486  1499 D CompatibilityChangeReporter: Compat change id reported: 177438394; UID 10175; state: DISABLED
-11-06 20:49:51.739   486  1499 D CompatibilityChangeReporter: Compat change id reported: 135772972; UID 10175; state: DISABLED
-11-06 20:49:51.744  7011  7011 D BoundBrokerSvc: onBind: Intent { act=com.google.android.gms.common.BIND_SHARED_PREFS pkg=com.google.android.gms }
-11-06 20:49:51.744  7011  7011 D BoundBrokerSvc: Loading bound service for intent: Intent { act=com.google.android.gms.common.BIND_SHARED_PREFS pkg=com.google.android.gms }
-11-06 20:49:51.752   486   534 D CompatibilityChangeReporter: Compat change id reported: 143937733; UID 10175; state: DISABLED
-11-06 20:49:51.754  8758  8758 E BoxApplication: Activation Error
-11-06 20:49:51.754  8758  8758 E BoxApplication: java.lang.UnsatisfiedLinkError: No implementation found for java.lang.String com.xlox.BoxApplication.getSdkKey() (tried Java_com_xlox_BoxApplication_getSdkKey and Java_com_xlox_BoxApplication_getSdkKey__)
-11-06 20:49:51.754  8758  8758 E BoxApplication: 	at com.xlox.BoxApplication.getSdkKey(Native Method)
-11-06 20:49:51.754  8758  8758 E BoxApplication: 	at com.xlox.BoxApplication.onCreate(Unknown Source:28)
-11-06 20:49:51.754  8758  8758 E BoxApplication: 	at android.app.Instrumentation.callApplicationOnCreate(Instrumentation.java:1277)
-11-06 20:49:51.754  8758  8758 E BoxApplication: 	at android.app.ActivityThread.handleBindApplication(ActivityThread.java:6811)
-11-06 20:49:51.754  8758  8758 E BoxApplication: 	at android.app.ActivityThread.-$$Nest$mhandleBindApplication(Unknown Source:0)
-11-06 20:49:51.754  8758  8758 E BoxApplication: 	at android.app.ActivityThread$H.handleMessage(ActivityThread.java:2133)
-11-06 20:49:51.754  8758  8758 E BoxApplication: 	at android.os.Handler.dispatchMessage(Handler.java:106)
-11-06 20:49:51.754  8758  8758 E BoxApplication: 	at android.os.Looper.loopOnce(Looper.java:201)
-11-06 20:49:51.754  8758  8758 E BoxApplication: 	at android.os.Looper.loop(Looper.java:288)
-11-06 20:49:51.754  8758  8758 E BoxApplication: 	at android.app.ActivityThread.main(ActivityThread.java:7924)
-11-06 20:49:51.754  8758  8758 E BoxApplication: 	at java.lang.reflect.Method.invoke(Native Method)
-11-06 20:49:51.754  8758  8758 E BoxApplication: 	at com.android.internal.os.RuntimeInit$MethodAndArgsCaller.run(RuntimeInit.java:548)
-11-06 20:49:51.754  8758  8758 E BoxApplication: 	at com.android.internal.os.ZygoteInit.main(ZygoteInit.java:936)
-11-06 20:49:51.768  7011  7011 D BoundBrokerSvc: onUnbind: Intent { act=com.google.android.gms.common.BIND_SHARED_PREFS pkg=com.google.android.gms }
-11-06 20:49:51.781  8758  8782 D libEGL  : loaded /vendor/lib64/egl/libEGL_emulation.so
-11-06 20:49:51.782   288   288 D Zygote  : Forked child process 8784
-11-06 20:49:51.786   486   534 I ActivityManager: Start proc 8784:com.xlox:stub1/u0a175 for content provider {com.xlox/top.bienvenido.mundo.manifest.MundoProvider$Companion$STUB1}
-11-06 20:49:51.791  8784  8784 I com.xlox:stub1: Using CollectorTypeCC GC.
-11-06 20:49:51.793  8784  8784 W com.xlox:stub1: Unexpected CPU variant for x86: x86_64.
-11-06 20:49:51.793  8784  8784 W com.xlox:stub1: Known variants: atom, sandybridge, silvermont, kabylake, default
-11-06 20:49:51.823   486   532 W PackageManager: Failed registering loading progress callback. Package is fully loaded.
-11-06 20:49:51.833  8758  8782 D libEGL  : loaded /vendor/lib64/egl/libGLESv1_CM_emulation.so
-11-06 20:49:51.835  8758  8782 D libEGL  : loaded /vendor/lib64/egl/libGLESv2_emulation.so
-11-06 20:49:51.837  1588  1588 I AiAiEcho: EchoSearch: AppFetcherImpl is initialized with [19] apps [time=5, reason=com.xlox is added]
-11-06 20:49:51.845  1025  1077 I incfs-mounts: [incfs] Loaded incremental-fs mount info: 1 instances, 2 mount points
-11-06 20:49:51.851  8758  8758 D AppCompatDelegate: Checking for metadata for AppLocalesMetadataHolderService : Service not found
-11-06 20:49:51.873  1025  1025 D MainContentCaptureSession: Flushing 18 event(s) for act:com.google.android.apps.nexuslauncher/.NexusLauncherActivity [state=2 (ACTIVE), disabled=false], reason=VIEW_TREE_APPEARING
-11-06 20:49:51.873  1025  1025 D MainContentCaptureSession: Flushing 2 event(s) for act:com.google.android.apps.nexuslauncher/.NexusLauncherActivity [state=2 (ACTIVE), disabled=false], reason=VIEW_TREE_APPEARED
-11-06 20:49:51.880  7011  7079 I Icing   : Indexing com.google.android.gms-apps from com.google.android.gms
-11-06 20:49:51.886   486  2510 D CompatibilityChangeReporter: Compat change id reported: 161252188; UID 10175; state: DISABLED
-11-06 20:49:51.886  5045  5045 D PersistedStoragePackageUninstalledReceiver: Received android.intent.action.PACKAGE_FULLY_REMOVED for com.xlox for u0
-11-06 20:49:51.887   375   401 I adbd    : jdwp connection from 8784
-11-06 20:49:51.911  8784  8784 D CompatibilityChangeReporter: Compat change id reported: 171979766; UID 10175; state: DISABLED
-11-06 20:49:51.926  8784  8784 D ApplicationLoaders: Returning zygote-cached class loader: /system/framework/android.test.base.jar
-11-06 20:49:51.926  8784  8784 W ziparchive: Unable to open '/data/app/~~Hc4K8cTdKaGEeP7sW7pKmQ==/com.xlox-AfJg2BX0LqG7qtZrRM5aTQ==/base.dm': No such file or directory
-11-06 20:49:51.926  8784  8784 W ziparchive: Unable to open '/data/app/~~Hc4K8cTdKaGEeP7sW7pKmQ==/com.xlox-AfJg2BX0LqG7qtZrRM5aTQ==/base.dm': No such file or directory
-11-06 20:49:51.939  8784  8784 D nativeloader: Configuring classloader-namespace for other apk /data/app/~~Hc4K8cTdKaGEeP7sW7pKmQ==/com.xlox-AfJg2BX0LqG7qtZrRM5aTQ==/base.apk. target_sdk_version=28, uses_libraries=, library_path=/data/app/~~Hc4K8cTdKaGEeP7sW7pKmQ==/com.xlox-AfJg2BX0LqG7qtZrRM5aTQ==/lib/x86_64, permitted_path=/data:/mnt/expand:/data/user/0/com.xlox
-11-06 20:49:51.946  1588  2036 I AiAiEcho: EchoSearch: WidgetFetcherImpl is initialized with [25] widgets [reason=package added for userId: 0]
-11-06 20:49:51.983  8784  8784 V GraphicsEnvironment: ANGLE Developer option for 'com.xlox' set to: 'default'
-11-06 20:49:51.983  8784  8784 V GraphicsEnvironment: ANGLE GameManagerService for com.xlox: false
-11-06 20:49:51.983  8784  8784 V GraphicsEnvironment: Neither updatable production driver nor prerelease driver is supported.
-11-06 20:49:51.988  8784  8784 D NetworkSecurityConfig: No Network Security Config specified, using platform default
-11-06 20:49:51.990  8784  8784 D NetworkSecurityConfig: No Network Security Config specified, using platform default
-11-06 20:49:51.991  8784  8784 E BoxApplication: libXloX.so failed to load
-11-06 20:49:51.991  8784  8784 E BoxApplication: java.lang.UnsatisfiedLinkError: dlopen failed: library "libXloX.so" not found
-11-06 20:49:51.991  8784  8784 E BoxApplication: 	at java.lang.Runtime.loadLibrary0(Runtime.java:1077)
-11-06 20:49:51.991  8784  8784 E BoxApplication: 	at java.lang.Runtime.loadLibrary0(Runtime.java:998)
-11-06 20:49:51.991  8784  8784 E BoxApplication: 	at java.lang.System.loadLibrary(System.java:1661)
-11-06 20:49:51.991  8784  8784 E BoxApplication: 	at com.xlox.BoxApplication.<clinit>(Unknown Source:2)
-11-06 20:49:51.991  8784  8784 E BoxApplication: 	at java.lang.Class.newInstance(Native Method)
-11-06 20:49:51.991  8784  8784 E BoxApplication: 	at android.app.AppComponentFactory.instantiateApplication(AppComponentFactory.java:76)
-11-06 20:49:51.991  8784  8784 E BoxApplication: 	at androidx.core.app.CoreComponentFactory.instantiateApplication(Unknown Source:0)
-11-06 20:49:51.991  8784  8784 E BoxApplication: 	at android.app.Instrumentation.newApplication(Instrumentation.java:1243)
-11-06 20:49:51.991  8784  8784 E BoxApplication: 	at android.app.LoadedApk.makeApplicationInner(LoadedApk.java:1458)
-11-06 20:49:51.991  8784  8784 E BoxApplication: 	at android.app.LoadedApk.makeApplicationInner(LoadedApk.java:1395)
-11-06 20:49:51.991  8784  8784 E BoxApplication: 	at android.app.ActivityThread.handleBindApplication(ActivityThread.java:6772)
-11-06 20:49:51.991  8784  8784 E BoxApplication: 	at android.app.ActivityThread.-$$Nest$mhandleBindApplication(Unknown Source:0)
-11-06 20:49:51.991  8784  8784 E BoxApplication: 	at android.app.ActivityThread$H.handleMessage(ActivityThread.java:2133)
-11-06 20:49:51.991  8784  8784 E BoxApplication: 	at android.os.Handler.dispatchMessage(Handler.java:106)
-11-06 20:49:51.991  8784  8784 E BoxApplication: 	at android.os.Looper.loopOnce(Looper.java:201)
-11-06 20:49:51.991  8784  8784 E BoxApplication: 	at android.os.Looper.loop(Looper.java:288)
-11-06 20:49:51.991  8784  8784 E BoxApplication: 	at android.app.ActivityThread.main(ActivityThread.java:7924)
-11-06 20:49:51.991  8784  8784 E BoxApplication: 	at java.lang.reflect.Method.invoke(Native Method)
-11-06 20:49:51.991  8784  8784 E BoxApplication: 	at com.android.internal.os.RuntimeInit$MethodAndArgsCaller.run(RuntimeInit.java:548)
-11-06 20:49:51.991  8784  8784 E BoxApplication: 	at com.android.internal.os.ZygoteInit.main(ZygoteInit.java:936)
-11-06 20:49:52.001  1582  2267 I MediaProvider: Begin Intent { act=android.intent.action.PACKAGE_FULLY_REMOVED dat=package: flg=0x5000010 cmp=com.google.android.providers.media.module/com.android.providers.media.MediaService (has extras) }
-11-06 20:49:52.027  8758  8758 D CompatibilityChangeReporter: Compat change id reported: 210923482; UID 10175; state: DISABLED
-11-06 20:49:52.027  8758  8758 D CompatibilityChangeReporter: Compat change id reported: 37756858; UID 10175; state: ENABLED
-11-06 20:49:52.030  8784  8801 E com.xlox:stub1: No implementation found for java.lang.Object top.bienvenido.mundo.common.initialize.MNative.ioctl(int, java.lang.Object) (tried Java_top_bienvenido_mundo_common_initialize_MNative_ioctl and Java_top_bienvenido_mundo_common_initialize_MNative_ioctl__ILjava_lang_Object_2)
-11-06 20:49:52.032  8758  8758 D CompatibilityChangeReporter: Compat change id reported: 171228096; UID 10175; state: ENABLED
-11-06 20:49:52.038   486   886 W BroadcastQueue: Background execution not allowed: receiving Intent { act=android.intent.action.PACKAGE_ADDED dat=package: flg=0x4000010 (has extras) } to com.google.android.packageinstaller/com.android.packageinstaller.PackageInstalledReceiver
-11-06 20:49:52.039   486   533 W BroadcastQueue: Background execution not allowed: receiving Intent { act=android.intent.action.PACKAGE_ADDED dat=package: flg=0x4000010 (has extras) } to com.google.android.gms/.games.chimera.GamesSystemBroadcastReceiverProxy
-11-06 20:49:52.039   486   533 W BroadcastQueue: Background execution not allowed: receiving Intent { act=android.intent.action.PACKAGE_ADDED dat=package: flg=0x4000010 (has extras) } to com.google.android.gms/.gass.chimera.PackageChangeBroadcastReceiver
-11-06 20:49:52.039   486   533 W BroadcastQueue: Background execution not allowed: receiving Intent { act=android.intent.action.PACKAGE_ADDED dat=package: flg=0x4000010 (has extras) } to com.google.android.gms/.chimera.GmsIntentOperationService$PersistentTrustedReceiver
-11-06 20:49:52.039   486   533 W BroadcastQueue: Background execution not allowed: receiving Intent { act=android.intent.action.PACKAGE_ADDED dat=package: flg=0x4000010 (has extras) } to com.google.android.googlequicksearchbox/com.google.android.apps.gsa.googlequicksearchbox.GelStubAppWatcher
-11-06 20:49:52.062  8784  8784 I BoxApplication: Loader diagnostics: sdk=33 abi=x86_64 page=4096 lib=missing align=-1 writable=false lastError=
-11-06 20:49:52.063  8784  8784 E com.xlox:stub1: No implementation found for java.lang.String com.xlox.BoxApplication.getSdkKey() (tried Java_com_xlox_BoxApplication_getSdkKey and Java_com_xlox_BoxApplication_getSdkKey__)
-11-06 20:49:52.063  8784  8784 E BoxApplication: Activation Error
-11-06 20:49:52.063  8784  8784 E BoxApplication: java.lang.UnsatisfiedLinkError: No implementation found for java.lang.String com.xlox.BoxApplication.getSdkKey() (tried Java_com_xlox_BoxApplication_getSdkKey and Java_com_xlox_BoxApplication_getSdkKey__)
-11-06 20:49:52.063  8784  8784 E BoxApplication: 	at com.xlox.BoxApplication.getSdkKey(Native Method)
-11-06 20:49:52.063  8784  8784 E BoxApplication: 	at com.xlox.BoxApplication.onCreate(Unknown Source:28)
-11-06 20:49:52.063  8784  8784 E BoxApplication: 	at android.app.Instrumentation.callApplicationOnCreate(Instrumentation.java:1277)
-11-06 20:49:52.063  8784  8784 E BoxApplication: 	at android.app.ActivityThread.handleBindApplication(ActivityThread.java:6811)
-11-06 20:49:52.063  8784  8784 E BoxApplication: 	at android.app.ActivityThread.-$$Nest$mhandleBindApplication(Unknown Source:0)
-11-06 20:49:52.063  8784  8784 E BoxApplication: 	at android.app.ActivityThread$H.handleMessage(ActivityThread.java:2133)
-11-06 20:49:52.063  8784  8784 E BoxApplication: 	at android.os.Handler.dispatchMessage(Handler.java:106)
-11-06 20:49:52.063  8784  8784 E BoxApplication: 	at android.os.Looper.loopOnce(Looper.java:201)
-11-06 20:49:52.063  8784  8784 E BoxApplication: 	at android.os.Looper.loop(Looper.java:288)
-11-06 20:49:52.063  8784  8784 E BoxApplication: 	at android.app.ActivityThread.main(ActivityThread.java:7924)
-11-06 20:49:52.063  8784  8784 E BoxApplication: 	at java.lang.reflect.Method.invoke(Native Method)
-11-06 20:49:52.063  8784  8784 E BoxApplication: 	at com.android.internal.os.RuntimeInit$MethodAndArgsCaller.run(RuntimeInit.java:548)
-11-06 20:49:52.063  8784  8784 E BoxApplication: 	at com.android.internal.os.ZygoteInit.main(ZygoteInit.java:936)
-11-06 20:49:52.065  7011  7079 I Icing   : Indexing done com.google.android.gms-apps
-11-06 20:49:52.068  7011  7079 I Icing   : Indexing com.google.android.gms-apps from com.google.android.gms
-11-06 20:49:52.068  7011  7079 I Icing   : Indexing done com.google.android.gms-apps
-11-06 20:49:52.070  1582  2267 D MediaProvider: Deleted 0 Android/media items belonging to com.xlox on /data/user/0/com.google.android.providers.media.module/databases/external.db
-11-06 20:49:52.074  1582  2267 D MediaGrants: Removed 0 media_grants for com.xlox. Reason: Package orphaned
-11-06 20:49:52.075  1582  2267 I MediaProvider: End Intent { act=android.intent.action.PACKAGE_FULLY_REMOVED dat=package: flg=0x5000010 cmp=com.google.android.providers.media.module/com.android.providers.media.MediaService (has extras) }
-11-06 20:49:52.093  8758  8758 D CompatibilityChangeReporter: Compat change id reported: 237531167; UID 10175; state: DISABLED
-11-06 20:49:52.101  8758  8781 W Parcel  : Expecting binder but got null!
-11-06 20:49:52.129  8758  8758 I Choreographer: Skipped 37 frames!  The application may be doing too much work on its main thread.
-11-06 20:49:52.130   486  1672 D CoreBackPreview: Window{a972acc u0 com.xlox/com.xlox.LogAct}: Setting back callback OnBackInvokedCallbackInfo{mCallback=android.window.IOnBackInvokedCallback$Stub$Proxy@53ed1be, mPriority=0}
-11-06 20:49:52.132  6966  8069 W ChimeraUtils: Module com.google.android.gms.nearby_en missing resource null(0)
-11-06 20:49:52.146  6966  8069 W ChimeraUtils: Module com.google.android.gms.nearby_en missing resource null(0)
-11-06 20:49:52.148  6966  8673 I Fitness : OnPackageChangedOperation got intent: Intent { act=android.intent.action.PACKAGE_CHANGED dat=package: flg=0x5000010 pkg=com.google.android.gms cmp=com.google.android.gms/.chimera.PersistentIntentOperationService (has extras) } [CONTEXT service_id=17 ]
-11-06 20:49:52.162   355   376 W ServiceManager: Permission failure: android.permission.ACCESS_SURFACE_FLINGER from uid=10175 pid=8758
-11-06 20:49:52.162   355   376 D PermissionCache: checking android.permission.ACCESS_SURFACE_FLINGER for uid=10175 => denied (175 us)
-11-06 20:49:52.163   355   599 W ServiceManager: Permission failure: android.permission.ACCESS_SURFACE_FLINGER from uid=10175 pid=0
-11-06 20:49:52.163   355   599 D PermissionCache: checking android.permission.ACCESS_SURFACE_FLINGER for uid=10175 => denied (1870 us)
-11-06 20:49:52.163   355   376 W ServiceManager: Permission failure: android.permission.ROTATE_SURFACE_FLINGER from uid=10175 pid=8758
-11-06 20:49:52.163   355   376 D PermissionCache: checking android.permission.ROTATE_SURFACE_FLINGER for uid=10175 => denied (1778 us)
-11-06 20:49:52.164   355   376 W ServiceManager: Permission failure: android.permission.INTERNAL_SYSTEM_WINDOW from uid=10175 pid=8758
-11-06 20:49:52.164   355   376 D PermissionCache: checking android.permission.INTERNAL_SYSTEM_WINDOW for uid=10175 => denied (236 us)
-11-06 20:49:52.183   355   378 W TransactionTracing: Could not find layer handle 0x7c16f99a41f0
-11-06 20:49:52.184   355   378 W TransactionTracing: Could not find layer handle 0x7c16f99a3bf0
-11-06 20:49:52.185   355   599 W ServiceManager: Permission failure: android.permission.ROTATE_SURFACE_FLINGER from uid=10175 pid=0
-11-06 20:49:52.185   355   599 D PermissionCache: checking android.permission.ROTATE_SURFACE_FLINGER for uid=10175 => denied (21466 us)
-11-06 20:49:52.194  8758  8781 D HostConnection: HostComposition ext ANDROID_EMU_CHECKSUM_HELPER_v1 ANDROID_EMU_native_sync_v2 ANDROID_EMU_dma_v1 ANDROID_EMU_direct_mem ANDROID_EMU_host_composition_v1 ANDROID_EMU_host_composition_v2 ANDROID_EMU_vulkan ANDROID_EMU_deferred_vulkan_commands ANDROID_EMU_vulkan_null_optional_strings ANDROID_EMU_vulkan_create_resources_with_requirements ANDROID_EMU_YUV_Cache ANDROID_EMU_vulkan_ignored_handles ANDROID_EMU_has_shared_slots_host_memory_allocator ANDROID_EMU_vulkan_free_memory_sync ANDROID_EMU_vulkan_shader_float16_int8 ANDROID_EMU_vulkan_async_queue_submit ANDROID_EMU_vulkan_queue_submit_with_commands ANDROID_EMU_sync_buffer_data ANDROID_EMU_vulkan_async_qsri ANDROID_EMU_read_color_buffer_dma ANDROID_EMU_hwc_multi_configs ANDROID_EMU_hwc_color_transform GL_OES_EGL_image_external_essl3 GL_OES_vertex_array_object GL_KHR_texture_compression_astc_ldr ANDROID_EMU_host_side_tracing ANDROID_EMU_gles_max_version_3_0 
-11-06 20:49:52.195   486   519 W BroadcastQueue: Background execution not allowed: receiving Intent { act=android.intent.action.DROPBOX_ENTRY_ADDED flg=0x10 (has extras) } to com.google.android.gms/.stats.service.DropBoxEntryAddedReceiver
-11-06 20:49:52.196   486   533 W BroadcastQueue: Background execution not allowed: receiving Intent { act=android.intent.action.DROPBOX_ENTRY_ADDED flg=0x10 (has extras) } to com.google.android.gms/.chimera.GmsIntentOperationService$PersistentTrustedReceiver
-11-06 20:49:52.204  8758  8781 W OpenGLRenderer: Failed to initialize 101010-2 format, error = EGL_SUCCESS
-11-06 20:49:52.204  6966  8667 I Fitness : FitCleanupIntentOperation received Intent android.intent.action.PACKAGE_CHANGED [CONTEXT service_id=17 ]
-11-06 20:49:52.206  8758  8781 D EGL_emulation: eglCreateContext: 0x75f92e60ee50: maj 3 min 0 rcv 3
-11-06 20:49:52.209  8758  8781 D EGL_emulation: eglMakeCurrent: 0x75f92e60ee50: ver 3 0 (tinfo 0x75fb49985080) (first time)
-11-06 20:49:52.235   127   127 I hwservicemanager: getTransport: Cannot find entry android.hardware.graphics.mapper@4.0::IMapper/default in either framework or device VINTF manifest.
-11-06 20:49:52.235  8758  8781 I Gralloc4: mapper 4.x is not supported
-11-06 20:49:52.236   486  1676 E DatabaseUtils: Writing exception to parcel
-11-06 20:49:52.236   486  1676 E DatabaseUtils: java.lang.SecurityException: Permission denial: reading from settings requires:android.permission.READ_DEVICE_CONFIG
-11-06 20:49:52.236   486  1676 E DatabaseUtils: 	at android.provider.DeviceConfig.enforceReadPermission(DeviceConfig.java:1219)
-11-06 20:49:52.236   486  1676 E DatabaseUtils: 	at com.android.providers.settings.SettingsProvider.getConfigSetting(SettingsProvider.java:1138)
-11-06 20:49:52.236   486  1676 E DatabaseUtils: 	at com.android.providers.settings.SettingsProvider.call(SettingsProvider.java:419)
-11-06 20:49:52.236   486  1676 E DatabaseUtils: 	at android.content.ContentProvider.call(ContentProvider.java:2511)
-11-06 20:49:52.236   486  1676 E DatabaseUtils: 	at android.content.ContentProvider$Transport.call(ContentProvider.java:525)
-11-06 20:49:52.236   486  1676 E DatabaseUtils: 	at android.content.ContentProviderNative.onTransact(ContentProviderNative.java:295)
-11-06 20:49:52.236   486  1676 E DatabaseUtils: 	at android.os.Binder.execTransactInternal(Binder.java:1280)
-11-06 20:49:52.236   486  1676 E DatabaseUtils: 	at android.os.Binder.execTransact(Binder.java:1244)
-11-06 20:49:52.258   127   127 I hwservicemanager: getTransport: Cannot find entry android.hardware.graphics.allocator@4.0::IAllocator/default in either framework or device VINTF manifest.
-11-06 20:49:52.259  8784  8806 E com.xlox:stub1: No implementation found for java.lang.Object top.bienvenido.mundo.common.initialize.MNative.ioctl(int, java.lang.Object) (tried Java_top_bienvenido_mundo_common_initialize_MNative_ioctl and Java_top_bienvenido_mundo_common_initialize_MNative_ioctl__ILjava_lang_Object_2)
-11-06 20:49:52.261   126   126 I servicemanager: Could not find android.hardware.graphics.allocator.IAllocator/default in the VINTF manifest.
-11-06 20:49:52.261  8758  8781 W Gralloc4: allocator 4.x is not supported
-11-06 20:49:52.269  8758  8781 D HostConnection: HostComposition ext ANDROID_EMU_CHECKSUM_HELPER_v1 ANDROID_EMU_native_sync_v2 ANDROID_EMU_dma_v1 ANDROID_EMU_direct_mem ANDROID_EMU_host_composition_v1 ANDROID_EMU_host_composition_v2 ANDROID_EMU_vulkan ANDROID_EMU_deferred_vulkan_commands ANDROID_EMU_vulkan_null_optional_strings ANDROID_EMU_vulkan_create_resources_with_requirements ANDROID_EMU_YUV_Cache ANDROID_EMU_vulkan_ignored_handles ANDROID_EMU_has_shared_slots_host_memory_allocator ANDROID_EMU_vulkan_free_memory_sync ANDROID_EMU_vulkan_shader_float16_int8 ANDROID_EMU_vulkan_async_queue_submit ANDROID_EMU_vulkan_queue_submit_with_commands ANDROID_EMU_sync_buffer_data ANDROID_EMU_vulkan_async_qsri ANDROID_EMU_read_color_buffer_dma ANDROID_EMU_hwc_multi_configs ANDROID_EMU_hwc_color_transform GL_OES_EGL_image_external_essl3 GL_OES_vertex_array_object GL_KHR_texture_compression_astc_ldr ANDROID_EMU_host_side_tracing ANDROID_EMU_gles_max_version_3_0 
-11-06 20:49:52.295  7011  7079 I Icing   : Indexing com.google.android.gms-apps from com.google.android.gms
-11-06 20:49:52.306  7011  7079 I Icing   : Indexing done com.google.android.gms-apps
-11-06 20:49:52.364   486   522 W ziparchive: Unable to open '/data/app/~~Hc4K8cTdKaGEeP7sW7pKmQ==/com.xlox-AfJg2BX0LqG7qtZrRM5aTQ==/base.dm': No such file or directory
-11-06 20:49:52.371   486   522 I ActivityTaskManager: Displayed com.xlox/.LogAct: +1s552ms
-11-06 20:49:52.383  8758  8771 I OpenGLRenderer: Davey! duration=866ms; Flags=1, FrameTimelineVsyncId=23467, IntendedVsync=241390243584, Vsync=242006910226, InputEventId=0, HandleInputStart=242014740088, AnimationStart=242014740459, PerformTraversalsStart=242015314721, DrawStart=242155290972, FrameDeadline=241406910250, FrameInterval=242014703611, FrameStartTime=16666666, SyncQueued=242158712717, SyncStart=242158961666, IssueDrawCommandsStart=242159111485, SwapBuffers=242159806442, FrameCompleted=242257120418, DequeueBufferDuration=7374, QueueBufferDuration=415786, GpuCompleted=242257120418, SwapBuffersCompleted=242248330635, DisplayPresentTime=0, CommandSubmissionCompleted=242159806442, 
-11-06 20:49:52.410   486   519 D CompatibilityChangeReporter: Compat change id reported: 181136395; UID 10175; state: DISABLED
-11-06 20:49:52.410   486   519 D CompatibilityChangeReporter: Compat change id reported: 174042936; UID 10175; state: DISABLED
-11-06 20:49:52.421  1025  1990 D OneSearchSuggestProvider: Shut down the binder channel
-11-06 20:49:52.426   961  1258 D BtGatt.ScanManager: uid 10119 isForeground true scanMode -1
-11-06 20:49:52.427   961  1258 D BtGatt.ScanManager: uid 10119 isForeground true scanMode -1
-11-06 20:49:52.427   961  1258 D BtGatt.ScanManager: uid 10119 isForeground true scanMode 1
-11-06 20:49:52.428  1025  1040 I s.nexuslauncher: oneway function results for code 2 on binder at 0x75f8be677bc0 will be dropped but finished with status UNKNOWN_TRANSACTION
-11-06 20:49:52.447  1743  2446 I PBSessionCacheImpl: Deleted sessionId[7667589066854840] from persistence.
-11-06 20:49:52.548   961   961 V MediaPlayerList: mPackageChangedBroadcastReceiver: action: android.intent.action.PACKAGE_CHANGED
-11-06 20:49:52.548   961   961 D MediaPlayerList: Name of package changed: com.xlox
-11-06 20:49:52.548   961   961 V MediaPlayerList: mPackageChangedBroadcastReceiver: action: android.intent.action.PACKAGE_CHANGED
-11-06 20:49:52.549   961   961 D MediaPlayerList: Name of package changed: com.xlox
-11-06 20:49:52.551   486   582 D CompatibilityChangeReporter: Compat change id reported: 171306433; UID 10175; state: DISABLED
-11-06 20:49:52.551   486   582 D CompatibilityChangeReporter: Compat change id reported: 218533173; UID 10175; state: DISABLED
-11-06 20:49:52.696  1743  2508 W SearchServiceCore: Abort, client detached.
-11-06 20:49:52.697  3106  3158 I Bugle   : BroadcastReceiverAsyncWorkTracker: Acknowledging broadcast of atsi@f24ff7a
-11-06 20:49:52.711   764   764 D ControlsListingControllerImpl: ServiceConfig reloaded, count: 0
-11-06 20:49:52.716   988   988 D CarrierSvcBindHelper: onPackageModified: com.xlox
-11-06 20:49:52.744   486   602 I InputReader: Reconfiguring input devices, changes=KEYBOARD_LAYOUTS | 
-11-06 20:49:52.745   988   988 D CarrierSvcBindHelper: No carrier app for: 0
-11-06 20:49:52.749  6966  8667 I Fitness : OnPackageChangedOperation got intent: Intent { act=android.intent.action.PACKAGE_CHANGED dat=package: flg=0x45000010 pkg=com.google.android.gms cmp=com.google.android.gms/.chimera.PersistentIntentOperationService (has extras) } [CONTEXT service_id=17 ]
-11-06 20:49:52.753  6966  8673 I Fitness : FitCleanupIntentOperation received Intent android.intent.action.PACKAGE_CHANGED [CONTEXT service_id=17 ]
-11-06 20:49:52.769  3740  8817 I ProvidersCache: Provider returned no roots. Possibly naughty: com.google.android.apps.docs.storage
-11-06 20:49:52.782   486   486 W Looper  : Slow dispatch took 289ms main h=com.android.server.job.JobSchedulerService$JobHandler c=null m=8
-11-06 20:49:52.783  6966  7004 W ChimeraUtils: Module com.google.android.gms.nearby_en missing resource null(0)
-11-06 20:49:52.784  6966  7004 W ChimeraUtils: Module com.google.android.gms.nearby_en missing resource null(0)
-11-06 20:49:52.785   486   486 W Looper  : Slow delivery took 292ms main h=com.android.server.power.Notifier$NotifierHandler c=null m=7
-11-06 20:49:52.787   486   486 I Telecom : DefaultDialerCache: Refreshing default dialer for user 0: now com.google.android.dialer: DDC.oR@Ajw
-11-06 20:49:52.788   486   486 W Looper  : Drained
-11-06 20:49:52.789   486   591 I RoleService: Granting default roles...
-11-06 20:49:52.795  5045  5215 I PermissionControllerServiceImpl: Updating user sensitive for uid 10175
-11-06 20:49:52.808   988   988 D ImsResolver: maybeAddedImsService, packageName: com.xlox
-11-06 20:49:52.837  5045  8666 W Role    : Default holder doesn't have required signing certificate: com.google.android.apps.work.clouddpc:23962F4B43B9857638EA66F4D419518EAE282491ACDA4B94707BD59003C45E58
-11-06 20:49:52.879   486  2510 W JobScheduler: Job didn't exist in JobStore: a8b6de #u0a138/1034 com.google.android.apps.photos/com.google.android.libraries.social.mediamonitor.MediaMonitorJobSchedulerService
-11-06 20:49:52.927  7011  7078 I Icing   : Indexing com.google.android.gms-apps from com.google.android.gms
-11-06 20:49:52.969   486  2442 W UriGrantsManagerService: No permission grants found for com.google.android.apps.photos
-11-06 20:49:52.970   486  1854 W UriGrantsManagerService: No permission grants found for com.google.android.apps.photos
-11-06 20:49:52.992   486  2442 W UriGrantsManagerService: No permission grants found for com.google.android.apps.photos
-11-06 20:49:52.993   486   828 W UriGrantsManagerService: No permission grants found for com.google.android.apps.photos
-11-06 20:49:53.000   486  1854 W UriGrantsManagerService: No permission grants found for com.google.android.apps.photos
-11-06 20:49:53.001   486  2452 W UriGrantsManagerService: No permission grants found for com.google.android.apps.photos
-11-06 20:49:53.045  7011  7078 I Icing   : Indexing done com.google.android.gms-apps
-11-06 20:49:53.085  8758  8758 D SplashScreenView: Building from parcel drawable: android.graphics.drawable.BitmapDrawable@9981969
-11-06 20:49:53.092  8758  8758 D SplashScreenView: Build android.window.SplashScreenView{8f9ac8f V.E...... ......ID 0,0-0,0}
-11-06 20:49:53.092  8758  8758 D SplashScreenView: Icon: view: i.d0{a7c3b1c V.ED..... ......I. 0,0-0,0 #10204dd android:id/splashscreen_icon_view} drawable: android.graphics.drawable.BitmapDrawable@9981969 size: 528
-11-06 20:49:53.092  8758  8758 D SplashScreenView: Branding: view: android.view.View{48fe325 G.ED..... ......I. 0,0-0,0 #10204dc android:id/splashscreen_branding_view} drawable: null size w: 0 h: 0
-11-06 20:49:53.094   486  1854 D CompatibilityChangeReporter: Compat change id reported: 214016041; UID 10175; state: DISABLED
-11-06 20:49:53.095  8758  8758 I Choreographer: Skipped 40 frames!  The application may be doing too much work on its main thread.
-11-06 20:49:53.099  1483  1483 I GoogleInputMethodService: GoogleInputMethodService.onFinishInput():3227 
-11-06 20:49:53.231  1483  1483 I GoogleInputMethodService: GoogleInputMethodService.updateDeviceLockedStatus():2087 repeatCheckTimes = 0, unlocked = true
-11-06 20:49:53.231  1483  1483 I GoogleInputMethodService: GoogleInputMethodService.onStartInput():1877 onStartInput(EditorInfo{inputType=0x0(NULL) imeOptions=0x0 privateImeOptions=null actionName=UNSPECIFIED actionLabel=null actionId=0 initialSelStart=-1 initialSelEnd=-1 initialCapsMode=0x0 hintText=null label=null packageName=com.xlox fieldId=-1 fieldName=null extras=null}, false)
-11-06 20:49:53.231  1483  1483 I GoogleInputMethodService: GoogleInputMethodService.shouldHideHeaderOnInitialState():4008 ShouldHideHeaderOnInitialState = false
-11-06 20:49:53.232  1483  1483 I GoogleInputMethodService: GoogleInputMethodService.updateDeviceLockedStatus():2087 repeatCheckTimes = 2, unlocked = true
-11-06 20:49:53.548  1498  1579 I incfs-mounts: [incfs] Loaded incremental-fs mount info: 1 instances, 2 mount points
-11-06 20:49:53.925  1025  1025 D MainContentCaptureSession: Flushing 40 event(s) for act:com.google.android.apps.nexuslauncher/.NexusLauncherActivity [state=2 (ACTIVE), disabled=false], reason=TEXT_CHANGE
-11-06 20:49:53.927  8758  8771 I OpenGLRenderer: Davey! duration=700ms; Flags=0, FrameTimelineVsyncId=23847, IntendedVsync=242273576882, Vsync=242273576882, InputEventId=0, HandleInputStart=242275869375, AnimationStart=242275869656, PerformTraversalsStart=242275971016, DrawStart=242275997114, FrameDeadline=242290243548, FrameInterval=242275868354, FrameStartTime=16666666, SyncQueued=242276091561, SyncStart=242276104003, IssueDrawCommandsStart=242276187680, SwapBuffers=242956397346, FrameCompleted=242974408239, DequeueBufferDuration=3236, QueueBufferDuration=1365629, GpuCompleted=242974408239, SwapBuffersCompleted=242970427268, DisplayPresentTime=184911226994688, CommandSubmissionCompleted=242956397346, 
-11-06 20:49:54.044  8758  8758 I Choreographer: Skipped 56 frames!  The application may be doing too much work on its main thread.
-11-06 20:49:54.054   486  1676 D OomAdjuster: Not killing cached processes
-11-06 20:49:54.057   486  1672 D CoreBackPreview: Window{b3a00c1 u0 Splash Screen com.xlox}: Setting back callback null
-11-06 20:49:54.057   486   519 W InputManager-JNI: Input channel object 'b3a00c1 Splash Screen com.xlox (client)' was disposed without first being removed with the input manager!
-11-06 20:49:54.061  8758  8774 I OpenGLRenderer: Davey! duration=981ms; Flags=0, FrameTimelineVsyncId=23862, IntendedVsync=242290243548, Vsync=242290243548, InputEventId=0, HandleInputStart=242301582570, AnimationStart=242301582990, PerformTraversalsStart=242301692745, DrawStart=242301727240, FrameDeadline=243006910186, FrameInterval=242301580426, FrameStartTime=16666666, SyncQueued=242301764559, SyncStart=242970439250, IssueDrawCommandsStart=242974502021, SwapBuffers=243811866003, FrameCompleted=243940440564, DequeueBufferDuration=2905, QueueBufferDuration=148809, GpuCompleted=243940440564, SwapBuffersCompleted=243927416950, DisplayPresentTime=72057628414509141, CommandSubmissionCompleted=243811866003, 
-11-06 20:49:54.073   961  1258 D BtGatt.ScanManager: uid 10119 isForeground true scanMode -1
-11-06 20:49:54.073   961  1258 D BtGatt.ScanManager: uid 10119 isForeground true scanMode -1
-11-06 20:49:54.073   961  1258 D BtGatt.ScanManager: uid 10119 isForeground true scanMode 1
-11-06 20:49:54.075  6966  6990 I FontLog : Received query Noto Color Emoji Compat, URI content://com.google.android.gms.fonts [CONTEXT service_id=132 ]
-11-06 20:49:54.076  6966  6990 I FontLog : Query [emojicompat-emoji-font] resolved to {Noto Color Emoji Compat, wdth 100.0, wght 400, ital 0.0, bestEffort false} [CONTEXT service_id=132 ]
-11-06 20:49:54.082  6966  6990 I FontLog : Fetch {Noto Color Emoji Compat, wdth 100.0, wght 400, ital 0.0, bestEffort false} end status Status{statusCode=SUCCESS, resolution=null} [CONTEXT service_id=132 ]
-11-06 20:49:54.094  6966  6990 I FontLog : Pulling font file for id = 16, cache size = 12 [CONTEXT service_id=132 ]
-11-06 20:49:54.095  8758  8781 D EGL_emulation: app_time_stats: avg=433.14ms min=18.39ms max=956.68ms count=4
-11-06 20:49:54.104  6966  6990 I FontLog : Pulling font file for id = 16, cache size = 12 [CONTEXT service_id=132 ]
-11-06 20:49:54.104  8758  8774 I OpenGLRenderer: Davey! duration=722ms; Flags=0, FrameTimelineVsyncId=23877, IntendedVsync=242306910214, Vsync=242973576854, InputEventId=0, HandleInputStart=242981147976, AnimationStart=242981148477, PerformTraversalsStart=242981240619, DrawStart=242981616971, FrameDeadline=243973576814, FrameInterval=242981089046, FrameStartTime=16666666, SyncQueued=242981751562, SyncStart=243927431026, IssueDrawCommandsStart=243932823760, SwapBuffers=243937656729, FrameCompleted=243975198205, DequeueBufferDuration=3247, QueueBufferDuration=163586, GpuCompleted=243975198205, SwapBuffersCompleted=243962686104, DisplayPresentTime=0, CommandSubmissionCompleted=243937656729, 
-11-06 20:49:54.354  8758  8758 D SplashScreenView: remove starting view
-11-06 20:49:56.222  1743  2292 W A       : Batch timed out; batchId=4 taskId=-1000010
-11-06 20:49:56.237  1743  2561 D t       : Starting download: https://dl.google.com/mdi-serving/agsa-apa-smart-action-models/1129/093578cccafa7554c592b1756ecd6d0176942a9f
-11-06 20:49:56.237  1743  2561 V t       : Is http uri, downloading (uri: https://dl.google.com/mdi-serving/agsa-apa-smart-action-models/1129/093578cccafa7554c592b1756ecd6d0176942a9f)
-11-06 20:49:56.238  1743  7325 D t       : Starting download: https://dl.google.com/mdi-serving/agsa-apa-smart-action-models/1129/7c880c786013ae8631e40f5d800ff15a868d2929
-11-06 20:49:56.239  1743  7325 V t       : Is http uri, downloading (uri: https://dl.google.com/mdi-serving/agsa-apa-smart-action-models/1129/7c880c786013ae8631e40f5d800ff15a868d2929)
-11-06 20:49:56.306  1743  2561 E MDD     : DownloadProgressMonitor: Can't find file group for uri: android://com.google.android.googlequicksearchbox/files/datadownload/shared/public/datadownloadfile_1793998074885
-11-06 20:49:56.362  1743  7325 E MDD     : DownloadProgressMonitor: Can't find file group for uri: android://com.google.android.googlequicksearchbox/files/datadownload/shared/public/datadownloadfile_1793998074886
-11-06 20:49:57.162  1743  5790 D t       : Starting download: https://dl.google.com/mdi-serving/agsa-apa-smart-action-models/1129/265b5ad4cc2df325212297efbc5c8dd52681b24a
-11-06 20:49:57.162  1743  5790 V t       : Is http uri, downloading (uri: https://dl.google.com/mdi-serving/agsa-apa-smart-action-models/1129/265b5ad4cc2df325212297efbc5c8dd52681b24a)
-11-06 20:49:57.216  8758  8826 D ProfileInstaller: Installing profile for com.xlox
-11-06 20:49:57.250  1743  5790 E MDD     : DownloadProgressMonitor: Can't find file group for uri: android://com.google.android.googlequicksearchbox/files/datadownload/shared/public/datadownloadfile_1793998074887
-11-06 20:49:57.349  1743  2561 D t       : Starting download: https://dl.google.com/mdi-serving/agsa-apa-smart-action-models/1129/262d6f61914ff6e28557d9adfcb3632975ddf9d2
-11-06 20:49:57.350  1743  2561 V t       : Is http uri, downloading (uri: https://dl.google.com/mdi-serving/agsa-apa-smart-action-models/1129/262d6f61914ff6e28557d9adfcb3632975ddf9d2)
-11-06 20:49:57.486  1743  2561 E MDD     : DownloadProgressMonitor: Can't find file group for uri: android://com.google.android.googlequicksearchbox/files/datadownload/shared/public/datadownloadfile_1793998074888
-11-06 20:49:57.552   284   893 I netd    : tetherGetStats() -> {[]} <4.37ms>
-11-06 20:49:57.554  1483  1483 I GoogleInputMethodService: GoogleInputMethodService.onKeyDown():2444 Received KEYCODE_BACK. isAllViewsInvisible=false
-11-06 20:49:57.564   284   893 I netd    : bandwidthSetGlobalAlert(2097152) <0.13ms>
-11-06 20:49:57.572   486   523 D AutofillManagerService: onBackKeyPressed()
-11-06 20:49:57.580   486  2217 I ActivityTaskManager: moveTaskToBack: Task{7aee26b #22 type=standard A=10175:com.xlox}
-11-06 20:49:57.699   486   498 I system_server: Background young concurrent copying GC freed 483698(18MB) AllocSpace objects, 23(460KB) LOS objects, 47% free, 21MB/40MB, paused 49us,51us total 216.585ms
-11-06 20:49:57.795  8758  8781 D EGL_emulation: app_time_stats: avg=920.66ms min=39.65ms max=3293.32ms count=4
-11-06 20:49:57.917   355   378 W TransactionTracing: Could not find layer handle 0x7c16f99a27b0
-11-06 20:49:57.917   355   378 W TransactionTracing: Could not find layer handle 0x7c16f99a0650
-11-06 20:49:57.947  1025  1025 D MainContentCaptureSession: Flushing 2 event(s) for act:com.google.android.apps.nexuslauncher/.NexusLauncherActivity [state=2 (ACTIVE), disabled=false], reason=VIEW_TREE_APPEARING
-11-06 20:49:57.948  1025  1025 D MainContentCaptureSession: Flushing 32 event(s) for act:com.google.android.apps.nexuslauncher/.NexusLauncherActivity [state=2 (ACTIVE), disabled=false], reason=VIEW_TREE_APPEARED
-11-06 20:49:57.948  1025  1025 D MainContentCaptureSession: Flushing 1 event(s) for act:com.google.android.apps.nexuslauncher/.NexusLauncherActivity [state=2 (ACTIVE), disabled=false], reason=FULL
-11-06 20:49:57.952   486  1622 W AppSearchIcing: icing-search-engine.cc:217: Error: 5, Message: Document (com.google.android.googlequicksearchbox$OneSearchZeroStateGoogleSuggestions/default, zp) not found.
-11-06 20:49:57.964  1025  1990 D OneSearchSuggestProvider: Created the binder channel successfully for end point service =com.google.android.apps.search.googleapp.search.suggest.plugins.onesearch.server.OneSearchSuggestService , mChannel=Q0{delegate=L0{logId=65, target=directaddress:///AndroidComponentAddress%5BIntent%20%7B%20act=grpc.io.action.BIND%20cmp=com.google.android.googlequicksearchbox/com.google.android.apps.search.googleapp.search.suggest.plugins.onesearch.server.OneSearchSuggestService%20%7D%5D}} , mOneSearchConnection=y1.J@f1e198d
-11-06 20:49:58.027  1588  1948 I AiAiEcho: Predicting[0]: 
-11-06 20:49:58.027  1588  1948 I AiAiEcho: Ranked targets strategy: SORT, count: 0, ranking metadata: 
-11-06 20:49:58.028  1588  1948 I AiAiEcho: #postPredictionTargets: Sending updates to UISurface lockscreen with targets# 0
-11-06 20:49:58.028  1588  1948 I AiAiEcho: #postPredictionTargets: Sending updates to UISurface home with targets# 0
-11-06 20:49:58.100  1743  2508 I A       : Using proto config with mendel
-11-06 20:49:58.126  1743  2508 W A       : Queue length for executor EventBus is now 11. Perhaps some tasks are too long, or the pool is too small.
-11-06 20:49:58.170  1743  2508 I A       : Using proto config with mendel
-11-06 20:49:58.357   355  1113 E SurfaceFlinger: Only WindowManager is allowed to use eEarlyWakeup[Start|End] flags
-11-06 20:49:58.373   306   306 I RanchuHwc: validateDisplay: layer 112 CompositionType 1, fallback to client
-11-06 20:49:58.373   306   306 I RanchuHwc: validateDisplay: layer 111 CompositionType 1, fallback to client
-11-06 20:49:58.492   306   306 I RanchuHwc: validateDisplay: layer 112 CompositionType 1, fallback to client
-11-06 20:49:58.492   306   306 I RanchuHwc: validateDisplay: layer 111 CompositionType 1, fallback to client
-11-06 20:49:58.492   306   306 I RanchuHwc: validateDisplay: layer 110 CompositionType 1, fallback to client
-11-06 20:49:58.708   306   306 I RanchuHwc: validateDisplay: layer 112 CompositionType 1, fallback to client
-11-06 20:49:58.708   306   306 I RanchuHwc: validateDisplay: layer 111 CompositionType 1, fallback to client
-11-06 20:49:58.708   306   306 I RanchuHwc: validateDisplay: layer 110 CompositionType 1, fallback to client
-11-06 20:49:58.735  1483  1483 I GoogleInputMethodService: GoogleInputMethodService.onFinishInput():3227 
-11-06 20:49:58.737  1025  1025 D MainContentCaptureSession: Flushing 2 event(s) for act:com.google.android.apps.nexuslauncher/.NexusLauncherActivity [state=2 (ACTIVE), disabled=false], reason=VIEW_ROOT
-11-06 20:49:58.788   355  1113 E SurfaceFlinger: Only WindowManager is allowed to use eEarlyWakeup[Start|End] flags
-11-06 20:49:58.790   306   306 I RanchuHwc: validateDisplay: layer 112 CompositionType 1, fallback to client
-11-06 20:49:58.790   306   306 I RanchuHwc: validateDisplay: layer 111 CompositionType 1, fallback to client
-11-06 20:49:58.793  1483  1483 I GoogleInputMethodService: GoogleInputMethodService.updateDeviceLockedStatus():2087 repeatCheckTimes = 0, unlocked = true
-11-06 20:49:58.793  1483  1483 I GoogleInputMethodService: GoogleInputMethodService.onStartInput():1877 onStartInput(EditorInfo{inputType=0x0(NULL) imeOptions=0x0 privateImeOptions=null actionName=UNSPECIFIED actionLabel=null actionId=0 initialSelStart=-1 initialSelEnd=-1 initialCapsMode=0x0 hintText=null label=null packageName=com.google.android.apps.nexuslauncher fieldId=-1 fieldName=null extras=null}, false)
-11-06 20:49:58.793  1483  1483 I GoogleInputMethodService: GoogleInputMethodService.shouldHideHeaderOnInitialState():4008 ShouldHideHeaderOnInitialState = false
-11-06 20:49:58.793  1483  1483 I GoogleInputMethodService: GoogleInputMethodService.updateDeviceLockedStatus():2087 repeatCheckTimes = 2, unlocked = true
-11-06 20:49:58.883   355   378 W TransactionTracing: Could not find layer handle 0x7c16f99a1310
-11-06 20:49:58.906   764   818 D EGL_emulation: app_time_stats: avg=9892.76ms min=9892.76ms max=9892.76ms count=1
-11-06 20:49:58.979  1025  1025 D MainContentCaptureSession: Flushing 1 event(s) for act:com.google.android.apps.nexuslauncher/.NexusLauncherActivity [state=2 (ACTIVE), disabled=false], reason=VIEW_TREE_APPEARING
-11-06 20:49:58.982  1025  1025 D MainContentCaptureSession: Flushing 2 event(s) for act:com.google.android.apps.nexuslauncher/.NexusLauncherActivity [state=2 (ACTIVE), disabled=false], reason=VIEW_TREE_APPEARED
-11-06 20:49:59.033  1025  1735 D EGL_emulation: app_time_stats: avg=125.21ms min=32.53ms max=368.95ms count=8
-11-06 20:49:59.063   486   532 D OomAdjuster: Not killing cached processes
---------- beginning of kernel
-11-06 20:49:59.289     0     0 I logd    : start watching /data/system/packages.list ...
-11-06 20:49:59.306     0     0 I logd    : ReadPackageList, total packages: 182
-11-06 20:49:59.100   486  1676 W system_server: Long monitor contention with owner binder:486_1C (2442) at com.android.server.pm.Computer com.android.server.pm.PackageManagerService.snapshotComputer()(PackageManagerService.java:1111) waiters=0 in com.android.server.pm.Computer com.android.server.pm.PackageManagerService.snapshotComputer() for 148ms
-11-06 20:49:59.100   486   525 W system_server: Long monitor contention with owner binder:486_1C (2442) at com.android.server.pm.Computer com.android.server.pm.PackageManagerService.snapshotComputer()(PackageManagerService.java:1111) waiters=1 in com.android.server.pm.Computer com.android.server.pm.PackageManagerService.snapshotComputer() for 143ms
-11-06 20:49:59.135   486  1672 W system_server: Long monitor contention with owner android.display (525) at void com.android.server.wm.ActivityTaskSupervisor$ActivityTaskSupervisorHandler.handleMessage(android.os.Message)(ActivityTaskSupervisor.java:2427) waiters=1 in void com.android.server.wm.WindowManagerService.reportSystemGestureExclusionChanged(com.android.server.wm.Session, android.view.IWindow, java.util.List) for 145ms
-11-06 20:49:59.155   355   378 W TransactionTracing: Could not find layer handle 0x7c16f99a23f0
-11-06 20:49:59.172   486  8839 D HostConnection: HostComposition ext ANDROID_EMU_CHECKSUM_HELPER_v1 ANDROID_EMU_native_sync_v2 ANDROID_EMU_dma_v1 ANDROID_EMU_direct_mem ANDROID_EMU_host_composition_v1 ANDROID_EMU_host_composition_v2 ANDROID_EMU_vulkan ANDROID_EMU_deferred_vulkan_commands ANDROID_EMU_vulkan_null_optional_strings ANDROID_EMU_vulkan_create_resources_with_requirements ANDROID_EMU_YUV_Cache ANDROID_EMU_vulkan_ignored_handles ANDROID_EMU_has_shared_slots_host_memory_allocator ANDROID_EMU_vulkan_free_memory_sync ANDROID_EMU_vulkan_shader_float16_int8 ANDROID_EMU_vulkan_async_queue_submit ANDROID_EMU_vulkan_queue_submit_with_commands ANDROID_EMU_sync_buffer_data ANDROID_EMU_vulkan_async_qsri ANDROID_EMU_read_color_buffer_dma ANDROID_EMU_hwc_multi_configs ANDROID_EMU_hwc_color_transform GL_OES_EGL_image_external_essl3 GL_OES_vertex_array_object GL_KHR_texture_compression_astc_ldr ANDROID_EMU_host_side_tracing ANDROID_EMU_gles_max_version_3_0 
-11-06 20:49:59.183   486  8839 W OpenGLRenderer: Failed to initialize 101010-2 format, error = EGL_SUCCESS
-11-06 20:49:59.185   486  8839 D EGL_emulation: eglCreateContext: 0x75f92e633810: maj 3 min 0 rcv 3
-11-06 20:49:59.193   486  8839 D EGL_emulation: eglMakeCurrent: 0x75f92e633810: ver 3 0 (tinfo 0x75fb318b7100) (first time)
-11-06 20:49:59.268  1743  2292 I A       : NGA Sync: MDD Task: MDD.WIFI.CHARGING.PERIODIC.TASK done.
-11-06 20:49:59.270  1743  2292 I A       : NGA Sync: isNgaSyncEnabled: false; enableFileGroupPopulator: false; requiresMddAssets: false
-11-06 20:49:59.274  1743  2174 I A       : Refresh account policy.
-11-06 20:49:59.307   284   893 I netd    : tetherGetStats() -> {[]} <0.30ms>
-11-06 20:49:59.311   284   893 I netd    : bandwidthSetGlobalAlert(2097152) <0.07ms>
-11-06 20:49:59.312   284   893 I netd    : bandwidthRemoveInterfaceQuota(eth0) <0.55ms>
-11-06 20:49:59.313   284   893 I netd    : bandwidthSetInterfaceQuota(eth0, 9223372036854775807) <0.47ms>
-11-06 20:49:59.346  7011  7011 D BoundBrokerSvc: onUnbind: Intent { act=com.google.firebase.dynamiclinks.service.START pkg=com.google.android.gms }
-11-06 20:49:59.387   486   524 I DropBoxManagerService: add tag=system_server_strictmode isTagEnabled=true flags=0x2
-11-06 20:49:59.388   486   524 I DropBoxManagerService: add tag=system_server_strictmode isTagEnabled=true flags=0x2
-11-06 20:49:59.388   486   524 I DropBoxManagerService: add tag=system_server_strictmode isTagEnabled=true flags=0x2
-11-06 20:49:59.388   486   524 I DropBoxManagerService: add tag=system_server_strictmode isTagEnabled=true flags=0x2
-11-06 20:49:59.388   486   524 I DropBoxManagerService: add tag=system_server_strictmode isTagEnabled=true flags=0x2
-11-06 20:49:59.388   486   524 I DropBoxManagerService: add tag=system_server_strictmode isTagEnabled=true flags=0x2
-11-06 20:49:59.388   486   524 I DropBoxManagerService: add tag=system_server_strictmode isTagEnabled=true flags=0x2
-11-06 20:49:59.626  1483  1483 I GoogleInputMethodService: GoogleInputMethodService.onKeyDown():2444 Received KEYCODE_BACK. isAllViewsInvisible=false
-11-06 20:49:59.626  1025  1025 D TaplEvents: Main / Key event: KeyEvent { action=ACTION_DOWN, keyCode=KEYCODE_BACK, scanCode=0, metaState=0, flags=0x0, repeatCount=0, eventTime=249510000000, downTime=249510000000, deviceId=-1, source=0x0, displayId=-1 }
-11-06 20:49:59.626   486   523 D AutofillManagerService: onBackKeyPressed()
-11-06 20:49:59.627  1025  1025 D TaplEvents: Main / Key event: KeyEvent { action=ACTION_UP, keyCode=KEYCODE_BACK, scanCode=0, metaState=0, flags=0x0, repeatCount=0, eventTime=249510000000, downTime=249510000000, deviceId=-1, source=0x0, displayId=-1 }
-11-06 20:49:59.963   486   705 D ConnectivityService: releasing NetworkRequest [ REQUEST id=139, [ Transports: CELLULAR Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED&NOT_VPN&NOT_VCN_MANAGED Uid: 10120 RequestorUid: 10120 RequestorPkg: com.google.android.googlequicksearchbox UnderlyingNetworks: Null] ] (release request)
-11-06 20:49:59.964   486   705 I ConnectivityService: Update capabilities for net 101 : -FOREGROUND
-11-06 20:49:59.966   284   893 I netd    : networkSetPermissionForNetwork(101, 1) <2.32ms>
-11-06 20:50:00.004  1588  1948 I AiAiEcho: Predicting[0]: 
-11-06 20:50:00.004  1588  1948 I AiAiEcho: Ranked targets strategy: SORT, count: 0, ranking metadata: 
-11-06 20:50:00.004  1588  1948 I AiAiEcho: #postPredictionTargets: Sending updates to UISurface lockscreen with targets# 0
-11-06 20:50:00.004  1588  1948 I AiAiEcho: #postPredictionTargets: Sending updates to UISurface home with targets# 0
-11-06 20:50:00.026   764   818 D EGL_emulation: app_time_stats: avg=1119.86ms min=1119.86ms max=1119.86ms count=1
-11-06 20:50:00.690   150  8653 I keystore2: keystore2::watchdog: Watchdog thread idle -> terminating. Have a great day.
-11-06 20:50:01.533     0     0 W healthd : battery l=100 v=5000 t=25.0 h=2 st=2 c=900000 fc=3000000 cc=10 chg=a
-11-06 20:50:01.389   486   533 W BroadcastQueue: Background execution not allowed: receiving Intent { act=android.intent.action.DROPBOX_ENTRY_ADDED flg=0x10 (has extras) } to com.google.android.gms/.stats.service.DropBoxEntryAddedReceiver
-11-06 20:50:01.390   486   533 W BroadcastQueue: Background execution not allowed: receiving Intent { act=android.intent.action.DROPBOX_ENTRY_ADDED flg=0x10 (has extras) } to com.google.android.gms/.chimera.GmsIntentOperationService$PersistentTrustedReceiver
-11-06 20:50:01.668  1483  1483 I GoogleInputMethodService: GoogleInputMethodService.onKeyDown():2444 Received KEYCODE_BACK. isAllViewsInvisible=false
-11-06 20:50:01.668  1025  1025 D TaplEvents: Main / Key event: KeyEvent { action=ACTION_DOWN, keyCode=KEYCODE_BACK, scanCode=0, metaState=0, flags=0x0, repeatCount=0, eventTime=251552000000, downTime=251552000000, deviceId=-1, source=0x0, displayId=-1 }
-11-06 20:50:01.668  1025  1025 D TaplEvents: Main / Key event: KeyEvent { action=ACTION_UP, keyCode=KEYCODE_BACK, scanCode=0, metaState=0, flags=0x0, repeatCount=0, eventTime=251552000000, downTime=251552000000, deviceId=-1, source=0x0, displayId=-1 }
-11-06 20:50:01.668   486   523 D AutofillManagerService: onBackKeyPressed()
-11-06 20:50:03.709  1483  1483 I GoogleInputMethodService: GoogleInputMethodService.onKeyDown():2444 Received KEYCODE_BACK. isAllViewsInvisible=false
-11-06 20:50:03.710  1025  1025 D TaplEvents: Main / Key event: KeyEvent { action=ACTION_DOWN, keyCode=KEYCODE_BACK, scanCode=0, metaState=0, flags=0x0, repeatCount=0, eventTime=253594000000, downTime=253594000000, deviceId=-1, source=0x0, displayId=-1 }
-11-06 20:50:03.710   486   523 D AutofillManagerService: onBackKeyPressed()
-11-06 20:50:03.711  1025  1025 D TaplEvents: Main / Key event: KeyEvent { action=ACTION_UP, keyCode=KEYCODE_BACK, scanCode=0, metaState=0, flags=0x0, repeatCount=0, eventTime=253594000000, downTime=253594000000, deviceId=-1, source=0x0, displayId=-1 }
-11-06 20:50:04.138  8758  8768 W System  : A resource failed to call release. 
-11-06 20:50:04.993   486  1672 D OomAdjuster: Not killing cached processes
-11-06 20:50:05.751  1483  1483 I GoogleInputMethodService: GoogleInputMethodService.onKeyDown():2444 Received KEYCODE_BACK. isAllViewsInvisible=false
-11-06 20:50:05.751  1025  1025 D TaplEvents: Main / Key event: KeyEvent { action=ACTION_DOWN, keyCode=KEYCODE_BACK, scanCode=0, metaState=0, flags=0x0, repeatCount=0, eventTime=255635000000, downTime=255635000000, deviceId=-1, source=0x0, displayId=-1 }
-11-06 20:50:05.751   486   523 D AutofillManagerService: onBackKeyPressed()
-11-06 20:50:05.751  1025  1025 D TaplEvents: Main / Key event: KeyEvent { action=ACTION_UP, keyCode=KEYCODE_BACK, scanCode=0, metaState=0, flags=0x0, repeatCount=0, eventTime=255635000000, downTime=255635000000, deviceId=-1, source=0x0, displayId=-1 }
-11-06 20:50:06.191  6966  6966 D BoundBrokerSvc: onUnbind: Intent { act=com.google.android.gms.nearby.exposurenotification.START dat=chimera-action:/... cmp=com.google.android.gms/.chimera.PersistentApiServiceNoInstantApps }
+11-06 20:59:52.935   488  2277 D CompatibilityChangeReporter: Compat change id reported: 161252188; UID 10175; state: DISABLED
+--------- beginning of main
+11-06 20:59:52.944  7210  7389 I incfs-mounts: [incfs] Loaded incremental-fs mount info: 1 instances, 2 mount points
+11-06 20:59:52.947   488   537 I incfs-dataloaderconnector: Reported status back to IncrementalService. DataLoaderId=3, status=0
+11-06 20:59:52.968   488   862 I ActivityManager: Force stopping com.xlox appid=10175 user=0: from pid 9178
+11-06 20:59:52.988   978   978 D CarrierSvcBindHelper: onHandleForceStop: [com.xlox]
+11-06 20:59:52.988   978   978 D CarrierSvcBindHelper: No carrier app for: 0
+11-06 20:59:53.005  7210  7252 I RealtimeCacheCleanup: Beginning Realtime garbage collection.
+11-06 20:59:53.005  7210  7252 I RealtimeCacheCleanup: Finished Realtime garbage collection.
+11-06 20:59:53.005  7167  8490 W ChimeraUtils: Module com.google.android.gms.nearby_en missing resource null(0)
+11-06 20:59:53.018   488  2101 I ActivityTaskManager: START u0 {flg=0x10000000 cmp=com.xlox/.LogAct} from uid 2000
+11-06 20:59:53.021   488  2101 D CompatibilityChangeReporter: Compat change id reported: 265464455; UID 10175; state: DISABLED
+11-06 20:59:53.021   488  2101 D CompatibilityChangeReporter: Compat change id reported: 265452344; UID 10175; state: DISABLED
+11-06 20:59:53.021   488  2101 D CompatibilityChangeReporter: Compat change id reported: 266124927; UID 10175; state: DISABLED
+11-06 20:59:53.021   488  2101 D CompatibilityChangeReporter: Compat change id reported: 265451093; UID 10175; state: DISABLED
+11-06 20:59:53.021   488  2101 D CompatibilityChangeReporter: Compat change id reported: 265456536; UID 10175; state: DISABLED
+11-06 20:59:53.022   488  2101 D CompatibilityChangeReporter: Compat change id reported: 255940284; UID 10175; state: DISABLED
+11-06 20:59:53.022   488  2101 D CompatibilityChangeReporter: Compat change id reported: 236283604; UID 10175; state: DISABLED
+11-06 20:59:53.022   488  2101 D CompatibilityChangeReporter: Compat change id reported: 263959004; UID 10175; state: DISABLED
+11-06 20:59:53.023   488  2101 D CompatibilityChangeReporter: Compat change id reported: 264304459; UID 10175; state: DISABLED
+11-06 20:59:53.023   488  2101 D CompatibilityChangeReporter: Compat change id reported: 264301586; UID 10175; state: DISABLED
+11-06 20:59:53.023   488  2101 D CompatibilityChangeReporter: Compat change id reported: 254631730; UID 10175; state: DISABLED
+11-06 20:59:53.023   488  2101 D CompatibilityChangeReporter: Compat change id reported: 273509367; UID 10175; state: DISABLED
+11-06 20:59:53.024   488  2101 D CompatibilityChangeReporter: Compat change id reported: 263259275; UID 10175; state: DISABLED
+11-06 20:59:53.024   488  2101 I incfs-mounts: [incfs] Loaded incremental-fs mount info: 1 instances, 2 mount points
+11-06 20:59:53.026   488  2101 D CompatibilityChangeReporter: Compat change id reported: 194480991; UID 10175; state: ENABLED
+11-06 20:59:53.026   488  2101 D CompatibilityChangeReporter: Compat change id reported: 174042980; UID 10175; state: DISABLED
+11-06 20:59:53.031  7167  7167 D BoundBrokerSvc: onBind: Intent { act=com.google.android.gms.nearby.exposurenotification.START dat=chimera-action:/... cmp=com.google.android.gms/.chimera.PersistentApiServiceNoInstantApps }
+11-06 20:59:53.031  7167  7167 D BoundBrokerSvc: Loading bound service for intent: Intent { act=com.google.android.gms.nearby.exposurenotification.START dat=chimera-action:/... cmp=com.google.android.gms/.chimera.PersistentApiServiceNoInstantApps }
+11-06 20:59:53.034  7210  7389 I Icing   : Usage reports ok 1, Failed Usage reports 0, indexed 0, rejected 0
+11-06 20:59:53.037   488  2101 D CompatibilityChangeReporter: Compat change id reported: 184838306; UID 10175; state: DISABLED
+11-06 20:59:53.037   488  2101 D CompatibilityChangeReporter: Compat change id reported: 185004937; UID 10175; state: DISABLED
+11-06 20:59:53.037   488  2101 D CompatibilityChangeReporter: Compat change id reported: 181136395; UID 10175; state: DISABLED
+11-06 20:59:53.037   488  2101 D CompatibilityChangeReporter: Compat change id reported: 174042936; UID 10175; state: DISABLED
+11-06 20:59:53.037   488  2101 D CompatibilityChangeReporter: Compat change id reported: 197654537; UID 10175; state: DISABLED
+11-06 20:59:53.038   488  2101 V SplashScreenExceptionList: SplashScreen checking exception for package com.xlox (target sdk:28) -> false
+11-06 20:59:53.039   488  2101 D CompatibilityChangeReporter: Compat change id reported: 205907456; UID 10175; state: DISABLED
+11-06 20:59:53.040   754   801 I incfs-mounts: [incfs] Loaded incremental-fs mount info: 1 instances, 2 mount points
+11-06 20:59:53.040   488   516 D CompatibilityChangeReporter: Compat change id reported: 135634846; UID 10175; state: DISABLED
+11-06 20:59:53.040   488   516 D CompatibilityChangeReporter: Compat change id reported: 177438394; UID 10175; state: DISABLED
+11-06 20:59:53.040   488   516 D CompatibilityChangeReporter: Compat change id reported: 135772972; UID 10175; state: DISABLED
+11-06 20:59:53.041   488   525 D CompatibilityChangeReporter: Compat change id reported: 143937733; UID 10175; state: DISABLED
+11-06 20:59:53.049   292   292 D Zygote  : Forked child process 9188
+11-06 20:59:53.052   488   525 I ActivityManager: Start proc 9188:com.xlox/u0a175 for next-top-activity {com.xlox/com.xlox.LogAct}
+11-06 20:59:53.061   754   809 D SplashScreenView: Build android.window.SplashScreenView{9cc48a8 V.E...... ......ID 0,0-0,0}
+11-06 20:59:53.061   754   809 D SplashScreenView: Icon: view: android.widget.ImageView{40e4fc1 V.ED..... ......I. 0,0-0,0 #10204dd android:id/splashscreen_icon_view} drawable: com.android.wm.shell.startingsurface.SplashscreenIconDrawableFactory$ImmobileIconDrawable@6aaf366 size: 528
+11-06 20:59:53.061   754   809 D SplashScreenView: Branding: view: android.view.View{3d6e6a7 G.ED..... ......I. 0,0-0,0 #10204dc android:id/splashscreen_branding_view} drawable: null size w: 0 h: 0
+11-06 20:59:53.067   754   812 W Parcel  : Expecting binder but got null!
+11-06 20:59:53.074  9188  9188 I com.xlox: Using CollectorTypeCC GC.
+11-06 20:59:53.075   488   505 I system_server: JIT allocated 72KB for compiled code of boolean android.app.admin.IDevicePolicyManager$Stub.onTransact(int, android.os.Parcel, android.os.Parcel, int)
+11-06 20:59:53.080  9188  9188 W com.xlox: Unexpected CPU variant for x86: x86_64.
+11-06 20:59:53.080  9188  9188 W com.xlox: Known variants: atom, sandybridge, silvermont, kabylake, default
+11-06 20:59:53.081  7210  7260 I Icing   : IndexChimeraService.getServiceInterface callingPackage=com.google.android.gms componentName=null serviceId=30
+11-06 20:59:53.092  7167  8490 W ChimeraUtils: Module com.google.android.gms.nearby_en missing resource null(0)
+11-06 20:59:53.095   381   400 I adbd    : jdwp connection from 9188
+11-06 20:59:53.099   488   525 W ActivityManager: Slow operation: 59ms so far, now at startProcess: done updating pids map
+11-06 20:59:53.110   488   506 I system_server: Background concurrent copying GC freed 283323(12MB) AllocSpace objects, 29(852KB) LOS objects, 49% free, 21MB/42MB, paused 38us,270us total 517.699ms
+11-06 20:59:53.127   981   981 D MainContentCaptureSession: Flushing 1 event(s) for act:com.google.android.apps.nexuslauncher/.NexusLauncherActivity [state=2 (ACTIVE), disabled=false], reason=FULL
+11-06 20:59:53.144   488  1577 D CoreBackPreview: Window{600c799 u0 Splash Screen com.xlox}: Setting back callback OnBackInvokedCallbackInfo{mCallback=android.window.IOnBackInvokedCallback$Stub$Proxy@6c5b1ed, mPriority=0}
+11-06 20:59:53.167   981  1827 D EGL_emulation: app_time_stats: avg=361.46ms min=34.95ms max=1574.98ms count=5
+11-06 20:59:53.483  4911  9100 W Role    : Default holder doesn't have required signing certificate: com.google.android.apps.work.clouddpc:23962F4B43B9857638EA66F4D419518EAE282491ACDA4B94707BD59003C45E58
+11-06 20:59:53.514   366   382 W TransactionTracing: Could not find layer handle 0x7d626d2934d0
+11-06 20:59:53.515   366   382 W TransactionTracing: Could not find layer handle 0x7d626d296650
+11-06 20:59:53.515   366   382 W TransactionTracing: Could not find layer handle 0x7d626d296650
+11-06 20:59:53.516   366   382 W TransactionTracing: Could not find layer handle 0x7d626d2934d0
+11-06 20:59:53.516   366   382 W TransactionTracing: Could not find layer handle 0x7d626d296650
+11-06 20:59:53.516   366   382 W TransactionTracing: Could not find layer handle 0x7d626d2934d0
+11-06 20:59:53.516   366   382 W TransactionTracing: Could not find layer handle 0x7d626d296650
+11-06 20:59:53.516   366   382 W TransactionTracing: Could not find layer handle 0x7d626d2934d0
+11-06 20:59:53.516   366   382 W TransactionTracing: Could not find layer handle 0x7d626d296650
+11-06 20:59:53.516   366   382 W TransactionTracing: Could not find layer handle 0x7d626d2934d0
+11-06 20:59:53.527  9188  9188 D CompatibilityChangeReporter: Compat change id reported: 171979766; UID 10175; state: DISABLED
+11-06 20:59:53.583   366   382 W TransactionTracing: Could not find layer handle 0x7d626d295db0
+11-06 20:59:53.583   366   382 W TransactionTracing: Could not find layer handle 0x7d626d295db0
+11-06 20:59:53.614   981   981 D MainContentCaptureSession: Flushing 2 event(s) for act:com.google.android.apps.nexuslauncher/.NexusLauncherActivity [state=2 (ACTIVE), disabled=false], reason=VIEW_TREE_APPEARING
+11-06 20:59:53.614   981   981 D MainContentCaptureSession: Flushing 2 event(s) for act:com.google.android.apps.nexuslauncher/.NexusLauncherActivity [state=2 (ACTIVE), disabled=false], reason=VIEW_TREE_APPEARED
+11-06 20:59:53.649   978  1006 I m.android.phone: Background young concurrent copying GC freed 59383(3201KB) AllocSpace objects, 0(0B) LOS objects, 44% free, 3651KB/6565KB, paused 231us,12us total 1.021s
+11-06 20:59:53.652  9188  9188 D ApplicationLoaders: Returning zygote-cached class loader: /system/framework/android.test.base.jar
+11-06 20:59:53.653  9188  9188 W ziparchive: Unable to open '/data/app/~~yrYx_MBVt4f3j50x8c73Nw==/com.xlox-k79ICMLzr95fjush68g3GQ==/base.dm': No such file or directory
+11-06 20:59:53.653  9188  9188 W ziparchive: Unable to open '/data/app/~~yrYx_MBVt4f3j50x8c73Nw==/com.xlox-k79ICMLzr95fjush68g3GQ==/base.dm': No such file or directory
+11-06 20:59:53.682   488   862 D CompatibilityChangeReporter: Compat change id reported: 161252188; UID 10175; state: DISABLED
+11-06 20:59:53.715  9188  9188 D nativeloader: Configuring classloader-namespace for other apk /data/app/~~yrYx_MBVt4f3j50x8c73Nw==/com.xlox-k79ICMLzr95fjush68g3GQ==/base.apk. target_sdk_version=28, uses_libraries=, library_path=/data/app/~~yrYx_MBVt4f3j50x8c73Nw==/com.xlox-k79ICMLzr95fjush68g3GQ==/lib/x86_64, permitted_path=/data:/mnt/expand:/data/user/0/com.xlox
+11-06 20:59:53.736  9188  9188 V GraphicsEnvironment: ANGLE Developer option for 'com.xlox' set to: 'default'
+11-06 20:59:53.736  9188  9188 V GraphicsEnvironment: ANGLE GameManagerService for com.xlox: false
+11-06 20:59:53.736  9188  9188 V GraphicsEnvironment: Neither updatable production driver nor prerelease driver is supported.
+11-06 20:59:53.745  9188  9188 D NetworkSecurityConfig: No Network Security Config specified, using platform default
+11-06 20:59:53.748  9188  9188 D NetworkSecurityConfig: No Network Security Config specified, using platform default
+11-06 20:59:53.752  9188  9188 E BoxApplication: libXloX.so failed to load
+11-06 20:59:53.752  9188  9188 E BoxApplication: java.lang.UnsatisfiedLinkError: dlopen failed: library "libXloX.so" not found
+11-06 20:59:53.752  9188  9188 E BoxApplication: 	at java.lang.Runtime.loadLibrary0(Runtime.java:1077)
+11-06 20:59:53.752  9188  9188 E BoxApplication: 	at java.lang.Runtime.loadLibrary0(Runtime.java:998)
+11-06 20:59:53.752  9188  9188 E BoxApplication: 	at java.lang.System.loadLibrary(System.java:1661)
+11-06 20:59:53.752  9188  9188 E BoxApplication: 	at com.xlox.BoxApplication.<clinit>(Unknown Source:2)
+11-06 20:59:53.752  9188  9188 E BoxApplication: 	at java.lang.Class.newInstance(Native Method)
+11-06 20:59:53.752  9188  9188 E BoxApplication: 	at android.app.AppComponentFactory.instantiateApplication(AppComponentFactory.java:76)
+11-06 20:59:53.752  9188  9188 E BoxApplication: 	at androidx.core.app.CoreComponentFactory.instantiateApplication(Unknown Source:0)
+11-06 20:59:53.752  9188  9188 E BoxApplication: 	at android.app.Instrumentation.newApplication(Instrumentation.java:1243)
+11-06 20:59:53.752  9188  9188 E BoxApplication: 	at android.app.LoadedApk.makeApplicationInner(LoadedApk.java:1458)
+11-06 20:59:53.752  9188  9188 E BoxApplication: 	at android.app.LoadedApk.makeApplicationInner(LoadedApk.java:1395)
+11-06 20:59:53.752  9188  9188 E BoxApplication: 	at android.app.ActivityThread.handleBindApplication(ActivityThread.java:6772)
+11-06 20:59:53.752  9188  9188 E BoxApplication: 	at android.app.ActivityThread.-$$Nest$mhandleBindApplication(Unknown Source:0)
+11-06 20:59:53.752  9188  9188 E BoxApplication: 	at android.app.ActivityThread$H.handleMessage(ActivityThread.java:2133)
+11-06 20:59:53.752  9188  9188 E BoxApplication: 	at android.os.Handler.dispatchMessage(Handler.java:106)
+11-06 20:59:53.752  9188  9188 E BoxApplication: 	at android.os.Looper.loopOnce(Looper.java:201)
+11-06 20:59:53.752  9188  9188 E BoxApplication: 	at android.os.Looper.loop(Looper.java:288)
+11-06 20:59:53.752  9188  9188 E BoxApplication: 	at android.app.ActivityThread.main(ActivityThread.java:7924)
+11-06 20:59:53.752  9188  9188 E BoxApplication: 	at java.lang.reflect.Method.invoke(Native Method)
+11-06 20:59:53.752  9188  9188 E BoxApplication: 	at com.android.internal.os.RuntimeInit$MethodAndArgsCaller.run(RuntimeInit.java:548)
+11-06 20:59:53.752  9188  9188 E BoxApplication: 	at com.android.internal.os.ZygoteInit.main(ZygoteInit.java:936)
+11-06 20:59:53.773  7210  7389 I Icing   : Usage reports ok 0, Failed Usage reports 0, indexed 0, rejected 0
+11-06 20:59:53.794  9188  9188 I BoxApplication: Loader diagnostics: sdk=33 abi=x86_64 page=4096 lib=missing align=-1 writable=false lastError=
+11-06 20:59:53.794  9188  9188 E com.xlox: No implementation found for java.lang.String com.xlox.BoxApplication.getSdkKey() (tried Java_com_xlox_BoxApplication_getSdkKey and Java_com_xlox_BoxApplication_getSdkKey__)
+11-06 20:59:53.795  9188  9188 E BoxApplication: Activation Error
+11-06 20:59:53.795  9188  9188 E BoxApplication: java.lang.UnsatisfiedLinkError: No implementation found for java.lang.String com.xlox.BoxApplication.getSdkKey() (tried Java_com_xlox_BoxApplication_getSdkKey and Java_com_xlox_BoxApplication_getSdkKey__)
+11-06 20:59:53.795  9188  9188 E BoxApplication: 	at com.xlox.BoxApplication.getSdkKey(Native Method)
+11-06 20:59:53.795  9188  9188 E BoxApplication: 	at com.xlox.BoxApplication.onCreate(Unknown Source:28)
+11-06 20:59:53.795  9188  9188 E BoxApplication: 	at android.app.Instrumentation.callApplicationOnCreate(Instrumentation.java:1277)
+11-06 20:59:53.795  9188  9188 E BoxApplication: 	at android.app.ActivityThread.handleBindApplication(ActivityThread.java:6811)
+11-06 20:59:53.795  9188  9188 E BoxApplication: 	at android.app.ActivityThread.-$$Nest$mhandleBindApplication(Unknown Source:0)
+11-06 20:59:53.795  9188  9188 E BoxApplication: 	at android.app.ActivityThread$H.handleMessage(ActivityThread.java:2133)
+11-06 20:59:53.795  9188  9188 E BoxApplication: 	at android.os.Handler.dispatchMessage(Handler.java:106)
+11-06 20:59:53.795  9188  9188 E BoxApplication: 	at android.os.Looper.loopOnce(Looper.java:201)
+11-06 20:59:53.795  9188  9188 E BoxApplication: 	at android.os.Looper.loop(Looper.java:288)
+11-06 20:59:53.795  9188  9188 E BoxApplication: 	at android.app.ActivityThread.main(ActivityThread.java:7924)
+11-06 20:59:53.795  9188  9188 E BoxApplication: 	at java.lang.reflect.Method.invoke(Native Method)
+11-06 20:59:53.795  9188  9188 E BoxApplication: 	at com.android.internal.os.RuntimeInit$MethodAndArgsCaller.run(RuntimeInit.java:548)
+11-06 20:59:53.795  9188  9188 E BoxApplication: 	at com.android.internal.os.ZygoteInit.main(ZygoteInit.java:936)
+11-06 20:59:53.795   488   862 D PackageManager: Instant App installer not found with android.intent.action.INSTALL_INSTANT_APP_PACKAGE
+11-06 20:59:53.795   488   862 D PackageManager: Clear ephemeral installer activity
+11-06 20:59:53.796   488  1577 W Binder  : Caught a RuntimeException from the binder stub implementation.
+11-06 20:59:53.796   488  1577 W Binder  : java.lang.ArrayIndexOutOfBoundsException: Array index out of range: 0
+11-06 20:59:53.796   488  1577 W Binder  : 	at android.util.ArraySet.valueAt(ArraySet.java:422)
+11-06 20:59:53.796   488  1577 W Binder  : 	at com.android.server.contentcapture.ContentCapturePerUserService$ContentCaptureServiceRemoteCallback.updateContentCaptureOptions(ContentCapturePerUserService.java:733)
+11-06 20:59:53.796   488  1577 W Binder  : 	at com.android.server.contentcapture.ContentCapturePerUserService$ContentCaptureServiceRemoteCallback.setContentCaptureWhitelist(ContentCapturePerUserService.java:646)
+11-06 20:59:53.796   488  1577 W Binder  : 	at android.service.contentcapture.IContentCaptureServiceCallback$Stub.onTransact(IContentCaptureServiceCallback.java:115)
+11-06 20:59:53.796   488  1577 W Binder  : 	at android.os.Binder.execTransactInternal(Binder.java:1285)
+11-06 20:59:53.796   488  1577 W Binder  : 	at android.os.Binder.execTransact(Binder.java:1244)
+11-06 20:59:53.800   488   862 D CompatibilityChangeReporter: Compat change id reported: 135634846; UID 10175; state: DISABLED
+11-06 20:59:53.802   488   862 D CompatibilityChangeReporter: Compat change id reported: 177438394; UID 10175; state: DISABLED
+11-06 20:59:53.802   488   862 D CompatibilityChangeReporter: Compat change id reported: 135772972; UID 10175; state: DISABLED
+11-06 20:59:53.802   488   525 D CompatibilityChangeReporter: Compat change id reported: 143937733; UID 10175; state: DISABLED
+11-06 20:59:53.806   292   292 D Zygote  : Forked child process 9215
+11-06 20:59:53.808   488   525 I ActivityManager: Start proc 9215:com.xlox:stub1/u0a175 for content provider {com.xlox/top.bienvenido.mundo.manifest.MundoProvider$Companion$STUB1}
+11-06 20:59:53.814  9215  9215 I com.xlox:stub1: Using CollectorTypeCC GC.
+11-06 20:59:53.815  9215  9215 W com.xlox:stub1: Unexpected CPU variant for x86: x86_64.
+11-06 20:59:53.815  9215  9215 W com.xlox:stub1: Known variants: atom, sandybridge, silvermont, kabylake, default
+11-06 20:59:53.821  7167  7195 W ChimeraUtils: Module com.google.android.gms.nearby_en missing resource null(0)
+11-06 20:59:53.822  7167  7195 W ChimeraUtils: Module com.google.android.gms.nearby_en missing resource null(0)
+11-06 20:59:53.825  9188  9188 D AppCompatDelegate: Checking for metadata for AppLocalesMetadataHolderService : Service not found
+11-06 20:59:53.831  9188  9220 D libEGL  : loaded /vendor/lib64/egl/libEGL_emulation.so
+11-06 20:59:53.832  9188  9220 D libEGL  : loaded /vendor/lib64/egl/libGLESv1_CM_emulation.so
+11-06 20:59:53.833  9188  9220 D libEGL  : loaded /vendor/lib64/egl/libGLESv2_emulation.so
+11-06 20:59:53.856   381   400 I adbd    : jdwp connection from 9215
+11-06 20:59:53.880  9188  9188 D CompatibilityChangeReporter: Compat change id reported: 210923482; UID 10175; state: DISABLED
+11-06 20:59:53.881  9188  9188 D CompatibilityChangeReporter: Compat change id reported: 37756858; UID 10175; state: ENABLED
+11-06 20:59:53.883   981   981 D Launcher.Model: package removed received com.xlox
+11-06 20:59:53.884   981  1055 D PackageUpdatedTask: Removing app iconcom.xlox
+11-06 20:59:53.893  9188  9188 D CompatibilityChangeReporter: Compat change id reported: 171228096; UID 10175; state: ENABLED
+11-06 20:59:53.894  7210  7219 I gle.android.gms: Background young concurrent copying GC freed 170750(9485KB) AllocSpace objects, 38(1644KB) LOS objects, 44% free, 13MB/24MB, paused 45us,15us total 150.348ms
+11-06 20:59:53.903   488  2103 D CompatibilityChangeReporter: Compat change id reported: 161252188; UID 10175; state: DISABLED
+11-06 20:59:53.911  7210  7389 I Icing   : Indexing com.google.android.gms-apps from com.google.android.gms
+11-06 20:59:53.920   981  1055 D ModelWriter: removing items from db . Reason: [removed because the corresponding package or component is removed. mOp=3 removedPackages=[com.xlox] removedComponents=[]]
+11-06 20:59:53.921  9215  9215 D CompatibilityChangeReporter: Compat change id reported: 171979766; UID 10175; state: DISABLED
+11-06 20:59:53.924  7210  7389 I Icing   : Indexing done com.google.android.gms-apps
+11-06 20:59:53.926  7210  7893 I Icing   : Indexing com.google.android.gms-apps from com.google.android.gms
+11-06 20:59:53.926  7210  7893 I Icing   : Indexing done com.google.android.gms-apps
+11-06 20:59:53.933  9215  9215 D ApplicationLoaders: Returning zygote-cached class loader: /system/framework/android.test.base.jar
+11-06 20:59:53.934  9188  9188 D CompatibilityChangeReporter: Compat change id reported: 237531167; UID 10175; state: DISABLED
+11-06 20:59:53.935  9215  9215 W ziparchive: Unable to open '/data/app/~~yrYx_MBVt4f3j50x8c73Nw==/com.xlox-k79ICMLzr95fjush68g3GQ==/base.dm': No such file or directory
+11-06 20:59:53.935  9215  9215 W ziparchive: Unable to open '/data/app/~~yrYx_MBVt4f3j50x8c73Nw==/com.xlox-k79ICMLzr95fjush68g3GQ==/base.dm': No such file or directory
+11-06 20:59:53.935   981   981 D MainContentCaptureSession: Flushing 18 event(s) for act:com.google.android.apps.nexuslauncher/.NexusLauncherActivity [state=2 (ACTIVE), disabled=false], reason=VIEW_TREE_APPEARING
+11-06 20:59:53.937  9188  9211 W Parcel  : Expecting binder but got null!
+11-06 20:59:53.959   981   981 D MainContentCaptureSession: Flushing 2 event(s) for act:com.google.android.apps.nexuslauncher/.NexusLauncherActivity [state=2 (ACTIVE), disabled=false], reason=VIEW_TREE_APPEARED
+11-06 20:59:53.968   488  2173 D CoreBackPreview: Window{7ad9a19 u0 com.xlox/com.xlox.LogAct}: Setting back callback OnBackInvokedCallbackInfo{mCallback=android.window.IOnBackInvokedCallback$Stub$Proxy@8348078, mPriority=0}
+11-06 20:59:53.968   366   380 W ServiceManager: Permission failure: android.permission.ACCESS_SURFACE_FLINGER from uid=10175 pid=9188
+11-06 20:59:53.968   366   380 D PermissionCache: checking android.permission.ACCESS_SURFACE_FLINGER for uid=10175 => denied (81 us)
+11-06 20:59:53.969   366   380 W ServiceManager: Permission failure: android.permission.ROTATE_SURFACE_FLINGER from uid=10175 pid=9188
+11-06 20:59:53.969   366   380 D PermissionCache: checking android.permission.ROTATE_SURFACE_FLINGER for uid=10175 => denied (122 us)
+11-06 20:59:53.969   366   380 W ServiceManager: Permission failure: android.permission.INTERNAL_SYSTEM_WINDOW from uid=10175 pid=9188
+11-06 20:59:53.969   366   380 D PermissionCache: checking android.permission.INTERNAL_SYSTEM_WINDOW for uid=10175 => denied (103 us)
+11-06 20:59:53.978   366  1159 W ServiceManager: Permission failure: android.permission.ACCESS_SURFACE_FLINGER from uid=10175 pid=0
+11-06 20:59:53.978   366  1159 D PermissionCache: checking android.permission.ACCESS_SURFACE_FLINGER for uid=10175 => denied (10098 us)
+11-06 20:59:53.986   366   382 W TransactionTracing: Could not find layer handle 0x7d626d2952d0
+11-06 20:59:54.012  9188  9211 D HostConnection: HostComposition ext ANDROID_EMU_CHECKSUM_HELPER_v1 ANDROID_EMU_native_sync_v2 ANDROID_EMU_dma_v1 ANDROID_EMU_direct_mem ANDROID_EMU_host_composition_v1 ANDROID_EMU_host_composition_v2 ANDROID_EMU_vulkan ANDROID_EMU_deferred_vulkan_commands ANDROID_EMU_vulkan_null_optional_strings ANDROID_EMU_vulkan_create_resources_with_requirements ANDROID_EMU_YUV_Cache ANDROID_EMU_vulkan_ignored_handles ANDROID_EMU_has_shared_slots_host_memory_allocator ANDROID_EMU_vulkan_free_memory_sync ANDROID_EMU_vulkan_shader_float16_int8 ANDROID_EMU_vulkan_async_queue_submit ANDROID_EMU_vulkan_queue_submit_with_commands ANDROID_EMU_sync_buffer_data ANDROID_EMU_vulkan_async_qsri ANDROID_EMU_read_color_buffer_dma ANDROID_EMU_hwc_multi_configs ANDROID_EMU_hwc_color_transform GL_OES_EGL_image_external_essl3 GL_OES_vertex_array_object GL_KHR_texture_compression_astc_ldr ANDROID_EMU_host_side_tracing ANDROID_EMU_gles_max_version_3_0 
+11-06 20:59:54.021  1608  1926 I incfs-mounts: [incfs] Loaded incremental-fs mount info: 1 instances, 2 mount points
+11-06 20:59:54.031  9188  9211 W OpenGLRenderer: Failed to initialize 101010-2 format, error = EGL_SUCCESS
+11-06 20:59:54.034  9188  9211 D EGL_emulation: eglCreateContext: 0x72e1dacf1090: maj 3 min 0 rcv 3
+11-06 20:59:54.036  9188  9211 D EGL_emulation: eglMakeCurrent: 0x72e1dacf1090: ver 3 0 (tinfo 0x72e40b8c5080) (first time)
+11-06 20:59:54.048  9215  9215 D nativeloader: Configuring classloader-namespace for other apk /data/app/~~yrYx_MBVt4f3j50x8c73Nw==/com.xlox-k79ICMLzr95fjush68g3GQ==/base.apk. target_sdk_version=28, uses_libraries=, library_path=/data/app/~~yrYx_MBVt4f3j50x8c73Nw==/com.xlox-k79ICMLzr95fjush68g3GQ==/lib/x86_64, permitted_path=/data:/mnt/expand:/data/user/0/com.xlox
+11-06 20:59:54.053   127   127 I hwservicemanager: getTransport: Cannot find entry android.hardware.graphics.mapper@4.0::IMapper/default in either framework or device VINTF manifest.
+11-06 20:59:54.053  9188  9211 I Gralloc4: mapper 4.x is not supported
+11-06 20:59:54.054  1608  1926 I AiAiEcho: EchoSearch: WidgetFetcherImpl is initialized with [25] widgets [reason=package removed for userId: 0]
+11-06 20:59:54.065   127   127 I hwservicemanager: getTransport: Cannot find entry android.hardware.graphics.allocator@4.0::IAllocator/default in either framework or device VINTF manifest.
+11-06 20:59:54.066   126   126 I servicemanager: Could not find android.hardware.graphics.allocator.IAllocator/default in the VINTF manifest.
+11-06 20:59:54.066  9188  9211 W Gralloc4: allocator 4.x is not supported
+11-06 20:59:54.072  9188  9211 D HostConnection: HostComposition ext ANDROID_EMU_CHECKSUM_HELPER_v1 ANDROID_EMU_native_sync_v2 ANDROID_EMU_dma_v1 ANDROID_EMU_direct_mem ANDROID_EMU_host_composition_v1 ANDROID_EMU_host_composition_v2 ANDROID_EMU_vulkan ANDROID_EMU_deferred_vulkan_commands ANDROID_EMU_vulkan_null_optional_strings ANDROID_EMU_vulkan_create_resources_with_requirements ANDROID_EMU_YUV_Cache ANDROID_EMU_vulkan_ignored_handles ANDROID_EMU_has_shared_slots_host_memory_allocator ANDROID_EMU_vulkan_free_memory_sync ANDROID_EMU_vulkan_shader_float16_int8 ANDROID_EMU_vulkan_async_queue_submit ANDROID_EMU_vulkan_queue_submit_with_commands ANDROID_EMU_sync_buffer_data ANDROID_EMU_vulkan_async_qsri ANDROID_EMU_read_color_buffer_dma ANDROID_EMU_hwc_multi_configs ANDROID_EMU_hwc_color_transform GL_OES_EGL_image_external_essl3 GL_OES_vertex_array_object GL_KHR_texture_compression_astc_ldr ANDROID_EMU_host_side_tracing ANDROID_EMU_gles_max_version_3_0 
+11-06 20:59:54.077   488   523 W PackageManager: Failed registering loading progress callback. Package is fully loaded.
+11-06 20:59:54.099   981  1055 I incfs-mounts: [incfs] Loaded incremental-fs mount info: 1 instances, 2 mount points
+11-06 20:59:54.111  9215  9215 V GraphicsEnvironment: ANGLE Developer option for 'com.xlox' set to: 'default'
+11-06 20:59:54.113  1608  1608 I AiAiEcho: EchoSearch: AppFetcherImpl is initialized with [19] apps [time=9, reason=com.xlox is added]
+11-06 20:59:54.116  9215  9215 V GraphicsEnvironment: ANGLE GameManagerService for com.xlox: false
+11-06 20:59:54.122  9215  9215 V GraphicsEnvironment: Neither updatable production driver nor prerelease driver is supported.
+11-06 20:59:54.123  9215  9215 D NetworkSecurityConfig: No Network Security Config specified, using platform default
+11-06 20:59:54.124  9215  9215 D NetworkSecurityConfig: No Network Security Config specified, using platform default
+11-06 20:59:54.125  9215  9215 E BoxApplication: libXloX.so failed to load
+11-06 20:59:54.125  9215  9215 E BoxApplication: java.lang.UnsatisfiedLinkError: dlopen failed: library "libXloX.so" not found
+11-06 20:59:54.125  9215  9215 E BoxApplication: 	at java.lang.Runtime.loadLibrary0(Runtime.java:1077)
+11-06 20:59:54.125  9215  9215 E BoxApplication: 	at java.lang.Runtime.loadLibrary0(Runtime.java:998)
+11-06 20:59:54.125  9215  9215 E BoxApplication: 	at java.lang.System.loadLibrary(System.java:1661)
+11-06 20:59:54.125  9215  9215 E BoxApplication: 	at com.xlox.BoxApplication.<clinit>(Unknown Source:2)
+11-06 20:59:54.125  9215  9215 E BoxApplication: 	at java.lang.Class.newInstance(Native Method)
+11-06 20:59:54.125  9215  9215 E BoxApplication: 	at android.app.AppComponentFactory.instantiateApplication(AppComponentFactory.java:76)
+11-06 20:59:54.125  9215  9215 E BoxApplication: 	at androidx.core.app.CoreComponentFactory.instantiateApplication(Unknown Source:0)
+11-06 20:59:54.125  9215  9215 E BoxApplication: 	at android.app.Instrumentation.newApplication(Instrumentation.java:1243)
+11-06 20:59:54.125  9215  9215 E BoxApplication: 	at android.app.LoadedApk.makeApplicationInner(LoadedApk.java:1458)
+11-06 20:59:54.125  9215  9215 E BoxApplication: 	at android.app.LoadedApk.makeApplicationInner(LoadedApk.java:1395)
+11-06 20:59:54.125  9215  9215 E BoxApplication: 	at android.app.ActivityThread.handleBindApplication(ActivityThread.java:6772)
+11-06 20:59:54.125  9215  9215 E BoxApplication: 	at android.app.ActivityThread.-$$Nest$mhandleBindApplication(Unknown Source:0)
+11-06 20:59:54.125  9215  9215 E BoxApplication: 	at android.app.ActivityThread$H.handleMessage(ActivityThread.java:2133)
+11-06 20:59:54.125  9215  9215 E BoxApplication: 	at android.os.Handler.dispatchMessage(Handler.java:106)
+11-06 20:59:54.125  9215  9215 E BoxApplication: 	at android.os.Looper.loopOnce(Looper.java:201)
+11-06 20:59:54.125  9215  9215 E BoxApplication: 	at android.os.Looper.loop(Looper.java:288)
+11-06 20:59:54.125  9215  9215 E BoxApplication: 	at android.app.ActivityThread.main(ActivityThread.java:7924)
+11-06 20:59:54.125  9215  9215 E BoxApplication: 	at java.lang.reflect.Method.invoke(Native Method)
+11-06 20:59:54.125  9215  9215 E BoxApplication: 	at com.android.internal.os.RuntimeInit$MethodAndArgsCaller.run(RuntimeInit.java:548)
+11-06 20:59:54.125  9215  9215 E BoxApplication: 	at com.android.internal.os.ZygoteInit.main(ZygoteInit.java:936)
+11-06 20:59:54.156  1608  1926 I AiAiEcho: EchoSearch: WidgetFetcherImpl is initialized with [25] widgets [reason=package added for userId: 0]
+11-06 20:59:54.193   488   513 W ziparchive: Unable to open '/data/app/~~yrYx_MBVt4f3j50x8c73Nw==/com.xlox-k79ICMLzr95fjush68g3GQ==/base.dm': No such file or directory
+11-06 20:59:54.194   945  1227 D BtGatt.ScanManager: uid 10120 isForeground true scanMode -1
+11-06 20:59:54.195   945  1227 D BtGatt.ScanManager: uid 10120 isForeground true scanMode -1
+11-06 20:59:54.201  9188  9188 D SplashScreenView: Building from parcel drawable: android.graphics.drawable.BitmapDrawable@c1dd2f6
+11-06 20:59:54.202  9188  9188 D SplashScreenView: Build android.window.SplashScreenView{8ab9964 V.E...... ......ID 0,0-0,0}
+11-06 20:59:54.202  9188  9188 D SplashScreenView: Icon: view: i.d0{124f7cd V.ED..... ......I. 0,0-0,0 #10204dd android:id/splashscreen_icon_view} drawable: android.graphics.drawable.BitmapDrawable@c1dd2f6 size: 528
+11-06 20:59:54.202  9188  9188 D SplashScreenView: Branding: view: android.view.View{5cc2882 G.ED..... ......I. 0,0-0,0 #10204dc android:id/splashscreen_branding_view} drawable: null size w: 0 h: 0
+11-06 20:59:54.203   945  1227 D BtGatt.ScanManager: uid 10120 isForeground true scanMode 1
+11-06 20:59:54.212   488   893 D CompatibilityChangeReporter: Compat change id reported: 214016041; UID 10175; state: DISABLED
+11-06 20:59:54.218  1469  1469 I GoogleInputMethodService: GoogleInputMethodService.onFinishInput():3227 
+11-06 20:59:54.220  1469  1469 I GoogleInputMethodService: GoogleInputMethodService.updateDeviceLockedStatus():2087 repeatCheckTimes = 0, unlocked = true
+11-06 20:59:54.220  1469  1469 I GoogleInputMethodService: GoogleInputMethodService.onStartInput():1877 onStartInput(EditorInfo{inputType=0x0(NULL) imeOptions=0x0 privateImeOptions=null actionName=UNSPECIFIED actionLabel=null actionId=0 initialSelStart=-1 initialSelEnd=-1 initialCapsMode=0x0 hintText=null label=null packageName=com.xlox fieldId=-1 fieldName=null extras=null}, false)
+11-06 20:59:54.220  1469  1469 I GoogleInputMethodService: GoogleInputMethodService.shouldHideHeaderOnInitialState():4008 ShouldHideHeaderOnInitialState = false
+11-06 20:59:54.221  1469  1469 I GoogleInputMethodService: GoogleInputMethodService.updateDeviceLockedStatus():2087 repeatCheckTimes = 2, unlocked = true
+11-06 20:59:54.217   488   513 I ActivityTaskManager: Displayed com.xlox/.LogAct: +1s168ms
+11-06 20:59:54.248  9215  9215 I BoxApplication: Loader diagnostics: sdk=33 abi=x86_64 page=4096 lib=missing align=-1 writable=false lastError=
+11-06 20:59:54.248  9215  9215 E com.xlox:stub1: No implementation found for java.lang.String com.xlox.BoxApplication.getSdkKey() (tried Java_com_xlox_BoxApplication_getSdkKey and Java_com_xlox_BoxApplication_getSdkKey__)
+11-06 20:59:54.248  9215  9215 E BoxApplication: Activation Error
+11-06 20:59:54.248  9215  9215 E BoxApplication: java.lang.UnsatisfiedLinkError: No implementation found for java.lang.String com.xlox.BoxApplication.getSdkKey() (tried Java_com_xlox_BoxApplication_getSdkKey and Java_com_xlox_BoxApplication_getSdkKey__)
+11-06 20:59:54.248  9215  9215 E BoxApplication: 	at com.xlox.BoxApplication.getSdkKey(Native Method)
+11-06 20:59:54.248  9215  9215 E BoxApplication: 	at com.xlox.BoxApplication.onCreate(Unknown Source:28)
+11-06 20:59:54.248  9215  9215 E BoxApplication: 	at android.app.Instrumentation.callApplicationOnCreate(Instrumentation.java:1277)
+11-06 20:59:54.248  9215  9215 E BoxApplication: 	at android.app.ActivityThread.handleBindApplication(ActivityThread.java:6811)
+11-06 20:59:54.248  9215  9215 E BoxApplication: 	at android.app.ActivityThread.-$$Nest$mhandleBindApplication(Unknown Source:0)
+11-06 20:59:54.248  9215  9215 E BoxApplication: 	at android.app.ActivityThread$H.handleMessage(ActivityThread.java:2133)
+11-06 20:59:54.248  9215  9215 E BoxApplication: 	at android.os.Handler.dispatchMessage(Handler.java:106)
+11-06 20:59:54.248  9215  9215 E BoxApplication: 	at android.os.Looper.loopOnce(Looper.java:201)
+11-06 20:59:54.248  9215  9215 E BoxApplication: 	at android.os.Looper.loop(Looper.java:288)
+11-06 20:59:54.248  9215  9215 E BoxApplication: 	at android.app.ActivityThread.main(ActivityThread.java:7924)
+11-06 20:59:54.248  9215  9215 E BoxApplication: 	at java.lang.reflect.Method.invoke(Native Method)
+11-06 20:59:54.248  9215  9215 E BoxApplication: 	at com.android.internal.os.RuntimeInit$MethodAndArgsCaller.run(RuntimeInit.java:548)
+11-06 20:59:54.248  9215  9215 E BoxApplication: 	at com.android.internal.os.ZygoteInit.main(ZygoteInit.java:936)
+11-06 20:59:54.266   488   893 D CoreBackPreview: Window{600c799 u0 Splash Screen com.xlox}: Setting back callback null
+11-06 20:59:54.271   488  2101 W InputManager-JNI: Input channel object '600c799 Splash Screen com.xlox (client)' was disposed without first being removed with the input manager!
+11-06 20:59:54.331   366   382 W TransactionTracing: Could not find layer handle 0x7d626d2953f0
+11-06 20:59:54.331   366   382 W TransactionTracing: Could not find layer handle 0x7d626d294a90
+11-06 20:59:54.333  9215  9229 E com.xlox:stub1: No implementation found for java.lang.Object top.bienvenido.mundo.common.initialize.MNative.ioctl(int, java.lang.Object) (tried Java_top_bienvenido_mundo_common_initialize_MNative_ioctl and Java_top_bienvenido_mundo_common_initialize_MNative_ioctl__ILjava_lang_Object_2)
+11-06 20:59:54.341   981  2202 D OneSearchSuggestProvider: Shut down the binder channel
+11-06 20:59:54.351   981  2936 I s.nexuslauncher: oneway function results for code 2 on binder at 0x72e16ad6e460 will be dropped but finished with status UNKNOWN_TRANSACTION
+11-06 20:59:54.394   981   981 D MainContentCaptureSession: Flushing 18 event(s) for act:com.google.android.apps.nexuslauncher/.NexusLauncherActivity [state=2 (ACTIVE), disabled=false], reason=VIEW_TREE_APPEARING
+11-06 20:59:54.419   981   981 D MainContentCaptureSession: Flushing 2 event(s) for act:com.google.android.apps.nexuslauncher/.NexusLauncherActivity [state=2 (ACTIVE), disabled=false], reason=VIEW_TREE_APPEARED
+11-06 20:59:54.460   366   382 W TransactionTracing: Could not find layer handle 0x7d626d292cf0
+11-06 20:59:54.460   366   382 W TransactionTracing: Could not find layer handle 0x7d626d296590
+11-06 20:59:54.576  9215  9238 E com.xlox:stub1: No implementation found for java.lang.Object top.bienvenido.mundo.common.initialize.MNative.ioctl(int, java.lang.Object) (tried Java_top_bienvenido_mundo_common_initialize_MNative_ioctl and Java_top_bienvenido_mundo_common_initialize_MNative_ioctl__ILjava_lang_Object_2)
+11-06 20:59:54.592   488  2101 E DatabaseUtils: Writing exception to parcel
+11-06 20:59:54.592   488  2101 E DatabaseUtils: java.lang.SecurityException: Permission denial: reading from settings requires:android.permission.READ_DEVICE_CONFIG
+11-06 20:59:54.592   488  2101 E DatabaseUtils: 	at android.provider.DeviceConfig.enforceReadPermission(DeviceConfig.java:1219)
+11-06 20:59:54.592   488  2101 E DatabaseUtils: 	at com.android.providers.settings.SettingsProvider.getConfigSetting(SettingsProvider.java:1138)
+11-06 20:59:54.592   488  2101 E DatabaseUtils: 	at com.android.providers.settings.SettingsProvider.call(SettingsProvider.java:419)
+11-06 20:59:54.592   488  2101 E DatabaseUtils: 	at android.content.ContentProvider.call(ContentProvider.java:2511)
+11-06 20:59:54.592   488  2101 E DatabaseUtils: 	at android.content.ContentProvider$Transport.call(ContentProvider.java:525)
+11-06 20:59:54.592   488  2101 E DatabaseUtils: 	at android.content.ContentProviderNative.onTransact(ContentProviderNative.java:295)
+11-06 20:59:54.592   488  2101 E DatabaseUtils: 	at android.os.Binder.execTransactInternal(Binder.java:1280)
+11-06 20:59:54.592   488  2101 E DatabaseUtils: 	at android.os.Binder.execTransact(Binder.java:1244)
+11-06 20:59:54.658   754   754 D TileServices: Couldn't find tile for ComponentInfo{com.google.android.apps.wellbeing/com.google.android.apps.wellbeing.focusmode.quicksettings.FocusModeTileService}
+11-06 20:59:54.660   488   893 D CompatibilityChangeReporter: Compat change id reported: 168419799; UID 10085; state: DISABLED
+11-06 20:59:54.660   488   893 D CompatibilityChangeReporter: Compat change id reported: 273564678; UID 10085; state: DISABLED
+11-06 20:59:54.751  7210  7210 D BoundBrokerSvc: onBind: Intent { act=com.google.android.gms.common.BIND_SHARED_PREFS pkg=com.google.android.gms }
+11-06 20:59:54.751  7210  7210 D BoundBrokerSvc: Loading bound service for intent: Intent { act=com.google.android.gms.common.BIND_SHARED_PREFS pkg=com.google.android.gms }
+11-06 20:59:54.770  7210  7210 D BoundBrokerSvc: onUnbind: Intent { act=com.google.android.gms.common.BIND_SHARED_PREFS pkg=com.google.android.gms }
+11-06 20:59:54.782  4911  4911 D PersistedStoragePackageUninstalledReceiver: Received android.intent.action.PACKAGE_FULLY_REMOVED for com.xlox for u0
+11-06 20:59:54.823   945   945 V MediaPlayerList: mPackageChangedBroadcastReceiver: action: android.intent.action.PACKAGE_CHANGED
+11-06 20:59:54.823   945   945 D MediaPlayerList: Name of package changed: com.xlox
+11-06 20:59:54.823   488   575 D CompatibilityChangeReporter: Compat change id reported: 171306433; UID 10175; state: DISABLED
+11-06 20:59:54.826   945   945 V MediaPlayerList: mPackageChangedBroadcastReceiver: action: android.intent.action.PACKAGE_CHANGED
+11-06 20:59:54.827   945   945 D MediaPlayerList: Name of package changed: com.xlox
+11-06 20:59:54.827   754   754 D ControlsListingControllerImpl: ServiceConfig reloaded, count: 0
+11-06 20:59:54.832  2830  3120 I Bugle   : BroadcastReceiverAsyncWorkTracker: Acknowledging broadcast of atsi@6aeb781
+11-06 20:59:54.834   488   594 I InputReader: Reconfiguring input devices, changes=KEYBOARD_LAYOUTS | 
+11-06 20:59:54.846  7210  7210 D BoundBrokerSvc: onUnbind: Intent { act=com.google.android.mdd.service.START dat=chimera-action:/... cmp=com.google.android.gms/.chimera.GmsBoundBrokerService }
+11-06 20:59:54.864  3653  9246 I ProvidersCache: Provider returned no roots. Possibly naughty: com.google.android.apps.docs.storage
+11-06 20:59:54.872  7167  9109 I Fitness : OnPackageChangedOperation got intent: Intent { act=android.intent.action.PACKAGE_CHANGED dat=package: flg=0x45000010 pkg=com.google.android.gms cmp=com.google.android.gms/.chimera.PersistentIntentOperationService (has extras) } [CONTEXT service_id=17 ]
+11-06 20:59:54.891   488   488 I Telecom : DefaultDialerCache: Refreshing default dialer for user 0: now com.google.android.dialer: DDC.oR@Afk
+11-06 20:59:54.892  4911  4924 I PermissionControllerServiceImpl: Updating user sensitive for uid 10175
+11-06 20:59:54.894   488   575 D CompatibilityChangeReporter: Compat change id reported: 218533173; UID 10175; state: DISABLED
+11-06 20:59:54.907  1605  2237 I MediaProvider: Begin Intent { act=android.intent.action.PACKAGE_FULLY_REMOVED dat=package: flg=0x5000010 cmp=com.google.android.providers.media.module/com.android.providers.media.MediaService (has extras) }
+11-06 20:59:54.931   488   584 I RoleService: Granting default roles...
+11-06 20:59:54.932   978   978 D CarrierSvcBindHelper: onPackageModified: com.xlox
+11-06 20:59:54.933   978   978 D CarrierSvcBindHelper: No carrier app for: 0
+11-06 20:59:54.933   978   978 D ImsResolver: maybeAddedImsService, packageName: com.xlox
+11-06 20:59:54.962  9188  9188 I Choreographer: Skipped 44 frames!  The application may be doing too much work on its main thread.
+11-06 20:59:54.967  4911  9100 W Role    : Default holder doesn't have required signing certificate: com.google.android.apps.work.clouddpc:23962F4B43B9857638EA66F4D419518EAE282491ACDA4B94707BD59003C45E58
+11-06 20:59:54.971  1605  2237 D MediaProvider: Deleted 0 Android/media items belonging to com.xlox on /data/user/0/com.google.android.providers.media.module/databases/external.db
+11-06 20:59:55.026  7167  9109 I Fitness : FitCleanupIntentOperation received Intent android.intent.action.PACKAGE_CHANGED [CONTEXT service_id=17 ]
+11-06 20:59:55.033   488  2254 W BroadcastQueue: Background execution not allowed: receiving Intent { act=android.intent.action.PACKAGE_ADDED dat=package: flg=0x4000010 (has extras) } to com.google.android.packageinstaller/com.android.packageinstaller.PackageInstalledReceiver
+11-06 20:59:55.035   488   524 W BroadcastQueue: Background execution not allowed: receiving Intent { act=android.intent.action.PACKAGE_ADDED dat=package: flg=0x4000010 (has extras) } to com.google.android.gms/.games.chimera.GamesSystemBroadcastReceiverProxy
+11-06 20:59:55.035   488   524 W BroadcastQueue: Background execution not allowed: receiving Intent { act=android.intent.action.PACKAGE_ADDED dat=package: flg=0x4000010 (has extras) } to com.google.android.gms/.gass.chimera.PackageChangeBroadcastReceiver
+11-06 20:59:55.035   488   524 W BroadcastQueue: Background execution not allowed: receiving Intent { act=android.intent.action.PACKAGE_ADDED dat=package: flg=0x4000010 (has extras) } to com.google.android.gms/.chimera.GmsIntentOperationService$PersistentTrustedReceiver
+11-06 20:59:55.035   488   524 W BroadcastQueue: Background execution not allowed: receiving Intent { act=android.intent.action.PACKAGE_ADDED dat=package: flg=0x4000010 (has extras) } to com.google.android.googlequicksearchbox/com.google.android.apps.gsa.googlequicksearchbox.GelStubAppWatcher
+11-06 20:59:55.084  1671  1671 I GsaVoiceInteractionSrv: Handling ACTION_STOP_HOTWORD
+11-06 20:59:55.085  1671  2192 E HwDetectorWithState: a: 3
+11-06 20:59:55.086   488  2103 W BroadcastQueue: Background execution not allowed: receiving Intent { act=android.intent.action.DROPBOX_ENTRY_ADDED flg=0x10 (has extras) } to com.google.android.gms/.stats.service.DropBoxEntryAddedReceiver
+11-06 20:59:55.087  7167  9109 I Fitness : OnPackageChangedOperation got intent: Intent { act=android.intent.action.PACKAGE_CHANGED dat=package: flg=0x5000010 pkg=com.google.android.gms cmp=com.google.android.gms/.chimera.PersistentIntentOperationService (has extras) } [CONTEXT service_id=17 ]
+11-06 20:59:55.092   488   524 W BroadcastQueue: Background execution not allowed: receiving Intent { act=android.intent.action.DROPBOX_ENTRY_ADDED flg=0x10 (has extras) } to com.google.android.gms/.chimera.GmsIntentOperationService$PersistentTrustedReceiver
+11-06 20:59:55.108   488  2254 W JobScheduler: Job didn't exist in JobStore: 2b921f6 #u0a139/1034 com.google.android.apps.photos/com.google.android.libraries.social.mediamonitor.MediaMonitorJobSchedulerService
+11-06 20:59:55.123  7167  9109 I Fitness : FitCleanupIntentOperation received Intent android.intent.action.PACKAGE_CHANGED [CONTEXT service_id=17 ]
+11-06 20:59:55.128  1605  2237 D MediaGrants: Removed 0 media_grants for com.xlox. Reason: Package orphaned
+11-06 20:59:55.159  7167  7328 W ChimeraUtils: Module com.google.android.gms.nearby_en missing resource null(0)
+11-06 20:59:55.160  1605  2237 I MediaProvider: End Intent { act=android.intent.action.PACKAGE_FULLY_REMOVED dat=package: flg=0x5000010 cmp=com.google.android.providers.media.module/com.android.providers.media.MediaService (has extras) }
+11-06 20:59:55.166  7167  7328 W ChimeraUtils: Module com.google.android.gms.nearby_en missing resource null(0)
+11-06 20:59:55.200   488   893 W UriGrantsManagerService: No permission grants found for com.google.android.apps.photos
+11-06 20:59:55.203   488  2173 W UriGrantsManagerService: No permission grants found for com.google.android.apps.photos
+11-06 20:59:55.235  7210  7389 I Icing   : Indexing com.google.android.gms-apps from com.google.android.gms
+11-06 20:59:55.237  7167  7195 W ChimeraUtils: Module com.google.android.gms.nearby_en missing resource null(0)
+11-06 20:59:55.249  7167  7195 W ChimeraUtils: Module com.google.android.gms.nearby_en missing resource null(0)
+11-06 20:59:55.324  7210  7389 I Icing   : Indexing done com.google.android.gms-apps
+11-06 20:59:55.327  7210  7389 I Icing   : Indexing com.google.android.gms-apps from com.google.android.gms
+11-06 20:59:55.327  7210  7389 I Icing   : Indexing done com.google.android.gms-apps
+11-06 20:59:55.328   488  2173 W UriGrantsManagerService: No permission grants found for com.google.android.apps.photos
+11-06 20:59:55.334   488  2098 W UriGrantsManagerService: No permission grants found for com.google.android.apps.photos
+11-06 20:59:55.360   488  2098 W UriGrantsManagerService: No permission grants found for com.google.android.apps.photos
+11-06 20:59:55.360   488  2098 W UriGrantsManagerService: No permission grants found for com.google.android.apps.photos
+11-06 20:59:55.842  9188  9203 I OpenGLRenderer: Davey! duration=783ms; Flags=0, FrameTimelineVsyncId=24602, IntendedVsync=265537270434, Vsync=265537270434, InputEventId=0, HandleInputStart=265547469422, AnimationStart=265547469803, PerformTraversalsStart=265547545254, DrawStart=265547722986, FrameDeadline=265553937100, FrameInterval=265547468030, FrameStartTime=16666666, SyncQueued=265547837921, SyncStart=265547853319, IssueDrawCommandsStart=265548250791, SwapBuffers=266204060862, FrameCompleted=266320818737, DequeueBufferDuration=2554, QueueBufferDuration=173183, GpuCompleted=266320818737, SwapBuffersCompleted=266301465510, DisplayPresentTime=0, CommandSubmissionCompleted=266204060862, 
+11-06 20:59:55.868  9188  9203 I OpenGLRenderer: Davey! duration=926ms; Flags=0, FrameTimelineVsyncId=24617, IntendedVsync=265553937100, Vsync=265553937100, InputEventId=0, HandleInputStart=265558271007, AnimationStart=265558271288, PerformTraversalsStart=265576560127, DrawStart=265576820352, FrameDeadline=266353937068, FrameInterval=265558269955, FrameStartTime=16666666, SyncQueued=265576883811, SyncStart=266301484164, IssueDrawCommandsStart=266301868763, SwapBuffers=267183530671, FrameCompleted=267205134592, DequeueBufferDuration=2445, QueueBufferDuration=459369, GpuCompleted=267205134592, SwapBuffersCompleted=267199799557, DisplayPresentTime=72057628414509141, CommandSubmissionCompleted=267183530671, 
+11-06 20:59:55.870  9188  9188 I Choreographer: Skipped 53 frames!  The application may be doing too much work on its main thread.
+11-06 20:59:55.871  9188  9188 D SplashScreenView: remove starting view
+11-06 20:59:55.871   488  2173 D CompatibilityChangeReporter: Compat change id reported: 197654537; UID 10175; state: DISABLED
+11-06 20:59:55.896   945  1227 D BtGatt.ScanManager: uid 10120 isForeground true scanMode -1
+11-06 20:59:55.896   945  1227 D BtGatt.ScanManager: uid 10120 isForeground true scanMode -1
+11-06 20:59:55.896   945  1227 D BtGatt.ScanManager: uid 10120 isForeground true scanMode 1
+11-06 20:59:55.900  7167  7179 I FontLog : Received query Noto Color Emoji Compat, URI content://com.google.android.gms.fonts [CONTEXT service_id=132 ]
+11-06 20:59:55.901  7167  7179 I FontLog : Query [emojicompat-emoji-font] resolved to {Noto Color Emoji Compat, wdth 100.0, wght 400, ital 0.0, bestEffort false} [CONTEXT service_id=132 ]
+11-06 20:59:55.903  7167  7179 I FontLog : Fetch {Noto Color Emoji Compat, wdth 100.0, wght 400, ital 0.0, bestEffort false} end status Status{statusCode=SUCCESS, resolution=null} [CONTEXT service_id=132 ]
+11-06 20:59:55.909  7167  7179 I FontLog : Pulling font file for id = 16, cache size = 10 [CONTEXT service_id=132 ]
+11-06 20:59:55.921  7167  7179 I FontLog : Pulling font file for id = 16, cache size = 10 [CONTEXT service_id=132 ]
+11-06 20:59:56.011  9188  9211 D EGL_emulation: app_time_stats: avg=609.13ms min=152.79ms max=898.33ms count=3
+11-06 20:59:56.041  9188  9203 I OpenGLRenderer: Davey! duration=888ms; Flags=0, FrameTimelineVsyncId=24646, IntendedVsync=265570603766, Vsync=266303937070, InputEventId=0, HandleInputStart=266304356309, AnimationStart=266304356750, PerformTraversalsStart=266304468749, DrawStart=266304497833, FrameDeadline=267237270366, FrameInterval=266304326093, FrameStartTime=16666666, SyncQueued=266304531927, SyncStart=267199829023, IssueDrawCommandsStart=267211488409, SwapBuffers=267252758282, FrameCompleted=267354071911, DequeueBufferDuration=4168, QueueBufferDuration=253083, GpuCompleted=267354071911, SwapBuffersCompleted=267352833387, DisplayPresentTime=0, CommandSubmissionCompleted=267252758282, 
+11-06 20:59:56.145  9188  9203 I OpenGLRenderer: Davey! duration=997ms; Flags=0, FrameTimelineVsyncId=24723, IntendedVsync=266320603736, Vsync=267203937034, InputEventId=0, HandleInputStart=267212451158, AnimationStart=267212451698, PerformTraversalsStart=267214846712, DrawStart=267215081921, FrameDeadline=267387270360, FrameInterval=267212186373, FrameStartTime=16666666, SyncQueued=267215129290, SyncStart=267352846632, IssueDrawCommandsStart=267353172971, SwapBuffers=267382373611, FrameCompleted=267456283727, DequeueBufferDuration=3257, QueueBufferDuration=239188, GpuCompleted=267456283727, SwapBuffersCompleted=267452641064, DisplayPresentTime=72904454231819792, CommandSubmissionCompleted=267382373611, 
+11-06 20:59:56.150  1517  1556 I incfs-mounts: [incfs] Loaded incremental-fs mount info: 1 instances, 2 mount points
+11-06 20:59:56.247   981   981 D MainContentCaptureSession: Flushing 40 event(s) for act:com.google.android.apps.nexuslauncher/.NexusLauncherActivity [state=2 (ACTIVE), disabled=false], reason=TEXT_CHANGE
+11-06 20:59:58.742   488   523 D OomAdjuster: Not killing cached processes
+11-06 20:59:59.006  9188  9256 D ProfileInstaller: Installing profile for com.xlox
+11-06 21:00:00.012  1608  1849 I AiAiEcho: Predicting[0]: 
+11-06 21:00:00.013  1608  1849 I AiAiEcho: Ranked targets strategy: SORT, count: 0, ranking metadata: 
+11-06 21:00:00.014  1608  1849 I AiAiEcho: #postPredictionTargets: Sending updates to UISurface lockscreen with targets# 0
+11-06 21:00:00.015  1608  1849 I AiAiEcho: #postPredictionTargets: Sending updates to UISurface home with targets# 0
+11-06 21:00:00.019  6543  6543 W PeriodicJobReceiver: refresh periodic job from action=settings.intelligence.battery.action.PERIODIC_JOB_UPDATE
+11-06 21:00:00.023  6543  6543 W PeriodicJobManager: schedule next alarm job at Nov 06,2026 22:00:00
+11-06 21:00:00.035  1100  1100 D BatteryBroadcastReceiver: onReceive:settings.intelligence.battery.action.FETCH_BATTERY_USAGE_DATA
+11-06 21:00:00.040  1100  1148 D BatteryUsageLoaderService: loadUsageDataSafely() in the AsyncTask
+11-06 21:00:00.052   754   812 D EGL_emulation: app_time_stats: avg=8430.48ms min=8430.48ms max=8430.48ms count=1
+11-06 21:00:00.059  1100  1148 W PowerProfile: ambient.on is deprecated! Use ambient.on.display0 instead.
+11-06 21:00:00.059  1100  1148 W PowerProfile: screen.on is deprecated! Use screen.on.display0 instead.
+11-06 21:00:00.059  1100  1148 W PowerProfile: screen.full is deprecated! Use screen.full.display0 instead.
+11-06 21:00:00.059  1100  1148 W ModemPowerProfile: getAverageBatteryDrainMaH called with unexpected key: 0x0, drain:0,RAT:DEFAULT
+11-06 21:00:00.059  1100  1148 W ModemPowerProfile: getAverageBatteryDrainMaH called with unexpected key: 0x10000000, drain:IDLE,RAT:DEFAULT
+11-06 21:00:00.060  1100  1148 W ModemPowerProfile: getAverageBatteryDrainMaH called with unexpected key: 0x20000000, drain:RX,RAT:DEFAULT
+11-06 21:00:00.060  1100  1148 W ModemPowerProfile: getAverageBatteryDrainMaH called with unexpected key: 0x30000000, drain:TX,level:UNKNOWN(0x0)RAT:DEFAULT
+11-06 21:00:00.060  1100  1148 W ModemPowerProfile: getAverageBatteryDrainMaH called with unexpected key: 0x31000000, drain:TX,level:UNKNOWN(0x1000000)RAT:DEFAULT
+11-06 21:00:00.060  1100  1148 W ModemPowerProfile: getAverageBatteryDrainMaH called with unexpected key: 0x32000000, drain:TX,level:UNKNOWN(0x2000000)RAT:DEFAULT
+11-06 21:00:00.060  1100  1148 W ModemPowerProfile: getAverageBatteryDrainMaH called with unexpected key: 0x33000000, drain:TX,level:UNKNOWN(0x3000000)RAT:DEFAULT
+11-06 21:00:00.060  1100  1148 W ModemPowerProfile: getAverageBatteryDrainMaH called with unexpected key: 0x34000000, drain:TX,level:UNKNOWN(0x4000000)RAT:DEFAULT
+11-06 21:00:00.060  1100  1148 W BatteryAppListPreferenceController: shouldShowBatteryAttributionList(): 0.1
+11-06 21:00:00.060  1100  1148 W BatteryUsageLoaderService: getBatteryEntryList() returns null or empty content
+11-06 21:00:00.060  1100  1148 D BatteryUsageLoaderService: getBatteryUsageStats() in 19/ms
+11-06 21:00:00.089  1100  1148 D DatabaseUtils: sendBatteryEntryData() size=1 in 29/ms
