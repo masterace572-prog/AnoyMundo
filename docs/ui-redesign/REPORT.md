@@ -261,11 +261,14 @@ font/icon download.
 
 The redesign is a view-layer change. Business logic is untouched:
 
-- `LogAct`: native `Check`, `Prefs`, clipboard, permission requests and the VPN
-  guard are unchanged. Added `Splash.install` / `exit`, `ThemeMode`, inset
-  helpers, `TransitionDrawable` focus ring, `Haptics`, and
-  `onWindowFocusChanged` to restore theme-aware system-bar icons after the
-  platform splash releases them.
+- `LogAct`: native `Check`, `Prefs`, clipboard and the VPN guard are unchanged.
+  Added `Splash.install` / `exit`, `ThemeMode`, inset helpers, a
+  `TransitionDrawable` focus ring, `Haptics`, and `onWindowFocusChanged` to
+  restore theme-aware system-bar icons after the platform splash releases them.
+  First-launch special-access intents are now guarded against OEM ROMs that
+  omit the "All files access" / "Install unknown apps" settings pages, with a
+  generic fallback; `onActivityResult` no longer kills the process (that read
+  as a crash on launch) and no longer loops back into the same settings page.
 - `MAct`: parses `exdate()` (numeric + 7-date), ticks the countdown every 1s,
   keeps `Downtwo`, `LibManager`, `AppManager`, Meta*, OBB copy, launch, install,
   stop and update flows. Only the binding targets and the unavailable-value
@@ -279,10 +282,18 @@ The redesign is a view-layer change. Business logic is untouched:
   intent extra is honoured **only** when `ApplicationInfo.FLAG_DEBUGGABLE` is
   set, so CI can capture both palettes from one installed APK; release builds
   ignore it.
+- `xlox/app/proguard-rules.pro`: the release variant keeps the design-system
+  package, the three activities, `AppManager`, `ThemeMode` and the compat
+  splash / insets entry points, so R8 + `shrinkResources` cannot remove a class
+  that layouts or the splash screen inflate by name.
+- `Splash.exit`: the post-splash callback, the animated exit and the delayed
+  `withEndAction` are each exception-guarded, so a cosmetic splash animation
+  can never abort startup (including with animations enabled on real devices).
 - `xlox/scripts/ui_screenshots.sh` and `.github/workflows/android-ui-qa.yml`
-  are QA-only tooling: direct emulator launch, 13 captures, foreground-app
-  assertions, path/contrast/duplication validation, zero-warning lint gate and
-  one idempotent publisher step.
+  are QA-only tooling: direct emulator launch, 14 captures including a release
+  APK launch smoke test, foreground-app assertions, full logcat crash capture,
+  path/contrast/duplication validation, a zero-warning lint gate and one
+  idempotent publisher step.
 
 ---
 
@@ -427,7 +438,7 @@ been resolved and re-verified in the green CI runs above.
 
 - `docs/ui-redesign/AUDIT.md` — approved Part A audit.
 - `docs/ui-redesign/REPORT.md` — this report.
-- `docs/ui-redesign/screenshots/*.png` — 13 CI/emulator frames.
+- `docs/ui-redesign/screenshots/*.png` — 14 CI/emulator frames.
 - `xlox/app/src/main/res/**`, `xlox/app/src/main/java/com/xlox/ui/**` — tokens,
   component library, activities and screen layouts.
 - `xlox/app/src/debug/**` — debug-only component preview and QA manifest.
