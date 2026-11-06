@@ -75,6 +75,13 @@ jobs:
           ./gradlew :app:assembleDebug --no-daemon --stacktrace 2>&1 | tee /tmp/assembleDebug.log
           ls -lh app/build/outputs/apk/debug/
 
+      - name: Build release APK
+        run: |
+          chmod +x gradlew
+          set -o pipefail
+          ./gradlew :app:assembleRelease --no-daemon --stacktrace 2>&1 | tee /tmp/assembleRelease.log
+          ls -lh app/build/outputs/apk/release/
+
       - name: Android Lint (debug)
         run: |
           ./gradlew :app:lintDebug --no-daemon --stacktrace 2>&1 | tee /tmp/lintDebug.log
@@ -301,13 +308,14 @@ jobs:
               'components_light.png', 'components_dark.png',
               'login_font_130.png', 'main_font_130.png',
               'login_320.png', 'main_320.png', 'login_keyboard.png',
+              'release_login.png',
           }
           missing = sorted(expected - {f.name for f in files})
           if missing:
               print('::error::missing required screenshots:', missing)
               sys.exit(1)
-          if len(files) < 13:
-              print('::error::expected 13 screenshots, found', len(files))
+          if len(files) < 14:
+              print('::error::expected 14 screenshots, found', len(files))
               sys.exit(1)
           small = [(f.name, f.stat().st_size) for f in files if f.stat().st_size < 5000]
           if small:
@@ -335,14 +343,16 @@ jobs:
           # palettes need light icons. Catches a splash theme leaking white
           # icons onto a cream status bar.
           bar_bad = []
+          dark_frames = {f.name for f in files
+                         if f.name.endswith('_dark.png') or f.name.startswith('release_')}
           for f in files:
               if '320' in f.name:
                   continue  # 320x640 frames have a shorter status bar
-              want_dark = not f.name.endswith('_dark.png')
+              want_dark = f.name not in dark_frames
               n = icon_pixels(f, want_dark)
               if n < 200:
                   bar_bad.append((f.name, n))
-          print('status-bar icon pixel counts:', [(f.name, icon_pixels(f, not f.name.endswith('_dark.png'))) for f in files if '320' not in f.name])
+          print('status-bar icon pixel counts:', [(f.name, icon_pixels(f, f.name not in dark_frames)) for f in files if '320' not in f.name])
           if bar_bad:
               print('::error::status bar icons lack contrast:', bar_bad)
               sys.exit(1)
@@ -356,6 +366,15 @@ jobs:
           print('focus lines:', len(focus))
           if len(focus) < 12 or bad_focus:
               print('::error::app was not foreground for every capture:', bad_focus[:4])
+              sys.exit(1)
+          rel = [l for l in trace.splitlines() if l.startswith('release focus:')]
+          if not rel or 'com.xlox/.LogAct' not in rel[-1]:
+              print('::error::release APK did not reach the login screen:', rel[-1:] if rel else [])
+              sys.exit(1)
+          rel_log = Path('qa-logs/release-logcat.txt')
+          rel_text = rel_log.read_text(errors='replace') if rel_log.exists() else ''
+          if 'FATAL EXCEPTION' in rel_text and 'Process: com.xlox' in rel_text:
+              print('::error::release APK crashed on launch')
               sys.exit(1)
           kb = [l for l in trace.splitlines() if l.startswith('keyboard state:')]
           if not kb or 'true' not in kb[-1].lower():
@@ -400,6 +419,7 @@ jobs:
           mkdir -p qa-logs
           cp /tmp/assembleDebug.log qa-logs/assembleDebug.log 2>/dev/null || true
           cp /tmp/lintDebug.log qa-logs/lintDebug.log 2>/dev/null || true
+          cp /tmp/assembleRelease.log qa-logs/assembleRelease.log 2>/dev/null || true
           cp xlox/app/build/intermediates/lint_intermediate_text_report/debug/lint-results-debug.txt qa-logs/lint-results-debug.txt 2>/dev/null || true
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"

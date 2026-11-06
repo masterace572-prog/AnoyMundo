@@ -185,8 +185,15 @@ public class LogAct extends AppCompatActivity {
     public void onWindowFocusChanged(boolean hasFocus) {
         super.onWindowFocusChanged(hasFocus);
         // Safety net in case a platform splash implementation never delivers
-        // an exit-animation callback.
-        if (hasFocus) ThemeMode.applyWindow(this);
+        // an exit-animation callback. Cosmetic only: never let a bar refresh
+        // abort startup on an OEM window implementation.
+        if (hasFocus) {
+            try {
+                ThemeMode.applyWindow(this);
+            } catch (RuntimeException ignored) {
+                // Keep the activity usable; the splash callback retries.
+            }
+        }
     }
 
     private void setAuthenticating(boolean active) {

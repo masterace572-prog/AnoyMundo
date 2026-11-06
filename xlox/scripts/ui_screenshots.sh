@@ -174,6 +174,52 @@ if ! test -s "$OUT/login_keyboard.png"; then
 fi
 log "captured login_keyboard.png ($(wc -c < "$OUT/login_keyboard.png") bytes)"
 
+# ---- Release APK launch smoke (R8 / shrinkResources / native libs) ----
+# The debug captures above use an ABI-neutral re-signed build. This installs
+# the actual minified release artifact so a release-only launch crash shows up
+# in CI instead of only on a device. Native .so files are removed for the
+# x86_64 emulator; every JNI call is guarded by try/catch.
+RELEASE_APK=app/build/outputs/apk/release/app-release.apk
+if [ -f "$RELEASE_APK" ]; then
+    if [ ! -f /tmp/qa.keystore ]; then
+        keytool -genkeypair -keystore /tmp/qa.keystore -alias qa \
+            -keyalg RSA -keysize 2048 -validity 10000 \
+            -storepass android -keypass android -dname "CN=Anoy UI QA" \
+            >/dev/null 2>&1 || true
+    fi
+    if [ -z "${APKSIGNER:-}" ]; then
+        APKSIGNER=$(ls "${ANDROID_SDK_ROOT:-/nonexistent}"/build-tools/*/apksigner 2>/dev/null | sort | tail -1 || true)
+        test -n "$APKSIGNER" || APKSIGNER=$(ls "${ANDROID_HOME:-/nonexistent}"/build-tools/*/apksigner 2>/dev/null | sort | tail -1 || true)
+    fi
+    cp "$RELEASE_APK" /tmp/qa-release-unsigned.apk
+    zip -q -d /tmp/qa-release-unsigned.apk 'lib/arm64-v8a/*' >/dev/null 2>&1 || true
+    if [ -n "$APKSIGNER" ] && "$APKSIGNER" sign --ks /tmp/qa.keystore \
+        --ks-pass pass:android --key-pass pass:android \
+        --out /tmp/qa-release-signed.apk /tmp/qa-release-unsigned.apk >> "$LOG" 2>&1; then
+        adb uninstall com.xlox >/dev/null 2>&1 || true
+        if adb install -r -g /tmp/qa-release-signed.apk >> "$LOG" 2>&1; then
+            adb logcat -c >/dev/null 2>&1 || true
+            adb shell am force-stop com.xlox >/dev/null 2>&1 || true
+            adb shell am start -W -n com.xlox/.LogAct >> "$LOG" 2>&1 || true
+            sleep 6
+            release_focus=$(adb shell dumpsys window 2>/dev/null | grep -m1 'mCurrentFocus' || true)
+            log "release focus: $release_focus"
+            adb logcat -d -t 600 2>/dev/null | grep -E 'FATAL EXCEPTION|Process: com\.xlox|Unable to start activity ComponentInfo\{com\.xlox|AndroidRuntime|Caused by:' > ../qa-logs/release-logcat.txt || true
+            if adb exec-out screencap -p > "$OUT/release_login.png"; then
+                log "captured release_login.png ($(wc -c < "$OUT/release_login.png") bytes)"
+            else
+                log "WARN: release screencap failed"
+            fi
+        else
+            log "WARN: release APK install failed"
+        fi
+    else
+        log "WARN: cannot resign release APK"
+    fi
+else
+    log "WARN: release APK missing at $RELEASE_APK"
+fi
+
 log "=== all captures complete ==="
 ls -lh "$OUT" >> "$LOG" 2>&1 || true
 exit 0

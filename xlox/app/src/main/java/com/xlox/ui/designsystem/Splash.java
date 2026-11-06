@@ -47,24 +47,36 @@ public final class Splash {
         Runnable finish = () -> {
             if (afterExit != null) afterExit.run();
         };
-        View icon = provider.getIconView();
-        View target = icon != null ? icon : provider.getView();
-        if (!DsMotion.animationsEnabled(target.getContext())) {
-            provider.remove();
+        // This callback runs on the main thread from the platform splash
+        // screen. Never let a cosmetic exit animation kill the process.
+        try {
+            View icon = provider.getIconView();
+            View target = icon != null ? icon : provider.getView();
+            if (target == null || !DsMotion.animationsEnabled(target.getContext())) {
+                provider.remove();
+                finish.run();
+                return;
+            }
+            target.animate().cancel();
+            target.animate()
+                    .alpha(0f)
+                    .scaleX(1.12f)
+                    .scaleY(1.12f)
+                    .setDuration(DsMotion.SHEET)
+                    .setInterpolator(DsMotion.interpolator())
+                    .withEndAction(() -> {
+                        provider.remove();
+                        finish.run();
+                    })
+                    .start();
+        } catch (Throwable t) {
+            Log.d("Splash", "Exit animation failed", t);
+            try {
+                provider.remove();
+            } catch (Throwable ignored) {
+                // The platform may already have removed the splash view.
+            }
             finish.run();
-            return;
         }
-        target.animate().cancel();
-        target.animate()
-                .alpha(0f)
-                .scaleX(1.12f)
-                .scaleY(1.12f)
-                .setDuration(DsMotion.SHEET)
-                .setInterpolator(DsMotion.interpolator())
-                .withEndAction(() -> {
-                    provider.remove();
-                    finish.run();
-                })
-                .start();
     }
 }
