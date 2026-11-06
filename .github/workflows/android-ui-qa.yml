@@ -109,109 +109,125 @@ jobs:
           arch: x86_64
           profile: pixel_5
           avd-name: ui_qa_avd
-          force-avd-creation: true
+          force-avd-creation: false
           disable-animations: true
           emulator-options: -no-snapshot-save -no-window -noaudio -no-boot-anim
           working-directory: xlox
           script: |
-            # POSIX sh (dash): no pipefail. Capture a full trace inside the
-            # checkout so the failure-log publisher can always ship it.
+            # POSIX sh (dash): no pipefail. Keep stdout flowing to the job log
+            # AND mirror every milestone into a trace file inside the checkout.
             set -u
             mkdir -p ../qa-logs
-            (
-              set -x
-              echo "=== emulator QA started ==="
-              APK=app/build/outputs/apk/debug/app-debug.apk
-              OUT=../docs/ui-redesign/screenshots
-              mkdir -p "$OUT" || { echo "FATAL: cannot create $OUT"; exit 1; }
-              test -f "$APK" || { echo "FATAL: debug APK missing at $APK"; exit 1; }
+            LOG=../qa-logs/emulator-trace.txt
+            : > "$LOG"
+            log() { echo "$*"; echo "$*" >> "$LOG"; }
+            fatal() { echo "::error::$*"; log "FATAL: $*"; exit 1; }
+            log "=== emulator QA started ==="
+            APK=app/build/outputs/apk/debug/app-debug.apk
+            OUT=../docs/ui-redesign/screenshots
+            mkdir -p "$OUT" || fatal "cannot create $OUT"
+            test -f "$APK" || fatal "debug APK missing at $APK"
 
-              adb wait-for-device
-              # The release-grade loader ships arm64-v8a JNI only. On an x86_64
-              # emulator that normally returns INSTALL_FAILED_NO_MATCHING_ABIS,
-              # so fall back to an ABI-neutral, QA-only build of the same APK
-              # (native libs removed, resigned). All screens still render: the
-              # app already guards every JNI call with try/catch.
+            adb wait-for-device || log "WARN: adb wait-for-device failed"
+            # The loader ships arm64-v8a JNI only. On an x86_64 emulator that
+            # usually returns INSTALL_FAILED_NO_MATCHING_ABIS, so fall back to
+            # an ABI-neutral, QA-only build of the same APK (native libs
+            # removed, resigned). Every JNI call is already guarded.
+            adb uninstall com.xlox >/dev/null 2>&1 || true
+            if INSTALL_OUT=$(adb install -r -g "$APK" 2>&1); then
+              log "direct install ok: $INSTALL_OUT"
+            else
+              log "WARN: direct install failed: $INSTALL_OUT"
               adb uninstall com.xlox >/dev/null 2>&1 || true
-              if ! adb install -r -g "$APK"; then
-                echo "WARN: direct install failed; building ABI-neutral QA APK"
-                adb uninstall com.xlox >/dev/null 2>&1 || true
-                cp "$APK" /tmp/qa-unsigned.apk
-                zip -q -d /tmp/qa-unsigned.apk 'lib/arm64-v8a/*' >/dev/null 2>&1 || true
-                keytool -genkeypair -keystore /tmp/qa.keystore -alias qa \
-                  -keyalg RSA -keysize 2048 -validity 10000 \
-                  -storepass android -keypass android -dname "CN=Anoy UI QA" >/dev/null 2>&1
-                "$ANDROID_SDK_ROOT/build-tools/34.0.0/apksigner" sign \
-                  --ks /tmp/qa.keystore --ks-pass pass:android --key-pass pass:android \
-                  --out /tmp/qa-signed.apk /tmp/qa-unsigned.apk \
-                  || { echo "FATAL: could not resign QA APK"; exit 1; }
-                adb install -r -g /tmp/qa-signed.apk \
-                  || { echo "FATAL: ABI-neutral install failed"; exit 1; }
+              cp "$APK" /tmp/qa-unsigned.apk
+              zip -q -d /tmp/qa-unsigned.apk 'lib/arm64-v8a/*' >/dev/null 2>&1 || true
+              keytool -genkeypair -keystore /tmp/qa.keystore -alias qa \
+                -keyalg RSA -keysize 2048 -validity 10000 \
+                -storepass android -keypass android -dname "CN=Anoy UI QA" >/dev/null 2>&1 \
+                || fatal "cannot create QA keystore"
+              "$ANDROID_SDK_ROOT/build-tools/34.0.0/apksigner" sign \
+                --ks /tmp/qa.keystore --ks-pass pass:android --key-pass pass:android \
+                --out /tmp/qa-signed.apk /tmp/qa-unsigned.apk \
+                || fatal "cannot resign QA APK"
+              if INSTALL_OUT=$(adb install -r -g /tmp/qa-signed.apk 2>&1); then
+                log "ABI-neutral install ok: $INSTALL_OUT"
+              else
+                fatal "ABI-neutral install failed: $INSTALL_OUT"
               fi
-              adb shell appops set com.xlox MANAGE_EXTERNAL_STORAGE allow || true
-              adb shell appops set com.xlox REQUEST_INSTALL_PACKAGES allow || true
-              adb shell settings put secure show_ime_with_hard_keyboard 0 || true
-              adb shell settings put system font_scale 1.0 || true
+            fi
+            adb shell appops set com.xlox MANAGE_EXTERNAL_STORAGE allow || true
+            adb shell appops set com.xlox REQUEST_INSTALL_PACKAGES allow || true
+            adb shell settings put secure show_ime_with_hard_keyboard 0 || true
+            adb shell settings put system font_scale 1.0 || true
 
-              capture() {
-                name="$1"; component="$2"
-                adb shell am force-stop com.xlox >/dev/null 2>&1 || true
-                adb shell am start -W -n "com.xlox/$component" >/dev/null 2>&1 || echo "WARN: am start failed for $component"
-                sleep 4
-                adb exec-out screencap -p > "$OUT/$name.png" || { echo "FATAL: screencap failed for $name"; exit 1; }
-                test -s "$OUT/$name.png" || { echo "FATAL: empty screenshot for $name"; exit 1; }
-                echo "captured $name.png ($(wc -c < "$OUT/$name.png") bytes)"
-              }
+            capture() {
+              name="$1"; component="$2"
+              adb shell am force-stop com.xlox >/dev/null 2>&1 || true
+              adb shell am start -W -n "com.xlox/$component" >/dev/null 2>&1 \
+                || log "WARN: am start failed for $component"
+              sleep 4
+              adb exec-out screencap -p > "$OUT/$name.png" \
+                || fatal "screencap failed for $name"
+              test -s "$OUT/$name.png" || fatal "empty screenshot for $name"
+              log "captured $name.png ($(wc -c < "$OUT/$name.png") bytes)"
+            }
 
-              for mode in light dark; do
-                if [ "$mode" = dark ]; then
-                  adb shell cmd uimode night yes || { echo "FATAL: cannot enable night mode"; exit 1; }
-                else
-                  adb shell cmd uimode night no || { echo "FATAL: cannot enable day mode"; exit 1; }
-                fi
-                sleep 2
-                capture "login_${mode}" ".LogAct"
-                capture "main_${mode}" ".MAct"
-                capture "facebook_${mode}" ".FacebookActivity"
-                capture "components_${mode}" ".ui.designsystem.DsPreviewActivity"
-              done
-
-              # Font scale 1.3, then restore 1.0.
-              adb shell settings put system font_scale 1.3 || true
-              adb shell cmd uimode night no || true
+            for mode in light dark; do
+              if [ "$mode" = dark ]; then
+                adb shell cmd uimode night yes || fatal "cannot enable night mode"
+              else
+                adb shell cmd uimode night no || fatal "cannot enable day mode"
+              fi
               sleep 2
-              capture "login_font_130" ".LogAct"
-              capture "main_font_130" ".MAct"
-              adb shell settings put system font_scale 1.0 || true
+              capture "login_${mode}" ".LogAct"
+              capture "main_${mode}" ".MAct"
+              capture "facebook_${mode}" ".FacebookActivity"
+              capture "components_${mode}" ".ui.designsystem.DsPreviewActivity"
+            done
 
-              # Narrow 320dp width to check clipping/overlap.
-              adb shell wm size 320x640 || true
-              adb shell wm density 160 || true
-              sleep 2
-              capture "login_320" ".LogAct"
-              capture "main_320" ".MAct"
-              adb shell wm size reset || true
-              adb shell wm density reset || true
+            # Font scale 1.3, then restore 1.0.
+            adb shell settings put system font_scale 1.3 || true
+            adb shell cmd uimode night no || true
+            sleep 2
+            capture "login_font_130" ".LogAct"
+            capture "main_font_130" ".MAct"
+            adb shell settings put system font_scale 1.0 || true
 
-              ls -lh "$OUT"
-              echo "=== all captures complete ==="
-            ) > ../qa-logs/emulator.log 2>&1
-            rc=$?
-            echo "=== emulator script exit: $rc ==="
-            cat ../qa-logs/emulator.log
-            exit $rc
+            # Narrow 320dp width to check clipping/overlap.
+            adb shell wm size 320x640 || true
+            adb shell wm density 160 || true
+            sleep 2
+            capture "login_320" ".LogAct"
+            capture "main_320" ".MAct"
+            adb shell wm size reset || true
+            adb shell wm density reset || true
+
+            log "=== all captures complete ==="
+            ls -lh "$OUT"
 
       - name: Surface emulator diagnostics
         if: always()
         run: |
-          echo "=== qa-logs/emulator.log ==="
-          cat qa-logs/emulator.log 2>/dev/null || echo "(no emulator log)"
+          echo "=== qa-logs/emulator-trace.txt ==="
+          cat qa-logs/emulator-trace.txt 2>/dev/null || echo "(no emulator trace)"
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('qa-logs/emulator-trace.txt')
+          lines = p.read_text(errors='replace').splitlines() if p.exists() else ['(no trace file)']
+          if not lines:
+              lines = ['(trace file was empty)']
+          if len(lines) > 30:
+              lines = lines[:8] + ['...'] + lines[-22:]
+          for line in lines:
+              safe = (line.replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A'))[:280]
+              print('::warning::' + safe)
+          PY
 
       - name: Commit screenshots to the branch
         if: success()
         working-directory: ${{ github.workspace }}
         run: |
-          rm -f qa-logs/emulator.log
+          rm -f qa-logs/emulator.log qa-logs/emulator-trace.txt
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -f docs/ui-redesign/screenshots/
