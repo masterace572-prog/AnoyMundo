@@ -32,8 +32,8 @@ Daemon will be stopped at the end of the build
 > Task :app:compressDebugAssets
 > Task :app:processDebugJavaRes NO-SOURCE
 > Task :app:processDebugManifestForPackage
-> Task :app:mergeDebugJavaResource
 > Task :app:checkDebugDuplicateClasses
+> Task :app:mergeDebugJavaResource
 > Task :app:processDebugResources
 
 > Task :app:compileDebugJavaWithJavac
@@ -8299,5 +8299,5 @@ com.android.tools.r8.internal.L10: Should never be called
 > Task :app:createDebugApkListingFileRedirect
 > Task :app:assembleDebug
 
-BUILD SUCCESSFUL in 55s
+BUILD SUCCESSFUL in 56s
 34 actionable tasks: 34 executed

@@ -20,15 +20,15 @@ Daemon will be stopped at the end of the build
 > Task :app:mergeReleaseJniLibFolders
 > Task :app:mergeReleaseNativeLibs
 > Task :app:checkReleaseDuplicateClasses
+> Task :app:processReleaseJavaRes NO-SOURCE
 > Task :app:mergeReleaseArtProfile
 > Task :app:stripReleaseDebugSymbols
 > Task :app:processReleaseManifestForPackage
-> Task :app:processReleaseJavaRes NO-SOURCE
 > Task :app:extractReleaseNativeDebugMetadata
 > Task :app:mergeReleaseShaders
-> Task :app:mergeReleaseNativeDebugMetadata
 > Task :app:compileReleaseShaders NO-SOURCE
 > Task :app:generateReleaseAssets UP-TO-DATE
+> Task :app:mergeReleaseNativeDebugMetadata
 > Task :app:mergeReleaseAssets
 > Task :app:compressReleaseAssets
 > Task :app:processApplicationManifestReleaseForBundle
