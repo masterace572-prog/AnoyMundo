@@ -19,10 +19,10 @@ Daemon will be stopped at the end of the build
 > Task :app:mapDebugSourceSetPaths
 > Task :app:generateDebugResources
 > Task :app:packageDebugResources
-> Task :app:mergeDebugResources
 > Task :app:createDebugCompatibleScreenManifests
 > Task :app:extractDeepLinksDebug
 > Task :app:parseDebugLocalResources
+> Task :app:mergeDebugResources
 > Task :app:processDebugMainManifest
 > Task :app:processDebugManifest
 > Task :app:mergeDebugShaders
@@ -33,8 +33,10 @@ Daemon will be stopped at the end of the build
 > Task :app:processDebugJavaRes NO-SOURCE
 > Task :app:checkDebugDuplicateClasses
 > Task :app:mergeDebugJavaResource
+> Task :app:processDebugManifestForPackage
 > Task :app:mergeLibDexDebug
 > Task :app:configureNdkBuildDebug[arm64-v8a]
+> Task :app:processDebugResources
 
 > Task :app:desugarDebugFileDependencies
 WARNING: /home/runner/.gradle/caches/transforms-3/b91f9dab850d9a00e31f249c21322702/transformed/mundo-release-runtime.jar: D8: Expected stack map table for method with non-linear control flow.
@@ -8276,25 +8278,23 @@ com.android.tools.r8.internal.L10: Should never be called
 
 
 > Task :app:buildNdkBuildDebug[arm64-v8a]
-> Task :app:processDebugManifestForPackage
-> Task :app:mergeDebugJniLibFolders
-> Task :app:mergeDebugNativeLibs
-> Task :app:stripDebugDebugSymbols
-> Task :app:processDebugResources
-> Task :app:validateSigningDebug
-> Task :app:mergeExtDexDebug
 
 > Task :app:compileDebugJavaWithJavac
 Note: Some input files use or override a deprecated API.
 Note: Recompile with -Xlint:deprecation for details.
 
 > Task :app:dexBuilderDebug
+> Task :app:mergeDebugJniLibFolders
+> Task :app:mergeProjectDexDebug
+> Task :app:mergeDebugNativeLibs
+> Task :app:validateSigningDebug
 > Task :app:writeDebugAppMetadata
 > Task :app:writeDebugSigningConfigVersions
-> Task :app:mergeProjectDexDebug
+> Task :app:stripDebugDebugSymbols
+> Task :app:mergeExtDexDebug
 > Task :app:packageDebug
 > Task :app:createDebugApkListingFileRedirect
 > Task :app:assembleDebug
 
-BUILD SUCCESSFUL in 55s
+BUILD SUCCESSFUL in 54s
 34 actionable tasks: 34 executed
