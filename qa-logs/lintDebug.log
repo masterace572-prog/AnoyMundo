@@ -23,24 +23,10 @@ Daemon will be stopped at the end of the build
 > Task :app:bundleDebugClassesToCompileJar
 > Task :app:generateDebugLintReportModel
 > Task :app:lintAnalyzeDebug
-
 > Task :app:lintReportDebug
-Wrote HTML report to file:///home/runner/work/AnoyMundo/AnoyMundo/xlox/app/build/reports/lint-results-debug.html
-
 > Task :app:lintDebug
 
-BUILD SUCCESSFUL in 30s
+BUILD SUCCESSFUL in 27s
 21 actionable tasks: 7 executed, 14 up-to-date
 === FULL LINT TEXT REPORT ===
-/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/debug/res/layout/ds_preview.xml:429: Warning: Use app:drawableEndCompat instead of android:drawableEnd [UseCompatTextViewDrawableXml from androidx.appcompat]
-            <TextView style="@style/Widget.Ds.ListRow" android:layout_width="match_parent" android:layout_height="wrap_content" android:drawableEnd="@drawable/ds_ic_chevron_right" android:drawablePadding="@dimen/space_8" android:text="@string/ds_list_row" android:textAppearance="@style/TextAppearance.Ds.BodyMedium" />
-                                                                                                                                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-   Explanation for issues of type "UseCompatTextViewDrawableXml":
-   TextView uses android: compound drawable attributes instead of app: ones
-
-   Vendor: Android Open Source Project
-   Identifier: androidx.appcompat
-   Feedback: https://issuetracker.google.com/issues/new?component=460343
-
-0 errors, 1 warnings
+No issues found.
