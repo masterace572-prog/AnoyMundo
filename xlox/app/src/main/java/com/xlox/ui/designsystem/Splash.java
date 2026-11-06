@@ -45,7 +45,11 @@ public final class Splash {
 
     private static void animateExit(SplashScreenViewProvider provider, Runnable afterExit) {
         Runnable finish = () -> {
-            if (afterExit != null) afterExit.run();
+            try {
+                if (afterExit != null) afterExit.run();
+            } catch (Throwable t) {
+                Log.d("Splash", "Post-splash callback failed", t);
+            }
         };
         // This callback runs on the main thread from the platform splash
         // screen. Never let a cosmetic exit animation kill the process.
@@ -65,7 +69,13 @@ public final class Splash {
                     .setDuration(DsMotion.SHEET)
                     .setInterpolator(DsMotion.interpolator())
                     .withEndAction(() -> {
-                        provider.remove();
+                        // This runs 300ms later on the main thread, outside
+                        // the try/catch above. Guard it independently.
+                        try {
+                            provider.remove();
+                        } catch (Throwable ignored) {
+                            // The platform may already have removed the view.
+                        }
                         finish.run();
                     })
                     .start();

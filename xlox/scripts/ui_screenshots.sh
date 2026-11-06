@@ -198,10 +198,21 @@ if [ -f "$RELEASE_APK" ]; then
         --out /tmp/qa-release-signed.apk /tmp/qa-release-unsigned.apk >> "$LOG" 2>&1; then
         adb uninstall com.xlox >/dev/null 2>&1 || true
         if adb install -r -g /tmp/qa-release-signed.apk >> "$LOG" 2>&1; then
+            # Re-grant the appops: the reinstall cleared them, otherwise the
+            # first-launch "All files access" settings screen steals focus.
+            adb shell appops set com.xlox MANAGE_EXTERNAL_STORAGE allow >> "$LOG" 2>&1 || true
+            adb shell appops set com.xlox REQUEST_INSTALL_PACKAGES allow >> "$LOG" 2>&1 || true
+            # Exercise the animated splash-exit path too. The capture loop
+            # disables animations, but real devices leave them on, so this is
+            # the only way CI covers the delayed withEndAction callback.
+            adb shell settings put global window_animation_scale 1.0 >> "$LOG" 2>&1 || true
+            adb shell settings put global transition_animation_scale 1.0 >> "$LOG" 2>&1 || true
+            adb shell settings put global animator_duration_scale 1.0 >> "$LOG" 2>&1 || true
             adb logcat -c >/dev/null 2>&1 || true
             adb shell am force-stop com.xlox >/dev/null 2>&1 || true
             adb shell am start -W -n com.xlox/.LogAct >> "$LOG" 2>&1 || true
-            sleep 6
+            sleep 7
+            adb shell am broadcast -a android.intent.action.CLOSE_SYSTEM_DIALOGS >/dev/null 2>&1 || true
             release_focus=$(adb shell dumpsys window 2>/dev/null | grep -m1 'mCurrentFocus' || true)
             log "release focus: $release_focus"
             adb logcat -d -t 600 2>/dev/null | grep -E 'FATAL EXCEPTION|Process: com\.xlox|Unable to start activity ComponentInfo\{com\.xlox|AndroidRuntime|Caused by:' > ../qa-logs/release-logcat.txt || true
