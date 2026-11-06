@@ -11,42 +11,42 @@ Daemon will be stopped at the end of the build
 > Task :app:createReleaseCompatibleScreenManifests
 > Task :app:extractDeepLinksRelease
 > Task :app:parseReleaseLocalResources
-> Task :app:processReleaseMainManifest
 > Task :app:mergeReleaseResources
+> Task :app:processReleaseMainManifest
 > Task :app:processReleaseManifest
 > Task :app:extractProguardFiles
 > Task :app:configureNdkBuildRelease[arm64-v8a]
-> Task :app:buildNdkBuildRelease[arm64-v8a]
-> Task :app:mergeReleaseJniLibFolders
-> Task :app:mergeReleaseNativeLibs
-> Task :app:checkReleaseDuplicateClasses
-> Task :app:processReleaseJavaRes NO-SOURCE
-> Task :app:mergeReleaseArtProfile
-> Task :app:stripReleaseDebugSymbols
 > Task :app:processReleaseManifestForPackage
-> Task :app:extractReleaseNativeDebugMetadata
-> Task :app:mergeReleaseShaders
-> Task :app:compileReleaseShaders NO-SOURCE
-> Task :app:generateReleaseAssets UP-TO-DATE
-> Task :app:mergeReleaseNativeDebugMetadata
-> Task :app:mergeReleaseAssets
-> Task :app:compressReleaseAssets
-> Task :app:processApplicationManifestReleaseForBundle
-> Task :app:collectReleaseDependencies
-> Task :app:sdkReleaseDependencyData
-> Task :app:validateSigningRelease
-> Task :app:writeReleaseAppMetadata
-> Task :app:writeReleaseSigningConfigVersions
-> Task :app:mergeReleaseJavaResource
 > Task :app:processReleaseResources
+> Task :app:buildNdkBuildRelease[arm64-v8a]
 
 > Task :app:compileReleaseJavaWithJavac
 Note: Some input files use or override a deprecated API.
 Note: Recompile with -Xlint:deprecation for details.
 
 > Task :app:generateReleaseLintVitalReportModel
+> Task :app:mergeReleaseJniLibFolders
+> Task :app:mergeReleaseNativeLibs
+> Task :app:checkReleaseDuplicateClasses
 > Task :app:mergeReleaseGeneratedProguardFiles
+> Task :app:mergeReleaseArtProfile
+> Task :app:processReleaseJavaRes NO-SOURCE
+> Task :app:stripReleaseDebugSymbols
+> Task :app:extractReleaseNativeDebugMetadata
+> Task :app:mergeReleaseNativeDebugMetadata
+> Task :app:mergeReleaseShaders
+> Task :app:compileReleaseShaders NO-SOURCE
+> Task :app:generateReleaseAssets UP-TO-DATE
+> Task :app:mergeReleaseAssets
+> Task :app:compressReleaseAssets
+> Task :app:processApplicationManifestReleaseForBundle
 > Task :app:expandReleaseArtProfileWildcards
+> Task :app:collectReleaseDependencies
+> Task :app:sdkReleaseDependencyData
+> Task :app:validateSigningRelease
+> Task :app:writeReleaseAppMetadata
+> Task :app:writeReleaseSigningConfigVersions
+> Task :app:mergeReleaseJavaResource
 > Task :app:bundleReleaseResources
 > Task :app:lintVitalAnalyzeRelease
 > Task :app:lintVitalReportRelease
@@ -61,5 +61,5 @@ WARNING: /home/runner/.gradle/caches/transforms-3/b91f9dab850d9a00e31f249c213227
 > Task :app:createReleaseApkListingFileRedirect
 > Task :app:assembleRelease
 
-BUILD SUCCESSFUL in 1m 19s
+BUILD SUCCESSFUL in 1m 16s
 47 actionable tasks: 47 executed
