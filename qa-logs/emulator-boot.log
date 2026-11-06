@@ -1,21 +1,51 @@
-=== manual emulator QA at Fri Nov  6 08:12:15 UTC 2026 ===
+=== manual emulator QA at Fri Nov  6 09:18:11 UTC 2026 ===
 SDK=/usr/local/lib/android/sdk
-KVM=no (software acceleration)
+=== /dev/kvm before ===
+crw-rw---- 1 root kvm 10, 232 Nov  6 09:14 /dev/kvm
+=== /dev/kvm after ===
+crw-rw-rw- 1 root kvm 10, 232 Nov  6 09:14 /dev/kvm
+KVM=yes
 * daemon not running; starting now at tcp:5037
 * daemon started successfully
+ANDROID_AVD_HOME=/home/runner/.android/avd
 Loading local repository...                                                     [=========                              ] 25% Loading local repository...       [=========                              ] 25% Fetch remote repository...        [=======================================] 100% Fetch remote repository...       
 Auto-selecting single ABI x86_64
-ls: cannot access '/home/runner/.android/avd': No such file or directory
-launching: emulator -port 5554 -avd ui_qa_avd -no-snapshot-save -no-snapstorage -no-window -noaudio -no-boot-anim -gpu swiftshader_indirect -accel off
-emulator pid=2854
-FATAL: emulator process exited before boot
-booted=0 after 1 checks
-=== emulator stdout ===
-INFO         | Android emulator version 37.2.13.0 (build_id 16740729) (CL:N/A)
-INFO         | Graphics backend: gfxstream
-ERROR        | Unknown AVD name [ui_qa_avd], use -list-avds to see valid list.
-ERROR        | HOME is defined but there is no file ui_qa_avd.ini in $HOME/.android/avd
-ERROR        | (Note: Directories are searched in the order $ANDROID_AVD_HOME, $ANDROID_SDK_HOME/avd and $HOME/.android/avd)
-=== adb devices ===
-List of devices attached
-
+=== AVD directory ===
+total 16
+drwxr-xr-x 3 runner runner 4096 Nov  6 09:18 .
+drwxr-x--- 3 runner runner 4096 Nov  6 09:18 ..
+drwxr-xr-x 2 runner runner 4096 Nov  6 09:18 ui_qa_avd.avd
+-rw-r--r-- 1 runner runner   86 Nov  6 09:18 ui_qa_avd.ini
+=== emulator -list-avds ===
+ui_qa_avd
+launching: emulator -port 5554 -avd ui_qa_avd -no-snapshot-save -no-snapstorage -no-window -noaudio -no-boot-anim -gpu swiftshader_indirect
+emulator pid=2867
+booted=1 after 8 checks
+Broadcasting: Intent { act=android.intent.action.CLOSE_SYSTEM_DIALOGS flg=0x400000 }
+Broadcast completed: result=0
+=== emulator QA started ===
+cwd=/home/runner/work/AnoyMundo/AnoyMundo/xlox  serial=unknown
+WARN: direct install failed: Performing Streamed Install
+adb: failed to install app/build/outputs/apk/debug/app-debug.apk: Failure [INSTALL_FAILED_NO_MATCHING_ABIS: INSTALL_FAILED_NO_MATCHING_ABIS: Failed to extract native libraries, res=-113]
+ABI-neutral install ok: Serving...
+All files should be loaded. Notifying the device.
+Performing Incremental Install
+Success
+Install command complete in 775 ms
+appearance set to light
+captured login_light.png (142399 bytes)
+captured main_light.png (125213 bytes)
+captured facebook_light.png (119087 bytes)
+captured components_light.png (1354248 bytes)
+appearance set to dark
+captured login_dark.png (161429 bytes)
+captured main_dark.png (166999 bytes)
+captured facebook_dark.png (119258 bytes)
+captured components_dark.png (1352162 bytes)
+appearance set to light
+captured login_font_130.png (159539 bytes)
+captured main_font_130.png (132148 bytes)
+captured login_320.png (28619 bytes)
+captured main_320.png (30143 bytes)
+=== all captures complete ===
+=== emulator QA complete ===
