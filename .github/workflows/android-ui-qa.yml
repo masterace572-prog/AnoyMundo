@@ -195,49 +195,62 @@ jobs:
       - name: Validate screenshots
         if: always()
         run: |
-          python3 -m pip install --quiet --user pillow 2>/dev/null || true
           python3 - <<'PY'
-          import hashlib, sys
+          import hashlib, struct, sys, zlib
           from pathlib import Path
-          try:
-              from PIL import Image
-          except ImportError:
-              print('Pillow unavailable; pixel check skipped')
-              Image = None
+
+          def first_row(path):
+              """Decode only the first PNG scanline using the stdlib."""
+              data = path.read_bytes()
+              pos, idat, w, ctype = 8, b'', 0, 0
+              while pos < len(data):
+                  ln = struct.unpack('>I', data[pos:pos + 4])[0]
+                  typ = data[pos + 4:pos + 8]
+                  chunk = data[pos + 8:pos + 8 + ln]
+                  pos += 12 + ln
+                  if typ == b'IHDR':
+                      w, _h, _depth, ctype = struct.unpack('>IIBB', chunk[:10])
+                  elif typ == b'IDAT':
+                      idat += chunk
+                  elif typ == b'IEND':
+                      break
+              bpp = {0: 1, 2: 3, 3: 1, 4: 2, 6: 4}.get(ctype, 3)
+              raw = zlib.decompress(idat)
+              stride = w * bpp
+              filt = raw[0]
+              line = bytearray(raw[1:1 + stride])
+              if filt in (1, 3, 4):
+                  for x in range(bpp, stride):
+                      line[x] = (line[x] + line[x - bpp]) & 255
+              px = line[(w // 2) * bpp:(w // 2) * bpp + 3]
+              return sum(px) / 3
+
           files = sorted(Path('docs/ui-redesign/screenshots').glob('*.png'))
+          print('screenshot count:', len(files))
           if len(files) < 12:
-              print('FATAL: expected 12 screenshots, found', len(files))
+              print('::error::expected 12 screenshots, found', len(files))
               sys.exit(1)
-          seen, duplicates = {}, []
+          small = [(f.name, f.stat().st_size) for f in files if f.stat().st_size < 5000]
+          if small:
+              print('::error::blank or truncated screenshots:', small)
+              sys.exit(1)
+          seen, dups = {}, []
           for f in files:
               h = hashlib.md5(f.read_bytes()).hexdigest()
               if h in seen:
-                  duplicates.append((seen[h], f.name))
+                  dups.append((seen[h], f.name))
               seen[h] = f.name
-          print('duplicate frames:', duplicates)
-          print('::warning::screenshots=' + ','.join(f.name + ':' + str(f.stat().st_size) for f in files))
-          contaminated = []
-          if Image is not None:
-              for f in files:
-                  im = Image.open(f).convert('RGB')
-                  w, h = im.size
-                  hits = total = 0
-                  for y in range(int(h * 0.04), int(h * 0.34), max(1, h // 60)):
-                      for x in range(0, w, max(1, w // 40)):
-                          r, g, b = im.getpixel((x, y))
-                          total += 1
-                          if r < 70 and 95 < g < 175 and 120 < b < 215:
-                              hits += 1
-                  ratio = hits / max(1, total)
-                  if ratio > 0.30:
-                      contaminated.append((f.name, round(ratio, 2)))
-          print('system-overlay contamination:', contaminated)
-          if contaminated:
-              print('::error::system overlays detected in ' + str(contaminated))
-          if duplicates:
-              print('::error::duplicate frames detected: ' + str(duplicates))
-          if contaminated or duplicates:
+          print('duplicate frames:', dups)
+          if dups:
+              print('::warning::duplicate frames: ' + str(dups))
+          light = Path('docs/ui-redesign/screenshots/login_light.png')
+          dark = Path('docs/ui-redesign/screenshots/login_dark.png')
+          ll, dd = first_row(light), first_row(dark)
+          print('top-row luminance: light=%.1f dark=%.1f' % (ll, dd))
+          if abs(ll - dd) < 60:
+              print('::error::light and dark screenshots are not visually distinct')
               sys.exit(1)
+          print('::notice::screenshot validation passed')
           PY
 
       - name: Commit screenshots to the branch

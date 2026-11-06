@@ -84,12 +84,23 @@ capture() {
 }
 
 set_mode() {
-    if [ "$1" = dark ]; then
+    mode="$1"
+    # ThemeMode is dark-first and persists its own preference, so switching the
+    # system night mode alone is not enough. Write the app's real SharedPreferences
+    # through run-as (the QA APK is debuggable), then align the system mode too.
+    printf '<?xml version="1.0" encoding="utf-8" standalone="yes" ?>\n<map><string name="mode">%s</string></map>\n' "$mode" > /tmp/anoy_appearance.xml
+    adb push /tmp/anoy_appearance.xml /data/local/tmp/anoy_appearance.xml >/dev/null 2>&1 \
+        || fatal "cannot push appearance preference"
+    adb shell run-as com.xlox sh -c 'mkdir -p shared_prefs; cp /data/local/tmp/anoy_appearance.xml shared_prefs/anoy_appearance.xml' >> "$LOG" 2>&1 \
+        || log "WARN: could not write appearance preference for $mode"
+    if [ "$mode" = dark ]; then
         adb shell cmd uimode night yes >> "$LOG" 2>&1 || fatal "cannot enable night mode"
     else
         adb shell cmd uimode night no >> "$LOG" 2>&1 || fatal "cannot enable day mode"
     fi
-    sleep 2
+    adb shell am force-stop com.xlox >/dev/null 2>&1 || true
+    sleep 3
+    log "appearance set to $mode"
 }
 
 for mode in light dark; do
