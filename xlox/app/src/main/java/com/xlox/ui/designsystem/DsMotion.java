@@ -5,6 +5,7 @@ import android.animation.ValueAnimator;
 import android.content.Context;
 import android.os.Build;
 import android.provider.Settings;
+import android.util.Log;
 import android.view.View;
 import android.view.animation.Interpolator;
 
@@ -15,6 +16,8 @@ import androidx.interpolator.view.animation.FastOutSlowInInterpolator;
 
 /** Motion tokens: critically damped springs, staggered entrances and micro-physics. */
 public final class DsMotion {
+
+    private static final String TAG = "DsMotion";
 
     public static final long STATE = 150L;
     public static final long SCREEN = 380L;
@@ -36,17 +39,38 @@ public final class DsMotion {
                 Settings.Global.ANIMATOR_DURATION_SCALE, 1f) != 0f;
     }
 
-    private static SpringForce criticallyDamped(float stiffness) {
-        return new SpringForce()
+    /**
+     * The final position must live on the SpringForce. A bare SpringForce has
+     * an UNSET (Double.MAX_VALUE) final position, and SpringAnimation's
+     * sanityCheck() throws "Final position of the spring cannot be greater than
+     * the max value" at start() when that force is installed.
+     */
+    private static SpringForce criticallyDamped(float stiffness, float finalPosition) {
+        return new SpringForce(finalPosition)
                 .setStiffness(stiffness)
                 .setDampingRatio(SpringForce.DAMPING_RATIO_NO_BOUNCY);
     }
 
     private static SpringAnimation spring(View v, DynamicAnimation.ViewProperty property,
                                           float target, float stiffness) {
-        SpringAnimation a = new SpringAnimation(v, property, target);
-        a.setSpring(criticallyDamped(stiffness));
+        SpringAnimation a = new SpringAnimation(v, property);
+        a.setSpring(criticallyDamped(stiffness, target));
         return a;
+    }
+
+    /** Cosmetic springs must never abort a screen launch on a library/OEM quirk. */
+    private static void startSpring(View v, DynamicAnimation.ViewProperty property,
+                                    float target, float stiffness) {
+        try {
+            spring(v, property, target, stiffness).start();
+        } catch (RuntimeException e) {
+            Log.w(TAG, "Spring animation unavailable; applying target directly", e);
+            try {
+                property.setValue(v, target);
+            } catch (RuntimeException ignored) {
+                // Leave the view in its current state rather than crashing.
+            }
+        }
     }
 
     /** Shared-axis / staggered fade-and-slide cascade, 40ms between items. */
@@ -66,9 +90,9 @@ public final class DsMotion {
             v.setAlpha(0f);
             v.setTranslationY(Tokens.px(v.getContext(), com.xlox.R.dimen.space_24));
             v.postDelayed(() -> {
-                spring(v, DynamicAnimation.ALPHA, 1f, SpringForce.STIFFNESS_LOW).start();
-                spring(v, DynamicAnimation.TRANSLATION_Y, 0f,
-                        SpringForce.STIFFNESS_MEDIUM).start();
+                startSpring(v, DynamicAnimation.ALPHA, 1f, SpringForce.STIFFNESS_LOW);
+                startSpring(v, DynamicAnimation.TRANSLATION_Y, 0f,
+                        SpringForce.STIFFNESS_MEDIUM);
             }, delay);
         }
     }
@@ -82,7 +106,7 @@ public final class DsMotion {
             return;
         }
         view.setAlpha(0f);
-        spring(view, DynamicAnimation.ALPHA, 1f, SpringForce.STIFFNESS_LOW).start();
+        startSpring(view, DynamicAnimation.ALPHA, 1f, SpringForce.STIFFNESS_LOW);
     }
 
     public static void fadeOut(View view, Runnable end) {
@@ -106,20 +130,20 @@ public final class DsMotion {
             switch (event.getActionMasked()) {
                 case android.view.MotionEvent.ACTION_DOWN:
                     if (animationsEnabled(view.getContext())) {
-                        spring(view, DynamicAnimation.SCALE_X, pressed,
-                                SpringForce.STIFFNESS_MEDIUM).start();
-                        spring(view, DynamicAnimation.SCALE_Y, pressed,
-                                SpringForce.STIFFNESS_MEDIUM).start();
+                        startSpring(view, DynamicAnimation.SCALE_X, pressed,
+                                SpringForce.STIFFNESS_MEDIUM);
+                        startSpring(view, DynamicAnimation.SCALE_Y, pressed,
+                                SpringForce.STIFFNESS_MEDIUM);
                     }
                     Haptics.tick(view);
                     break;
                 case android.view.MotionEvent.ACTION_UP:
                 case android.view.MotionEvent.ACTION_CANCEL:
                     if (animationsEnabled(view.getContext())) {
-                        spring(view, DynamicAnimation.SCALE_X, 1f,
-                                SpringForce.STIFFNESS_MEDIUM).start();
-                        spring(view, DynamicAnimation.SCALE_Y, 1f,
-                                SpringForce.STIFFNESS_MEDIUM).start();
+                        startSpring(view, DynamicAnimation.SCALE_X, 1f,
+                                SpringForce.STIFFNESS_MEDIUM);
+                        startSpring(view, DynamicAnimation.SCALE_Y, 1f,
+                                SpringForce.STIFFNESS_MEDIUM);
                     } else {
                         view.setScaleX(1f);
                         view.setScaleY(1f);
@@ -159,8 +183,8 @@ public final class DsMotion {
         v.setScaleX(from);
         v.setScaleY(from);
         v.setAlpha(0f);
-        spring(v, DynamicAnimation.SCALE_X, to, SpringForce.STIFFNESS_LOW).start();
-        spring(v, DynamicAnimation.SCALE_Y, to, SpringForce.STIFFNESS_LOW).start();
-        spring(v, DynamicAnimation.ALPHA, 1f, SpringForce.STIFFNESS_LOW).start();
+        startSpring(v, DynamicAnimation.SCALE_X, to, SpringForce.STIFFNESS_LOW);
+        startSpring(v, DynamicAnimation.SCALE_Y, to, SpringForce.STIFFNESS_LOW);
+        startSpring(v, DynamicAnimation.ALPHA, 1f, SpringForce.STIFFNESS_LOW);
     }
 }

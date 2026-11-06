@@ -237,6 +237,16 @@ for p in sorted((RES / "drawable").glob("ds_ic_*.xml")):
             bad_paths.append(f"{p.name}: {err}")
 check(not bad_paths, "every Lucide vector pathData parses", str(bad_paths))
 
+# ---------------------------------------------------- spring animation sanity
+# A bare SpringForce has an UNSET (Double.MAX_VALUE) rest position; installing
+# it on a SpringAnimation throws at start() and crashes every screen launch.
+motion = DESIGN_SYSTEM_DIR / "DsMotion.java"
+motion_text = text_of(motion) if motion.exists() else ""
+check("new SpringForce(finalPosition)" in motion_text,
+      "every spring force has an explicit final position")
+check("startSpring(" in motion_text,
+      "spring starts are wrapped in a non-fatal fallback")
+
 # --------------------------------------------------------- accessibility
 icon_controls = 0
 unlabelled = []
