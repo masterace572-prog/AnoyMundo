@@ -267,10 +267,10 @@ public class MAct extends AppCompatActivity {
     }
 
     private void setKeyTimeUnavailable() {
-        if (daysValue != null) daysValue.setText(R.string.not_available);
-        if (hoursValue != null) hoursValue.setText(R.string.not_available);
-        if (minutesValue != null) minutesValue.setText(R.string.not_available);
-        if (secondsValue != null) secondsValue.setText(R.string.not_available);
+        if (daysValue != null) daysValue.setText(R.string.not_available_short);
+        if (hoursValue != null) hoursValue.setText(R.string.not_available_short);
+        if (minutesValue != null) minutesValue.setText(R.string.not_available_short);
+        if (secondsValue != null) secondsValue.setText(R.string.not_available_short);
     }
 
     private void startKeyCountdown() {
@@ -283,8 +283,8 @@ public class MAct extends AppCompatActivity {
             return;
         }
         if (expiry == null || expiry.trim().isEmpty() || "NULL".equalsIgnoreCase(expiry.trim())) {
-            if (expiryValue != null) expiryValue.setText(R.string.not_available);
-            if (timeRemaining != null) timeRemaining.setText(R.string.not_available);
+            if (expiryValue != null) expiryValue.setText(R.string.not_available_short);
+            if (timeRemaining != null) timeRemaining.setText(R.string.not_available_short);
             return;
         }
 
@@ -298,7 +298,7 @@ public class MAct extends AppCompatActivity {
             }
         }
         if (expiryMillis <= 0L) {
-            if (timeRemaining != null) timeRemaining.setText(R.string.not_available);
+            if (timeRemaining != null) timeRemaining.setText(R.string.not_available_short);
             return;
         }
 

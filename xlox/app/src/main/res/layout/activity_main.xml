@@ -133,7 +133,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="@dimen/space_12"
-                    android:text="@string/not_available" />
+                    android:text="@string/not_available_short" />
 
                 <!-- Four tabular cells, all bound to the existing countdown -->
                 <LinearLayout

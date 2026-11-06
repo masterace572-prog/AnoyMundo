@@ -16,7 +16,7 @@
         style="@style/TextAppearance.Ds.Mono.Medium"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="@string/not_available" />
+        android:text="@string/not_available_short" />
 
     <TextView
         android:id="@+id/timeLabel"

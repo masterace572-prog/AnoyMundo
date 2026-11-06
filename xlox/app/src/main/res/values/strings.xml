@@ -7,7 +7,7 @@
     <string name="welcome_heading">Welcome back</string>
     <string name="welcome_subtitle">Enter your access key to continue</string>
     <string name="access_key_label">ACCESS KEY</string>
-    <string name="access_key_hint">Paste or enter your key</string>
+    <string name="access_key_hint">Enter your key</string>
     <string name="sign_in">Sign in</string>
     <string name="paste_key">Paste from clipboard</string>
     <string name="enter_your_key">Enter your access key</string>
@@ -40,6 +40,7 @@
     <string name="ready">Ready</string>
     <string name="not_installed">Not installed</string>
     <string name="not_available">Not available</string>
+    <string name="not_available_short">—</string>
     <string name="launch">Launch</string>
     <string name="install">Install</string>
     <string name="stop">Stop</string>
