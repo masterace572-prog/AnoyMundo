@@ -71,6 +71,9 @@ capture() {
         log "WARN: am start failed for $component"
     fi
     sleep 4
+    adb shell am broadcast -a android.intent.action.CLOSE_SYSTEM_DIALOGS >/dev/null 2>&1 || true
+    adb shell dumpsys activity activities 2>/dev/null | grep -m1 'mResumedActivity' >> "$LOG" || true
+    sleep 1
     if ! adb exec-out screencap -p > "$OUT/$name.png"; then
         fatal "screencap failed for $name"
     fi

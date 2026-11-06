@@ -112,6 +112,13 @@ jobs:
           AVD=ui_qa_avd
           echo "=== manual emulator QA at $(date -u) ==="
           echo "SDK=$SDK"
+          if [ -e /dev/kvm ]; then
+            echo "=== /dev/kvm before ==="; ls -l /dev/kvm || true
+            sudo chmod 666 /dev/kvm 2>/dev/null || true
+            echo "=== /dev/kvm after ==="; ls -l /dev/kvm || true
+          else
+            echo "/dev/kvm is absent"
+          fi
           if [ -w /dev/kvm ]; then echo "KVM=yes"; else echo "KVM=no (software acceleration)"; fi
           adb start-server || true
           export ANDROID_AVD_HOME="$HOME/.android/avd"
@@ -151,9 +158,12 @@ jobs:
             exit 1
           fi
 
-          # Settle the system server, then freeze animations for stable captures.
-          sleep 5
+          # Settle the system server, suppress the first-run immersive-mode
+          # education overlay and close any boot-time system dialogs.
+          sleep 10
           adb -s emulator-5554 shell input keyevent 82 || true
+          adb shell settings put secure immersive_mode_confirmations confirmed || true
+          adb shell am broadcast -a android.intent.action.CLOSE_SYSTEM_DIALOGS || true
           adb shell settings put global window_animation_scale 0.0 || true
           adb shell settings put global transition_animation_scale 0.0 || true
           adb shell settings put global animator_duration_scale 0.0 || true
@@ -182,15 +192,57 @@ jobs:
               print('::warning::' + safe)
           PY
 
+      - name: Validate screenshots
+        if: always()
+        run: |
+          python3 -m pip install --quiet --user pillow 2>/dev/null || true
+          python3 - <<'PY'
+          import hashlib, sys
+          from pathlib import Path
+          try:
+              from PIL import Image
+          except ImportError:
+              print('Pillow unavailable; pixel check skipped')
+              Image = None
+          files = sorted(Path('docs/ui-redesign/screenshots').glob('*.png'))
+          if len(files) < 12:
+              print('FATAL: expected 12 screenshots, found', len(files))
+              sys.exit(1)
+          seen, duplicates = {}, []
+          for f in files:
+              h = hashlib.md5(f.read_bytes()).hexdigest()
+              if h in seen:
+                  duplicates.append((seen[h], f.name))
+              seen[h] = f.name
+          print('duplicate frames:', duplicates)
+          contaminated = []
+          if Image is not None:
+              for f in files:
+                  im = Image.open(f).convert('RGB')
+                  w, h = im.size
+                  hits = total = 0
+                  for y in range(int(h * 0.04), int(h * 0.34), max(1, h // 60)):
+                      for x in range(0, w, max(1, w // 40)):
+                          r, g, b = im.getpixel((x, y))
+                          total += 1
+                          if r < 70 and 95 < g < 175 and 120 < b < 215:
+                              hits += 1
+                  ratio = hits / max(1, total)
+                  if ratio > 0.30:
+                      contaminated.append((f.name, round(ratio, 2)))
+          print('system-overlay contamination:', contaminated)
+          if duplicates or contaminated:
+              sys.exit(1)
+          PY
+
       - name: Commit screenshots to the branch
         if: success()
         working-directory: ${{ github.workspace }}
         run: |
           git checkout -- qa-logs/ 2>/dev/null || true
-          rm -f qa-logs/emulator-trace.txt qa-logs/emulator-boot.log qa-logs/emulator-stdout.log
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -f docs/ui-redesign/screenshots/
+          git add -f docs/ui-redesign/screenshots/ qa-logs/emulator-boot.log qa-logs/emulator-trace.txt qa-logs/emulator-stdout.log
           git diff --cached --quiet && { echo "No screenshot changes"; exit 0; }
           git commit -m "Add UI QA screenshots [skip ci]" -q
           for attempt in 1 2 3 4 5; do
