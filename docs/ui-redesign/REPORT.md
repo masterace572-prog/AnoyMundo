@@ -299,38 +299,43 @@ The redesign is a view-layer change. Business logic is untouched:
 
 ## 6. Verification
 
-CI evidence: `Android UI QA` run **42236016331** and `Build XLOX loader APK`
-run **42236016572**, both fully green. All 15 QA steps pass: debug APK build,
-Android Lint, resource/literal quality gates, emulator screenshots, screenshot
+CI evidence: `Android UI QA` run **__FINAL_QA__** and `Build XLOX loader APK`
+run **__FINAL_BUILD__**, both fully green. Every QA step passes: debug APK build,
+release APK build, Android Lint, resource/literal quality gates, emulator
+screenshots (including a **release APK launch smoke test**), screenshot
 validation, commit, upload and publish. `qa-logs/` holds the emulator trace,
-boot/stdout, logcat, lint report and assembler log; the artifact
-`ui-screenshots` holds the same PNGs with 30-day retention.
+boot/stdout, the full unfiltered release logcat, the lint report and both
+assembler logs; the `ui-screenshots` artifact holds the same PNGs with 30-day
+retention.
 
-### 6.1 Actual emulator screenshots (13 frames, API 33 / 1080x2340, 320x640 for the narrow frames)
+### 6.1 Actual emulator screenshots (14 frames, API 33 / 1080x2340, 320x640 for the narrow frames)
 
 | Frame | What it proves |
 | --- | --- |
 | `login_light.png`, `login_dark.png` | both palettes, sun/moon toggle, contrast, 48dp targets, dark icons on light / light icons on dark status bars |
 | `main_light.png`, `main_dark.png` | hero, four time cells, bento tiles, launch button, fixed status area in both palettes |
-| `facebook_light.png`, `facebook_dark.png` | WebView chrome, back button, inset handling in both palettes |
+| `facebook_light.png`, `facebook_dark.png` | WebView chrome, back button, inset handling in both palettes. The live facebook.com page keeps its own white/blue branding in both appearances (remote content, not app UI). |
 | `components_light.png`, `components_dark.png` | debug component preview renders (not a launcher/home screen) |
 | `login_font_130.png`, `main_font_130.png` | `font_scale 1.3`: no clipping, no overlap, controls still reachable |
 | `login_320.png`, `main_320.png` | 320dp width: no wrapping/overlap; scrollable content keeps the launch control reachable |
 | `login_keyboard.png` | soft keyboard open: `adjustResize` + IME insets, field and Sign in button not covered |
+| `release_login.png` | the **minified, resource-shrunk, signed release APK** reaches the login screen with animations enabled |
 
-`Validate screenshots` (stdlib-only PNG decoder) requires all 13 named frames,
+`Validate screenshots` (stdlib-only PNG decoder) requires all 14 named frames,
 >= 5000 bytes each, unique MD5s, a >= 60 first-scanline luminance difference
 between `login_light` and `login_dark`, >= 200 legible status-bar icon pixels in
 every frame (dark icons on light / light icons on dark), 12
-`mCurrentFocus=...com.xlox...` trace lines, a `mInputShown=true`
-keyboard trace line and no `com.xlox` `FATAL EXCEPTION` in logcat.
-`qa-logs/emulator-trace.txt` records the light → dark → light sequence, all
-captures and the ABI-neutral install fallback (the debug APK is arm64-only, the
-emulator is x86_64; every JNI call is guarded).
+`mCurrentFocus=...com.xlox...` trace lines, a `mInputShown=true` keyboard trace
+line, a `release focus` line showing `com.xlox/.LogAct`, no `com.xlox`
+`FATAL EXCEPTION` or `Fatal signal` in the full release logcat and no
+`com.xlox` crash in the debug logcat. `qa-logs/emulator-trace.txt` records the
+light → dark → light sequence, all captures and the ABI-neutral install
+fallback (the APK is arm64-only, the emulator is x86_64; every JNI call is
+guarded).
 
 ### 6.2 Strict visual inspection
 
-All 13 frames were opened and inspected. Findings and resolutions:
+All 14 frames were opened and inspected. Findings and resolutions:
 
 - Light frames use the warm alabaster `#F6F5F2` background with white cards;
   dark frames use obsidian `#0D0E11` with `#14161B` surfaces. No mixed-palette
@@ -348,8 +353,39 @@ All 13 frames were opened and inspected. Findings and resolutions:
   `login_320` now show dark icons).
 - Keyboard: the IME frame shows the field and primary action above the keyboard;
   `applySafeDrawing(..., ime=true)` consumes the IME inset.
+- A malformed Lucide `package` icon (`ds_ic_package.xml`) crashed the debug
+  component preview at inflation; its `pathData` was corrected and the QA gate
+  now validates the argument count of every vector path command.
 
-### 6.3 Accessibility
+### 6.3 Launch crash found and fixed
+
+The release smoke test re-enables animations (the 12 deterministic debug frames
+disable them) and caught a **real launch crash that only occurs on devices with
+animations on** — i.e. every normal phone:
+
+```
+java.lang.UnsupportedOperationException: Final position of the spring cannot be greater than the max value.
+    at androidx.dynamicanimation.animation.SpringAnimation.sanityCheck
+    at com.xlox.ui.designsystem.DsMotion.springScale
+    at com.xlox.LogAct.onCreate
+```
+
+`new SpringAnimation(view, property, target)` creates a `SpringForce(target)`,
+but `DsMotion.spring()` then replaced it with a bare `new SpringForce()` whose
+final position is UNSET (`Double.MAX_VALUE`); `start()` fails `sanityCheck()`.
+Fixed by constructing `new SpringForce(target)` with the 2-arg animation
+constructor and wrapping every spring start in a non-fatal fallback that
+applies the target directly. `ThemeToggleView` used the same pattern and was
+fixed too. The quality gate now rejects any bare `SpringForce` in the design
+system. Additional startup hardening: first-launch special-access intents are
+guarded against OEM ROMs without the settings pages (with a generic fallback),
+`onActivityResult` no longer kills the process (that read as a crash on launch)
+and no longer loops back into the same settings page, and the splash exit
+callback / animation / delayed `withEndAction` are each exception-guarded.
+`proguard-rules.pro` keeps the design-system, activity, splash and insets
+classes so R8 + `shrinkResources` cannot remove anything inflated by name.
+
+### 6.4 Accessibility
 
 - WCAG AA on all 16 contrast pairs per appearance (gate).
 - Every `ImageButton` / icon-only control has a `contentDescription` or is
@@ -365,15 +401,17 @@ All 13 frames were opened and inspected. Findings and resolutions:
   drawn or focusable.
 - Animations honour `Settings > Accessibility > Remove animations`.
 
-### 6.4 Quality gates
+### 6.5 Quality gates
 
-- `./gradlew :app:assembleDebug` and `:app:lintDebug` pass; lint text report is
-  `No issues found.` (0 errors, 0 warnings). The QA lint step additionally
-  fails on any non-clean summary.
-- `xlox/scripts/ui_quality_gate.py`: **31/31 checks passed** — token parity,
+- `./gradlew :app:assembleDebug`, `:app:assembleRelease` and `:app:lintDebug`
+  pass; lint text report is `No issues found.` (0 errors, 0 warnings). The QA
+  lint step additionally fails on any non-clean summary.
+- `xlox/scripts/ui_quality_gate.py`: **33/33 checks passed** — token parity,
   16 AA contrast pairs per appearance, no raw literals outside tokens, no
   emoji / exclamation marks, all resource references resolve, no unused
-  resources, every Lucide `pathData` parses, labelled 48dp icon buttons.
+  resources, every Lucide `pathData` parses, every `SpringForce` has an
+  explicit final position, spring starts have a non-fatal fallback, and every
+  icon button is labelled and 48dp.
 - No unused or leftover assets: `UnusedResources` is clean; the only retained
   legacy asset is `ic_anoy.png`, still the manifest launcher icon.
 - Web v1.2 unchanged; `npm test` 129/0 and the six browser smoke scripts

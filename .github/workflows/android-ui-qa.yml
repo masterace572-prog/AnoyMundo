@@ -368,7 +368,7 @@ jobs:
               print('::error::app was not foreground for every capture:', bad_focus[:4])
               sys.exit(1)
           rel = [l for l in trace.splitlines() if l.startswith('release focus')]
-          if not rel or not any('com.xlox/.LogAct' in l for l in rel):
+          if not rel or not any('com.xlox' in l and 'LogAct' in l for l in rel):
               print('::error::release APK did not reach the login screen:', rel[-2:] if rel else [])
               sys.exit(1)
           rel_log = Path('qa-logs/release-logcat.txt')

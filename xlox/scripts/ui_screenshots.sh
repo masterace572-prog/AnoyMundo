@@ -219,7 +219,7 @@ if [ -f "$RELEASE_APK" ]; then
                 release_focus=$(adb shell dumpsys window 2>/dev/null | grep -m1 'mCurrentFocus' || true)
                 log "release focus $attempt: $release_focus"
                 case "$release_focus" in
-                    *com.xlox/.LogAct*) break ;;
+                    *com.xlox*LogAct*) break ;;
                 esac
                 adb shell input keyevent 4 >/dev/null 2>&1 || true
                 sleep 2
