@@ -1,9 +1,9 @@
-=== manual emulator QA at Fri Nov  6 14:43:47 UTC 2026 ===
+=== manual emulator QA at Fri Nov  6 19:48:10 UTC 2026 ===
 SDK=/usr/local/lib/android/sdk
 === /dev/kvm before ===
-crw-rw---- 1 root kvm 10, 232 Nov  6 14:40 /dev/kvm
+crw-rw---- 1 root kvm 10, 232 Nov  6 19:42 /dev/kvm
 === /dev/kvm after ===
-crw-rw-rw- 1 root kvm 10, 232 Nov  6 14:40 /dev/kvm
+crw-rw-rw- 1 root kvm 10, 232 Nov  6 19:42 /dev/kvm
 KVM=yes
 * daemon not running; starting now at tcp:5037
 * daemon started successfully
@@ -12,15 +12,15 @@ Loading local repository...                                                     
 Auto-selecting single ABI x86_64
 === AVD directory ===
 total 16
-drwxr-xr-x 3 runner runner 4096 Nov  6 14:43 .
-drwxr-x--- 3 runner runner 4096 Nov  6 14:43 ..
-drwxr-xr-x 2 runner runner 4096 Nov  6 14:43 ui_qa_avd.avd
--rw-r--r-- 1 runner runner   86 Nov  6 14:43 ui_qa_avd.ini
+drwxr-xr-x 3 runner runner 4096 Nov  6 19:48 .
+drwxr-x--- 3 runner runner 4096 Nov  6 19:48 ..
+drwxr-xr-x 2 runner runner 4096 Nov  6 19:48 ui_qa_avd.avd
+-rw-r--r-- 1 runner runner   86 Nov  6 19:48 ui_qa_avd.ini
 === emulator -list-avds ===
 ui_qa_avd
 launching: emulator -port 5554 -avd ui_qa_avd -no-snapshot-save -no-snapstorage -no-window -noaudio -no-boot-anim -gpu swiftshader_indirect
-emulator pid=2867
-booted=1 after 8 checks
+emulator pid=3406
+booted=1 after 9 checks
 Broadcasting: Intent { act=android.intent.action.CLOSE_SYSTEM_DIALOGS flg=0x400000 }
 Broadcast completed: result=0
 === emulator QA started ===
@@ -31,36 +31,38 @@ ABI-neutral install ok: Serving...
 All files should be loaded. Notifying the device.
 Performing Incremental Install
 Success
-Install command complete in 1230 ms
+Install command complete in 1276 ms
 appearance set to light
-focus for login_light:   mCurrentFocus=Window{649afa1 u0 com.xlox/com.xlox.LogAct}
-captured login_light.png (141486 bytes)
-focus for main_light:   mCurrentFocus=Window{dc822f9 u0 com.xlox/com.xlox.MAct}
-captured main_light.png (105479 bytes)
-focus for facebook_light:   mCurrentFocus=Window{1a76534 u0 com.xlox/com.xlox.FacebookActivity}
-captured facebook_light.png (122644 bytes)
-focus for components_light:   mCurrentFocus=Window{9fff304 u0 com.xlox/com.xlox.ui.designsystem.DsPreviewActivity}
-captured components_light.png (162701 bytes)
+focus for login_light:   mCurrentFocus=Window{c453a5b u0 com.xlox/com.xlox.LogAct}
+captured login_light.png (141174 bytes)
+focus for main_light:   mCurrentFocus=Window{9cabfe2 u0 com.xlox/com.xlox.MAct}
+captured main_light.png (105515 bytes)
+focus for facebook_light:   mCurrentFocus=Window{4317d88 u0 com.xlox/com.xlox.FacebookActivity}
+captured facebook_light.png (118717 bytes)
+focus for components_light:   mCurrentFocus=Window{f4137ee u0 com.xlox/com.xlox.ui.designsystem.DsPreviewActivity}
+captured components_light.png (162663 bytes)
 appearance set to dark
-focus for login_dark:   mCurrentFocus=Window{ccf4f31 u0 com.xlox/com.xlox.LogAct}
-captured login_dark.png (157986 bytes)
-focus for main_dark:   mCurrentFocus=Window{a2e0e3f u0 com.xlox/com.xlox.MAct}
-captured main_dark.png (149097 bytes)
-focus for facebook_dark:   mCurrentFocus=Window{998467c u0 com.xlox/com.xlox.FacebookActivity}
-captured facebook_dark.png (122971 bytes)
-focus for components_dark:   mCurrentFocus=Window{a685c1c u0 com.xlox/com.xlox.ui.designsystem.DsPreviewActivity}
-captured components_dark.png (162941 bytes)
+focus for login_dark:   mCurrentFocus=Window{1f9e4e4 u0 com.xlox/com.xlox.LogAct}
+captured login_dark.png (157630 bytes)
+focus for main_dark:   mCurrentFocus=Window{fa0ba6f u0 com.xlox/com.xlox.MAct}
+captured main_dark.png (148359 bytes)
+focus for facebook_dark:   mCurrentFocus=Window{5adac4b u0 com.xlox/com.xlox.FacebookActivity}
+captured facebook_dark.png (122231 bytes)
+focus for components_dark:   mCurrentFocus=Window{4572027 u0 com.xlox/com.xlox.ui.designsystem.DsPreviewActivity}
+captured components_dark.png (162274 bytes)
 appearance set to light
-focus for login_font_130:   mCurrentFocus=Window{df2a5d6 u0 com.xlox/com.xlox.LogAct}
-captured login_font_130.png (159049 bytes)
-focus for main_font_130:   mCurrentFocus=Window{96adbf2 u0 com.xlox/com.xlox.MAct}
-captured main_font_130.png (116315 bytes)
-focus for login_320:   mCurrentFocus=Window{8032292 u0 com.xlox/com.xlox.LogAct}
-captured login_320.png (28682 bytes)
-focus for main_320:   mCurrentFocus=Window{259caa1 u0 com.xlox/com.xlox.MAct}
-captured main_320.png (25239 bytes)
+focus for login_font_130:   mCurrentFocus=Window{cc72e17 u0 com.xlox/com.xlox.LogAct}
+captured login_font_130.png (158371 bytes)
+focus for main_font_130:   mCurrentFocus=Window{e4be281 u0 com.xlox/com.xlox.MAct}
+captured main_font_130.png (115939 bytes)
+focus for login_320:   mCurrentFocus=Window{5dddd4d u0 com.xlox/com.xlox.LogAct}
+captured login_320.png (28788 bytes)
+focus for main_320:   mCurrentFocus=Window{abf3c9 u0 com.xlox/com.xlox.MAct}
+captured main_320.png (25341 bytes)
 tapped the access-key field
-keyboard state:   mShowRequested=true mShowExplicitlyRequested=true mShowForced=false mInputShown=true   mFallbackInputConnection=RemoteInputConnectionImpl{connection=android.view.inputmethod.BaseInputConnection@f542361 finished=false mParentInputMethodManager.isActive()=true mServedView=null}   mServedView=androidx.appcompat.widget.AppCompatEditText{55ed468 VFED..CL. .F...... 99,0-717,154 #7f090224 app:id/userkey aid=1073741824}   mServedInputConnection=RemoteInputConnectionImpl{connection=androidx.emoji2.viewsintegration.EmojiInputConnection@dd96774 finished=false mParentInputMethodManager.isActive()=true mServedView=androidx.appcompat.widget.AppCompatEditText{55ed468 VFED..CL. .F...... 99,0-717,154 #7f090224 app:id/userkey aid=1073741824}} 
-captured login_keyboard.png (148642 bytes)
+keyboard state:   mShowRequested=true mShowExplicitlyRequested=true mShowForced=false mInputShown=true   mFallbackInputConnection=RemoteInputConnectionImpl{connection=android.view.inputmethod.BaseInputConnection@e2d5330 finished=false mParentInputMethodManager.isActive()=true mServedView=null}   mServedView=androidx.appcompat.widget.AppCompatEditText{ad34493 VFED..CL. .F...... 99,0-717,154 #7f090224 app:id/userkey aid=1073741824}   mServedInputConnection=RemoteInputConnectionImpl{connection=androidx.emoji2.viewsintegration.EmojiInputConnection@49738cf finished=false mParentInputMethodManager.isActive()=true mServedView=androidx.appcompat.widget.AppCompatEditText{ad34493 VFED..CL. .F...... 99,0-717,154 #7f090224 app:id/userkey aid=1073741824}} 
+captured login_keyboard.png (148977 bytes)
+release focus:   mCurrentFocus=Window{a8ea227 u0 com.android.settings/com.android.settings.Settings$AppManageExternalStorageActivity}
+captured release_login.png (124013 bytes)
 === all captures complete ===
 === emulator QA complete ===
