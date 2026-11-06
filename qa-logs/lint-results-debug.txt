@@ -1,4 +1,4 @@
-/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/debug/res/layout/ds_preview.xml:428: Warning: Use app:drawableEndCompat instead of android:drawableEnd [UseCompatTextViewDrawableXml from androidx.appcompat]
+/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/debug/res/layout/ds_preview.xml:429: Warning: Use app:drawableEndCompat instead of android:drawableEnd [UseCompatTextViewDrawableXml from androidx.appcompat]
             <TextView style="@style/Widget.Ds.ListRow" android:layout_width="match_parent" android:layout_height="wrap_content" android:drawableEnd="@drawable/ds_ic_chevron_right" android:drawablePadding="@dimen/space_8" android:text="@string/ds_list_row" android:textAppearance="@style/TextAppearance.Ds.BodyMedium" />
                                                                                                                                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
