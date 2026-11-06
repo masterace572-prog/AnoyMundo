@@ -103,7 +103,6 @@
                     style="@style/TextAppearance.Ds.Micro"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:labelFor="@id/userkey"
                     android:text="@string/access_key_label" />
 
                 <LinearLayout

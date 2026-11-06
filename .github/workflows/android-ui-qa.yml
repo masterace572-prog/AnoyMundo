@@ -85,7 +85,7 @@ jobs:
           import pathlib, re, sys
           p = pathlib.Path('app/build/intermediates/lint_intermediate_text_report/debug/lint-results-debug.txt')
           text = p.read_text(errors='replace') if p.exists() else ''
-          found = re.findall(r'(\d+) errors?, (\d+) warnings?', text)
+          found = re.findall(r'([0-9]+) errors?, ([0-9]+) warnings?', text)
           clean = 'No issues found.' in text or (found and not any(int(v) for v in found[-1]))
           print('lint summary:', found[-1] if found else ('No issues found.' if clean else 'missing'))
           if not clean:
