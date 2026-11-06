@@ -19,10 +19,10 @@ Daemon will be stopped at the end of the build
 > Task :app:mapDebugSourceSetPaths
 > Task :app:generateDebugResources
 > Task :app:packageDebugResources
-> Task :app:mergeDebugResources
 > Task :app:createDebugCompatibleScreenManifests
 > Task :app:extractDeepLinksDebug
 > Task :app:parseDebugLocalResources
+> Task :app:mergeDebugResources
 > Task :app:processDebugMainManifest
 > Task :app:processDebugManifest
 > Task :app:mergeDebugShaders
@@ -36,18 +36,15 @@ Daemon will be stopped at the end of the build
 > Task :app:mergeDebugJavaResource
 > Task :app:processDebugResources
 
+> Task :app:desugarDebugFileDependencies
+WARNING: /home/runner/.gradle/caches/transforms-3/b91f9dab850d9a00e31f249c21322702/transformed/mundo-release-runtime.jar: D8: Expected stack map table for method with non-linear control flow.
+WARNING: /home/runner/.gradle/caches/transforms-3/b91f9dab850d9a00e31f249c21322702/transformed/mundo-release-runtime.jar: D8: Expected stack map table for method with non-linear control flow.
+
 > Task :app:compileDebugJavaWithJavac
 Note: Some input files use or override a deprecated API.
 Note: Recompile with -Xlint:deprecation for details.
 
 > Task :app:mergeLibDexDebug
-
-> Task :app:desugarDebugFileDependencies
-WARNING: /home/runner/.gradle/caches/transforms-3/b91f9dab850d9a00e31f249c21322702/transformed/mundo-release-runtime.jar: D8: Expected stack map table for method with non-linear control flow.
-WARNING: /home/runner/.gradle/caches/transforms-3/b91f9dab850d9a00e31f249c21322702/transformed/mundo-release-runtime.jar: D8: Expected stack map table for method with non-linear control flow.
-
-> Task :app:dexBuilderDebug
-> Task :app:mergeProjectDexDebug
 
 > Task :app:desugarDebugFileDependencies
 WARNING: D8: Unexpected error during rewriting of Kotlin metadata for class 'top.bienvenido.mundo.manifest.MundoSplashLauncher':
@@ -8286,6 +8283,8 @@ com.android.tools.r8.internal.L10: Should never be called
 	at java.base/java.lang.Thread.run(Thread.java:840)
 
 
+> Task :app:dexBuilderDebug
+> Task :app:mergeProjectDexDebug
 > Task :app:configureNdkBuildDebug[arm64-v8a]
 > Task :app:mergeExtDexDebug
 > Task :app:buildNdkBuildDebug[arm64-v8a]
@@ -8299,5 +8298,5 @@ com.android.tools.r8.internal.L10: Should never be called
 > Task :app:createDebugApkListingFileRedirect
 > Task :app:assembleDebug
 
-BUILD SUCCESSFUL in 35s
+BUILD SUCCESSFUL in 1m 1s
 34 actionable tasks: 34 executed
