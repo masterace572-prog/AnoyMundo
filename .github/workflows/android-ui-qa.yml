@@ -114,11 +114,17 @@ jobs:
           echo "SDK=$SDK"
           if [ -w /dev/kvm ]; then echo "KVM=yes"; else echo "KVM=no (software acceleration)"; fi
           adb start-server || true
-
+          export ANDROID_AVD_HOME="$HOME/.android/avd"
+          mkdir -p "$ANDROID_AVD_HOME"
+          echo "ANDROID_AVD_HOME=$ANDROID_AVD_HOME"
           echo "no" | avdmanager create avd --force -n "$AVD" \
-            --package 'system-images;android-33;google_apis;x86_64' \
+            -k 'system-images;android-33;google_apis;x86_64' \
+            -p "$ANDROID_AVD_HOME/$AVD.avd" \
             --device 'pixel_5' || echo "WARN: avdmanager create returned nonzero"
-          ls -la "${ANDROID_AVD_HOME:-$HOME/.android/avd}" || true
+          echo "=== AVD directory ==="
+          ls -la "$ANDROID_AVD_HOME" || true
+          echo "=== emulator -list-avds ==="
+          emulator -list-avds || true
 
           OPTS="-port 5554 -avd $AVD -no-snapshot-save -no-snapstorage -no-window -noaudio -no-boot-anim -gpu swiftshader_indirect"
           if [ ! -w /dev/kvm ]; then OPTS="$OPTS -accel off"; fi
@@ -128,7 +134,7 @@ jobs:
           echo "emulator pid=$EMU_PID"
 
           booted=0
-          for i in $(seq 1 180); do
+          for i in $(seq 1 240); do
             if ! kill -0 "$EMU_PID" 2>/dev/null; then
               echo "FATAL: emulator process exited before boot"
               break
