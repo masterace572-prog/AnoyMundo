@@ -215,6 +215,7 @@ jobs:
                   duplicates.append((seen[h], f.name))
               seen[h] = f.name
           print('duplicate frames:', duplicates)
+          print('::warning::screenshots=' + ','.join(f.name + ':' + str(f.stat().st_size) for f in files))
           contaminated = []
           if Image is not None:
               for f in files:
@@ -231,12 +232,16 @@ jobs:
                   if ratio > 0.30:
                       contaminated.append((f.name, round(ratio, 2)))
           print('system-overlay contamination:', contaminated)
-          if duplicates or contaminated:
+          if contaminated:
+              print('::error::system overlays detected in ' + str(contaminated))
+          if duplicates:
+              print('::error::duplicate frames detected: ' + str(duplicates))
+          if contaminated or duplicates:
               sys.exit(1)
           PY
 
       - name: Commit screenshots to the branch
-        if: success()
+        if: always()
         working-directory: ${{ github.workspace }}
         run: |
           git checkout -- qa-logs/ 2>/dev/null || true
@@ -245,11 +250,13 @@ jobs:
           git add -f docs/ui-redesign/screenshots/ qa-logs/emulator-boot.log qa-logs/emulator-trace.txt qa-logs/emulator-stdout.log
           git diff --cached --quiet && { echo "No screenshot changes"; exit 0; }
           git commit -m "Add UI QA screenshots [skip ci]" -q
+          pushed=0
           for attempt in 1 2 3 4 5; do
             git pull --rebase origin arena/b2fac70f-anoymundo -q || true
-            git push origin HEAD:arena/b2fac70f-anoymundo && break
+            if git push origin HEAD:arena/b2fac70f-anoymundo; then pushed=1; break; fi
             sleep 6
           done
+          [ "$pushed" = 1 ] || { echo "FATAL: could not publish QA logs"; exit 1; }
 
       - name: Upload screenshots
         if: always()
@@ -273,8 +280,10 @@ jobs:
           git add -f qa-logs/
           git diff --cached --quiet && { echo "No new logs"; exit 0; }
           git commit -m "QA failure logs for run ${{ github.run_number }} [skip ci]" -q
+          pushed=0
           for attempt in 1 2 3 4 5; do
             git pull --rebase origin arena/b2fac70f-anoymundo -q || true
-            git push origin HEAD:arena/b2fac70f-anoymundo && break
+            if git push origin HEAD:arena/b2fac70f-anoymundo; then pushed=1; break; fi
             sleep 6
           done
+          [ "$pushed" = 1 ] || { echo "FATAL: could not publish QA logs"; exit 1; }
