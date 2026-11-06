@@ -9,161 +9,162 @@ ABI-neutral install ok: Serving...
 All files should be loaded. Notifying the device.
 Performing Incremental Install
 Success
-Install command complete in 2210 ms
+Install command complete in 936 ms
 Night mode: no
 appearance set to light
 Starting: Intent { cmp=com.xlox/.LogAct (has extras) }
 Status: ok
 LaunchState: COLD
 Activity: com.xlox/.LogAct
-TotalTime: 4489
-WaitTime: 4582
+TotalTime: 4759
+WaitTime: 4786
 Complete
-focus for login_light:   mCurrentFocus=Window{9d3a17b u0 com.xlox/com.xlox.LogAct}
-captured login_light.png (141867 bytes)
+focus for login_light:   mCurrentFocus=Window{be881f3 u0 com.xlox/com.xlox.LogAct}
+captured login_light.png (141358 bytes)
 Starting: Intent { cmp=com.xlox/.MAct (has extras) }
 Status: ok
 LaunchState: COLD
 Activity: com.xlox/.MAct
-TotalTime: 4789
-WaitTime: 4870
+TotalTime: 4205
+WaitTime: 4259
 Complete
-focus for main_light:   mCurrentFocus=Window{5a8bc39 u0 com.xlox/com.xlox.MAct}
-captured main_light.png (106103 bytes)
+focus for main_light:   mCurrentFocus=Window{964aaa u0 com.xlox/com.xlox.MAct}
+captured main_light.png (105662 bytes)
 Starting: Intent { cmp=com.xlox/.FacebookActivity (has extras) }
 Status: ok
 LaunchState: COLD
 Activity: com.xlox/.FacebookActivity
-TotalTime: 3792
-WaitTime: 3873
+TotalTime: 3095
+WaitTime: 3125
 Complete
-focus for facebook_light:   mCurrentFocus=Window{bf55a46 u0 com.xlox/com.xlox.FacebookActivity}
-captured facebook_light.png (119057 bytes)
+focus for facebook_light:   mCurrentFocus=Window{7ac9813 u0 com.xlox/com.xlox.FacebookActivity}
+captured facebook_light.png (104201 bytes)
 Starting: Intent { cmp=com.xlox/.ui.designsystem.DsPreviewActivity (has extras) }
 Status: ok
 LaunchState: COLD
 Activity: com.xlox/.ui.designsystem.DsPreviewActivity
-TotalTime: 3773
-WaitTime: 3893
+TotalTime: 2676
+WaitTime: 2727
 Complete
-focus for components_light:   mCurrentFocus=Window{4dcad32 u0 com.xlox/com.xlox.ui.designsystem.DsPreviewActivity}
-captured components_light.png (193169 bytes)
+focus for components_light:   mCurrentFocus=Window{21637ae u0 com.xlox/com.xlox.ui.designsystem.DsPreviewActivity}
+captured components_light.png (162150 bytes)
 Night mode: yes
 appearance set to dark
 Starting: Intent { cmp=com.xlox/.LogAct (has extras) }
 Status: ok
 LaunchState: COLD
 Activity: com.xlox/.LogAct
-TotalTime: 3693
-WaitTime: 3768
+TotalTime: 3027
+WaitTime: 3047
 Complete
-focus for login_dark:   mCurrentFocus=Window{a79a5a4 u0 com.xlox/com.xlox.LogAct}
-captured login_dark.png (158423 bytes)
+focus for login_dark:   mCurrentFocus=Window{6ec287b u0 com.xlox/com.xlox.LogAct}
+captured login_dark.png (157054 bytes)
 Starting: Intent { cmp=com.xlox/.MAct (has extras) }
 Status: ok
 LaunchState: COLD
 Activity: com.xlox/.MAct
-TotalTime: 3036
-WaitTime: 3048
+TotalTime: 3799
+WaitTime: 3857
 Complete
-focus for main_dark:   mCurrentFocus=Window{51ec758 u0 com.xlox/com.xlox.MAct}
-captured main_dark.png (149601 bytes)
+focus for main_dark:   mCurrentFocus=Window{42efcea u0 com.xlox/com.xlox.MAct}
+captured main_dark.png (148469 bytes)
 Starting: Intent { cmp=com.xlox/.FacebookActivity (has extras) }
 Status: ok
 LaunchState: COLD
 Activity: com.xlox/.FacebookActivity
-TotalTime: 2802
-WaitTime: 2803
+TotalTime: 2276
+WaitTime: 2305
 Complete
-focus for facebook_dark:   mCurrentFocus=Window{bf34539 u0 com.xlox/com.xlox.FacebookActivity}
-captured facebook_dark.png (123678 bytes)
+focus for facebook_dark:   mCurrentFocus=Window{94c7734 u0 com.xlox/com.xlox.FacebookActivity}
+captured facebook_dark.png (107871 bytes)
 Starting: Intent { cmp=com.xlox/.ui.designsystem.DsPreviewActivity (has extras) }
 Status: ok
 LaunchState: COLD
 Activity: com.xlox/.ui.designsystem.DsPreviewActivity
-TotalTime: 3149
-WaitTime: 3208
+TotalTime: 2689
+WaitTime: 2701
 Complete
-focus for components_dark:   mCurrentFocus=Window{2846876 u0 com.xlox/com.xlox.ui.designsystem.DsPreviewActivity}
-captured components_dark.png (163316 bytes)
+focus for components_dark:   mCurrentFocus=Window{4e55a03 u0 com.xlox/com.xlox.ui.designsystem.DsPreviewActivity}
+captured components_dark.png (162213 bytes)
 Night mode: no
 appearance set to light
 Starting: Intent { cmp=com.xlox/.LogAct (has extras) }
 Status: ok
 LaunchState: COLD
 Activity: com.xlox/.LogAct
-TotalTime: 1845
-WaitTime: 1847
+TotalTime: 3155
+WaitTime: 3195
 Complete
-focus for login_font_130:   mCurrentFocus=Window{68060db u0 com.xlox/com.xlox.LogAct}
-captured login_font_130.png (160026 bytes)
+focus for login_font_130:   mCurrentFocus=Window{42ccd81 u0 com.xlox/com.xlox.LogAct}
+captured login_font_130.png (159519 bytes)
 Starting: Intent { cmp=com.xlox/.MAct (has extras) }
 Status: ok
 LaunchState: COLD
 Activity: com.xlox/.MAct
-TotalTime: 2149
-WaitTime: 2150
+TotalTime: 1867
+WaitTime: 1870
 Complete
-focus for main_font_130:   mCurrentFocus=Window{95be33b u0 com.xlox/com.xlox.MAct}
-captured main_font_130.png (118167 bytes)
+focus for main_font_130:   mCurrentFocus=Window{7109542 u0 com.xlox/com.xlox.MAct}
+captured main_font_130.png (117476 bytes)
 Starting: Intent { cmp=com.xlox/.LogAct (has extras) }
 Status: ok
 LaunchState: COLD
 Activity: com.xlox/.LogAct
-TotalTime: 2515
-WaitTime: 2517
+TotalTime: 2553
+WaitTime: 2557
 Complete
-focus for login_320:   mCurrentFocus=Window{e1093cf u0 com.xlox/com.xlox.LogAct}
-captured login_320.png (28947 bytes)
+focus for login_320:   mCurrentFocus=Window{83a7ee4 u0 com.xlox/com.xlox.LogAct}
+captured login_320.png (28828 bytes)
 Starting: Intent { cmp=com.xlox/.MAct (has extras) }
 Status: ok
 LaunchState: COLD
 Activity: com.xlox/.MAct
-TotalTime: 1847
-WaitTime: 1851
+TotalTime: 1816
+WaitTime: 1818
 Complete
-focus for main_320:   mCurrentFocus=Window{577975b u0 com.xlox/com.xlox.MAct}
-captured main_320.png (25499 bytes)
+focus for main_320:   mCurrentFocus=Window{772ff5d u0 com.xlox/com.xlox.MAct}
+captured main_320.png (25428 bytes)
 Starting: Intent { cmp=com.xlox/.LogAct (has extras) }
 Status: ok
 LaunchState: COLD
 Activity: com.xlox/.LogAct
-TotalTime: 3399
-WaitTime: 3416
+TotalTime: 2571
+WaitTime: 2602
 Complete
-keyboard state:   mShowRequested=true mShowExplicitlyRequested=true mShowForced=false mInputShown=true   mFallbackInputConnection=RemoteInputConnectionImpl{connection=android.view.inputmethod.BaseInputConnection@2ab5797 finished=false mParentInputMethodManager.isActive()=true mServedView=null}   mServedView=androidx.appcompat.widget.AppCompatEditText{f1c308e VFED..CL. .F...... 99,0-717,154 #7f090224 app:id/userkey aid=1073741824}   mServedInputConnection=RemoteInputConnectionImpl{connection=androidx.emoji2.viewsintegration.EmojiInputConnection@336f9a2 finished=false mParentInputMethodManager.isActive()=true mServedView=androidx.appcompat.widget.AppCompatEditText{f1c308e VFED..CL. .F...... 99,0-717,154 #7f090224 app:id/userkey aid=1073741824}} 
-captured login_keyboard.png (149603 bytes)
+keyboard state:   mShowRequested=true mShowExplicitlyRequested=true mShowForced=false mInputShown=true   mFallbackInputConnection=RemoteInputConnectionImpl{connection=android.view.inputmethod.BaseInputConnection@a7e36d6 finished=false mParentInputMethodManager.isActive()=true mServedView=null}   mServedView=androidx.appcompat.widget.AppCompatEditText{314e011 VFED..CL. .F...... 99,0-717,154 #7f090224 app:id/userkey aid=1073741824}   mServedInputConnection=RemoteInputConnectionImpl{connection=androidx.emoji2.viewsintegration.EmojiInputConnection@904152d finished=false mParentInputMethodManager.isActive()=true mServedView=androidx.appcompat.widget.AppCompatEditText{314e011 VFED..CL. .F...... 99,0-717,154 #7f090224 app:id/userkey aid=1073741824}} 
+captured login_keyboard.png (149282 bytes)
 Serving...
 All files should be loaded. Notifying the device.
 Performing Incremental Install
 Success
-Install command complete in 757 ms
+Install command complete in 826 ms
 Starting: Intent { cmp=com.xlox/.LogAct }
 Status: ok
-LaunchState: UNKNOWN (0)
+LaunchState: COLD
 Activity: com.xlox/.LogAct
-WaitTime: 932
+TotalTime: 1552
+WaitTime: 1558
 Complete
-release focus 1:   mCurrentFocus=Window{4045b15 u0 com.google.android.apps.nexuslauncher/com.google.android.apps.nexuslauncher.NexusLauncherActivity}
-release focus 2:   mCurrentFocus=Window{4045b15 u0 com.google.android.apps.nexuslauncher/com.google.android.apps.nexuslauncher.NexusLauncherActivity}
-release focus 3:   mCurrentFocus=Window{4045b15 u0 com.google.android.apps.nexuslauncher/com.google.android.apps.nexuslauncher.NexusLauncherActivity}
-release focus 4:   mCurrentFocus=Window{4045b15 u0 com.google.android.apps.nexuslauncher/com.google.android.apps.nexuslauncher.NexusLauncherActivity}
-release focus 5:   mCurrentFocus=Window{4045b15 u0 com.google.android.apps.nexuslauncher/com.google.android.apps.nexuslauncher.NexusLauncherActivity}
-release focus:   mCurrentFocus=Window{4045b15 u0 com.google.android.apps.nexuslauncher/com.google.android.apps.nexuslauncher.NexusLauncherActivity}
-captured release_login.png (1354139 bytes)
+release focus 1:   mCurrentFocus=Window{a972acc u0 com.xlox/com.xlox.LogAct}
+release focus 2:   mCurrentFocus=Window{e77453d u0 com.google.android.apps.nexuslauncher/com.google.android.apps.nexuslauncher.NexusLauncherActivity}
+release focus 3:   mCurrentFocus=Window{e77453d u0 com.google.android.apps.nexuslauncher/com.google.android.apps.nexuslauncher.NexusLauncherActivity}
+release focus 4:   mCurrentFocus=Window{e77453d u0 com.google.android.apps.nexuslauncher/com.google.android.apps.nexuslauncher.NexusLauncherActivity}
+release focus 5:   mCurrentFocus=Window{e77453d u0 com.google.android.apps.nexuslauncher/com.google.android.apps.nexuslauncher.NexusLauncherActivity}
+release focus:   mCurrentFocus=Window{e77453d u0 com.google.android.apps.nexuslauncher/com.google.android.apps.nexuslauncher.NexusLauncherActivity}
+captured release_login.png (1354378 bytes)
 === all captures complete ===
 total 2.9M
--rw-r--r-- 1 runner runner 160K Nov  6 20:36 components_dark.png
--rw-r--r-- 1 runner runner 189K Nov  6 20:34 components_light.png
--rw-r--r-- 1 runner runner 121K Nov  6 20:35 facebook_dark.png
--rw-r--r-- 1 runner runner 117K Nov  6 20:34 facebook_light.png
--rw-r--r-- 1 runner runner  29K Nov  6 20:36 login_320.png
--rw-r--r-- 1 runner runner 155K Nov  6 20:35 login_dark.png
--rw-r--r-- 1 runner runner 157K Nov  6 20:36 login_font_130.png
--rw-r--r-- 1 runner runner 147K Nov  6 20:36 login_keyboard.png
--rw-r--r-- 1 runner runner 139K Nov  6 20:34 login_light.png
--rw-r--r-- 1 runner runner  25K Nov  6 20:36 main_320.png
--rw-r--r-- 1 runner runner 147K Nov  6 20:35 main_dark.png
--rw-r--r-- 1 runner runner 116K Nov  6 20:36 main_font_130.png
--rw-r--r-- 1 runner runner 104K Nov  6 20:34 main_light.png
--rw-r--r-- 1 runner runner 1.3M Nov  6 20:37 release_login.png
+-rw-r--r-- 1 runner runner 159K Nov  6 20:48 components_dark.png
+-rw-r--r-- 1 runner runner 159K Nov  6 20:48 components_light.png
+-rw-r--r-- 1 runner runner 106K Nov  6 20:48 facebook_dark.png
+-rw-r--r-- 1 runner runner 102K Nov  6 20:47 facebook_light.png
+-rw-r--r-- 1 runner runner  29K Nov  6 20:49 login_320.png
+-rw-r--r-- 1 runner runner 154K Nov  6 20:48 login_dark.png
+-rw-r--r-- 1 runner runner 156K Nov  6 20:49 login_font_130.png
+-rw-r--r-- 1 runner runner 146K Nov  6 20:49 login_keyboard.png
+-rw-r--r-- 1 runner runner 139K Nov  6 20:47 login_light.png
+-rw-r--r-- 1 runner runner  25K Nov  6 20:49 main_320.png
+-rw-r--r-- 1 runner runner 145K Nov  6 20:48 main_dark.png
+-rw-r--r-- 1 runner runner 115K Nov  6 20:49 main_font_130.png
+-rw-r--r-- 1 runner runner 104K Nov  6 20:47 main_light.png
+-rw-r--r-- 1 runner runner 1.3M Nov  6 20:50 release_login.png
