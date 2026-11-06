@@ -1,0 +1,21 @@
+=== manual emulator QA at Fri Nov  6 08:12:15 UTC 2026 ===
+SDK=/usr/local/lib/android/sdk
+KVM=no (software acceleration)
+* daemon not running; starting now at tcp:5037
+* daemon started successfully
+Loading local repository...                                                     [=========                              ] 25% Loading local repository...       [=========                              ] 25% Fetch remote repository...        [=======================================] 100% Fetch remote repository...       
+Auto-selecting single ABI x86_64
+ls: cannot access '/home/runner/.android/avd': No such file or directory
+launching: emulator -port 5554 -avd ui_qa_avd -no-snapshot-save -no-snapstorage -no-window -noaudio -no-boot-anim -gpu swiftshader_indirect -accel off
+emulator pid=2854
+FATAL: emulator process exited before boot
+booted=0 after 1 checks
+=== emulator stdout ===
+INFO         | Android emulator version 37.2.13.0 (build_id 16740729) (CL:N/A)
+INFO         | Graphics backend: gfxstream
+ERROR        | Unknown AVD name [ui_qa_avd], use -list-avds to see valid list.
+ERROR        | HOME is defined but there is no file ui_qa_avd.ini in $HOME/.android/avd
+ERROR        | (Note: Directories are searched in the order $ANDROID_AVD_HOME, $ANDROID_SDK_HOME/avd and $HOME/.android/avd)
+=== adb devices ===
+List of devices attached
+

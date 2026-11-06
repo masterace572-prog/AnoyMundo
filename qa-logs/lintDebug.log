@@ -29,7 +29,7 @@ Wrote HTML report to file:///home/runner/work/AnoyMundo/AnoyMundo/xlox/app/build
 
 > Task :app:lintDebug
 
-BUILD SUCCESSFUL in 24s
+BUILD SUCCESSFUL in 18s
 21 actionable tasks: 7 executed, 14 up-to-date
 === FULL LINT TEXT REPORT ===
 /home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/debug/res/layout/ds_preview.xml:428: Warning: Use app:drawableEndCompat instead of android:drawableEnd [UseCompatTextViewDrawableXml from androidx.appcompat]
