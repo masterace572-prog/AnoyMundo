@@ -17,16 +17,34 @@ Daemon will be stopped at the end of the build
 > Task :app:processDebugManifestForPackage UP-TO-DATE
 > Task :app:processDebugResources UP-TO-DATE
 > Task :app:compileDebugJavaWithJavac UP-TO-DATE
+> Task :app:bundleDebugClassesToCompileJar
 > Task :app:extractProguardFiles
 > Task :app:preDebugAndroidTestBuild SKIPPED
 > Task :app:generateDebugAndroidTestResValues
-> Task :app:bundleDebugClassesToCompileJar
 > Task :app:generateDebugLintReportModel
 > Task :app:lintAnalyzeDebug
+
 > Task :app:lintReportDebug
+Wrote HTML report to file:///home/runner/work/AnoyMundo/AnoyMundo/xlox/app/build/reports/lint-results-debug.html
+
 > Task :app:lintDebug
 
-BUILD SUCCESSFUL in 27s
+BUILD SUCCESSFUL in 19s
 21 actionable tasks: 7 executed, 14 up-to-date
 === FULL LINT TEXT REPORT ===
-No issues found.
+/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/res/layout/activity_login.xml:129: Warning: Missing accessibility label: provide either a view with an android:labelFor that references this view or provide an android:hint, but not both [LabelFor]
+                    <EditText
+                     ~~~~~~~~
+
+   Explanation for issues of type "LabelFor":
+   Editable text fields should provide an android:hint or, provided your
+   minSdkVersion is at least 17, they may be referenced by a view with a
+   android:labelFor attribute.
+
+   When using android:labelFor, be sure to provide an android:text or an
+   android:contentDescription.
+
+   If your view is labeled but by a label in a different layout which includes
+   this one, just suppress this warning from lint.
+
+0 errors, 1 warnings

@@ -19,8 +19,8 @@ Daemon will be stopped at the end of the build
 > Task :app:mapDebugSourceSetPaths
 > Task :app:generateDebugResources
 > Task :app:packageDebugResources
-> Task :app:mergeDebugResources
 > Task :app:createDebugCompatibleScreenManifests
+> Task :app:mergeDebugResources
 > Task :app:extractDeepLinksDebug
 > Task :app:parseDebugLocalResources
 > Task :app:processDebugMainManifest
@@ -31,16 +31,26 @@ Daemon will be stopped at the end of the build
 > Task :app:mergeDebugAssets
 > Task :app:compressDebugAssets
 > Task :app:processDebugJavaRes NO-SOURCE
-> Task :app:checkDebugDuplicateClasses
-> Task :app:mergeDebugJavaResource
 > Task :app:processDebugManifestForPackage
-> Task :app:mergeLibDexDebug
-> Task :app:configureNdkBuildDebug[arm64-v8a]
+> Task :app:mergeDebugJavaResource
+> Task :app:checkDebugDuplicateClasses
 > Task :app:processDebugResources
+
+> Task :app:compileDebugJavaWithJavac
+Note: Some input files use or override a deprecated API.
+Note: Recompile with -Xlint:deprecation for details.
+
+> Task :app:mergeLibDexDebug
 
 > Task :app:desugarDebugFileDependencies
 WARNING: /home/runner/.gradle/caches/transforms-3/b91f9dab850d9a00e31f249c21322702/transformed/mundo-release-runtime.jar: D8: Expected stack map table for method with non-linear control flow.
 WARNING: /home/runner/.gradle/caches/transforms-3/b91f9dab850d9a00e31f249c21322702/transformed/mundo-release-runtime.jar: D8: Expected stack map table for method with non-linear control flow.
+
+> Task :app:dexBuilderDebug
+> Task :app:mergeProjectDexDebug
+> Task :app:configureNdkBuildDebug[arm64-v8a]
+
+> Task :app:desugarDebugFileDependencies
 WARNING: D8: Unexpected error during rewriting of Kotlin metadata for class 'top.bienvenido.mundo.manifest.MundoSplashLauncher':
 com.android.tools.r8.internal.L10: Should never be called
 	at com.android.tools.r8.internal.tA.a(R8_8.2.42_9ad08e95c347188a6c635bdc6315e258071719194689c80a2a99dea0b762189c:3)
@@ -8278,14 +8288,7 @@ com.android.tools.r8.internal.L10: Should never be called
 
 
 > Task :app:buildNdkBuildDebug[arm64-v8a]
-
-> Task :app:compileDebugJavaWithJavac
-Note: Some input files use or override a deprecated API.
-Note: Recompile with -Xlint:deprecation for details.
-
-> Task :app:dexBuilderDebug
 > Task :app:mergeDebugJniLibFolders
-> Task :app:mergeProjectDexDebug
 > Task :app:mergeDebugNativeLibs
 > Task :app:validateSigningDebug
 > Task :app:writeDebugAppMetadata
@@ -8296,5 +8299,5 @@ Note: Recompile with -Xlint:deprecation for details.
 > Task :app:createDebugApkListingFileRedirect
 > Task :app:assembleDebug
 
-BUILD SUCCESSFUL in 55s
+BUILD SUCCESSFUL in 32s
 34 actionable tasks: 34 executed
