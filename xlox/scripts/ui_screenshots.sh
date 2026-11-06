@@ -66,8 +66,9 @@ adb shell settings put system font_scale 1.0 >> "$LOG" 2>&1 || true
 capture() {
     name="$1"
     component="$2"
+    appearance="$3"
     adb shell am force-stop com.xlox >/dev/null 2>&1 || true
-    if ! adb shell am start -W -n "com.xlox/$component" >> "$LOG" 2>&1; then
+    if ! adb shell am start -W -n "com.xlox/$component" --es qa_appearance "$appearance" >> "$LOG" 2>&1; then
         log "WARN: am start failed for $component"
     fi
     sleep 4
@@ -85,45 +86,40 @@ capture() {
 
 set_mode() {
     mode="$1"
-    # ThemeMode is dark-first and persists its own preference, so switching the
-    # system night mode alone is not enough. Write the app's real SharedPreferences
-    # through run-as (the QA APK is debuggable), then align the system mode too.
-    printf '<?xml version="1.0" encoding="utf-8" standalone="yes" ?>\n<map><string name="mode">%s</string></map>\n' "$mode" > /tmp/anoy_appearance.xml
-    adb push /tmp/anoy_appearance.xml /data/local/tmp/anoy_appearance.xml >/dev/null 2>&1 \
-        || fatal "cannot push appearance preference"
-    adb shell run-as com.xlox sh -c 'mkdir -p shared_prefs; cp /data/local/tmp/anoy_appearance.xml shared_prefs/anoy_appearance.xml' >> "$LOG" 2>&1 \
-        || log "WARN: could not write appearance preference for $mode"
+    # Align the system bars too; the per-launch qa_appearance extra fixes the
+    # app palette on debug builds (see ThemeMode.apply).
     if [ "$mode" = dark ]; then
         adb shell cmd uimode night yes >> "$LOG" 2>&1 || fatal "cannot enable night mode"
     else
         adb shell cmd uimode night no >> "$LOG" 2>&1 || fatal "cannot enable day mode"
     fi
     adb shell am force-stop com.xlox >/dev/null 2>&1 || true
+    APPEARANCE="$mode"
     sleep 3
     log "appearance set to $mode"
 }
 
 for mode in light dark; do
     set_mode "$mode"
-    capture "login_${mode}" ".LogAct"
-    capture "main_${mode}" ".MAct"
-    capture "facebook_${mode}" ".FacebookActivity"
-    capture "components_${mode}" ".ui.designsystem.DsPreviewActivity"
+    capture "login_${mode}" ".LogAct" "$APPEARANCE"
+    capture "main_${mode}" ".MAct" "$APPEARANCE"
+    capture "facebook_${mode}" ".FacebookActivity" "$APPEARANCE"
+    capture "components_${mode}" ".ui.designsystem.DsPreviewActivity" "$APPEARANCE"
 done
 
 # Font scale 1.3, then restore 1.0.
 adb shell settings put system font_scale 1.3 >> "$LOG" 2>&1 || true
 set_mode light
-capture "login_font_130" ".LogAct"
-capture "main_font_130" ".MAct"
+capture "login_font_130" ".LogAct" "$APPEARANCE"
+capture "main_font_130" ".MAct" "$APPEARANCE"
 adb shell settings put system font_scale 1.0 >> "$LOG" 2>&1 || true
 
 # Narrow 320dp width to check clipping/overlap.
 adb shell wm size 320x640 >> "$LOG" 2>&1 || true
 adb shell wm density 160 >> "$LOG" 2>&1 || true
 sleep 2
-capture "login_320" ".LogAct"
-capture "main_320" ".MAct"
+capture "login_320" ".LogAct" "$APPEARANCE"
+capture "main_320" ".MAct" "$APPEARANCE"
 adb shell wm size reset >> "$LOG" 2>&1 || true
 adb shell wm density reset >> "$LOG" 2>&1 || true
 

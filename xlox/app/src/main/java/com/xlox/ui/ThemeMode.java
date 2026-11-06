@@ -2,10 +2,12 @@ package com.xlox.ui;
 
 import android.app.Activity;
 import android.content.Context;
+import android.content.Intent;
 import android.content.res.Configuration;
 
 import androidx.appcompat.app.AppCompatDelegate;
 
+import com.xlox.BuildConfig;
 import com.xlox.R;
 import com.xlox.ui.designsystem.DesignSystem;
 import com.xlox.ui.designsystem.ThemeToggleView;
@@ -22,6 +24,14 @@ public final class ThemeMode {
     public static void apply(Context context) {
         String value = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
                 .getString(KEY, "dark");
+        // Debug builds only: the emulator QA launches each screen with an
+        // explicit appearance so both palettes can be captured from the same
+        // installed APK. Release builds ignore the extra entirely.
+        if (BuildConfig.DEBUG && context instanceof Activity) {
+            Intent intent = ((Activity) context).getIntent();
+            String forced = intent == null ? null : intent.getStringExtra("qa_appearance");
+            if ("light".equals(forced) || "dark".equals(forced)) value = forced;
+        }
         int wanted = "light".equals(value) ? AppCompatDelegate.MODE_NIGHT_NO
                 : "system".equals(value) ? AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
                 : AppCompatDelegate.MODE_NIGHT_YES;
