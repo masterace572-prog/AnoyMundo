@@ -1,49 +1,56 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Text-only splash: no logo, black background, white wordmark. -->
+<!--
+  Splash: the Lottie mark sits exactly where the system splash icon sits
+  (centred in the full window, 288 dp), so the hand-off is invisible. The
+  wordmark is real text that fades up under the dot; the version footer sits
+  24 dp above the navigation bar (inset added in SplashActivity).
+-->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/splashRoot"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:background="@color/black">
+
+    <com.airbnb.lottie.LottieAnimationView
+        android:id="@+id/splashMark"
+        android:layout_width="@dimen/splash_mark"
+        android:layout_height="@dimen/splash_mark"
+        android:layout_gravity="center"
+        android:importantForAccessibility="no"
+        app:lottie_renderMode="hardware" />
 
     <LinearLayout
         android:id="@+id/splashContent"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="center"
+        android:layout_marginTop="88dp"
         android:alpha="0"
         android:gravity="center_horizontal"
         android:orientation="vertical">
 
         <TextView
-            style="@style/Text.LargeTitle"
+            android:id="@+id/splashTitle"
+            style="@style/Text.Splash"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/app_name"
-            android:textSize="@dimen/text_splash" />
+            android:text="@string/app_name" />
 
         <TextView
-            style="@style/Text.SectionHeader"
+            style="@style/Text.SplashCaption"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="10dp"
-            android:letterSpacing="0.3"
+            android:layout_marginTop="8dp"
             android:text="@string/splash_caption" />
     </LinearLayout>
 
-    <ProgressBar
-        android:id="@+id/splashSpinner"
-        style="@style/Spinner"
-        android:layout_gravity="bottom|center_horizontal"
-        android:layout_marginBottom="72dp"
-        android:alpha="0"
-        android:indeterminateTint="@color/text_tertiary" />
-
     <TextView
         android:id="@+id/splashVersion"
-        style="@style/Text.Footnote"
+        style="@style/Text.Mono.Footer"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="bottom|center_horizontal"
-        android:layout_marginBottom="32dp"
-        android:alpha="0"
-        android:textColor="@color/text_tertiary" />
+        android:layout_marginBottom="@dimen/space_24"
+        android:alpha="0" />
 </FrameLayout>

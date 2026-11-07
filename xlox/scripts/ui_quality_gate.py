@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Static checks for the Android black/blue UI (v2.0).
+"""Static checks for the Android UI (2.1 redesign brief).
 
 Runs on a plain checkout (no Android SDK needed). Exits non-zero when a gate
 fails and prints a PASS/FAIL line for every gate.
@@ -9,10 +9,14 @@ Gates
   2. Format strings get the right number of arguments in getString().
   3. No app logo anywhere: no ic_anoy / logo images, no bitmap resources.
   4. Colours only come from the palette in values/colors.xml.
-  5. Text never gets its own background (TextView / text styles).
-  6. Window and screens are black, primary text is white, buttons are blue.
+  5. Text never gets a filled background (only outline status chips).
+  6. Window and screens are black, primary text is white, buttons are blue pills.
   7. Layouts contain no hardcoded user-visible text or raw text sizes.
-  8. Removed pieces stay removed (Material, splashscreen, FacebookActivity, designsystem).
+  8. Brief rules: no purple / teal / bg_tile_*, no emoji, no default spinner,
+     no Toast, no dynamic colour; Material / splashscreen / Lottie present at
+     minSdk-21-compatible versions; FacebookActivity / designsystem stay gone.
+  9. Lottie files: 60 fps, under 60 KB, provenance + licences in assets/licenses.
+ 10. Every MaterialButton uses an Anoy button style.
 """
 from __future__ import annotations
 
@@ -102,9 +106,12 @@ gate("All XML files are well-formed", parse_errors)
 # ------------------------------------------------------- 1. references exist
 missing = []
 for f in java_files:
-    for m in re.finditer(r"\bR\.(\w+)\.(\w+)", f.read_text()):
+    for m in re.finditer(r"(?<![\w.])R\.(\w+)\.(\w+)", f.read_text()):
         kind, name = m.groups()
-        if kind != "styleable" and name not in defined.get(kind, set()):
+        pool = defined.get(kind, set())
+        if kind == "style":
+            pool = {n.replace(".", "_") for n in pool}
+        if kind != "styleable" and name not in pool:
             missing.append(f"{rel(f)}: R.{kind}.{name}")
 for f in xml_files:
     for m in re.finditer(r'"@(\w+)/([\w.]+)"', f.read_text()):
@@ -226,6 +233,8 @@ for f in layouts:
             if tag == "EditText":
                 continue  # the input field shape is a control, not text styling
             bg = el.getAttribute("android:background")
+            if bg.startswith("@drawable/bg_chip_"):
+                continue  # outline-only status chip (checked below)
             if bg and bg not in ("@null", "@android:color/transparent"):
                 text_bg.append(f"{rel(f)}: <{tag} id={el.getAttribute('android:id')}> background={bg}")
 styles_src = (RES / "values/styles.xml").read_text()
@@ -238,7 +247,11 @@ for f in java_files:
         var = m.group(1).lower()
         if any(k in var for k in ("text", "label", "title", "message", "value", "note", "footer", "error")):
             text_bg.append(f"{rel(f)}: {m.group(0)}")
-gate("Text has no background of its own", text_bg)
+for chip in sorted(RES.glob("drawable/bg_chip_*.xml")):
+    src = chip.read_text()
+    if "<stroke" not in src or not re.search(r'<solid android:color="@color/transparent"', src):
+        text_bg.append(f"{rel(chip)} must be an outline (transparent fill + stroke)")
+gate("Text has no filled background of its own", text_bg)
 
 # --------------------------------------------- 6. black / white / blue theme
 
@@ -260,9 +273,14 @@ if not re.search(r'name="android:textColorPrimary">@color/(white|text_primary)<'
     theme.append("primary text colour is not white")
 if colour("text_primary") and colour("text_primary") not in ("#FFFFFF", "#FFFFFFFF"):
     theme.append(f"text_primary is {colour('text_primary')}")
-btn = (RES / "drawable/bg_button_primary.xml").read_text() if (RES / "drawable/bg_button_primary.xml").exists() else ""
-if "@color/blue" not in btn or "radius" not in btn:
-    theme.append("bg_button_primary is not a rounded blue shape")
+m_btn = re.search(r'<style name="Widget.Anoy.Button" [^>]*>(.*?)</style>', styles_src, re.S)
+btn_bg = (RES / "color/button_bg.xml").read_text() if (RES / "color/button_bg.xml").exists() else ""
+if not m_btn or "@color/button_bg" not in m_btn.group(1) or "@dimen/button_radius" not in m_btn.group(1):
+    theme.append("Widget.Anoy.Button is not a button_bg tinted pill with button_radius")
+if "@color/blue" not in btn_bg:
+    theme.append("color/button_bg is not blue")
+if not re.search(r'<dimen name="button_radius">28dp<', (RES / "values/dimens.xml").read_text()):
+    theme.append("button_radius must be 28dp (56 dp pill)")
 for f in layouts:
     src = f.read_text()
     # Root element only. No background at all is fine: the theme window is black
@@ -270,7 +288,8 @@ for f in layouts:
     from xml.dom import minidom
     root = minidom.parseString(src.encode()).documentElement
     root_bg = root.getAttribute("android:background")
-    if root_bg and root_bg not in ("@color/black", "@drawable/bg_dialog"):
+    # Sheet layouts (dialog_*, sheet_*) inherit the sheet surface.
+    if root_bg and root_bg != "@color/black":
         theme.append(f"{rel(f)}: root background {root_bg}")
 gate("Black background, white text, rounded blue buttons", theme)
 
@@ -284,23 +303,77 @@ for f in layouts:
         literals.append(f"{rel(f)}: textSize=\"{m.group(1)}\" (use a Text.* style or @dimen)")
 gate("Layouts use string resources and the type scale", literals)
 
-# -------------------------------------------------- 8. removed stays removed
-removed = []
+# ----------------------------------------------------------- 8. brief rules
+rules = []
 gradle = (APP / "build.gradle").read_text()
-for dep in ("com.google.android.material", "core-splashscreen", "dynamicanimation"):
-    if dep in gradle:
-        removed.append(f"app/build.gradle still depends on {dep}")
+need_deps = {
+    "com.google.android.material:material:1.13.0": "Material 1.13.0 (newest with minSdk 21)",
+    "com.airbnb.android:lottie:6.7.1": "Lottie 6.7.1",
+    "androidx.core:core-splashscreen:1.0.1": "core-splashscreen 1.0.1 (1.2.0 needs minSdk 23)",
+}
+for dep, why in need_deps.items():
+    if dep not in gradle:
+        rules.append(f"app/build.gradle must depend on {why}")
+if not re.search(r"minSdk 21\b", gradle) or not re.search(r"targetSdk 28\b", gradle):
+    rules.append("minSdk must stay 21 and targetSdk 28")
 if "buildConfig true" not in gradle:
-    removed.append("app/build.gradle must enable buildFeatures.buildConfig (BuildConfig is used)")
+    rules.append("app/build.gradle must enable buildFeatures.buildConfig (BuildConfig is used)")
+EMOJI = re.compile("[\U0001F000-\U0001FAFF\u2600-\u27BF\u2B00-\u2BFF\uFE0F]")
 for f in java_files + xml_files:
     src = f.read_text()
-    for bad in ("FacebookActivity", "designsystem", "SplashScreen.installSplashScreen", "com.google.android.material"):
+    for bad in ("FacebookActivity", "designsystem", "android.widget.Toast", "Toast.makeText", "DynamicColors",
+                "<ProgressBar", "android.widget.ProgressBar", "bg_tile_", "purple", "teal"):
         if bad in src:
-            removed.append(f"{rel(f)} mentions {bad}")
+            rules.append(f"{rel(f)} mentions {bad}")
+    if EMOJI.search(src):
+        rules.append(f"{rel(f)} contains an emoji character")
+    for hexc in re.findall(r"#(?:FF)?([0-9A-Fa-f]{6})\b", src):
+        if hexc.upper() in {"AF52DE", "BF5AF2", "6750A4", "D0BCFF", "5AC8FA", "64D2FF", "30B0C7", "40C8E0"}:
+            rules.append(f"{rel(f)} uses a purple/teal colour #{hexc}")
+if "SplashScreen.installSplashScreen(this)" not in (JAVA / "com/xlox/SplashActivity.java").read_text():
+    rules.append("SplashActivity must install the core-splashscreen")
+if not re.search(r'<style name="AppTheme" parent="Theme.Material3.Dark.NoActionBar"', styles_src):
+    rules.append("AppTheme must extend Theme.Material3.Dark.NoActionBar")
+if (RES / "values-night").exists():
+    rules.append("values-night must not exist (dark only)")
 manifest = (MAIN / "AndroidManifest.xml").read_text()
 if not re.search(r'\.SplashActivity"[^>]*>\s*<intent-filter>\s*<action android:name="android.intent.action.MAIN"', manifest):
-    removed.append("SplashActivity is not the launcher activity")
-gate("Removed components stay removed; splash is the launcher", removed)
+    rules.append("SplashActivity is not the launcher activity")
+gate("Brief rules: palette, no emoji / spinner / Toast / dynamic colour; deps pinned", rules)
+
+# ------------------------------------------------------------ 9. Lottie budget
+import json as _json
+lottie = []
+raw_dir = RES / "raw"
+for name in ("anoy_mark", "anoy_sync", "anoy_success"):
+    f = raw_dir / f"{name}.json"
+    if not f.exists():
+        lottie.append(f"missing res/raw/{name}.json")
+        continue
+    data = _json.loads(f.read_text())
+    if f.stat().st_size >= 60 * 1024:
+        lottie.append(f"{name}.json is {f.stat().st_size} bytes (limit 60 KB)")
+    if data.get("fr") != 60:
+        lottie.append(f"{name}.json frame rate is {data.get('fr')} (expected 60)")
+    if data.get("assets"):
+        lottie.append(f"{name}.json embeds assets (images)")
+lic = MAIN / "assets/licenses"
+for need in ("LOTTIE.md", "LUCIDE-ISC.txt"):
+    if not (lic / need).exists():
+        lottie.append(f"missing assets/licenses/{need}")
+gate("Lottie: 60 fps, < 60 KB, no images; provenance and licences shipped", lottie)
+
+# ---------------------------------------------------------- 10. button styles
+btns = []
+for f in layouts:
+    doc = minidom.parse(str(f))
+    for el in doc.getElementsByTagName("com.google.android.material.button.MaterialButton"):
+        if not el.getAttribute("style").startswith("@style/Widget.Anoy.Button"):
+            btns.append(f"{rel(f)}: {el.getAttribute('android:id')} has style {el.getAttribute('style')!r}")
+    for tag in ("Button", "ProgressBar"):
+        for el in doc.getElementsByTagName(tag):
+            btns.append(f"{rel(f)}: plain <{tag}> {el.getAttribute('android:id')}")
+gate("Buttons are MaterialButtons with Anoy styles", btns)
 
 print()
 print(f"{checks - len(failures)}/{checks} gates passed")

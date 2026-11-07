@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Static system-splash icon. Same geometry as frame 0 of res/raw/anoy_mark.json
+     (288 canvas, ring r 36, stroke 2.5, 14 % white) so the hand-off from the
+     system splash to SplashActivity's Lottie view is seamless. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="288dp"
+    android:height="288dp"
+    android:viewportWidth="288"
+    android:viewportHeight="288">
+    <path
+        android:fillColor="@android:color/transparent"
+        android:pathData="M180 144A36 36 0 1 0 108 144A36 36 0 1 0 180 144Z"
+        android:strokeColor="@color/splash_track"
+        android:strokeWidth="2.5" />
+</vector>

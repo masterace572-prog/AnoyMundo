@@ -1,20 +1,26 @@
 #!/bin/sh
-# UI QA screenshot harness for the Android loader (v2.0 black/blue UI).
-# Runs with cwd = xlox/ on a booted emulator. Writes screenshots to
-# docs/ui-redesign/screenshots and traces to qa-logs/ (repo root).
+# UI QA harness for the Android loader (2.1 redesign).
+# Runs with cwd = xlox/ on a booted emulator (animations off = reduced motion).
+# Screenshots -> $SHOT_DIR (default docs/ui-redesign/after); traces -> ../qa-logs.
 #
-# Flow covered: splash -> update gate (required / downloading) -> sign in
-# (keyboard, error) -> home (debug preview) -> font scale 1.3 -> 320 dp width
-# -> minified release APK launch.
+# Real walkthrough: splash -> live update gate (required / downloading / done)
+# -> sign in (empty, keyboard, malformed, key visible) -> airplane mode (gate
+# check failed + offline notice) -> sign out confirm -> sign in again.
+# Debug-only extras (BuildConfig.DEBUG) render the remaining states with sample
+# data: every update-gate state, sign-in loading / wrong key / maintenance /
+# success, home expired / notes / skeletons / launch states / Snackbar.
+# Then: animations on (live splash frames + screenrecord), font 0.85 and 2.0,
+# 360 dp phone, tablet, minified release build.
 set -eu
 
 LOG=../qa-logs/emulator-trace.txt
 OUT=${SHOT_DIR:-docs/ui-redesign/after}
 APK=app/build/outputs/apk/debug/app-debug.apk
 RELEASE_APK=app/build/outputs/apk/release/app-release.apk
+PKG=com.xlox
 
 mkdir -p ../qa-logs "$OUT"
-rm -f "$OUT"/*.png
+rm -f "$OUT"/*.png "$OUT"/*.mp4
 : > "$LOG"
 
 log() { echo "$*"; echo "$*" >> "$LOG"; }
@@ -29,7 +35,7 @@ keytool -genkeypair -keystore /tmp/qa.keystore -alias qa -keyalg RSA -keysize 20
 # guarded, so every screen still renders.
 install_apk() {
     src="$1"
-    adb uninstall com.xlox >/dev/null 2>&1 || true
+    adb uninstall $PKG >/dev/null 2>&1 || true
     if out=$(adb install -r -g "$src" 2>&1); then
         log "install ok: $src"
         return 0
@@ -45,16 +51,15 @@ install_apk() {
 }
 
 grant() {
-    adb shell appops set com.xlox MANAGE_EXTERNAL_STORAGE allow >/dev/null 2>&1 || true
-    adb shell pm grant com.xlox android.permission.READ_EXTERNAL_STORAGE >/dev/null 2>&1 || true
-    adb shell pm grant com.xlox android.permission.WRITE_EXTERNAL_STORAGE >/dev/null 2>&1 || true
+    adb shell appops set $PKG MANAGE_EXTERNAL_STORAGE allow >/dev/null 2>&1 || true
+    adb shell pm grant $PKG android.permission.READ_EXTERNAL_STORAGE >/dev/null 2>&1 || true
+    adb shell pm grant $PKG android.permission.WRITE_EXTERNAL_STORAGE >/dev/null 2>&1 || true
 }
 
 focus() { adb shell dumpsys window 2>/dev/null | grep -m1 'mCurrentFocus' | tr -d '\r' || true; }
 
 shot() {
     name="$1"
-    adb shell am broadcast -a android.intent.action.CLOSE_SYSTEM_DIALOGS >/dev/null 2>&1 || true
     sleep 0.4
     adb exec-out screencap -p > "$OUT/$name.png" || log "WARN: screencap failed for $name"
     log "focus for $name: $(focus)"
@@ -78,7 +83,9 @@ if m:
 ' "$1"
 }
 
-has_id() { dump_ui | grep -q "com.xlox:id/$1"; }
+has_id() { dump_ui | grep -q "com.xlox:id/$1\""; }
+
+texts() { dump_ui | grep -o 'text="[^"]*"' | grep -v 'text=""' | tr '\n' ' '; }
 
 tap_id() {
     xy=$(centre_of "$1")
@@ -105,20 +112,44 @@ wait_gone() {
     return 1
 }
 
-# Opens sign-in directly and waits until the update gate has let it through.
+stop_app() { adb shell am force-stop $PKG >/dev/null 2>&1 || true; }
+
+hide_keyboard() { adb shell input keyevent 111 >/dev/null 2>&1 || true; sleep 0.6; }
+
+# Opens sign in and waits until the (live) update gate has let it through.
+# Extra arguments are passed to am start (e.g. --es qa_result wrong).
 open_login() {
-    adb shell am force-stop com.xlox >/dev/null 2>&1 || true
-    adb shell am start -W -n com.xlox/.LogAct >> "$LOG" 2>&1 || log "WARN: am start LogAct failed"
+    stop_app
+    # shellcheck disable=SC2068
+    adb shell am start -W -n $PKG/.LogAct $@ >> "$LOG" 2>&1 || log "WARN: am start LogAct failed"
     sleep 1
-    wait_gone gateTitle 45 || log "WARN: update dialog still visible"
+    wait_gone gateTitle 45 || log "WARN: update sheet still visible"
     wait_for_id keyField 10 || log "WARN: sign-in form missing"
-    sleep 1
+    hide_keyboard
 }
 
-open_home_preview() {
-    adb shell am force-stop com.xlox >/dev/null 2>&1 || true
-    adb shell am start -W -n com.xlox/.MAct --ez qa_preview true >> "$LOG" 2>&1 || log "WARN: am start MAct failed"
-    sleep 2
+# Update-gate state rendered by the debug preview (no network).
+open_gate() {
+    stop_app
+    adb shell am start -W -n $PKG/.LogAct --es qa_gate "$1" >> "$LOG" 2>&1 || log "WARN: gate preview failed"
+    wait_for_id gateTitle 10 || log "WARN: gate preview $1 missing"
+    sleep 1.2
+}
+
+# Home with sample data (debug builds; no native session needed).
+open_home() {
+    stop_app
+    # shellcheck disable=SC2068
+    adb shell am start -W -n $PKG/.MAct --ez qa_preview true $@ >> "$LOG" 2>&1 || log "WARN: am start MAct failed"
+    wait_for_id primaryAction 10 || log "WARN: home missing"
+    sleep 1.5
+}
+
+airplane() {
+    adb shell cmd connectivity airplane-mode "$1" >/dev/null 2>&1 \
+        || adb shell settings put global airplane_mode_on "$([ "$1" = enable ] && echo 1 || echo 0)" >/dev/null 2>&1 || true
+    sleep 3
+    log "airplane mode $1"
 }
 
 log "=== emulator QA started $(date -u) ==="
@@ -131,96 +162,236 @@ adb logcat -c || true
 install_apk "$APK"
 grant
 
-# 1. Splash (fresh start through the launcher activity).
-# qa_hold (debug builds only) keeps the splash up so the shot is deterministic.
-adb shell am start -W -n com.xlox/.SplashActivity --ez qa_hold true >> "$LOG" 2>&1 || fatal "cannot start SplashActivity"
-sleep 1.5   # let the fade-in finish
+# ---------------------------------------------------------------- 1. splash
+# Still frames of the 1.8 s mark (qa_frame freezes the Lottie progress).
+for f in 0.00 0.15 0.30 0.42 0.60 0.72 1.00; do
+    stop_app
+    adb shell am start -W -n $PKG/.SplashActivity --ef qa_frame "$f" >> "$LOG" 2>&1 || fatal "cannot start SplashActivity"
+    sleep 1.2
+    shot "splash_f$(echo "$f" | tr -d '.')"
+done
+# Reduced motion (animations off): final frame + wordmark, held.
+stop_app
+adb shell am start -W -n $PKG/.SplashActivity --ez qa_hold true >> "$LOG" 2>&1 || fatal "cannot start SplashActivity"
+sleep 1.2
 shot splash
-# Real cold start through the launcher activity (no hold) for the update gate.
-adb shell am force-stop com.xlox >/dev/null 2>&1 || true
-adb shell am start -W -n com.xlox/.SplashActivity >> "$LOG" 2>&1 || fatal "cannot start SplashActivity"
 
-# 2. Update gate: a fresh install has no library, so the live panel's
-#    release must be installed before sign in is possible.
+# ------------------------------------------- 2. cold start + live update gate
+stop_app
+adb shell am start -n $PKG/.SplashActivity >> "$LOG" 2>&1 || fatal "cannot start SplashActivity"
+sleep 0.3
+shot splash_live_cold
 if wait_for_id gateAction 40; then
-    shot update_required
-    gate_text=$(dump_ui | grep -o 'text="[^"]*"' | tr '\n' ' ')
-    log "gate texts: $gate_text"
+    shot live_gate_required
+    log "gate texts: $(texts)"
     tap_id gateAction || true
     sleep 0.3
-    shot update_downloading
-    if wait_gone gateTitle 90; then
-        log "update gate passed"
-    else
-        shot update_stuck
-        log "WARN: update did not finish within 90 s"
-    fi
+    shot live_gate_downloading
+    i=0
+    while [ $i -lt 90 ]; do
+        t=$(texts)
+        case "$t" in *"up to date"*) shot live_gate_done; break ;; esac
+        has_id gateTitle || break
+        sleep 0.5; i=$((i + 1))
+    done
+    if wait_gone gateTitle 90; then log "update gate passed"; else shot live_gate_stuck; log "WARN: update did not finish"; fi
 else
     log "WARN: no update action shown (already current or check failed)"
-    shot update_state
-    wait_gone gateTitle 45 || true
+    shot live_gate_state
+    wait_gone gateTitle 45 && log "update gate passed" || true
 fi
 log "gate result focus: $(focus)"
 
-# 3. Sign in: idle, keyboard, validation error.
+# ------------------------------------------------------- 3. sign in (real)
 wait_for_id keyField 10 || log "WARN: sign-in form missing after the gate"
-sleep 1
+hide_keyboard
 shot login
-tap_id keyField || true
+tap_id userkey || tap_id keyField || true
 sleep 1.5
 log "keyboard state: $(adb shell dumpsys input_method | grep -m1 -E 'mInputShown|isInputViewShown' | tr -d '\r')"
 shot login_keyboard
+adb shell input keyevent 66 || true          # Done on an empty field
+sleep 1
+shot login_error_empty
 adb shell input text 'ab' || true
-adb shell input keyevent 111 || adb shell input keyevent 4 || true   # hide keyboard
-sleep 0.8
+hide_keyboard
 tap_id login || true
 sleep 1.2
-shot login_error
-tap_id toggleKey || true   # eye icon button: key shown, icon turns blue
+shot login_error_malformed
+tap_id toggleKey || true
 sleep 0.8
 shot login_key_visible
 
-# 4. Home (debug-only preview with sample data, no native session needed).
-open_home_preview
+# ------------------------------------------------- 4. airplane mode (real)
+airplane enable
+stop_app
+adb shell am start -W -n $PKG/.LogAct >> "$LOG" 2>&1 || true
+if wait_for_id gateAction 30; then
+    sleep 1
+    shot gate_check_failed_live
+    log "offline gate texts: $(texts)"
+fi
+airplane disable
+tap_id gateAction || true                    # Try again -> passes
+wait_gone gateTitle 45 || log "WARN: gate did not pass after Try again"
+wait_for_id keyField 10 || true
+airplane enable
+tap_id userkey || true
+adb shell input text 'ANOY-7D-QA7K2' || true
+hide_keyboard
+tap_id login || true
+sleep 1.5
+shot login_offline
+airplane disable
+
+# --------------------------------------- 5. sign-in states (debug extras)
+for r in loading wrong maintenance server vpn success; do
+    open_login --es qa_result "$r"
+    sleep 1.6
+    shot "login_$r"
+done
+# Success hands off to home (real 400 ms hold, then the home screen).
+open_login --es qa_result ok
+wait_for_id primaryAction 15 || log "WARN: success did not reach home"
+sleep 1.5
+shot login_ok_home
+
+# -------------------------------------------- 6. update-gate states (sheet)
+for g in checking required downloading downloading_unknown installing done check_failed download_failed; do
+    open_gate "$g"
+    shot "gate_$g"
+done
+
+# ------------------------------------------------------------- 7. home
+open_home
 shot home
-adb shell input swipe 540 1700 540 500 400 || true
+adb shell input swipe 540 1700 540 400 400 || true
 sleep 1
 shot home_scrolled
+open_home --es qa_note "''"
+shot home_note_empty
+open_home --es qa_note "'SERVER UPDATE TONIGHT. PLAY ON THE NEW VERSION ONLY 🔥'"
+shot home_note_custom
+open_home --es qa_expiry past
+shot home_expired
+open_home --es qa_expiry hours
+shot home_under_day
+open_home --ez qa_loading true
+shot home_loading
+open_home --es qa_status "'Unsafe - detection active'"
+shot home_server_warning
+open_home --es qa_action preparing
+shot home_preparing
+open_home --es qa_action launching
+shot home_launching
+open_home --es qa_action error
+shot home_error
+open_home --es qa_action snackbar
+sleep 0.5
+shot home_snackbar
 
-# 5. Large text.
-adb shell settings put system font_scale 1.3
-open_login
-shot login_font130
-open_home_preview
-shot home_font130
+# Sign out (real): confirm sheet, then back to sign in.
+open_home
+tap_id signOut || true
+sleep 1.2
+shot home_signout_sheet
+tap_id signOutConfirm || true
+wait_for_id keyField 45 || log "WARN: sign out did not reach sign in"
+wait_gone gateTitle 45 || true
+hide_keyboard
+shot signout_done
+log "signout focus: $(focus)"
+
+# TalkBack text of the licence card (one sentence).
+open_home
+log "licence card description: $(dump_ui | grep -o 'resource-id="com.xlox:id/licenceCard"[^>]*' | grep -o 'content-desc="[^"]*"')"
+
+adb logcat -d > ../qa-logs/logcat.txt 2>/dev/null || true
+
+# ------------------------------------------------ 8. animations on (live)
+adb shell settings put global window_animation_scale 1.0 || true
+adb shell settings put global transition_animation_scale 1.0 || true
+adb shell settings put global animator_duration_scale 1.0 || true
+stop_app
+( adb shell screenrecord --time-limit 6 /sdcard/splash.mp4 >/dev/null 2>&1 || true ) &
+REC=$!
+sleep 0.5
+adb shell am start -n $PKG/.SplashActivity >> "$LOG" 2>&1 || true
+sleep 0.5
+shot anim_splash_t05
+sleep 0.5
+shot anim_splash_t10
+sleep 0.5
+shot anim_splash_t15
+wait $REC 2>/dev/null || true
+adb pull /sdcard/splash.mp4 "$OUT/anim_splash.mp4" >/dev/null 2>&1 && log "screenrecord ok" || log "WARN: screenrecord unavailable"
+wait_gone gateTitle 45 || true
+wait_for_id keyField 10 || true
+hide_keyboard
+shot anim_login
+open_gate checking
+shot anim_gate_checking
+open_gate done
+sleep 0.2
+shot anim_gate_done
+open_home --ez qa_loading true
+shot anim_home_loading
+adb shell settings put global window_animation_scale 0.0 || true
+adb shell settings put global transition_animation_scale 0.0 || true
+adb shell settings put global animator_duration_scale 0.0 || true
+
+# ---------------------------------------------------------- 9. font scale
+for fs in 0.85 2.0; do
+    tag=$(echo "$fs" | tr -d '.')
+    adb shell settings put system font_scale "$fs"
+    sleep 1
+    open_login
+    shot "login_font$tag"
+    open_home
+    shot "home_font$tag"
+    adb shell input swipe 540 1700 540 400 400 || true
+    sleep 1
+    shot "home_font${tag}_scrolled"
+    open_gate required
+    shot "gate_font$tag"
+done
 adb shell settings put system font_scale 1.0
 
-# 6. Narrow phone (320 dp wide).
-adb shell wm size 640x1280 || true
-adb shell wm density 320 || true
-sleep 2
-open_login
-shot login_320
-open_home_preview
-shot home_320
+# ------------------------------------------------- 10. 360 dp and tablet
+size_pass() {
+    label="$1"; size="$2"; density="$3"
+    adb shell wm size "$size" || true
+    adb shell wm density "$density" || true
+    sleep 3
+    open_login
+    shot "login_$label"
+    open_home
+    shot "home_$label"
+    open_gate required
+    shot "gate_$label"
+}
+size_pass 360 720x1440 320
+size_pass tablet 1600x2560 320
 adb shell wm size reset || true
 adb shell wm density reset || true
 sleep 2
 
-adb logcat -d > ../qa-logs/logcat.txt 2>/dev/null || true
+adb logcat -d > ../qa-logs/logcat-sizes.txt 2>/dev/null || true
 
-# 7. Minified release build: must launch, pass the gate and reach sign in.
+# ------------------------------------- 11. minified release build (real flow)
 if [ -f "$RELEASE_APK" ]; then
     adb logcat -c || true
     install_apk "$RELEASE_APK"
     grant
-    adb shell am start -W -n com.xlox/.SplashActivity >> "$LOG" 2>&1 || log "WARN: release launch failed"
+    adb shell am start -W -n $PKG/.SplashActivity >> "$LOG" 2>&1 || log "WARN: release launch failed"
     sleep 3
     if wait_for_id gateAction 30; then
         tap_id gateAction || true
         wait_gone gateTitle 90 || log "WARN: release update did not finish"
     fi
+    wait_gone gateTitle 30 || true
     sleep 2
+    hide_keyboard
     log "release focus: $(focus)"
     shot release_login
     adb logcat -d > ../qa-logs/release-logcat.txt 2>/dev/null || true

@@ -1,8 +1,10 @@
 name: Android UI QA
 
 # Builds debug + release, runs Android Lint and the static UI gates, then
-# installs the app on an emulator and captures every screen of the v2.0 flow:
-# splash, update gate, sign in (keyboard / error), home, large text, 320 dp.
+# installs the app on an emulator and captures every screen and state of the
+# 2.1 redesign (see xlox/scripts/ui_screenshots.sh): live walkthrough, every
+# update-gate / sign-in / home state, animations on + off, font 0.85 / 2.0,
+# 360 dp, tablet and the minified release build.
 on:
   workflow_dispatch:
   push:
@@ -21,7 +23,7 @@ concurrency:
 jobs:
   qa:
     runs-on: ubuntu-24.04
-    timeout-minutes: 75
+    timeout-minutes: 110
     defaults:
       run:
         working-directory: xlox
@@ -118,7 +120,7 @@ jobs:
           adb shell settings put global window_animation_scale 0.0 || true
           adb shell settings put global transition_animation_scale 0.0 || true
           adb shell settings put global animator_duration_scale 0.0 || true
-          SHOT_DIR=docs/ui-redesign/before sh scripts/ui_screenshots.sh
+          SHOT_DIR=docs/ui-redesign/after sh scripts/ui_screenshots.sh
           kill $EMU 2>/dev/null || true
 
       - name: Validate screenshots and logs
@@ -128,19 +130,37 @@ jobs:
           python3 - <<'PY'
           import hashlib, re, sys
           from pathlib import Path
-          shots = Path('xlox/docs/ui-redesign/before')
-          need = ['splash', 'login', 'login_keyboard', 'login_error', 'home',
-                  'login_font130', 'home_font130', 'login_320', 'home_320', 'release_login']
+          shots = Path('xlox/docs/ui-redesign/after')
+          need = [
+              # splash (frames, reduced motion, animations on)
+              'splash', 'splash_f000', 'splash_f030', 'splash_f060', 'splash_f100', 'anim_splash_t10',
+              # live walkthrough
+              'login', 'login_keyboard', 'login_error_empty', 'login_error_malformed', 'login_key_visible',
+              'gate_check_failed_live', 'login_offline', 'login_ok_home', 'home_signout_sheet', 'signout_done',
+              # sign-in states
+              'login_loading', 'login_wrong', 'login_maintenance', 'login_server', 'login_success',
+              # update gate states
+              'gate_checking', 'gate_required', 'gate_downloading', 'gate_downloading_unknown',
+              'gate_installing', 'gate_done', 'gate_check_failed', 'gate_download_failed',
+              # home states
+              'home', 'home_scrolled', 'home_note_empty', 'home_note_custom', 'home_expired',
+              'home_under_day', 'home_loading', 'home_server_warning', 'home_preparing',
+              'home_launching', 'home_error', 'home_snackbar',
+              # accessibility / sizes
+              'login_font085', 'home_font085', 'login_font20', 'home_font20', 'gate_font20',
+              'login_360', 'home_360', 'gate_360', 'login_tablet', 'home_tablet', 'gate_tablet',
+              'release_login',
+          ]
           errors = []
           files = {p.stem: p for p in shots.glob('*.png')}
           for n in need:
               p = files.get(n)
-              if not p or p.stat().st_size < 8000:
+              if not p or p.stat().st_size < (2500 if n.startswith('splash') else 8000):
                   errors.append(f'missing or blank screenshot: {n}')
           seen = {}
           for n, p in files.items():
               h = hashlib.md5(p.read_bytes()).hexdigest()
-              if h in seen and 'update' not in n and 'update' not in seen[h]:
+              if h in seen and not any(k in n + seen[h] for k in ('live', 'anim_')):
                   errors.append(f'identical frames: {seen[h]} / {n}')
               seen[h] = n
           trace = Path('qa-logs/emulator-trace.txt')
@@ -148,9 +168,12 @@ jobs:
           for line in t.splitlines():
               if line.startswith('focus for ') and 'com.xlox' not in line:
                   errors.append('app not in front: ' + line)
-          if 'update gate passed' not in t and 'no update action shown' not in t:
-              errors.append('the update gate never let the user through')
-          for name in ('logcat.txt', 'release-logcat.txt'):
+          if 'update gate passed' not in t:
+              errors.append('the live update gate never let the user through')
+          m = re.search(r'licence card description: content-desc="([^"]*)"', t)
+          if not m or not m.group(1).startswith('Licence active,'):
+              errors.append('licence card is not read as one sentence: ' + (m.group(1) if m else 'missing'))
+          for name in ('logcat.txt', 'logcat-sizes.txt', 'release-logcat.txt'):
               p = Path('qa-logs') / name
               text = p.read_text(errors='replace') if p.exists() else ''
               lines = text.splitlines()

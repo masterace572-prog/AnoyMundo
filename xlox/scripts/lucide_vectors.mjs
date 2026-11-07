@@ -12,29 +12,36 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const SRC = path.resolve(here, '../../web/node_modules/lucide-static/icons');
 const OUT = path.resolve(here, '../app/src/main/res/drawable');
 
-// [lucide name, drawable suffix, colour resource or null (= tinted by the view), size dp]
+// [lucide name, drawable suffix]
 const ICONS = [
-  ['eye', 'eye', null],
-  ['eye-off', 'eye_off', null],
-  ['clipboard-paste', 'clipboard_paste', null],
-  ['key-round', 'key_round', null],
-  ['log-out', 'log_out', null],
-  ['shield-check', 'shield_check', null],
-  ['shield-alert', 'shield_alert', null],
-  ['calendar', 'calendar', null],
-  ['gamepad-2', 'gamepad', null],
-  ['activity', 'activity', null],
-  ['package', 'package', null],
-  ['server', 'server', null],
-  ['smartphone', 'smartphone', null],
-  ['cpu', 'cpu', null],
-  ['send', 'send_blue', 'blue', 18],
-  ['circle-help', 'help_blue', 'blue', 18],
-  ['circle-alert', 'alert_red', 'red', 16],
-  ['download', 'download_blue', 'blue'],
-  ['wifi-off', 'wifi_off_orange', 'orange'],
-  ['circle-check', 'circle_check_green', 'green'],
-  ['key-round', 'key_round_blue', 'blue'],
+  // Every glyph is plain white; views tint it (app:tint / iconTint /
+  // drawableTint) so one drawable serves every state colour.
+  ['eye', 'eye'],
+  ['eye-off', 'eye_off'],
+  ['clipboard-paste', 'clipboard_paste'],
+  ['key-round', 'key_round'],
+  ['log-out', 'log_out'],
+  ['shield-check', 'shield_check'],
+  ['shield-x', 'shield_x'],
+  ['calendar', 'calendar'],
+  ['timer', 'timer'],
+  ['gamepad-2', 'gamepad'],
+  ['activity', 'activity'],
+  ['package', 'package'],
+  ['server', 'server'],
+  ['smartphone', 'smartphone'],
+  ['cpu', 'cpu'],
+  ['send', 'send'],
+  ['circle-help', 'help'],
+  ['circle-alert', 'circle_alert'],
+  ['circle-check', 'circle_check'],
+  ['circle-x', 'circle_x'],
+  ['triangle-alert', 'triangle_alert'],
+  ['check', 'check'],
+  ['download', 'download'],
+  ['wifi-off', 'wifi_off'],
+  ['rotate-cw', 'rotate_cw'],
+  ['play', 'play'],
 ];
 
 const NUM = /-?(?:\d+\.?\d*|\.\d+)(?:e[-+]?\d+)?/iy;
@@ -107,7 +114,8 @@ if (!existsSync(SRC)) {
   process.exit(0);
 }
 
-for (const [name, suffix, colour, size = 24] of ICONS) {
+for (const [name, suffix] of ICONS) {
+  const colour = null; const size = 24;
   const svg = readFileSync(path.join(SRC, `${name}.svg`), 'utf8');
   const paths = [];
   for (const m of svg.matchAll(/<(path|line|polyline|polygon|circle|ellipse|rect)\b([^>]*?)\/?>/g)) {

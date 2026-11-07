@@ -15,3 +15,7 @@
 
 # zip4j optional crypto paths.
 -dontwarn net.lingala.zip4j.**
+
+# Lottie parses res/raw JSON reflectively-free, but keep its model enums
+# stable across shrinking (recommended by lottie-android).
+-dontwarn com.airbnb.lottie.**

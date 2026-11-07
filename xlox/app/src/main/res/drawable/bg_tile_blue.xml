@@ -1,6 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!-- Icon tile: soft tint behind an icon glyph. Never used behind text. -->
-<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
-    <solid android:color="@color/blue_tint" />
-    <corners android:radius="@dimen/tile_radius" />
-</shape>

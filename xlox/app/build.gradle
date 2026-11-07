@@ -30,12 +30,14 @@ android {
         // behaviour; raising targetSdk breaks its hidden-API bypass.
         //noinspection OldTargetApi,EditedTargetSdkVersion,ExpiredTargetSdkVersion
         targetSdk 28
+        // 2.1.0: UI redesign - Material 3 dark (token-mapped), Lottie splash,
+        //        bottom-sheet update gate, status chips, edge-to-edge.
         // 2.0.0: black iOS-style UI, text-only splash, mandatory library update
         //        gate before sign in, licence-key login, verified downloads.
         // 1.1.0: light/dark UI. 1.0.1: 16 KB page-size support (Android 15+/17)
         //        + read-only System.load() for API 37 devices.
-        versionCode 5
-        versionName '2.0.0'
+        versionCode 6
+        versionName '2.1.0'
 
         vectorDrawables {
             useSupportLibrary true
@@ -83,13 +85,21 @@ android {
 dependencies {
     implementation 'androidx.multidex:multidex:2.0.1'
     implementation fileTree(dir: 'libs', includes: ['*.aar'])
-    implementation 'androidx.appcompat:appcompat:1.6.1'
+    // Material 1.13.0 is the newest release that still supports minSdk 21
+    // (1.14 needs 23). It requires appcompat 1.7.0.
+    implementation 'androidx.appcompat:appcompat:1.7.0'
+    implementation 'com.google.android.material:material:1.13.0'
+    // Lottie 6.7.1 (minSdk 16) for the three in-house animations in res/raw.
+    implementation 'com.airbnb.android:lottie:6.7.1'
+    // core-splashscreen 1.0.1: the newest stable that supports minSdk 21
+    // (1.2.0 follows the androidx-wide bump to minSdk 23).
+    implementation 'androidx.core:core-splashscreen:1.0.1'
     // Already a transitive dependency; pinned so the compat insets API
     // (WindowInsetsControllerCompat / WindowCompat) is guaranteed.
     implementation 'androidx.core:core:1.13.1'
     implementation 'net.lingala.zip4j:zip4j:2.9.0'
     // core 1.13 ships kotlin-stdlib 1.8 (which absorbed -jdk7/-jdk8) while
-    // appcompat 1.6 still pulls the old 1.6 -jdk7/-jdk8 artifacts. Align them
+    // older androidx artifacts still pull the 1.6 -jdk7/-jdk8 jars. Align them
     // to avoid duplicate kotlin.* classes.
     implementation platform('org.jetbrains.kotlin:kotlin-bom:1.8.22')
 }

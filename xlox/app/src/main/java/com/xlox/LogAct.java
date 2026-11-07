@@ -23,14 +23,14 @@ import android.view.KeyEvent;
 import android.view.View;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputMethodManager;
-import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageButton;
-import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
+
+import com.google.android.material.button.MaterialButton;
 
 import com.xlox.ui.Ui;
 import com.xlox.ui.UpdateGate;
@@ -38,7 +38,9 @@ import com.xlox.utils.LibManager;
 import com.xlox.utils.Net;
 import com.xlox.utils.Prefs;
 
+import java.util.HashSet;
 import java.util.Locale;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.regex.Pattern;
@@ -67,6 +69,13 @@ public class LogAct extends AppCompatActivity {
     private static final Pattern KEY_PATTERN = Pattern.compile("^[A-Z0-9_-]{4,64}$");
     private static final int MAX_KEY_LENGTH = 64;
     private static final int REQUEST_STORAGE = 100;
+    /** Pause on the "Signed in" check before the home screen. */
+    private static final long SUCCESS_HOLD_MS = 400L;
+
+    /** Debug builds only (screenshot QA): simulate a sign-in result. */
+    public static final String EXTRA_QA_RESULT = "qa_result";
+    /** Debug builds only (screenshot QA): show an update-gate state. */
+    public static final String EXTRA_QA_GATE = "qa_gate";
 
     private final ExecutorService executor = Executors.newSingleThreadExecutor(r -> new Thread(r, "anoy-login"));
     private final Handler main = new Handler(Looper.getMainLooper());
@@ -78,8 +87,12 @@ public class LogAct extends AppCompatActivity {
     private ImageButton toggleKey;
     private ImageButton pasteKey;
     private TextView keyError;
-    private Button loginButton;
-    private ProgressBar loginSpinner;
+    private MaterialButton loginButton;
+    private View notice;
+    private TextView noticeText;
+    private View footer;
+    /** Messages that belong to the key itself (shown under the field). */
+    private final Set<String> fieldErrors = new HashSet<>();
 
     private UpdateGate gate;
     private boolean gatePassed;
@@ -89,6 +102,7 @@ public class LogAct extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        Ui.edgeToEdge(this);
         setContentView(R.layout.activity_login);
         prefs = new Prefs(this);
 
@@ -99,7 +113,15 @@ public class LogAct extends AppCompatActivity {
         pasteKey = findViewById(R.id.pasteKey);
         keyError = findViewById(R.id.keyError);
         loginButton = findViewById(R.id.login);
-        loginSpinner = findViewById(R.id.loginSpinner);
+        notice = findViewById(R.id.loginNotice);
+        noticeText = findViewById(R.id.loginNoticeText);
+        footer = findViewById(R.id.loginFooter);
+        for (int id : new int[]{R.string.error_key_empty, R.string.error_key_format, R.string.error_key_unknown,
+                R.string.error_key_blocked, R.string.error_key_expired, R.string.error_key_devices,
+                R.string.clipboard_empty}) {
+            fieldErrors.add(getString(id));
+        }
+        setupInsets();
 
         keyInput.setFilters(new InputFilter[]{new KeyFilter(), new InputFilter.LengthFilter(MAX_KEY_LENGTH)});
         String saved = prefs.getSt(PREF_USER, "");
@@ -142,6 +164,10 @@ public class LogAct extends AppCompatActivity {
             pasteFromClipboard();
         });
         loginButton.setOnClickListener(v -> attemptSignIn());
+        findViewById(R.id.loginNoticeRetry).setOnClickListener(v -> {
+            Ui.tap(v);
+            attemptSignIn();
+        });
         findViewById(R.id.getKey).setOnClickListener(v -> {
             Ui.tap(v);
             Ui.openUrl(this, getString(R.string.telegram_url));
@@ -149,11 +175,75 @@ public class LogAct extends AppCompatActivity {
 
         updateVersionFooter();
         setFormEnabled(false);
-        Ui.reveal(findViewById(R.id.loginContent), 0);
+        Ui.stagger(findViewById(R.id.loginContent), 0);
+        Ui.reveal(findViewById(R.id.loginActions), 120);
 
+        // QA only (debug builds): show one update-gate state without the network.
+        String qaGate = BuildConfig.DEBUG && getIntent() != null ? getIntent().getStringExtra(EXTRA_QA_GATE) : null;
+        if (qaGate != null) {
+            gate = UpdateGate.qaPreview(this, qaGate, this::onGatePassed);
+            return;
+        }
         // Every launch: check the library first. Sign in stays disabled until
         // the gate reports the library is current.
         gate = UpdateGate.start(this, this::onGatePassed);
+    }
+
+    /** Status bar on top; navigation bar or keyboard (whichever is taller) below. */
+    private void setupInsets() {
+        View root = findViewById(R.id.loginRoot);
+        Ui.maxWidth(findViewById(R.id.loginContent), 440);
+        Ui.maxWidth(findViewById(R.id.loginActions), 440);
+        Ui.onInsets(root, (bars, bottom, ime) -> {
+            root.setPadding(bars.left, bars.top, bars.right, bottom);
+            // Keyboard open: keep the pill pinned above it, drop the footer.
+            footer.setVisibility(ime ? View.GONE : View.VISIBLE);
+        });
+    }
+
+    /** QA only (debug builds): plays a sign-in outcome through the real UI states. */
+    private void runQaResult(String result) {
+        if (keyInput.getText().length() == 0) keyInput.setText("ANOY-7D-QA7K2");
+        if ("empty".equals(result)) {
+            keyInput.setText("");
+            attemptSignIn();
+            return;
+        }
+        if ("malformed".equals(result)) {
+            keyInput.setText("AB");
+            attemptSignIn();
+            return;
+        }
+        setSigningIn(true);
+        if ("loading".equals(result)) return;
+        if ("success".equals(result)) {
+            // Freeze on the "Signed in" check (the real one lasts 400 ms).
+            main.postDelayed(() -> Ui.setSuccess(loginButton, getString(R.string.signed_in)), 600L);
+            return;
+        }
+        final boolean ok = "ok".equals(result);
+        final String message;
+        switch (result) {
+            case "wrong":
+                message = getString(R.string.error_key_unknown);
+                break;
+            case "offline":
+                message = getString(R.string.net_offline);
+                break;
+            case "vpn":
+                message = getString(R.string.error_vpn);
+                break;
+            case "server":
+                message = getString(R.string.error_server_busy);
+                break;
+            case "maintenance":
+                message = "Server under maintenance. We'll be back shortly.";
+                break;
+            default:
+                message = null;
+                break;
+        }
+        main.postDelayed(() -> onSignInResult(ok, message), 900L);
     }
 
     private void onGatePassed() {
@@ -164,6 +254,8 @@ public class LogAct extends AppCompatActivity {
         if (keyInput.getText().length() == 0) {
             keyInput.requestFocus();
         }
+        String qa = BuildConfig.DEBUG && getIntent() != null ? getIntent().getStringExtra(EXTRA_QA_RESULT) : null;
+        if (qa != null) runQaResult(qa);
     }
 
     @Override
@@ -184,7 +276,9 @@ public class LogAct extends AppCompatActivity {
     }
 
     private void updateLoginEnabled() {
-        loginButton.setEnabled(gatePassed && !signingIn && keyInput.getText().toString().trim().length() > 0);
+        // While signing in the pill stays blue (loading); taps are ignored by
+        // attemptSignIn and by Ui.setLoading.
+        loginButton.setEnabled(signingIn || (gatePassed && keyInput.getText().toString().trim().length() > 0));
     }
 
     private void setKeyVisible(boolean visible) {
@@ -222,16 +316,35 @@ public class LogAct extends AppCompatActivity {
         keyInput.setSelection(keyInput.getText().length());
     }
 
+    /**
+     * Problems with the key go under the field (red border, alert icon, shake,
+     * REJECT haptic). Network / server / VPN / maintenance messages go to the
+     * notice card with "Try again".
+     */
     private void showError(String message) {
-        keyError.setText(message);
-        keyError.setVisibility(View.VISIBLE);
-        keyField.setActivated(true);
-        syncKeyIcon();
-        Ui.reject(keyField);
+        if (message == null) message = getString(R.string.error_sign_in_generic);
+        if (fieldErrors.contains(message)) {
+            Ui.fade(notice, false);
+            keyError.setText(message);
+            keyError.setVisibility(View.VISIBLE);
+            keyField.setActivated(true);
+            syncKeyIcon();
+            Ui.reject(keyField);
+        } else {
+            keyError.setVisibility(View.GONE);
+            keyField.setActivated(false);
+            syncKeyIcon();
+            noticeText.setText(message);
+            ((android.widget.ImageView) findViewById(R.id.loginNoticeIcon)).setImageResource(
+                    message.equals(getString(R.string.net_offline)) ? R.drawable.ic_wifi_off : R.drawable.ic_triangle_alert);
+            Ui.fade(notice, true);
+            Ui.rejectHaptic(notice);
+        }
     }
 
     private void clearError() {
         if (keyError.getVisibility() != View.GONE) keyError.setVisibility(View.GONE);
+        if (notice.getVisibility() != View.GONE) Ui.fade(notice, false);
         keyField.setActivated(false);
         syncKeyIcon();
     }
@@ -308,11 +421,19 @@ public class LogAct extends AppCompatActivity {
     private void onSignInResult(boolean ok, String message) {
         if (!Ui.alive(this)) return;
         if (ok) {
-            Intent intent = new Intent(this, MAct.class);
-            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-            startActivity(intent);
-            overridePendingTransition(R.anim.fade_in, R.anim.fade_out);
-            finish();
+            // "Signed in" check + CONFIRM haptic, then the home screen.
+            Ui.setSuccess(loginButton, getString(R.string.signed_in));
+            main.postDelayed(() -> {
+                if (!Ui.alive(this)) return;
+                Intent intent = new Intent(this, MAct.class);
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                if (BuildConfig.DEBUG && getIntent() != null && getIntent().hasExtra(EXTRA_QA_RESULT)) {
+                    intent.putExtra(MAct.EXTRA_PREVIEW, true);
+                }
+                startActivity(intent);
+                overridePendingTransition(R.anim.fade_in, R.anim.fade_out);
+                finish();
+            }, SUCCESS_HOLD_MS);
             return;
         }
         setSigningIn(false);
@@ -324,8 +445,7 @@ public class LogAct extends AppCompatActivity {
         keyInput.setEnabled(!busy);
         toggleKey.setEnabled(!busy);
         pasteKey.setEnabled(!busy);
-        Ui.setBusy(loginButton, loginSpinner, busy, getString(busy ? R.string.signing_in : R.string.sign_in));
-        if (!busy) loginButton.setText(R.string.sign_in);
+        Ui.setLoading(loginButton, busy, getString(busy ? R.string.signing_in : R.string.sign_in));
         updateLoginEnabled();
     }
 

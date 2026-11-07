@@ -38,7 +38,8 @@
     <string name="show_key_description">Show licence key</string>
     <string name="hide_key_description">Hide licence key</string>
     <string name="sign_in">Sign in</string>
-    <string name="signing_in">Signing in</string>
+    <string name="signing_in">Signing in…</string>
+    <string name="signed_in">Signed in</string>
     <string name="need_key">Need a licence key?</string>
     <string name="get_key">Get one on Telegram</string>
     <string name="clipboard_empty">Clipboard has no licence key.</string>
@@ -91,8 +92,8 @@
     <string name="game_name">BGMI</string>
     <string name="active">Active</string>
     <string name="expired">Expired</string>
-    <string name="time_left_value">%1$dd %2$02dh %3$02dm %4$02ds</string>
-    <string name="time_left_value_short">%1$02dh %2$02dm %3$02ds</string>
+    <string name="time_left_value">%1$dd %2$02dh %3$02dm</string>
+    <string name="time_left_value_short">%1$dh %2$02dm %3$02ds</string>
     <string name="state_ready">Ready</string>
     <string name="state_not_installed">Not installed</string>
     <string name="state_running">Running</string>
@@ -103,7 +104,7 @@
     <string name="help">Help on Telegram</string>
     <string name="preparing">Preparing game files</string>
     <string name="preparing_progress">Preparing game files · %1$d%%</string>
-    <string name="launching">Launching</string>
+    <string name="launching">Launching…</string>
     <string name="game_stopped">Game stopped.</string>
     <string name="licence_expired_message">Your licence has expired. Sign in with a new key.</string>
     <string name="error_activation">The game container isn\'t ready. Restart the app and try again.</string>
@@ -123,4 +124,31 @@
     <string name="main_obb_not_found">Main game file not found.</string>
     <string name="storage_permission_needed">Allow storage access so game files can be prepared.</string>
     <string name="home_kicker">Welcome back</string>
+    <!-- UI redesign (2.1) -->
+    <string name="action_preparing">Preparing…</string>
+    <string name="action_preparing_progress">Preparing… %1$d%%</string>
+    <string name="expires_on">Expires %1$s</string>
+    <string name="expired_on">Expired %1$s</string>
+    <string name="notice_fallback">Play fairly. Unsafe play can lead to a ban.</string>
+    <string name="notice_description">Notice from the server: %1$s</string>
+    <string name="sign_out_title">Sign out of this device?</string>
+    <string name="sign_out_message">You\'ll need your licence key to sign in again.</string>
+    <string name="cancel">Cancel</string>
+    <string name="loading">Loading</string>
+    <string name="licence_a11y_active">Licence active, %1$s left, expires %2$s</string>
+    <string name="licence_a11y_expired">Licence expired on %1$s</string>
+    <string name="licence_a11y_unknown">Licence status unknown</string>
+    <string name="status_chip_description">%1$s: %2$s</string>
+    <plurals name="a11y_days">
+        <item quantity="one">%d day</item>
+        <item quantity="other">%d days</item>
+    </plurals>
+    <plurals name="a11y_hours">
+        <item quantity="one">%d hour</item>
+        <item quantity="other">%d hours</item>
+    </plurals>
+    <plurals name="a11y_minutes">
+        <item quantity="one">%d minute</item>
+        <item quantity="other">%d minutes</item>
+    </plurals>
 </resources>

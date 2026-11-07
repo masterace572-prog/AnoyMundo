@@ -1,46 +1,44 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!--
-  Anoy palette: black background, white text, iOS system blue for actions.
-  These are the only raw colour values in the app.
--->
+<!-- Design tokens (UI brief). The only file allowed to hold raw hex colours. -->
 <resources>
+    <!-- Surfaces -->
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+    <color name="surface">#FF141416</color>
+    <color name="surface_raised">#FF1C1C1E</color>
+    <color name="hairline">#FF26262A</color>
+    <color name="separator">#FF2C2C2E</color>
+    <color name="track">#FF2C2C2E</color>
+    <color name="skeleton">#FF26262A</color>
 
-    <!-- Text (always drawn straight on the black background) -->
+    <!-- Text -->
     <color name="text_primary">#FFFFFFFF</color>
     <color name="text_secondary">#FF8E8E93</color>
     <color name="text_tertiary">#FF636366</color>
     <color name="text_disabled">#80FFFFFF</color>
 
-    <!-- Actions -->
+    <!-- Accent -->
     <color name="blue">#FF0A84FF</color>
     <color name="blue_pressed">#FF0060DF</color>
     <color name="blue_disabled">#FF1A3350</color>
+    <color name="blue_tint">#240A84FF</color>
 
-    <!-- Status text -->
-    <color name="green">#FF30D158</color>
-    <color name="orange">#FFFF9F0A</color>
-    <color name="red">#FFFF453A</color>
+    <!-- Status: success / warning / danger, tints 12-16 %, chip outlines 40 % -->
+    <color name="success">#FF30D158</color>
+    <color name="success_tint">#2430D158</color>
+    <color name="success_border">#6630D158</color>
+    <color name="warning">#FFFF9F0A</color>
+    <color name="warning_tint">#1FFF9F0A</color>
+    <color name="warning_border">#3DFF9F0A</color>
+    <color name="warning_chip_border">#66FF9F0A</color>
+    <color name="danger">#FFFF453A</color>
+    <color name="danger_tint">#24FF453A</color>
+    <color name="danger_border">#66FF453A</color>
 
-    <!-- Surfaces (cards and fields sit on the black page) -->
-    <color name="surface">#FF141416</color>
-    <color name="surface_raised">#FF1C1C1E</color>
-    <color name="card_border">#FF26262A</color>
-
-    <!-- Icon tiles: a soft tint behind an icon glyph (never behind text) -->
-    <color name="purple">#FFBF5AF2</color>
-    <color name="teal">#FF64D2FF</color>
-    <color name="blue_tint">#290A84FF</color>
-    <color name="green_tint">#2630D158</color>
-    <color name="orange_tint">#26FF9F0A</color>
-    <color name="red_tint">#26FF453A</color>
-    <color name="purple_tint">#29BF5AF2</color>
-    <color name="teal_tint">#2464D2FF</color>
-    <color name="gray_tint">#1FFFFFFF</color>
-
-    <!-- Lines and tracks -->
-    <color name="separator">#FF38383A</color>
-    <color name="track">#FF2C2C2E</color>
-    <color name="ripple_light">#33FFFFFF</color>
+    <!-- Effects -->
+    <color name="ripple_light">#29FFFFFF</color>
+    <color name="ripple_blue">#330A84FF</color>
+    <color name="splash_track">#24FFFFFF</color>
+    <color name="fade_end">#00000000</color>
+    <color name="transparent">#00000000</color>
 </resources>

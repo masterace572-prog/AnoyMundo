@@ -1,37 +1,65 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Layout tokens on a 4 dp grid (UI brief). -->
 <resources>
-    <dimen name="screen_padding">24dp</dimen>
-    <dimen name="row_height">48dp</dimen>
-    <dimen name="button_height">52dp</dimen>
-    <dimen name="button_radius">14dp</dimen>
-    <dimen name="field_height">54dp</dimen>
-    <dimen name="field_radius">12dp</dimen>
-    <dimen name="dialog_radius">20dp</dimen>
-    <dimen name="dialog_width">320dp</dimen>
-    <dimen name="hairline">1dp</dimen>
-    <dimen name="progress_height">4dp</dimen>
-    <dimen name="spinner_size">22dp</dimen>
+    <!-- Spacing -->
+    <dimen name="screen_padding">20dp</dimen>
+    <dimen name="card_padding">16dp</dimen>
+    <dimen name="group_gap">28dp</dimen>
+    <dimen name="section_gap">8dp</dimen>
+    <dimen name="space_4">4dp</dimen>
+    <dimen name="space_8">8dp</dimen>
+    <dimen name="space_12">12dp</dimen>
+    <dimen name="space_16">16dp</dimen>
+    <dimen name="space_24">24dp</dimen>
+    <dimen name="space_32">32dp</dimen>
     <dimen name="max_content_width">440dp</dimen>
-    <dimen name="card_radius">18dp</dimen>
-    <dimen name="card_padding">18dp</dimen>
-    <dimen name="tile_size">32dp</dimen>
+
+    <!-- Radii -->
+    <dimen name="card_radius">20dp</dimen>
+    <dimen name="sheet_radius">28dp</dimen>
+    <dimen name="field_radius">14dp</dimen>
+    <dimen name="button_radius">28dp</dimen>
+    <dimen name="snackbar_radius">14dp</dimen>
     <dimen name="tile_radius">9dp</dimen>
-    <dimen name="tile_padding">7dp</dimen>
-    <dimen name="tile_large">56dp</dimen>
-    <dimen name="tile_large_radius">16dp</dimen>
-    <dimen name="tile_large_padding">14dp</dimen>
+    <dimen name="tile_large_radius">20dp</dimen>
+    <dimen name="chip_radius">14dp</dimen>
+
+    <!-- Sizes -->
+    <dimen name="hairline">1dp</dimen>
+    <dimen name="focus_stroke">1.5dp</dimen>
+    <dimen name="button_height">56dp</dimen>
+    <dimen name="field_height">56dp</dimen>
+    <dimen name="row_height">56dp</dimen>
+    <dimen name="row_inset">56dp</dimen>
     <dimen name="icon_button">44dp</dimen>
     <dimen name="icon_small">18dp</dimen>
-    <dimen name="list_row_height">54dp</dimen>
-    <dimen name="list_inset">60dp</dimen>
-    <dimen name="text_display">34sp</dimen>
+    <dimen name="icon_chip">14dp</dimen>
+    <dimen name="tile_size">32dp</dimen>
+    <dimen name="tile_padding">7dp</dimen>
+    <dimen name="tile_large">56dp</dimen>
+    <dimen name="tile_large_padding">16dp</dimen>
+    <dimen name="key_mark">64dp</dimen>
+    <dimen name="key_mark_padding">19dp</dimen>
+    <dimen name="chip_height">28dp</dimen>
+    <dimen name="progress_thin">4dp</dimen>
+    <dimen name="progress_thick">6dp</dimen>
+    <dimen name="button_progress">18dp</dimen>
+    <dimen name="fade_height">24dp</dimen>
+    <dimen name="gate_anim">72dp</dimen>
+    <dimen name="splash_mark">288dp</dimen>
+    <dimen name="skeleton_height">14dp</dimen>
+    <dimen name="skeleton_radius">7dp</dimen>
+    <dimen name="press_drift">8dp</dimen>
 
-    <dimen name="text_large_title">34sp</dimen>
+    <!-- Type scale -->
+    <dimen name="text_large_title">32sp</dimen>
     <dimen name="text_title">22sp</dimen>
     <dimen name="text_headline">17sp</dimen>
-    <dimen name="text_body">17sp</dimen>
+    <dimen name="text_body">16sp</dimen>
     <dimen name="text_callout">15sp</dimen>
-    <dimen name="text_footnote">13sp</dimen>
-    <dimen name="text_caption">12sp</dimen>
-    <dimen name="text_splash">44sp</dimen>
+    <dimen name="text_caption">13sp</dimen>
+    <dimen name="text_hero">40sp</dimen>
+    <dimen name="text_hero_min">24sp</dimen>
+    <dimen name="text_splash">40sp</dimen>
+    <dimen name="text_splash_caption">12sp</dimen>
 </resources>

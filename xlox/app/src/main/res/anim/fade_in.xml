@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
-<alpha xmlns:android="http://schemas.android.com/apk/res/android"
-    android:duration="220"
-    android:fromAlpha="0"
-    android:interpolator="@android:interpolator/decelerate_quad"
-    android:toAlpha="1" />
+<!-- Screen enter: 320 ms crossfade + 8 dp upward drift, FastOutSlowIn. -->
+<set xmlns:android="http://schemas.android.com/apk/res/android"
+    android:duration="320"
+    android:interpolator="@android:interpolator/fast_out_slow_in">
+    <alpha android:fromAlpha="0" android:toAlpha="1" />
+    <translate android:fromYDelta="8dp" android:toYDelta="0" />
+</set>
