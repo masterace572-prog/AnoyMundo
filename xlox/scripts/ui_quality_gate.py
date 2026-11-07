@@ -173,6 +173,24 @@ for f in xml_files:
             bad_paths.append(f"{rel(f)}: {d[:60]}")
 gate("Vector drawables have valid path data", bad_paths)
 
+# ----------------------------------- 2c. layout attributes that crash at inflation
+from xml.dom import minidom as _md
+crashy = []
+for f in xml_files:
+    if "/layout" not in str(f):
+        continue
+    def walk(node):
+        for c in node.childNodes:
+            if c.nodeType != c.ELEMENT_NODE:
+                continue
+            if c.getAttribute("android:addStatesFromChildren") == "true":
+                for k in c.getElementsByTagName("*"):
+                    if k.getAttribute("android:duplicateParentState") == "true":
+                        crashy.append(f"{rel(f)}: addStatesFromChildren parent with duplicateParentState child")
+            walk(c)
+    walk(_md.parse(str(f)))
+gate("No layout attribute combinations that crash on inflation", crashy)
+
 # ------------------------------------------------------------ 3. no logo
 logo = []
 for p in MAIN.rglob("*"):

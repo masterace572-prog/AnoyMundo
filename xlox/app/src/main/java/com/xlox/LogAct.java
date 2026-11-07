@@ -74,6 +74,7 @@ public class LogAct extends AppCompatActivity {
     private Prefs prefs;
     private EditText keyInput;
     private View keyField;
+    private View keyIcon;
     private ImageButton toggleKey;
     private ImageButton pasteKey;
     private TextView keyError;
@@ -93,6 +94,7 @@ public class LogAct extends AppCompatActivity {
 
         keyInput = findViewById(R.id.userkey);
         keyField = findViewById(R.id.keyField);
+        keyIcon = findViewById(R.id.keyIcon);
         toggleKey = findViewById(R.id.toggleKey);
         pasteKey = findViewById(R.id.pasteKey);
         keyError = findViewById(R.id.keyError);
@@ -120,6 +122,7 @@ public class LogAct extends AppCompatActivity {
                 updateLoginEnabled();
             }
         });
+        keyInput.setOnFocusChangeListener((v, hasFocus) -> syncKeyIcon());
         keyInput.setOnEditorActionListener((v, actionId, event) -> {
             boolean enter = event != null && event.getKeyCode() == KeyEvent.KEYCODE_ENTER
                     && event.getAction() == KeyEvent.ACTION_DOWN;
@@ -223,12 +226,22 @@ public class LogAct extends AppCompatActivity {
         keyError.setText(message);
         keyError.setVisibility(View.VISIBLE);
         keyField.setActivated(true);
+        syncKeyIcon();
         Ui.reject(keyField);
     }
 
     private void clearError() {
         if (keyError.getVisibility() != View.GONE) keyError.setVisibility(View.GONE);
         keyField.setActivated(false);
+        syncKeyIcon();
+    }
+
+    /** The leading key icon follows the field: blue while focused, red on error. */
+    private void syncKeyIcon() {
+        if (keyIcon == null) return;
+        keyIcon.setActivated(keyField.isActivated());
+        keyIcon.setSelected(keyInput.hasFocus());
+        keyIcon.refreshDrawableState();
     }
 
     private void updateVersionFooter() {
