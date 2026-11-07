@@ -49,6 +49,12 @@
         <item name="fontFamily">@font/inter_regular</item>
     </style>
 
+    <!-- Scroll containers: never tint the black page grey when focused. -->
+    <style name="Scroll" parent="">
+        <item name="android:overScrollMode">never</item>
+        <item name="android:scrollbars">none</item>
+    </style>
+
     <!-- ============================== text ============================== -->
     <!-- No text style sets a background: text always sits on the black page. -->
     <style name="Text">

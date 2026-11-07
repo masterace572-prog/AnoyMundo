@@ -50,7 +50,11 @@ public class SplashActivity extends AppCompatActivity {
             openLogin();
             return;
         }
-        handler.postDelayed(next, SPLASH_MS);
+        // Count the splash time from the first drawn frame, not from onCreate:
+        // on a slow cold start the splash would otherwise flash by unseen.
+        getWindow().getDecorView().post(() -> handler.postDelayed(next, SPLASH_MS));
+        // Safety net in case the frame callback never runs.
+        handler.postDelayed(next, SPLASH_MS + 2500L);
     }
 
     private void openLogin() {
@@ -63,7 +67,7 @@ public class SplashActivity extends AppCompatActivity {
 
     @Override
     protected void onDestroy() {
-        handler.removeCallbacks(next);
+        handler.removeCallbacksAndMessages(null);
         super.onDestroy();
     }
 }

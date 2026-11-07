@@ -28,7 +28,6 @@ import android.widget.EditText;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 
-import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 
@@ -67,7 +66,6 @@ public class LogAct extends AppCompatActivity {
     private static final Pattern KEY_PATTERN = Pattern.compile("^[A-Z0-9_-]{4,64}$");
     private static final int MAX_KEY_LENGTH = 64;
     private static final int REQUEST_STORAGE = 100;
-    private static final int REQUEST_UNKNOWN_SOURCES = 200;
 
     private final ExecutorService executor = Executors.newSingleThreadExecutor(r -> new Thread(r, "anoy-login"));
     private final Handler main = new Handler(Looper.getMainLooper());
@@ -392,11 +390,9 @@ public class LogAct extends AppCompatActivity {
     private void requestPermissionsIfNeeded() {
         // A missing OEM settings page must never block sign in.
         try {
-            if (!hasStorageAccess()) {
-                requestStorageAccess();
-            } else if (!canInstallPackages()) {
-                requestInstallPackages();
-            }
+            // Storage access is needed to copy the OBB. Nothing here installs
+            // packages, so "Install unknown apps" is never requested.
+            if (!hasStorageAccess()) requestStorageAccess();
         } catch (RuntimeException e) {
             Log.w(TAG, "Special-access settings unavailable", e);
         }
@@ -430,44 +426,6 @@ public class LogAct extends AppCompatActivity {
             ActivityCompat.requestPermissions(this,
                     new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE,
                             Manifest.permission.READ_EXTERNAL_STORAGE}, REQUEST_STORAGE);
-        }
-    }
-
-    private boolean canInstallPackages() {
-        return Build.VERSION.SDK_INT < Build.VERSION_CODES.O || getPackageManager().canRequestPackageInstalls();
-    }
-
-    private void requestInstallPackages() {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return;
-        try {
-            startActivityForResult(new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
-                    Uri.parse("package:" + getPackageName())), REQUEST_UNKNOWN_SOURCES);
-        } catch (RuntimeException e) {
-            Log.w(TAG, "Install-unknown-apps settings unavailable", e);
-        }
-    }
-
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        if (requestCode == REQUEST_STORAGE && hasStorageAccess() && !canInstallPackages()) {
-            try {
-                requestInstallPackages();
-            } catch (RuntimeException e) {
-                Log.w(TAG, "Install-unknown-apps settings unavailable", e);
-            }
-        }
-    }
-
-    @Override
-    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        if (requestCode == REQUEST_STORAGE && !canInstallPackages()) {
-            try {
-                requestInstallPackages();
-            } catch (RuntimeException e) {
-                Log.w(TAG, "Install-unknown-apps settings unavailable", e);
-            }
         }
     }
 }

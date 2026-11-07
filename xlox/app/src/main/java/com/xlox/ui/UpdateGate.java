@@ -57,6 +57,7 @@ public final class UpdateGate {
 
     private AppCompatDialog dialog;
     private ProgressBar spinner;
+    private volatile long lastUnknownPost;
     private TextView title;
     private TextView message;
     private TextView detail;
@@ -285,20 +286,26 @@ public final class UpdateGate {
             return;
         }
         render(R.string.update_downloading_title, activity.getString(R.string.update_downloading_message), false, null);
-        progress.setIndeterminate(true);
-        progress.setVisibility(View.VISIBLE);
-        progressText.setVisibility(View.VISIBLE);
-        progressText.setText(activity.getString(R.string.update_progress_unknown, Ui.bytes(0)));
+        final long expected = release.size;
         lastPercent = -2;
+        showProgress(0L, expected, expected > 0 ? 0 : -1);
         keepScreenOn(true);
 
         EXECUTOR.execute(() -> {
             try {
                 Downtwo.download(activity, release, new Downtwo.Progress() {
                     @Override
-                    public void onProgress(long done, long total) {
+                    public void onProgress(long done, long reported) {
+                        // No Content-Length: fall back to the size from the manifest.
+                        final long total = reported > 0 ? reported : (expected >= done ? expected : -1L);
                         int percent = total > 0 ? (int) Math.min(100L, done * 100L / total) : -1;
                         if (percent == lastPercent && percent >= 0) return;
+                        if (percent < 0) {
+                            // Unknown size: refresh the byte counter at most ~6 times a second.
+                            long now = SystemClock.uptimeMillis();
+                            if (now - lastUnknownPost < 160L) return;
+                            lastUnknownPost = now;
+                        }
                         lastPercent = percent;
                         post(() -> showProgress(done, total, percent));
                     }
@@ -323,15 +330,18 @@ public final class UpdateGate {
     }
 
     private void showProgress(long done, long total, int percent) {
-        progress.setVisibility(View.VISIBLE);
         progressText.setVisibility(View.VISIBLE);
         if (percent >= 0) {
+            spinner.setVisibility(View.GONE);
+            progress.setVisibility(View.VISIBLE);
             progress.setIndeterminate(false);
             progress.setProgress(percent);
             progressText.setText(activity.getString(R.string.update_progress, percent,
                     Ui.bytes(done), Ui.bytes(total)));
         } else {
-            progress.setIndeterminate(true);
+            // Size unknown: a spinner, never a bar that looks complete.
+            progress.setVisibility(View.GONE);
+            spinner.setVisibility(View.VISIBLE);
             progressText.setText(activity.getString(R.string.update_progress_unknown, Ui.bytes(done)));
         }
     }

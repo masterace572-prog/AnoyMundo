@@ -132,9 +132,8 @@ install_apk "$APK"
 grant
 
 # 1. Splash (fresh start through the launcher activity).
-adb shell am start -n com.xlox/.SplashActivity >> "$LOG" 2>&1 || fatal "cannot start SplashActivity"
-sleep 0.5
-shot splash
+adb shell am start -W -n com.xlox/.SplashActivity >> "$LOG" 2>&1 || fatal "cannot start SplashActivity"
+shot splash   # shot() itself waits ~0.5 s; the splash stays 1.1 s after its first frame
 
 # 2. Update gate: a fresh install has no library, so the live panel's
 #    release must be installed before sign in is possible.
