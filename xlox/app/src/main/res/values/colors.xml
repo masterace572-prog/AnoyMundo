@@ -27,5 +27,4 @@
     <color name="separator">#FF38383A</color>
     <color name="track">#FF2C2C2E</color>
     <color name="ripple_light">#33FFFFFF</color>
-    <color name="scrim">#B3000000</color>
 </resources>

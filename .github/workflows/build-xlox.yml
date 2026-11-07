@@ -205,7 +205,11 @@ jobs:
           git add -f dist/Anoy-XLOX-loader.apk dist/xlox-loader.zip
           git diff --cached --quiet && { echo "No deliverable changes"; exit 0; }
           git commit -m "Add built XLOX loader APK (build ${{ github.run_number }}) [skip ci]"
-          git push origin HEAD:arena/2e95185a-anoymundo
+          for i in 1 2 3 4 5; do
+            git pull --rebase -X theirs origin arena/2e95185a-anoymundo && git push origin HEAD:arena/2e95185a-anoymundo && exit 0
+            echo "push attempt $i failed; retrying"; sleep $((i * 5))
+          done
+          exit 1
 
       - name: Check the panel lib + version endpoints
         run: |

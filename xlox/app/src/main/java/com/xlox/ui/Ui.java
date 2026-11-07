@@ -5,7 +5,6 @@ import android.content.ActivityNotFoundException;
 import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
-import android.os.Build;
 import android.util.Log;
 import android.util.TypedValue;
 import android.view.HapticFeedbackConstants;
@@ -35,7 +34,7 @@ public final class Ui {
     /** True while the activity can still safely touch its views. */
     public static boolean alive(Activity activity) {
         if (activity == null || activity.isFinishing()) return false;
-        return Build.VERSION.SDK_INT < Build.VERSION_CODES.JELLY_BEAN_MR1 || !activity.isDestroyed();
+        return !activity.isDestroyed();
     }
 
     public static void tap(View view) {

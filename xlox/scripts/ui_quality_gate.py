@@ -235,9 +235,13 @@ if "@color/blue" not in btn or "radius" not in btn:
     theme.append("bg_button_primary is not a rounded blue shape")
 for f in layouts:
     src = f.read_text()
-    root_bg = re.search(r'<[\w.]+\s[^>]*?android:background="([^"]+)"', src)
-    if root_bg and root_bg.group(1) not in ("@color/black", "@drawable/bg_dialog"):
-        theme.append(f"{rel(f)}: root background {root_bg.group(1)}")
+    # Root element only. No background at all is fine: the theme window is black
+    # (checked above), and not repainting it avoids overdraw.
+    from xml.dom import minidom
+    root = minidom.parseString(src.encode()).documentElement
+    root_bg = root.getAttribute("android:background")
+    if root_bg and root_bg not in ("@color/black", "@drawable/bg_dialog"):
+        theme.append(f"{rel(f)}: root background {root_bg}")
 gate("Black background, white text, rounded blue buttons", theme)
 
 # -------------------------------------------- 7. layouts use resources only
