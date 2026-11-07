@@ -4,7 +4,7 @@
 //   npm i --no-save playwright && npx playwright install chromium
 //   node scripts/ui-screenshots.mjs
 import { spawn } from 'node:child_process';
-import { mkdirSync } from 'node:fs';
+import { mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -51,12 +51,13 @@ const pages = [
 ];
 
 let failures = 0;
+const report = [];
 async function shot(page, file, opts = {}) {
   try {
     await page.waitForTimeout(350);
     await page.screenshot({ path: path.join(out, `${file}.png`), fullPage: opts.fullPage ?? true });
     console.log('saved', file);
-  } catch (e) { failures += 1; console.error('FAILED', file, e.message); }
+  } catch (e) { failures += 1; report.push(`FAILED ${file}: ${e.message}`); console.error('FAILED', file, e.message); }
 }
 
 try {
@@ -70,7 +71,10 @@ try {
     const page = await ctx.newPage();
     const errors = [];
     page.on('pageerror', (e) => errors.push(e.message));
-    page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
+    // Expected 4xx pages (404, wrong password) log "Failed to load resource"; ignore those.
+    page.on('console', (m) => {
+      if (m.type() === 'error' && !/Failed to load resource/.test(m.text())) errors.push(`${page.url()} ${m.text()}`);
+    });
 
     await page.goto(`${BASE}/login`);
     await shot(page, `${size.name}_login`);
@@ -125,12 +129,17 @@ try {
       await shot(page, `${size.name}_nav_open`, { fullPage: false });
     }
 
-    if (errors.length) { console.error(`[${size.name}] browser errors:\n  ${errors.join('\n  ')}`); failures += errors.length; }
+    if (errors.length) {
+      console.error(`[${size.name}] browser errors:\n  ${errors.join('\n  ')}`);
+      errors.forEach((e) => report.push(`[${size.name}] ${e}`));
+      failures += errors.length;
+    }
     await ctx.close();
   }
   await browser.close();
 } finally {
   stop();
 }
+writeFileSync(path.join(out, 'report.txt'), report.length ? `${report.join('\n')}\n` : 'ok\n');
 console.log(failures ? `${failures} problem(s)` : 'all screenshots saved');
 process.exit(failures ? 1 : 0);

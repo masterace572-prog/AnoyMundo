@@ -44,7 +44,7 @@ jobs:
         if: always()
         with:
           name: web-ui-screenshots
-          path: docs/ui-redesign/web/*.png
+          path: docs/ui-redesign/web/
           if-no-files-found: warn
           retention-days: 30
       - name: Commit screenshots
