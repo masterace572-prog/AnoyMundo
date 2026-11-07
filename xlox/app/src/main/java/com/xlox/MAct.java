@@ -2,6 +2,7 @@ package com.xlox;
 
 import android.content.ActivityNotFoundException;
 import android.content.Intent;
+import android.content.res.ColorStateList;
 import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Build;
@@ -12,11 +13,13 @@ import android.os.SystemClock;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
+import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
+import androidx.core.widget.ImageViewCompat;
 
 import com.xlox.ui.Ui;
 import com.xlox.ui.UpdateGate;
@@ -64,6 +67,8 @@ public class MAct extends AppCompatActivity {
     private final Handler main = new Handler(Looper.getMainLooper());
 
     private TextView panelNote;
+    private ImageView statusTile;
+    private int statusLook = -1;
     private TextView statusValue;
     private TextView expiresValue;
     private TextView timeLeftValue;
@@ -110,6 +115,7 @@ public class MAct extends AppCompatActivity {
 
         setContentView(R.layout.activity_main);
         panelNote = findViewById(R.id.panelNote);
+        statusTile = findViewById(R.id.statusTile);
         statusValue = findViewById(R.id.statusValue);
         expiresValue = findViewById(R.id.expiresValue);
         timeLeftValue = findViewById(R.id.timeLeftValue);
@@ -232,6 +238,7 @@ public class MAct extends AppCompatActivity {
         if (expiryMillis <= 0) {
             timeLeftValue.setText(R.string.dash);
             statusValue.setText(R.string.dash);
+            setStatusLook(LOOK_UNKNOWN);
             return;
         }
         long remaining = expiryMillis - System.currentTimeMillis();
@@ -244,10 +251,12 @@ public class MAct extends AppCompatActivity {
             statusValue.setText(R.string.expired);
             statusValue.setTextColor(ContextCompat.getColor(this, R.color.red));
             timeLeftValue.setText(R.string.dash);
+            setStatusLook(LOOK_EXPIRED);
             return;
         }
         statusValue.setText(R.string.active);
         statusValue.setTextColor(ContextCompat.getColor(this, R.color.green));
+        setStatusLook(LOOK_ACTIVE);
         long total = remaining / 1000L;
         long days = total / 86400L;
         long hours = (total % 86400L) / 3600L;
@@ -256,6 +265,22 @@ public class MAct extends AppCompatActivity {
         timeLeftValue.setText(days > 0
                 ? getString(R.string.time_left_value, days, hours, minutes, seconds)
                 : getString(R.string.time_left_value_short, hours, minutes, seconds));
+    }
+
+    private static final int LOOK_UNKNOWN = 0;
+    private static final int LOOK_ACTIVE = 1;
+    private static final int LOOK_EXPIRED = 2;
+
+    /** Hero card icon tile: green shield when active, red alert when expired. */
+    private void setStatusLook(int look) {
+        if (statusTile == null || look == statusLook) return;
+        statusLook = look;
+        int colour = look == LOOK_ACTIVE ? R.color.green : look == LOOK_EXPIRED ? R.color.red : R.color.text_secondary;
+        statusTile.setImageResource(look == LOOK_EXPIRED ? R.drawable.ic_shield_alert : R.drawable.ic_shield_check);
+        statusTile.setBackgroundResource(look == LOOK_ACTIVE ? R.drawable.bg_tile_green
+                : look == LOOK_EXPIRED ? R.drawable.bg_tile_red : R.drawable.bg_tile_gray);
+        ImageViewCompat.setImageTintList(statusTile,
+                ColorStateList.valueOf(ContextCompat.getColor(this, colour)));
     }
 
     /** The panel sends ISO-8601 UTC ("2026-11-14T08:35:00.000Z"). */

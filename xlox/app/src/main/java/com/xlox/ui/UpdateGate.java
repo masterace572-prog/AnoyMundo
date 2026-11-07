@@ -13,6 +13,7 @@ import android.view.ViewGroup;
 import android.view.Window;
 import android.view.WindowManager;
 import android.widget.Button;
+import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 
@@ -57,6 +58,7 @@ public final class UpdateGate {
 
     private AppCompatDialog dialog;
     private ProgressBar spinner;
+    private ImageView icon;
     private volatile long lastUnknownPost;
     private TextView title;
     private TextView message;
@@ -127,6 +129,7 @@ public final class UpdateGate {
             dialog = new AppCompatDialog(activity, R.style.AnoyDialog);
             View root = LayoutInflater.from(dialog.getContext()).inflate(R.layout.dialog_update, null, false);
             spinner = root.findViewById(R.id.gateSpinner);
+            icon = root.findViewById(R.id.gateIcon);
             title = root.findViewById(R.id.gateTitle);
             message = root.findViewById(R.id.gateMessage);
             detail = root.findViewById(R.id.gateDetail);
@@ -196,6 +199,7 @@ public final class UpdateGate {
         title.setText(titleRes);
         message.setText(body);
         spinner.setVisibility(busy ? View.VISIBLE : View.GONE);
+        icon.setVisibility(View.GONE);
         detail.setVisibility(View.GONE);
         progress.setVisibility(View.GONE);
         progressText.setVisibility(View.GONE);
@@ -207,6 +211,13 @@ public final class UpdateGate {
             action.setEnabled(true);
             action.setVisibility(View.VISIBLE);
         }
+    }
+
+    /** Large icon tile above the title for non-busy states. */
+    private void showIcon(int drawable, int tile) {
+        icon.setImageResource(drawable);
+        icon.setBackgroundResource(tile);
+        icon.setVisibility(View.VISIBLE);
     }
 
     private void runCheck() {
@@ -247,6 +258,7 @@ public final class UpdateGate {
                 status.release.version, status.localVersion)
                 : activity.getString(R.string.update_required_message_missing, status.release.version);
         render(R.string.update_required_title, body, false, activity.getString(R.string.update_now));
+        showIcon(R.drawable.ic_download_blue, R.drawable.bg_tile_blue_large);
         if (status.release.size > 0) {
             detail.setText(activity.getString(R.string.update_size, Ui.bytes(status.release.size)));
             detail.setVisibility(View.VISIBLE);
@@ -259,6 +271,7 @@ public final class UpdateGate {
 
     private void showCheckFailed(String reason) {
         render(R.string.update_check_failed_title, reason, false, activity.getString(R.string.try_again));
+        showIcon(R.drawable.ic_wifi_off_orange, R.drawable.bg_tile_orange_large);
         action.setOnClickListener(v -> {
             Ui.tap(v);
             runCheck();
@@ -268,6 +281,7 @@ public final class UpdateGate {
     private void showDownloadFailed(String reason) {
         keepScreenOn(false);
         render(R.string.update_failed_title, reason, false, activity.getString(R.string.update_now));
+        showIcon(R.drawable.ic_alert_red, R.drawable.bg_tile_red_large);
         action.setOnClickListener(v -> {
             Ui.tap(v);
             startDownload();
@@ -276,6 +290,7 @@ public final class UpdateGate {
 
     private void showDone(String version) {
         render(R.string.update_done_title, activity.getString(R.string.update_done_message, version), false, null);
+        showIcon(R.drawable.ic_circle_check_green, R.drawable.bg_tile_green_large);
         main.postDelayed(this::finish, DONE_VISIBLE_MS);
     }
 

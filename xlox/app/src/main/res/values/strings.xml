@@ -34,9 +34,7 @@
     <string name="login_subtitle">Enter the licence key you received to continue.</string>
     <string name="licence_key">Licence key</string>
     <string name="licence_key_hint">ANOY-7D-XXXXX</string>
-    <string name="show">Show</string>
-    <string name="hide">Hide</string>
-    <string name="paste">Paste</string>
+    <string name="paste_key_description">Paste licence key</string>
     <string name="show_key_description">Show licence key</string>
     <string name="hide_key_description">Hide licence key</string>
     <string name="sign_in">Sign in</string>
@@ -124,4 +122,5 @@
     <string name="obb_folder_not_found">Game files folder not found.</string>
     <string name="main_obb_not_found">Main game file not found.</string>
     <string name="storage_permission_needed">Allow storage access so game files can be prepared.</string>
+    <string name="home_kicker">Welcome back</string>
 </resources>

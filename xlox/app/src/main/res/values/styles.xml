@@ -158,4 +158,69 @@
         <item name="android:indeterminateTint">@color/white</item>
         <item name="android:indeterminateTintMode">src_in</item>
     </style>
+
+    <!-- =========================== components =========================== -->
+    <!-- Icon-only button (eye, paste, sign out). 44dp touch target. -->
+    <style name="IconButton">
+        <item name="android:layout_width">@dimen/icon_button</item>
+        <item name="android:layout_height">@dimen/icon_button</item>
+        <item name="android:background">@drawable/bg_icon_button</item>
+        <item name="android:scaleType">center</item>
+        <item name="tint">@color/icon_button_tint</item>
+    </style>
+
+    <style name="IconButton.Filled">
+        <item name="android:background">@drawable/bg_icon_button_filled</item>
+    </style>
+
+    <!-- Small rounded tile with a tinted glyph, leading a list row. -->
+    <style name="Tile">
+        <item name="android:layout_width">@dimen/tile_size</item>
+        <item name="android:layout_height">@dimen/tile_size</item>
+        <item name="android:padding">@dimen/tile_padding</item>
+        <item name="android:scaleType">fitCenter</item>
+        <item name="android:importantForAccessibility">no</item>
+    </style>
+
+    <style name="Tile.Large">
+        <item name="android:layout_width">@dimen/tile_large</item>
+        <item name="android:layout_height">@dimen/tile_large</item>
+        <item name="android:padding">@dimen/tile_large_padding</item>
+    </style>
+
+    <!-- Inset grouped list row inside a card. -->
+    <style name="ListRow">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:minHeight">@dimen/list_row_height</item>
+        <item name="android:gravity">center_vertical</item>
+        <item name="android:orientation">horizontal</item>
+        <item name="android:paddingStart">14dp</item>
+        <item name="android:paddingEnd">16dp</item>
+        <item name="android:paddingTop">8dp</item>
+        <item name="android:paddingBottom">8dp</item>
+    </style>
+
+    <style name="ListDivider">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">@dimen/hairline</item>
+        <item name="android:layout_marginStart">@dimen/list_inset</item>
+        <item name="android:background">@color/card_border</item>
+    </style>
+
+    <style name="Text.Display">
+        <item name="android:textSize">@dimen/text_display</item>
+        <item name="android:fontFamily">@font/inter_semibold</item>
+        <item name="android:letterSpacing">-0.02</item>
+        <item name="android:fontFeatureSettings">tnum</item>
+        <item name="android:maxLines">1</item>
+        <item name="android:ellipsize">end</item>
+    </style>
+
+    <style name="Text.Caption">
+        <item name="android:textSize">@dimen/text_caption</item>
+        <item name="android:textColor">@color/text_secondary</item>
+        <item name="android:fontFamily">@font/inter_medium</item>
+        <item name="android:letterSpacing">0.02</item>
+    </style>
 </resources>

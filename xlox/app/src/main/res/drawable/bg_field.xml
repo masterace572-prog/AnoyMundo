@@ -1,24 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Outlined field: hairline border, transparent fill, blue when focused. -->
+<!-- Filled field: dark surface, hairline edge, blue when focused, red on error. -->
 <selector xmlns:android="http://schemas.android.com/apk/res/android">
     <item android:state_activated="true">
         <shape android:shape="rectangle">
-            <solid android:color="@android:color/transparent" />
+            <solid android:color="@color/surface" />
             <stroke android:width="1.5dp" android:color="@color/red" />
             <corners android:radius="@dimen/field_radius" />
         </shape>
     </item>
     <item android:state_focused="true">
         <shape android:shape="rectangle">
-            <solid android:color="@android:color/transparent" />
+            <solid android:color="@color/surface" />
             <stroke android:width="1.5dp" android:color="@color/blue" />
             <corners android:radius="@dimen/field_radius" />
         </shape>
     </item>
     <item>
         <shape android:shape="rectangle">
-            <solid android:color="@android:color/transparent" />
-            <stroke android:width="@dimen/hairline" android:color="@color/separator" />
+            <solid android:color="@color/surface" />
+            <stroke android:width="@dimen/hairline" android:color="@color/card_border" />
             <corners android:radius="@dimen/field_radius" />
         </shape>
     </item>

@@ -12,6 +12,19 @@
     <dimen name="progress_height">4dp</dimen>
     <dimen name="spinner_size">22dp</dimen>
     <dimen name="max_content_width">440dp</dimen>
+    <dimen name="card_radius">18dp</dimen>
+    <dimen name="card_padding">18dp</dimen>
+    <dimen name="tile_size">32dp</dimen>
+    <dimen name="tile_radius">9dp</dimen>
+    <dimen name="tile_padding">7dp</dimen>
+    <dimen name="tile_large">56dp</dimen>
+    <dimen name="tile_large_radius">16dp</dimen>
+    <dimen name="tile_large_padding">14dp</dimen>
+    <dimen name="icon_button">44dp</dimen>
+    <dimen name="icon_small">18dp</dimen>
+    <dimen name="list_row_height">54dp</dimen>
+    <dimen name="list_inset">60dp</dimen>
+    <dimen name="text_display">34sp</dimen>
 
     <dimen name="text_large_title">34sp</dimen>
     <dimen name="text_title">22sp</dimen>

@@ -176,6 +176,9 @@ sleep 0.8
 tap_id login || true
 sleep 1.2
 shot login_error
+tap_id toggleKey || true   # eye icon button: key shown, icon turns blue
+sleep 0.8
+shot login_key_visible
 
 # 4. Home (debug-only preview with sample data, no native session needed).
 open_home_preview

@@ -107,6 +107,20 @@ Builds run on GitHub Actions (`.github/workflows/build-xlox.yml`), which
 publishes a signed APK as a GitHub release; `android-ui-qa.yml` runs lint, the
 UI gates and emulator screenshots (`docs/ui-redesign/screenshots`).
 
+### Icons
+
+Both the panel and the app use [Lucide](https://lucide.dev) icons (ISC licence,
+`web/public/assets/LUCIDE-LICENSE.txt`). They are generated once and committed,
+so neither build needs extra tooling:
+
+- Panel: `node web/scripts/build-icons.mjs` → `web/src/icons.generated.mjs`
+  (runs in `prebuild`; use `{{icon "name"}}` in views).
+- App: `node xlox/scripts/lucide_vectors.mjs` → `xlox/app/src/main/res/drawable/ic_*.xml`
+  (VectorDrawables; needs `npm ci` in `web/` first).
+
+`web-ui-qa.yml` captures desktop and phone screenshots of every panel page
+(`docs/ui-redesign/web`).
+
 ## Repository layout
 
 ```

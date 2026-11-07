@@ -23,6 +23,22 @@
     <color name="orange">#FFFF9F0A</color>
     <color name="red">#FFFF453A</color>
 
+    <!-- Surfaces (cards and fields sit on the black page) -->
+    <color name="surface">#FF141416</color>
+    <color name="surface_raised">#FF1C1C1E</color>
+    <color name="card_border">#FF26262A</color>
+
+    <!-- Icon tiles: a soft tint behind an icon glyph (never behind text) -->
+    <color name="purple">#FFBF5AF2</color>
+    <color name="teal">#FF64D2FF</color>
+    <color name="blue_tint">#290A84FF</color>
+    <color name="green_tint">#2630D158</color>
+    <color name="orange_tint">#26FF9F0A</color>
+    <color name="red_tint">#26FF453A</color>
+    <color name="purple_tint">#29BF5AF2</color>
+    <color name="teal_tint">#2464D2FF</color>
+    <color name="gray_tint">#1FFFFFFF</color>
+
     <!-- Lines and tracks -->
     <color name="separator">#FF38383A</color>
     <color name="track">#FF2C2C2E</color>

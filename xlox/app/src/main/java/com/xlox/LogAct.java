@@ -25,6 +25,7 @@ import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ImageButton;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 
@@ -73,8 +74,8 @@ public class LogAct extends AppCompatActivity {
     private Prefs prefs;
     private EditText keyInput;
     private View keyField;
-    private Button toggleKey;
-    private Button pasteKey;
+    private ImageButton toggleKey;
+    private ImageButton pasteKey;
     private TextView keyError;
     private Button loginButton;
     private ProgressBar loginSpinner;
@@ -192,7 +193,8 @@ public class LogAct extends AppCompatActivity {
         // setInputType resets the typeface on some versions; keep the mono face.
         keyInput.setTypeface(androidx.core.content.res.ResourcesCompat.getFont(this, R.font.jetbrains_mono_regular));
         keyInput.setSelection(Math.max(0, Math.min(selection, keyInput.getText().length())));
-        toggleKey.setText(visible ? R.string.hide : R.string.show);
+        toggleKey.setImageResource(visible ? R.drawable.ic_eye_off : R.drawable.ic_eye);
+        toggleKey.setSelected(visible);
         toggleKey.setContentDescription(getString(visible ? R.string.hide_key_description
                 : R.string.show_key_description));
     }
