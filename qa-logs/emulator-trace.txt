@@ -1,4 +1,4 @@
-=== emulator QA started Sat Nov  7 17:05:29 UTC 2026 ===
+=== emulator QA started Sat Nov  7 20:03:44 UTC 2026 ===
 direct install failed (Performing Streamed Install
 adb: failed to install app/build/outputs/apk/debug/app-debug.apk: Failure [INSTALL_FAILED_NO_MATCHING_ABIS: INSTALL_FAILED_NO_MATCHING_ABIS: Failed to extract native libraries, res=-113]); stripping native libs
 ABI-neutral install ok: app/build/outputs/apk/debug/app-debug.apk
@@ -6,79 +6,81 @@ Starting: Intent { cmp=com.xlox/.SplashActivity (has extras) }
 Status: ok
 LaunchState: COLD
 Activity: com.xlox/.SplashActivity
-TotalTime: 2934
-WaitTime: 2968
+TotalTime: 2138
+WaitTime: 2193
 Complete
-focus for splash:   mCurrentFocus=Window{51bdc86 u0 com.xlox/com.xlox.SplashActivity}
-captured splash.png (44335 bytes)
+focus for splash:   mCurrentFocus=Window{849660a u0 com.xlox/com.xlox.SplashActivity}
+captured splash.png (44721 bytes)
 Starting: Intent { cmp=com.xlox/.SplashActivity }
 Status: ok
 LaunchState: COLD
 Activity: com.xlox/.SplashActivity
-TotalTime: 3271
-WaitTime: 3313
+TotalTime: 1387
+WaitTime: 1410
 Complete
-focus for update_required:   mCurrentFocus=Window{a4978d1 u0 com.xlox/com.xlox.LogAct}
-captured update_required.png (93750 bytes)
+focus for update_required:   mCurrentFocus=Window{5b7b132 u0 com.xlox/com.xlox.LogAct}
+captured update_required.png (94232 bytes)
 gate texts: text="" text="" text="" text="" text="" text="" text="" text="Update required" text="Library 1.11 is required to continue." text="Download size 2.9 MB" text="Update now" 
-focus for update_downloading:   mCurrentFocus=Window{a4978d1 u0 com.xlox/com.xlox.LogAct}
-captured update_downloading.png (95190 bytes)
+focus for update_downloading:   mCurrentFocus=Window{350348a u0 com.xlox/com.xlox.LogAct}
+captured update_downloading.png (80079 bytes)
 update gate passed
-gate result focus:   mCurrentFocus=Window{c417109 u0 com.xlox/com.xlox.LogAct}
-focus for login:   mCurrentFocus=Window{c417109 u0 com.xlox/com.xlox.LogAct}
-captured login.png (80207 bytes)
+gate result focus:   mCurrentFocus=Window{350348a u0 com.xlox/com.xlox.LogAct}
+focus for login:   mCurrentFocus=Window{350348a u0 com.xlox/com.xlox.LogAct}
+captured login.png (80137 bytes)
 keyboard state:   mShowRequested=true mShowExplicitlyRequested=true mShowForced=false mInputShown=true
-focus for login_keyboard:   mCurrentFocus=Window{c417109 u0 com.xlox/com.xlox.LogAct}
-captured login_keyboard.png (133434 bytes)
-focus for login_error:   mCurrentFocus=Window{c417109 u0 com.xlox/com.xlox.LogAct}
-captured login_error.png (130948 bytes)
-focus for login_key_visible:   mCurrentFocus=Window{c417109 u0 com.xlox/com.xlox.LogAct}
-captured login_key_visible.png (129487 bytes)
+focus for login_keyboard:   mCurrentFocus=Window{350348a u0 com.xlox/com.xlox.LogAct}
+captured login_keyboard.png (133754 bytes)
+focus for login_error:   mCurrentFocus=Window{350348a u0 com.xlox/com.xlox.LogAct}
+captured login_error.png (132304 bytes)
+focus for login_key_visible:   mCurrentFocus=Window{350348a u0 com.xlox/com.xlox.LogAct}
+captured login_key_visible.png (129593 bytes)
 Starting: Intent { cmp=com.xlox/.MAct (has extras) }
 Status: ok
 LaunchState: COLD
 Activity: com.xlox/.MAct
-TotalTime: 2030
-WaitTime: 2033
+TotalTime: 1334
+WaitTime: 1345
 Complete
-focus for home:   mCurrentFocus=Window{735a44 u0 com.xlox/com.xlox.MAct}
-captured home.png (108595 bytes)
+focus for home:   mCurrentFocus=Window{42c55af u0 com.xlox/com.xlox.MAct}
+captured home.png (108531 bytes)
+focus for home_scrolled:   mCurrentFocus=Window{42c55af u0 com.xlox/com.xlox.MAct}
+captured home_scrolled.png (118786 bytes)
 Starting: Intent { cmp=com.xlox/.LogAct }
 Status: ok
 LaunchState: COLD
 Activity: com.xlox/.LogAct
-TotalTime: 2085
-WaitTime: 2170
+TotalTime: 1360
+WaitTime: 1410
 Complete
-focus for login_font130:   mCurrentFocus=Window{748ade u0 com.xlox/com.xlox.LogAct}
-captured login_font130.png (96574 bytes)
+focus for login_font130:   mCurrentFocus=Window{e8af933 u0 com.xlox/com.xlox.LogAct}
+captured login_font130.png (97321 bytes)
 Starting: Intent { cmp=com.xlox/.MAct (has extras) }
 Status: ok
 LaunchState: COLD
 Activity: com.xlox/.MAct
-TotalTime: 1939
-WaitTime: 2011
+TotalTime: 1401
+WaitTime: 1421
 Complete
-focus for home_font130:   mCurrentFocus=Window{299a952 u0 com.xlox/com.xlox.MAct}
-captured home_font130.png (121262 bytes)
+focus for home_font130:   mCurrentFocus=Window{9855fe2 u0 com.xlox/com.xlox.MAct}
+captured home_font130.png (121903 bytes)
 Starting: Intent { cmp=com.xlox/.LogAct }
 Status: ok
 LaunchState: COLD
 Activity: com.xlox/.LogAct
-TotalTime: 2427
-WaitTime: 2516
+TotalTime: 1419
+WaitTime: 1431
 Complete
-focus for login_320:   mCurrentFocus=Window{60c5fb2 u0 com.xlox/com.xlox.LogAct}
-captured login_320.png (52689 bytes)
+focus for login_320:   mCurrentFocus=Window{594221c u0 com.xlox/com.xlox.LogAct}
+captured login_320.png (52929 bytes)
 Starting: Intent { cmp=com.xlox/.MAct (has extras) }
 Status: ok
 LaunchState: COLD
 Activity: com.xlox/.MAct
-TotalTime: 1495
-WaitTime: 1504
+TotalTime: 1145
+WaitTime: 1148
 Complete
-focus for home_320:   mCurrentFocus=Window{4298f71 u0 com.xlox/com.xlox.MAct}
-captured home_320.png (54491 bytes)
+focus for home_320:   mCurrentFocus=Window{e371aad u0 com.xlox/com.xlox.MAct}
+captured home_320.png (54717 bytes)
 direct install failed (Performing Streamed Install
 adb: failed to install app/build/outputs/apk/release/app-release.apk: Failure [INSTALL_FAILED_NO_MATCHING_ABIS: INSTALL_FAILED_NO_MATCHING_ABIS: Failed to extract native libraries, res=-113]); stripping native libs
 ABI-neutral install ok: app/build/outputs/apk/release/app-release.apk
@@ -86,10 +88,10 @@ Starting: Intent { cmp=com.xlox/.SplashActivity }
 Status: ok
 LaunchState: COLD
 Activity: com.xlox/.SplashActivity
-TotalTime: 1683
-WaitTime: 1717
+TotalTime: 1084
+WaitTime: 1087
 Complete
-release focus:   mCurrentFocus=Window{456ea1f u0 com.xlox/com.xlox.LogAct}
-focus for release_login:   mCurrentFocus=Window{456ea1f u0 com.xlox/com.xlox.LogAct}
-captured release_login.png (80342 bytes)
-=== emulator QA finished Sat Nov  7 17:08:18 UTC 2026 ===
+release focus:   mCurrentFocus=Window{d015ea1 u0 com.xlox/com.xlox.LogAct}
+focus for release_login:   mCurrentFocus=Window{d015ea1 u0 com.xlox/com.xlox.LogAct}
+captured release_login.png (80257 bytes)
+=== emulator QA finished Sat Nov  7 20:05:46 UTC 2026 ===
