@@ -12,6 +12,14 @@ shaped with HarfBuzz; timings and easings are SplashActivity's constants.
   python gen_splash.py ../../xlox/app/src/main/res/font/inter_semibold.ttf reduced anoy_splash_reduced.json
   (--transparent drops the black "bg" layer)
 
+  Comparison variants (design only, NOT the app's timing):
+  python gen_splash.py $F main variants/anoy_splash_A1.json   --variant=A1
+  python gen_splash.py $F main variants/anoy_splash_A2.json   --variant=A2
+  python gen_splash.py $F main variants/anoy_splash_A1A2.json --variant=A1A2
+    A1  kicker exit (fade + drift) and the wordmark lift use (0.2, 0, 0, 1)
+    A2  kicker fade-in 0-0.46 s, wordmark fade-in 0.12-0.58 s
+    Everything else, and the 2.85 s length, unchanged.
+
 Changes from the first draft, to match the app exactly:
   * Android (Minikin) puts half the letter-spacing before and half after each
     letter, so the "Anoy" | "Loader" gap is 8 dp + one tracking step (-1.2 px),
@@ -20,6 +28,10 @@ Changes from the first draft, to match the app exactly:
     just "Hax"; the return half is the reversed curve (ValueAnimator REVERSE).
   * system_mark is the real res/drawable/splash_mark.xml outline, not a square.
   * Held layers end at op + 1 (safety for players that park exactly on op).
+  * Reduced-motion cut at frame 60 uses held opacity keyframes, not layer
+    in/out points, so every player shows the same frame 60.
+  * The "Anoy" | "Loader" gap is one space (measureText(" ") = 8.88 dp), as
+    SplashActivity sets it in code - not the 8 dp in activity_splash.xml.
 """
 import sys, json, os, re
 from fontTools.svgLib.path import parse_path
@@ -30,6 +42,7 @@ from fontTools.pens.basePen import BasePen
 FPS, W, H = 60, 360, 800
 STD  = (0.4, 0, 0.2, 1)        # cubic-bezier(0.4,0,0.2,1)
 SWAP = (0.45, 0, 0.55, 1)      # cubic-bezier(0.45,0,0.55,1)
+EMPH = (0.2, 0, 0, 1)          # variant A1 only
 S = lambda t: round(t * FPS, 3)
 
 # ---------- font ----------
@@ -83,6 +96,12 @@ def shape(font, text, size, track_em):
         x += pos.x_advance * sc + tr
     return paths, x - tr
 
+def measure_text(font, text, size, track_em):
+    """Android Paint.measureText: shaped advances plus the letter spacing of
+    every character (Minikin adds it half before, half after each one)."""
+    _, ink = shape(font, text, size, track_em)   # ink excludes the last tracking
+    return ink + track_em * size
+
 # ---------- lottie helpers ----------
 def prop(v):
     """number -> static; list of (frame, value, ease|None=hold) -> animated."""
@@ -130,13 +149,18 @@ def mark_paths():
     return pen.contours
 
 # ---------- build ----------
-def build(fontpath, mode, bg=True):
+def build(fontpath, mode, bg=True, variant=""):
     f = Font(fontpath)
     kick, wK = shape(f, "WELCOME TO", 11, 0.22)
     anoy, wA = shape(f, "Anoy",   40, -0.03)
     ldr,  wL = shape(f, "Loader", 40, -0.03)
     hax,  wH = shape(f, "Hax",    40, -0.03)
-    GAP = 8 + (-0.03 * 40)                   # 8 dp margin + Minikin half-tracks
+    # SplashActivity.onCreate: slot.setMarginStart(Math.round(anoy.getPaint()
+    # .measureText(" "))) - one real word space, not the layout's 8 dp. Inter
+    # SemiBold: 516/2048 em x 40 - 1.2 = 8.88 dp. (The app rounds it to whole
+    # device pixels, e.g. 9 px at 1x, 27 px at 3x; the design file keeps 8.88.)
+    MARGIN = measure_text(f, " ", 40, -0.03)
+    GAP = MARGIN + (-0.03 * 40)              # margin + Minikin half-tracks either side
     xK  = (W - wK) / 2
     xA1 = (W - (wA + GAP + wL)) / 2          # "Anoy Loader" centred
     xA2 = (W - (wA + GAP + wH)) / 2          # "Anoy Hax" centred
@@ -149,27 +173,28 @@ def build(fontpath, mode, bg=True):
     kb  = top + (KL - (f.asc + f.desc) * 11) / 2 + f.asc * 11        # kicker baseline
     wb0 = top + KL + GV + (LH - (f.asc + f.desc) * 40) / 2 + f.asc * 40
     wb1 = CY + f.cap * 40 / 2                # cap-height middle on y=336
-    print(f"wL={wL:.2f} wH={wH:.2f} slide={shift:.2f}px lift={wb0-wb1:.2f}px")
+    print(f"margin={MARGIN:.2f} wL={wL:.2f} wH={wH:.2f} slide={shift:.2f}px lift={wb0-wb1:.2f}px")
 
     layers = []
     if mode == "main":
         N = 171
+        EXIT = EMPH if "A1" in variant else STD     # kicker exit + wordmark lift
+        K_IN = .46 if "A2" in variant else .40      # kicker fade-in end
+        N_IN = .58 if "A2" in variant else .52      # wordmark fade-in end
+        lift = [(S(1.20),wb0,EXIT),(S(1.72),wb1,None)]
         layers = [
           ("kicker", kick, "#9A9AA1",
-             [(0,0,STD),(S(.40),100,None),(S(1.15),100,STD),(S(1.67),0,None)],
-             xK, [(S(1.15),kb,STD),(S(1.67),kb-8,None)], 0, N),
+             [(0,0,STD),(S(K_IN),100,None),(S(1.15),100,EXIT),(S(1.67),0,None)],
+             xK, [(S(1.15),kb,EXIT),(S(1.67),kb-8,None)], 0, N),
           ("hax", hax, "#FFFFFF",
              [(S(1.56),0,SWAP),(S(1.56+.70*.45),100,None)],
-             [(S(1.56),slot1,SWAP),(S(2.01),slot2,None)],
-             [(S(1.20),wb0,STD),(S(1.72),wb1,None)], 0, N),
+             [(S(1.56),slot1,SWAP),(S(2.01),slot2,None)], lift, 0, N),
           ("loader", ldr, "#FFFFFF",
-             [(S(.12),0,STD),(S(.52),100,None),(S(1.56+.30*.45),100,SWAP),(S(2.01),0,None)],
-             [(S(1.56),slot1,SWAP),(S(2.01),slot2,None)],
-             [(S(1.20),wb0,STD),(S(1.72),wb1,None)], 0, N),
+             [(S(.12),0,STD),(S(N_IN),100,None),(S(1.56+.30*.45),100,SWAP),(S(2.01),0,None)],
+             [(S(1.56),slot1,SWAP),(S(2.01),slot2,None)], lift, 0, N),
           ("anoy", anoy, "#FFFFFF",
-             [(S(.12),0,STD),(S(.52),100,None)],
-             [(S(1.56),xA1,SWAP),(S(2.01),xA2,None)],
-             [(S(1.20),wb0,STD),(S(1.72),wb1,None)], 0, N),
+             [(S(.12),0,STD),(S(N_IN),100,None)],
+             [(S(1.56),xA1,SWAP),(S(2.01),xA2,None)], lift, 0, N),
         ]
     elif mode == "loop":
         N = 144   # 2.4 s; set the player to repeat
@@ -183,12 +208,19 @@ def build(fontpath, mode, bg=True):
         ]
     else:  # reduced: 1.0 s still, hard cut, 0.7 s still
         N = 102
+        # The cut is made with held opacity keyframes switching exactly at
+        # frame 60, not with layer in/out points: players disagree on whether
+        # a layer is drawn on its out-point frame (rlottie: yes; lottie-android
+        # and lottie-web: no), but all agree a hold switches at its keyframe.
+        CUT = 60
+        gone = [(0,100,None),(CUT,0,None)]       # kicker, "Loader": 100 -> 0
+        comes = [(0,0,None),(CUT,100,None)]      # "Hax": 0 -> 100
         layers = [
-          ("kicker", kick, "#9A9AA1", 100, xK, kb, 0, 60),
-          ("hax", hax, "#FFFFFF", 100, slot2, wb1, 60, N),
-          ("loader", ldr, "#FFFFFF", 100, slot1, wb0, 0, 60),
+          ("kicker", kick, "#9A9AA1", gone, xK, kb, 0, N),
+          ("hax", hax, "#FFFFFF", comes, slot2, wb1, 0, N),
+          ("loader", ldr, "#FFFFFF", gone, slot1, wb0, 0, N),
           ("anoy", anoy, "#FFFFFF", 100,
-             [(0,xA1,None),(60,xA2,None)], [(0,wb0,None),(60,wb1,None)], 0, N),
+             [(0,xA1,None),(CUT,xA2,None)], [(0,wb0,None),(CUT,wb1,None)], 0, N),
         ]
 
     out = [text_layer(n + 1, nm, p, c, o, px, py, ip, op)
@@ -211,11 +243,14 @@ def build(fontpath, mode, bg=True):
     for l in out:
         if l["op"] == N: l["op"] = N + 1
     return {"v": "5.7.0", "fr": FPS, "ip": 0, "op": N, "w": W, "h": H,
-            "nm": f"Anoy splash ({mode})", "ddd": 0, "assets": [], "layers": out}
+            "nm": f"Anoy splash ({mode})" + (f" variant {variant}" if variant else ""), "ddd": 0, "assets": [], "layers": out}
 
 if __name__ == "__main__":
     a = [x for x in sys.argv[1:] if not x.startswith("--")]
-    data = build(a[0], a[1], bg="--transparent" not in sys.argv)
+    var = next((x.split("=", 1)[1] for x in sys.argv if x.startswith("--variant=")), "")
+    assert var in ("", "A1", "A2", "A1A2"), var
+    assert not var or a[1] == "main", "variants apply to the main film only"
+    data = build(a[0], a[1], bg="--transparent" not in sys.argv, variant=var)
     s = json.dumps(data, separators=(",", ":"))
     open(a[2], "w").write(s)
     print(f"{a[2]}: {len(s)/1024:.1f} KB, {data['op']} frames")

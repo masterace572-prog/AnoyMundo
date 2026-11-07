@@ -17,6 +17,11 @@ marketing preview, and other platforms.
 360 x 800 canvas, text outlined from `res/font/inter_semibold.ttf` (no font
 embedded), black `bg` layer (`--transparent` to drop it).
 
+The "Anoy" | "Loader" gap is one space at 40 dp with -0.03 em letter spacing
+(`measureText(" ")` = 8.88 dp), because `SplashActivity` sets the slot margin
+in code; the 8 dp in `activity_splash.xml` is overridden. On a phone the app
+rounds it to whole device pixels (9 px at 1x, 27 px at 3x).
+
 ## Regenerate
 
 ```
@@ -32,10 +37,21 @@ If the splash timing in `SplashActivity` ever changes, update the constants in
 
 ## Verified (2026-11-15)
 
-- **Against the app** (`verify.py`, rlottie, every frame): each layer's
-  movement matches `applyTime()` within 0.01 px, opacity within ~1 % (8-bit
-  rounding). The wait loop matches `breathe()` (whole line, reversed return
-  curve) within ~1 %.
+- **Against the app's code** (`verify.py`, rlottie at 4x, every frame; not a
+  device capture). Expected values: SplashActivity's timeline constants and
+  easings, plus the horizontal layout computed from the font with the app's
+  own rules (gap = `measureText(" ")`, Android letter spacing, centring,
+  `recentreDx`). Results after the 8.88 dp gap fix: absolute x within 0.04 px,
+  vertical moves within 0.01 px (lift assumed 13 dp), opacity within ~1.2 %
+  (8-bit rounding). The waiting loop and reduced file match the same way.
+  Reduced cut (2026-11-16): players disagree on the out-point frame (rlottie
+  draws a layer on it; lottie-web hides it), so the reduced file no longer
+  uses layer in/out points. Every layer runs 0 to the end of the film, and the
+  frame-60 cut is made with held opacity keys (kicker and "Loader" 100 -> 0,
+  "Hax" 0 -> 100). Frames 60-101 now match at 0.00 % opacity. rlottie and
+  lottie-web give the same result on frames 59/60/61 (measured, a fresh
+  player for each frame). No file uses in/out points to hide anything that
+  should not be seen.
 - **lottie-web 5.13 vs rlottie** (canvas renderer, frames 13-170 incl. 72, 94,
   107, 121 where the lift and slide overlap): positions within 0.24 px,
   opacity within ~1 %.
@@ -49,3 +65,17 @@ If the splash timing in `SplashActivity` ever changes, update the constants in
 
 The ~13 px lift is estimated here; on the phone the app measures it from the
 real layout, so a pixel of difference is expected and is not an error.
+
+## Variants (comparison only, not in the app)
+
+`variants/` holds Lottie-only alternatives for side-by-side review. None of
+them is applied to the app; the app's timing is unchanged.
+
+| File | Change from the app's film |
+|---|---|
+| `anoy_splash_A1.json` | Kicker exit (fade + 8 dp drift) and the wordmark lift use cubic-bezier(0.2, 0, 0, 1) instead of (0.4, 0, 0.2, 1) |
+| `anoy_splash_A2.json` | Kicker fade-in 0-0.46 s (was 0.40), wordmark fade-in 0.12-0.58 s (was 0.52) |
+| `anoy_splash_A1A2.json` | Both |
+
+All 2.85 s, 171 frames. Regenerate with `--variant=A1|A2|A1A2` (main only);
+check with `python verify.py variants/anoy_splash_A1.json --variant A1`.

@@ -1,0 +1,226 @@
+From 677172a193d2b524ab360d9e4aa3d4f4fd150ec0 Mon Sep 17 00:00:00 2001
+From: masterace572-prog <226556225+masterace572-prog@users.noreply.github.com>
+Date: Sat, 7 Nov 2026 12:00:00 +0000
+Subject: [PATCH] Splash hand-off B1-B4 (SplashActivity + 2 anims)
+
+Combined stand-in for the local commits c0d51c2 (B1), a7fc4fc (B2), 7bb1053 (B3)
+and cc6c671 (B4), which were lost when the sandbox was re-cloned. File contents
+are byte-identical to cc6c671 (blobs 8ee0ca2, f0eed8c, 9d3104b).
+---
+ .../main/java/com/xlox/SplashActivity.java    | 97 ++++++++++++++++---
+ .../main/res/anim/splash_handoff_enter.xml    | 10 ++
+ .../src/main/res/anim/splash_handoff_exit.xml |  8 ++
+ 3 files changed, 100 insertions(+), 15 deletions(-)
+ create mode 100644 xlox/app/src/main/res/anim/splash_handoff_enter.xml
+ create mode 100644 xlox/app/src/main/res/anim/splash_handoff_exit.xml
+
+diff --git a/xlox/app/src/main/java/com/xlox/SplashActivity.java b/xlox/app/src/main/java/com/xlox/SplashActivity.java
+index 5a46ba8..8ee0ca2 100644
+--- a/xlox/app/src/main/java/com/xlox/SplashActivity.java
++++ b/xlox/app/src/main/java/com/xlox/SplashActivity.java
+@@ -52,7 +52,10 @@ import java.util.concurrent.Executors;
+  *                         overlap: "Hax" is in by 70 % and "Loader" only leaves
+  *                         from 30 %, so the slot never looks empty
+  *   2.01-2.85 s  settle   hold "Anoy Hax"
+- *   2.85 s       handoff  280 ms cross-fade into LogAct (~3.13 s)
++ *   2.85 s       handoff  280 ms cross-fade into LogAct (~3.13 s): the next screen
++ *                         fades in on top (opacity only, fast-out-slow-in) while
++ *                         the splash stays fully opaque underneath - no dip
++ *                         (res/anim/splash_handoff_enter, splash_handoff_exit)
+  * </pre>
+  * 2.2.0: meanwhile the app (APK) update check runs and the bottom status line
+  * reports it. The hand-off waits for BOTH the film and the check: up to date
+@@ -103,7 +106,7 @@ public class SplashActivity extends AppCompatActivity {
+     private static final long VERSION_MS = 320L;
+     private static final long STATUS_AT_MS = 600L;
+     private static final long STATUS_MS = 280L;
+-    /** End of the film = hand-off (plus the 320 ms activity cross-fade). */
++    /** End of the film = hand-off (then the 280 ms splash_handoff cross-fade). */
+     private static final long FILM_MS = 2850L;
+     /** Reduced motion: hold the welcome, cut to the final line, hold, hand off. */
+     private static final long REDUCED_WELCOME_MS = 1000L;
+@@ -111,7 +114,13 @@ public class SplashActivity extends AppCompatActivity {
+     /** Startup slower than the film: very slow opacity breathe on "Anoy Hax". */
+     private static final long BREATHE_MS = 2400L;
+     private static final float BREATHE_MIN_ALPHA = 0.72f;
+-    /** Safety net if the first frame never arrives. */
++    /** The breathe ends by easing back to full opacity before the hand-off. */
++    private static final long BREATHE_SETTLE_MS = 180L;
++    /**
++     * Safety net if the first frame never arrives: the film's length plus this
++     * margin. The film is a ValueAnimator, so it stretches with the system
++     * animator duration scale; the timer stretches with it (see safetyMs()).
++     */
+     private static final long SAFETY_MS = FILM_MS + 2500L;
+ 
+     /** Inter cap height (1490 / 2048 em): used to centre the line optically. */
+@@ -327,7 +336,26 @@ public class SplashActivity extends AppCompatActivity {
+             setTextLayers(true);
+             film.start();
+         });
+-        handler.postDelayed(next, SAFETY_MS);
++        handler.postDelayed(next, safetyMs());
++    }
++
++    /**
++     * FILM_MS x animator duration scale + (SAFETY_MS - FILM_MS), so a slowed-down
++     * film (scale 1.5, 2, 5, ...) is never cut short by the safety net. Read from
++     * Settings.Global (ValueAnimator.getDurationScale needs API 26; minSdk is 21).
++     * Scale 0 never gets here: reduced motion takes playReduced(), which keeps
++     * its own fixed timer.
++     */
++    private long safetyMs() {
++        float scale = 1f;
++        try {
++            scale = android.provider.Settings.Global.getFloat(getContentResolver(),
++                    android.provider.Settings.Global.ANIMATOR_DURATION_SCALE, 1f);
++        } catch (RuntimeException e) {
++            // Unreadable setting: assume the normal speed.
++        }
++        if (!(scale > 0f) || Float.isInfinite(scale)) scale = 1f;
++        return Math.round(FILM_MS * (double) scale) + (SAFETY_MS - FILM_MS);
+     }
+ 
+     // ------------------------------------------------------ app update check
+@@ -404,10 +432,7 @@ public class SplashActivity extends AppCompatActivity {
+         }
+         // The slow-connection detail (if it came up) leaves with the answer.
+         Ui.fadeReserved(statusDetail, false);
+-        if (maybeProceed() && breath != null) {
+-            breath.cancel();
+-            name.setAlpha(1f);
+-        }
++        maybeProceed();
+     }
+ 
+     private void onCheckFailed(int run, String reason) {
+@@ -437,17 +462,46 @@ public class SplashActivity extends AppCompatActivity {
+         if (check == Check.CURRENT) {
+             // The green check + "Up to date" holds for at least 700 ms.
+             handingOff = true;
+-            handler.postDelayed(this::openLogin, Math.max(0L, DONE_OUT_MS + CURRENT_HOLD_MS - shown));
++            handOffAfter(this::openLogin, Math.max(0L, DONE_OUT_MS + CURRENT_HOLD_MS - shown));
+             return true;
+         }
+         if (check == Check.AVAILABLE && release != null) {
+             handingOff = true;
+-            handler.postDelayed(this::openUpdate, Math.max(0L, SWAP_OUT_MS + SWAP_IN_MS + PROCEED_MS - shown));
++            handOffAfter(this::openUpdate, Math.max(0L, SWAP_OUT_MS + SWAP_IN_MS + PROCEED_MS - shown));
+             return true;
+         }
+         return false;
+     }
+ 
++    /**
++     * Runs {@code open} after {@code delayMs}. If "Anoy Hax" is breathing, the
++     * breathe stops and the line eases from its current opacity back to 1
++     * (180 ms, fast-out-slow-in) first; the hand-off never starts before that
++     * has finished, so the cross-fade always leaves from a fully opaque frame.
++     */
++    private void handOffAfter(Runnable open, long delayMs) {
++        final long at = android.os.SystemClock.uptimeMillis() + delayMs;
++        if (breath == null) {
++            handler.postAtTime(open, at);
++            return;
++        }
++        breath.cancel();
++        breath = null;
++        ValueAnimator settle = ValueAnimator.ofFloat(name.getAlpha(), 1f);
++        settle.setDuration(BREATHE_SETTLE_MS);
++        settle.setInterpolator(FAST_OUT_SLOW_IN);
++        settle.addUpdateListener(a -> name.setAlpha((float) a.getAnimatedValue()));
++        settle.addListener(new AnimatorListenerAdapter() {
++            // Called on end and on cancel, so the hand-off can never be lost.
++            // (A normal end has already applied alpha 1 via the update listener.)
++            @Override
++            public void onAnimationEnd(Animator animation) {
++                handler.postAtTime(open, Math.max(at, android.os.SystemClock.uptimeMillis()));
++            }
++        });
++        settle.start();
++    }
++
+     /**
+      * Status line: Caption text with the quiet arc, the check (2.3.7: Lottie,
+      * one-shot), a tinted glyph (amber dot) or nothing. With durations it crossfades (opacity
+@@ -539,10 +593,21 @@ public class SplashActivity extends AppCompatActivity {
+         release.writeTo(intent);
+         if (qaUpdate != null) intent.putExtra(AppUpdateActivity.EXTRA_QA_PREVIEW, true);
+         startActivity(intent);
+-        overridePendingTransition(R.anim.fade_in, R.anim.fade_out);
++        overrideHandoffTransition();
+         finish();
+     }
+ 
++    /**
++     * The splash's own hand-off: the next screen fades in over the held frame
++     * for 280 ms while the splash stays opaque, so there is no dip. Splash only;
++     * every other screen keeps fade_in / fade_out. Like those, it is a window
++     * animation, so the system's transition-animation scale applies (0 = an
++     * instant switch).
++     */
++    private void overrideHandoffTransition() {
++        overridePendingTransition(R.anim.splash_handoff_enter, R.anim.splash_handoff_exit);
++    }
++
+     /** Measures the moves from the laid-out views; false if layout is unusable. */
+     private boolean measure() {
+         if (measured) return true;
+@@ -553,9 +618,11 @@ public class SplashActivity extends AppCompatActivity {
+                 - CAP_HEIGHT_EM * anoy.getTextSize() / 2f;
+         // Once the kicker has left, the name settles on the lockup's centre line
+         // (~42 % of the height), so the screen keeps its composition.
+-        moveDy = lockup.getTop() + lockup.getHeight() / 2f - capCentre;
++        // Whole device pixels, so "Anoy Hax" rests on the pixel grid and looks the
++        // same when its hardware layer is dropped at the end of the film.
++        moveDy = Math.round(lockup.getTop() + lockup.getHeight() / 2f - capCentre);
+         // "Hax" sits where "Loader" starts; shift the pair so "Anoy Hax" is centred.
+-        recentreDx = (loader.getWidth() - hax.getWidth()) / 2f;
++        recentreDx = Math.round((loader.getWidth() - hax.getWidth()) / 2f);
+         measured = true;
+         return true;
+     }
+@@ -657,8 +724,8 @@ public class SplashActivity extends AppCompatActivity {
+         if (opened || !Ui.alive(this)) return;
+         opened = true;
+         startActivity(new Intent(this, LogAct.class));
+-        // 280 ms crossfade (res/anim/fade_in, fade_out).
+-        overridePendingTransition(R.anim.fade_in, R.anim.fade_out);
++        // 280 ms cross-fade, no dip (res/anim/splash_handoff_enter, _exit).
++        overrideHandoffTransition();
+         finish();
+     }
+ 
+diff --git a/xlox/app/src/main/res/anim/splash_handoff_enter.xml b/xlox/app/src/main/res/anim/splash_handoff_enter.xml
+new file mode 100644
+index 0000000..f0eed8c
+--- /dev/null
++++ b/xlox/app/src/main/res/anim/splash_handoff_enter.xml
+@@ -0,0 +1,10 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- Splash hand-off only (SplashActivity -> LogAct / AppUpdateActivity): the
++     next screen fades in over the held "Anoy Hax" frame. Opacity only, 280 ms,
++     fast-out-slow-in (0.4, 0, 0.2, 1), no translation. Other screens keep
++     fade_in / fade_out. -->
++<alpha xmlns:android="http://schemas.android.com/apk/res/android"
++    android:duration="@integer/motion_medium"
++    android:fromAlpha="0"
++    android:interpolator="@android:interpolator/fast_out_slow_in"
++    android:toAlpha="1" />
+diff --git a/xlox/app/src/main/res/anim/splash_handoff_exit.xml b/xlox/app/src/main/res/anim/splash_handoff_exit.xml
+new file mode 100644
+index 0000000..9d3104b
+--- /dev/null
++++ b/xlox/app/src/main/res/anim/splash_handoff_exit.xml
+@@ -0,0 +1,8 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- Splash hand-off only: the splash stays fully opaque underneath for the
++     whole 280 ms while the next screen fades in on top, so the two crossfade
++     with no dip to black. Paired with splash_handoff_enter. -->
++<alpha xmlns:android="http://schemas.android.com/apk/res/android"
++    android:duration="@integer/motion_medium"
++    android:fromAlpha="1"
++    android:toAlpha="1" />
+-- 
+2.39.5
+
