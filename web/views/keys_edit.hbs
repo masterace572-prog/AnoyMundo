@@ -1,73 +1,112 @@
 <div class="page-head">
-    <div>
-        <h1 class="page-title">Edit key</h1>
-        <p class="page-sub mono">{{key.user_key}}</p>
+    <div class="page-head-main">
+        <a href="/keys" class="icon-btn lg" aria-label="Back to keys">{{icon "chevron-left"}}</a>
+        <div>
+            <h1 class="page-title">Edit key</h1>
+            <p class="page-sub mono">{{key.user_key}}</p>
+        </div>
     </div>
-    <a href="/keys" class="btn btn-secondary">All keys</a>
+    <div class="page-actions">
+        <button type="button" class="btn btn-secondary" data-copy-text="{{key.user_key}}">{{icon "copy"}}Copy key</button>
+    </div>
 </div>
 
 {{> msgStatus}}
 
-<div class="grid-2">
+<div class="grid-main">
+<section class="card">
+    <div class="card-head">
+        <div class="tile">{{icon "pencil"}}</div>
+        <div><h2 class="card-title">Settings</h2><div class="card-sub">{{#if user.isOwner}}Every field of this key{{else}}Status of this key{{/if}}</div></div>
+    </div>
 <form method="post" action="/keys/edit" class="form" novalidate data-busy-form>
     <input type="hidden" name="id_keys" value="{{key.id_keys}}">
     {{#if user.isOwner}}
     <div class="field {{#if errors.user_key}}invalid{{/if}}">
         <label class="label" for="user_key">Key</label>
-        <input type="text" class="input mono upper" name="user_key" id="user_key" value="{{form.user_key}}" required maxlength="64" autocomplete="off" autocapitalize="characters" spellcheck="false">
-        {{#if errors.user_key}}<div class="error">{{errors.user_key}}</div>{{/if}}
+        <div class="input-wrap">{{icon "key-round" "lead"}}
+        <input type="text" class="input mono upper" name="user_key" id="user_key" value="{{form.user_key}}" required maxlength="64" autocomplete="off" autocapitalize="characters" spellcheck="false"></div>
+        {{#if errors.user_key}}<div class="error">{{icon "circle-alert"}}<span>{{errors.user_key}}</span></div>{{/if}}
     </div>
-    <div class="field {{#if errors.game}}invalid{{/if}}">
-        <label class="label" for="game">Game</label>
-        {{{selects.game}}}
-        {{#if errors.game}}<div class="error">{{errors.game}}</div>{{/if}}
+    <div class="field-row">
+        <div class="field {{#if errors.game}}invalid{{/if}}">
+            <label class="label" for="game">Game</label>
+            {{{selects.game}}}
+            {{#if errors.game}}<div class="error">{{icon "circle-alert"}}<span>{{errors.game}}</span></div>{{/if}}
+        </div>
+        <div class="field {{#if errors.status}}invalid{{/if}}">
+            <label class="label" for="status">Status</label>
+            {{{selects.status}}}
+            {{#if errors.status}}<div class="error">{{icon "circle-alert"}}<span>{{errors.status}}</span></div>{{/if}}
+        </div>
     </div>
-    <div class="field {{#if errors.duration}}invalid{{/if}}">
-        <label class="label" for="duration">Duration (hours)</label>
-        <input type="number" class="input" name="duration" id="duration" value="{{form.duration}}" min="1" max="100000" required inputmode="numeric">
-        {{#if errors.duration}}<div class="error">{{errors.duration}}</div>{{/if}}
+    <div class="field-row">
+        <div class="field {{#if errors.duration}}invalid{{/if}}">
+            <label class="label" for="duration">Duration (hours)</label>
+            <div class="input-wrap">{{icon "clock" "lead"}}
+            <input type="number" class="input" name="duration" id="duration" value="{{form.duration}}" min="1" max="100000" required inputmode="numeric"></div>
+            {{#if errors.duration}}<div class="error">{{icon "circle-alert"}}<span>{{errors.duration}}</span></div>{{/if}}
+        </div>
+        <div class="field {{#if errors.max_devices}}invalid{{/if}}">
+            <label class="label" for="max_devices">Devices allowed</label>
+            <div class="input-wrap">{{icon "smartphone" "lead"}}
+            <input type="number" class="input" name="max_devices" id="max_devices" value="{{form.max_devices}}" min="1" max="100" required inputmode="numeric"></div>
+            {{#if errors.max_devices}}<div class="error">{{icon "circle-alert"}}<span>{{errors.max_devices}}</span></div>{{/if}}
+        </div>
     </div>
-    <div class="field {{#if errors.max_devices}}invalid{{/if}}">
-        <label class="label" for="max_devices">Devices allowed</label>
-        <input type="number" class="input" name="max_devices" id="max_devices" value="{{form.max_devices}}" min="1" max="100" required inputmode="numeric">
-        {{#if errors.max_devices}}<div class="error">{{errors.max_devices}}</div>{{/if}}
-    </div>
-    <div class="field {{#if errors.expired_date}}invalid{{/if}}">
-        <label class="label" for="expired_date">Expires (UTC)</label>
-        <input type="text" class="input mono" name="expired_date" id="expired_date" value="{{form.expired_date}}" placeholder="Not started yet" autocomplete="off">
-        {{#if errors.expired_date}}<div class="error">{{errors.expired_date}}</div>{{else}}<div class="hint">Format YYYY-MM-DD HH:MM:SS. Leave empty for a key that has not been used yet.</div>{{/if}}
-    </div>
-    <div class="field {{#if errors.registrator}}invalid{{/if}}">
-        <label class="label" for="registrator">Created by</label>
-        <input type="text" class="input" name="registrator" id="registrator" value="{{form.registrator}}" maxlength="32" autocomplete="off">
-        {{#if errors.registrator}}<div class="error">{{errors.registrator}}</div>{{/if}}
+    <div class="field-row">
+        <div class="field {{#if errors.expired_date}}invalid{{/if}}">
+            <label class="label" for="expired_date">Expires (UTC)</label>
+            <div class="input-wrap">{{icon "calendar" "lead"}}
+            <input type="text" class="input mono" name="expired_date" id="expired_date" value="{{form.expired_date}}" placeholder="Not started yet" autocomplete="off"></div>
+            {{#if errors.expired_date}}<div class="error">{{icon "circle-alert"}}<span>{{errors.expired_date}}</span></div>{{else}}<div class="hint">YYYY-MM-DD HH:MM:SS. Empty = not used yet.</div>{{/if}}
+        </div>
+        <div class="field {{#if errors.registrator}}invalid{{/if}}">
+            <label class="label" for="registrator">Created by</label>
+            <div class="input-wrap">{{icon "user" "lead"}}
+            <input type="text" class="input" name="registrator" id="registrator" value="{{form.registrator}}" maxlength="32" autocomplete="off"></div>
+            {{#if errors.registrator}}<div class="error">{{icon "circle-alert"}}<span>{{errors.registrator}}</span></div>{{/if}}
+        </div>
     </div>
     <div class="field {{#if errors.devices}}invalid{{/if}}">
         <label class="label" for="devices">Registered devices</label>
         <textarea class="input mono" name="devices" id="devices" rows="{{key.deviceRows}}" spellcheck="false" placeholder="No devices yet">{{form.devices}}</textarea>
-        {{#if errors.devices}}<div class="error">{{errors.devices}}</div>{{else}}<div class="hint">One device ID per line.</div>{{/if}}
+        {{#if errors.devices}}<div class="error">{{icon "circle-alert"}}<span>{{errors.devices}}</span></div>{{else}}<div class="hint">One device ID per line.</div>{{/if}}
     </div>
-    {{/if}}
+    {{else}}
     <div class="field {{#if errors.status}}invalid{{/if}}">
         <label class="label" for="status">Status</label>
         {{{selects.status}}}
-        {{#if errors.status}}<div class="error">{{errors.status}}</div>{{/if}}
+        {{#if errors.status}}<div class="error">{{icon "circle-alert"}}<span>{{errors.status}}</span></div>{{/if}}
     </div>
-    <button type="submit" class="btn btn-primary btn-block" data-busy-label="Saving…">Save</button>
+    {{/if}}
+    <button type="submit" class="btn btn-primary btn-block" data-busy-label="Saving…">{{icon "check"}}Save changes</button>
 </form>
-
-<section class="section" style="padding-top:0;border-top:0">
-    <h2 class="section-title">Details</h2>
-    <div class="list" style="margin-top:14px">
-        <div class="list-row"><span>Game</span><span>{{key.game}}</span></div>
-        <div class="list-row"><span>Duration</span><span>{{key.durationLabel}}</span></div>
-        <div class="list-row"><span>Devices</span><span>{{key.deviceTotal}} of {{key.max_devices}}</span></div>
-        <div class="list-row"><span>Expires</span><span>{{#if key.expiresLabel}}{{key.expiresLabel}}{{else}}Not started yet{{/if}}</span></div>
-        <div class="list-row"><span>Created by</span><span>{{key.registrator}}</span></div>
-    </div>
-    <div class="actions" style="margin-top:18px">
-        <button type="button" class="btn btn-secondary" data-key-action="reset" data-key="{{key.user_key}}">Reset devices</button>
-        <button type="button" class="btn btn-danger" data-key-action="delete" data-key="{{key.user_key}}" data-after="/keys">Delete key</button>
-    </div>
 </section>
+
+<aside class="stack">
+    <section class="card">
+        <div class="card-head">
+            <div class="tile teal">{{icon "info"}}</div>
+            <div><h2 class="card-title">Details</h2><div class="card-sub">Live state of this key</div></div>
+        </div>
+        <div class="list">
+            <div class="list-row"><span class="lr-label">{{icon "gamepad-2" "i-sm"}}Game</span><span class="lr-value">{{key.game}}</span></div>
+            <div class="list-row"><span class="lr-label">{{icon "clock" "i-sm"}}Duration</span><span class="lr-value">{{key.durationLabel}}</span></div>
+            <div class="list-row"><span class="lr-label">{{icon "smartphone" "i-sm"}}Devices</span><span class="lr-value num">{{key.deviceTotal}} of {{key.max_devices}}</span></div>
+            <div class="list-row"><span class="lr-label">{{icon "calendar" "i-sm"}}Expires</span><span class="lr-value">{{#if key.expiresLabel}}{{key.expiresLabel}}{{else}}Not started yet{{/if}}</span></div>
+            <div class="list-row"><span class="lr-label">{{icon "user" "i-sm"}}Created by</span><span class="lr-value">{{key.registrator}}</span></div>
+        </div>
+    </section>
+    <section class="card">
+        <div class="card-head">
+            <div class="tile orange">{{icon "wrench"}}</div>
+            <div><h2 class="card-title">Actions</h2><div class="card-sub">Applied immediately</div></div>
+        </div>
+        <div class="actions">
+            <button type="button" class="btn btn-secondary" data-key-action="reset" data-key="{{key.user_key}}">{{icon "rotate-ccw"}}Reset devices</button>
+            <button type="button" class="btn btn-danger" data-key-action="delete" data-key="{{key.user_key}}" data-after="/keys">{{icon "trash-2"}}Delete key</button>
+        </div>
+    </section>
+</aside>
 </div>

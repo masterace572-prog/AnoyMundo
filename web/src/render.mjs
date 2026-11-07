@@ -1,5 +1,6 @@
 import Handlebars from 'handlebars';
 import { templates } from './templates.generated.mjs';
+import { icons } from './icons.generated.mjs';
 import { config } from './config.mjs';
 import { readFlash } from './auth.mjs';
 
@@ -12,11 +13,28 @@ Handlebars.registerHelper('gt', (a, b) => Number(a) > Number(b));
 Handlebars.registerHelper('lt', (a, b) => Number(a) < Number(b));
 Handlebars.registerHelper('and', (...args) => args.slice(0, -1).every(Boolean));
 Handlebars.registerHelper('or', (...args) => args.slice(0, -1).some(Boolean));
+// First letter of a name, for avatar circles.
+Handlebars.registerHelper('initial', (...args) => {
+  const name = args.slice(0, -1).find((v) => typeof v === 'string' && v.trim()) || '?';
+  return name.trim().charAt(0).toUpperCase();
+});
 Handlebars.registerHelper('json', (value) => JSON.stringify(value ?? null));
 Handlebars.registerHelper('alertClass', (type) => {
   const allowed = ['success', 'warning', 'danger', 'info'];
   return `alert-${allowed.includes(String(type)) ? String(type) : 'info'}`;
 });
+
+// {{icon "key-round"}} or {{icon "copy" "i-sm"}}: inline line icon, decorative
+// (aria-hidden); the surrounding control carries the accessible label.
+export function iconSvg(name, cls = '') {
+  const inner = icons[name];
+  if (!inner) return '';
+  const extra = cls ? ` ${String(cls).replace(/[^a-z0-9 _-]/gi, '')}` : '';
+  return `<svg class="i${extra}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" ` +
+    `stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">${inner}</svg>`;
+}
+Handlebars.registerHelper('icon', (name, cls) => new Handlebars.SafeString(
+  iconSvg(String(name), typeof cls === 'string' ? cls : '')));
 
 Handlebars.registerPartial('header', templates.header);
 Handlebars.registerPartial('msgStatus', templates.msgStatus);

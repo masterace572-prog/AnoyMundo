@@ -3,55 +3,76 @@
         <h1 class="page-title">Settings</h1>
         <p class="page-sub">Your account and sign-in details.</p>
     </div>
+    <div class="page-actions">
+        <a href="/logout" class="btn btn-danger">{{icon "log-out"}}Sign out</a>
+    </div>
 </div>
 
 {{> msgStatus}}
 
 <div class="grid-2">
-    <section class="section" style="border-top:0;padding-top:0">
-        <h2 class="section-title">Account</h2>
-        <div class="list" style="margin-top:14px">
-            <div class="list-row"><span>Username</span><span>{{user.username}}</span></div>
-            <div class="list-row"><span>Email</span><span>{{user.email}}</span></div>
-            <div class="list-row"><span>Role</span><span>{{user.levelName}}</span></div>
-            <div class="list-row"><span>Balance</span><span>{{#if unlimited}}Unlimited{{else}}₹{{user.saldoLabel}}{{/if}}</span></div>
-            <div class="list-row"><span>Signed in</span><span>{{sessionSince}}</span></div>
-            <div class="list-row"><span>Session ends</span><span>{{sessionRemaining}}</span></div>
-        </div>
-
-        <h2 class="section-title" style="margin-top:28px">Name</h2>
-        <form method="post" action="/settings" class="form" style="margin-top:14px" novalidate data-busy-form>
-            <input type="hidden" name="fullname_form" value="1">
-            <div class="field {{#if errors.fullname}}invalid{{/if}}">
-                <label class="label" for="fullname">Display name</label>
-                <input type="text" class="input" name="fullname" id="fullname" value="{{form.fullname}}" required maxlength="155" autocomplete="name">
-                {{#if errors.fullname}}<div class="error">{{errors.fullname}}</div>{{/if}}
+    <div class="stack">
+        <section class="card">
+            <div class="card-head">
+                <div class="avatar" aria-hidden="true" style="width:46px;height:46px;flex-basis:46px;font-size:18px">{{initial user.fullname user.username}}</div>
+                <div><h2 class="card-title">{{user.displayName}}</h2><div class="card-sub">{{user.email}}</div></div>
             </div>
-            <button type="submit" class="btn btn-primary" data-busy-label="Saving…">Save name</button>
-        </form>
-    </section>
+            <div class="list">
+                <div class="list-row"><span class="lr-label">{{icon "at-sign" "i-sm"}}Username</span><span class="lr-value">{{user.username}}</span></div>
+                <div class="list-row"><span class="lr-label">{{icon "mail" "i-sm"}}Email</span><span class="lr-value">{{user.email}}</span></div>
+                <div class="list-row"><span class="lr-label">{{icon "shield" "i-sm"}}Role</span><span class="lr-value">{{user.levelName}}</span></div>
+                <div class="list-row"><span class="lr-label">{{icon "wallet" "i-sm"}}Balance</span><span class="lr-value">{{#if unlimited}}Unlimited{{else}}₹{{user.saldoLabel}}{{/if}}</span></div>
+                <div class="list-row"><span class="lr-label">{{icon "clock" "i-sm"}}Signed in</span><span class="lr-value">{{sessionSince}}</span></div>
+                <div class="list-row"><span class="lr-label">{{icon "hourglass" "i-sm"}}Session ends</span><span class="lr-value">{{sessionRemaining}}</span></div>
+            </div>
+        </section>
 
-    <section class="section" style="border-top:0;padding-top:0">
-        <h2 class="section-title">Password</h2>
-        <p class="section-sub">Changing it signs out every other session.</p>
+        <section class="card">
+            <div class="card-head">
+                <div class="tile purple">{{icon "id-card"}}</div>
+                <div><h2 class="card-title">Display name</h2><div class="card-sub">Shown in the panel</div></div>
+            </div>
+            <form method="post" action="/settings" class="form" novalidate data-busy-form>
+                <input type="hidden" name="fullname_form" value="1">
+                <div class="field {{#if errors.fullname}}invalid{{/if}}">
+                    <label class="label" for="fullname">Name</label>
+                    <div class="input-wrap">{{icon "user" "lead"}}
+                    <input type="text" class="input" name="fullname" id="fullname" value="{{form.fullname}}" required maxlength="155" autocomplete="name"></div>
+                    {{#if errors.fullname}}<div class="error">{{icon "circle-alert"}}<span>{{errors.fullname}}</span></div>{{/if}}
+                </div>
+                <div><button type="submit" class="btn btn-primary" data-busy-label="Saving…">{{icon "check"}}Save name</button></div>
+            </form>
+        </section>
+    </div>
+
+    <section class="card">
+        <div class="card-head">
+            <div class="tile green">{{icon "lock"}}</div>
+            <div><h2 class="card-title">Password</h2><div class="card-sub">Changing it signs out every other session.</div></div>
+        </div>
         <form method="post" action="/settings" class="form" novalidate data-busy-form>
             <input type="hidden" name="password_form" value="1">
             <div class="field {{#if errors.current}}invalid{{/if}}">
                 <label class="label" for="current">Current password</label>
+                <div class="input-wrap has-trail">{{icon "lock" "lead"}}
                 <input type="password" class="input" name="current" id="current" required autocomplete="current-password" maxlength="45">
-                {{#if errors.current}}<div class="error">{{errors.current}}</div>{{/if}}
+                <div class="trail"><button type="button" class="icon-btn" data-toggle-password="current" aria-label="Show password" aria-pressed="false">{{icon "eye" "when-off"}}{{icon "eye-off" "when-on"}}</button></div></div>
+                {{#if errors.current}}<div class="error">{{icon "circle-alert"}}<span>{{errors.current}}</span></div>{{/if}}
             </div>
             <div class="field {{#if errors.password}}invalid{{/if}}">
                 <label class="label" for="password">New password</label>
+                <div class="input-wrap has-trail">{{icon "key-round" "lead"}}
                 <input type="password" class="input" name="password" id="password" required minlength="6" maxlength="45" autocomplete="new-password">
-                {{#if errors.password}}<div class="error">{{errors.password}}</div>{{/if}}
+                <div class="trail"><button type="button" class="icon-btn" data-toggle-password="password" aria-label="Show password" aria-pressed="false">{{icon "eye" "when-off"}}{{icon "eye-off" "when-on"}}</button></div></div>
+                {{#if errors.password}}<div class="error">{{icon "circle-alert"}}<span>{{errors.password}}</span></div>{{/if}}
             </div>
             <div class="field {{#if errors.password2}}invalid{{/if}}">
                 <label class="label" for="password2">Confirm new password</label>
-                <input type="password" class="input" name="password2" id="password2" required minlength="6" maxlength="45" autocomplete="new-password">
-                {{#if errors.password2}}<div class="error">{{errors.password2}}</div>{{/if}}
+                <div class="input-wrap">{{icon "key-round" "lead"}}
+                <input type="password" class="input" name="password2" id="password2" required minlength="6" maxlength="45" autocomplete="new-password"></div>
+                {{#if errors.password2}}<div class="error">{{icon "circle-alert"}}<span>{{errors.password2}}</span></div>{{/if}}
             </div>
-            <button type="submit" class="btn btn-primary" data-busy-label="Saving…">Change password</button>
+            <div><button type="submit" class="btn btn-primary" data-busy-label="Saving…">{{icon "shield-check"}}Change password</button></div>
         </form>
     </section>
 </div>

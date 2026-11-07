@@ -8,6 +8,7 @@
     <meta name="description" content="{{brand}} licence panel">
     <meta name="robots" content="noindex">
     <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+    <link rel="preload" href="/assets/fonts/inter-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
     <title>{{title}} · {{brand}}</title>
     <link rel="stylesheet" href="/assets/css/ui.css">
 </head>
@@ -17,13 +18,11 @@
         <div class="scrim" data-nav-close></div>
         <div class="main">
             <header class="topbar">
-                <button type="button" class="icon-btn" data-nav-open aria-label="Open menu">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
-                </button>
+                <button type="button" class="icon-btn lg" data-nav-open aria-label="Open menu">{{icon "menu"}}</button>
                 <a href="/dashboard" class="brand">{{brand}}</a>
-                <span style="width:34px" aria-hidden="true"></span>
+                <a href="/settings" class="icon-btn lg" aria-label="Account settings">{{icon "user-round"}}</a>
             </header>
-            <main class="content" id="main-content">
+            <main class="content fade-in" id="main-content">
                 {{{content}}}
             </main>
             <footer class="footer">
@@ -31,7 +30,22 @@
                 <span>Panel v{{appVersion}}</span>
             </footer>
         </div>
+        <nav class="tabbar" aria-label="Quick navigation">
+            <a href="/dashboard" class="{{#if navDashboard}}active{{/if}}">{{icon "layout-dashboard"}}<span>Home</span></a>
+            <a href="/keys" class="{{#if navKeys}}active{{/if}}">{{icon "key-round"}}<span>Keys</span></a>
+            <a href="/keys/generate" class="tab-cta" aria-label="Generate keys"><span class="fab">{{icon "plus"}}</span></a>
+            <a href="/settings" class="{{#if navSettings}}active{{/if}}">{{icon "settings"}}<span>Settings</span></a>
+            <button type="button" data-nav-open>{{icon "menu"}}<span>More</span></button>
+        </nav>
     </div>
+    <template id="ui-icons">
+        <i data-icon="copy">{{icon "copy"}}</i><i data-icon="check">{{icon "check"}}</i>
+        <i data-icon="pencil">{{icon "pencil"}}</i><i data-icon="rotate-ccw">{{icon "rotate-ccw"}}</i>
+        <i data-icon="trash-2">{{icon "trash-2"}}</i><i data-icon="x">{{icon "x"}}</i>
+        <i data-icon="circle-check">{{icon "circle-check"}}</i><i data-icon="circle-alert">{{icon "circle-alert"}}</i>
+        <i data-icon="triangle-alert">{{icon "triangle-alert"}}</i><i data-icon="key-round">{{icon "key-round"}}</i>
+        <i data-icon="search">{{icon "search"}}</i>
+    </template>
     <script src="/assets/js/app-ui.js"></script>
 </body>
 </html>

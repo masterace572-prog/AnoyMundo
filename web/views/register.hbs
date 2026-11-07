@@ -7,58 +7,85 @@
     <meta name="color-scheme" content="dark">
     <meta name="robots" content="noindex">
     <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+    <link rel="preload" href="/assets/fonts/inter-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
     <title>Create account · {{brand}}</title>
     <link rel="stylesheet" href="/assets/css/ui.css">
 </head>
 <body class="auth">
 <main class="auth-shell">
-    <div class="auth-panel">
-        <div class="auth-wordmark">{{brand}}</div>
-        <h1 class="auth-title">Create account</h1>
-        <p class="muted">You need a referral code from an admin.</p>
+    <div class="auth-panel fade-in">
+        <div class="auth-wordmark">{{brand}} <small>Panel</small></div>
+        <div class="auth-card">
+            <div class="tile tile-lg">{{icon "user-plus"}}</div>
+            <h1 class="auth-title">Create account</h1>
+            <p class="lead">You need a referral code from an admin.</p>
 
-        {{> msgStatus}}
+            {{> msgStatus}}
 
-        <form method="post" action="/register" novalidate data-busy-form>
-            <div class="field {{#if errors.referral}}invalid{{/if}}">
-                <label class="label" for="referral">Referral code</label>
-                <input class="input mono upper" type="text" name="referral" id="referral" value="{{old.referral}}"
-                       autocomplete="off" autocapitalize="characters" spellcheck="false" required maxlength="25" placeholder="ABC1234">
-                {{#if errors.referral}}<div class="error">{{errors.referral}}</div>{{/if}}
-            </div>
-            <div class="field {{#if errors.email}}invalid{{/if}}">
-                <label class="label" for="email">Email</label>
-                <input class="input" type="email" name="email" id="email" value="{{old.email}}" autocomplete="email" required maxlength="40" placeholder="you@example.com">
-                {{#if errors.email}}<div class="error">{{errors.email}}</div>{{/if}}
-            </div>
-            <div class="field {{#if errors.username}}invalid{{/if}}">
-                <label class="label" for="username">Username</label>
-                <input class="input" type="text" name="username" id="username" value="{{old.username}}" autocomplete="username"
-                       autocapitalize="none" spellcheck="false" required minlength="4" maxlength="25" placeholder="Letters and numbers">
-                {{#if errors.username}}<div class="error">{{errors.username}}</div>{{else}}<div class="hint">Your keys will start with this name, in capitals.</div>{{/if}}
-            </div>
-            <div class="field {{#if errors.fullname}}invalid{{/if}}">
-                <label class="label" for="fullname">Name</label>
-                <input class="input" type="text" name="fullname" id="fullname" value="{{old.fullname}}" autocomplete="name" required maxlength="40" placeholder="Your name">
-                {{#if errors.fullname}}<div class="error">{{errors.fullname}}</div>{{/if}}
-            </div>
-            <div class="field {{#if errors.password}}invalid{{/if}}">
-                <label class="label" for="password">Password</label>
-                <div class="input-group">
-                    <input class="input" type="password" name="password" id="password" autocomplete="new-password" required minlength="6" maxlength="45" placeholder="At least 6 characters">
-                    <button type="button" class="addon-btn" data-toggle-password="password">Show</button>
+            <form method="post" action="/register" class="form" novalidate data-busy-form>
+                <div class="field {{#if errors.referral}}invalid{{/if}}">
+                    <label class="label" for="referral">Referral code</label>
+                    <div class="input-wrap">
+                        {{icon "ticket" "lead"}}
+                        <input class="input mono upper" type="text" name="referral" id="referral" value="{{old.referral}}"
+                               autocomplete="off" autocapitalize="characters" spellcheck="false" required maxlength="25" placeholder="ABC1234">
+                    </div>
+                    {{#if errors.referral}}<div class="error">{{icon "circle-alert"}}<span>{{errors.referral}}</span></div>{{/if}}
                 </div>
-                {{#if errors.password}}<div class="error">{{errors.password}}</div>{{/if}}
-            </div>
-            <div class="field {{#if errors.password2}}invalid{{/if}}">
-                <label class="label" for="password2">Confirm password</label>
-                <input class="input" type="password" name="password2" id="password2" autocomplete="new-password" required minlength="6" maxlength="45" placeholder="Repeat password">
-                {{#if errors.password2}}<div class="error">{{errors.password2}}</div>{{/if}}
-            </div>
-            <button type="submit" class="btn btn-primary btn-block" data-busy-label="Creating account…">Create account</button>
-        </form>
+                <div class="field {{#if errors.email}}invalid{{/if}}">
+                    <label class="label" for="email">Email</label>
+                    <div class="input-wrap">
+                        {{icon "mail" "lead"}}
+                        <input class="input" type="email" name="email" id="email" value="{{old.email}}" autocomplete="email" required maxlength="40" placeholder="you@example.com">
+                    </div>
+                    {{#if errors.email}}<div class="error">{{icon "circle-alert"}}<span>{{errors.email}}</span></div>{{/if}}
+                </div>
+                <div class="field-row">
+                    <div class="field {{#if errors.username}}invalid{{/if}}">
+                        <label class="label" for="username">Username</label>
+                        <div class="input-wrap">
+                            {{icon "at-sign" "lead"}}
+                            <input class="input" type="text" name="username" id="username" value="{{old.username}}" autocomplete="username"
+                                   autocapitalize="none" spellcheck="false" required minlength="4" maxlength="25" placeholder="Letters, numbers">
+                        </div>
+                        {{#if errors.username}}<div class="error">{{icon "circle-alert"}}<span>{{errors.username}}</span></div>{{/if}}
+                    </div>
+                    <div class="field {{#if errors.fullname}}invalid{{/if}}">
+                        <label class="label" for="fullname">Name</label>
+                        <div class="input-wrap">
+                            {{icon "user" "lead"}}
+                            <input class="input" type="text" name="fullname" id="fullname" value="{{old.fullname}}" autocomplete="name" required maxlength="40" placeholder="Your name">
+                        </div>
+                        {{#if errors.fullname}}<div class="error">{{icon "circle-alert"}}<span>{{errors.fullname}}</span></div>{{/if}}
+                    </div>
+                </div>
+                <div class="hint" style="margin-top:-8px">Your keys will start with your username, in capitals.</div>
+                <div class="field {{#if errors.password}}invalid{{/if}}">
+                    <label class="label" for="password">Password</label>
+                    <div class="input-wrap has-trail">
+                        {{icon "lock" "lead"}}
+                        <input class="input" type="password" name="password" id="password" autocomplete="new-password" required minlength="6" maxlength="45" placeholder="At least 6 characters">
+                        <div class="trail">
+                            <button type="button" class="icon-btn" data-toggle-password="password" aria-label="Show password" aria-pressed="false">{{icon "eye" "when-off"}}{{icon "eye-off" "when-on"}}</button>
+                        </div>
+                    </div>
+                    {{#if errors.password}}<div class="error">{{icon "circle-alert"}}<span>{{errors.password}}</span></div>{{/if}}
+                </div>
+                <div class="field {{#if errors.password2}}invalid{{/if}}">
+                    <label class="label" for="password2">Confirm password</label>
+                    <div class="input-wrap">
+                        {{icon "lock" "lead"}}
+                        <input class="input" type="password" name="password2" id="password2" autocomplete="new-password" required minlength="6" maxlength="45" placeholder="Repeat password">
+                    </div>
+                    {{#if errors.password2}}<div class="error">{{icon "circle-alert"}}<span>{{errors.password2}}</span></div>{{/if}}
+                </div>
+                <button type="submit" class="btn btn-primary btn-block btn-lg" data-busy-label="Creating account…">Create account {{icon "arrow-right"}}</button>
+            </form>
+        </div>
 
-        <p class="auth-foot">Already have an account? <a href="/login">Sign in</a></p>
+        <div class="auth-foot">
+            <span>Already have an account? <a href="/login">Sign in</a></span>
+        </div>
     </div>
 </main>
 <script src="/assets/js/app-ui.js"></script>

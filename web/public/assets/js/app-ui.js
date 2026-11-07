@@ -17,11 +17,30 @@
     return node;
   }
 
+  /* -------------------------------------------------------------- icons */
+  // Icons come from <template id="ui-icons"> (rendered server-side), so the
+  // script never builds SVG markup from strings.
+  function icon(name, cls) {
+    var tpl = document.getElementById('ui-icons');
+    var src = tpl && tpl.content ? tpl.content.querySelector('[data-icon="' + name + '"] svg') : null;
+    if (!src) return document.createTextNode('');
+    var svg = src.cloneNode(true);
+    if (cls) svg.setAttribute('class', (svg.getAttribute('class') || '') + ' ' + cls);
+    return svg;
+  }
+  function iconButton(name, label, cls) {
+    var b = el('button', { type: 'button', className: 'icon-btn' + (cls ? ' ' + cls : ''), 'aria-label': label, title: label });
+    b.appendChild(icon(name));
+    return b;
+  }
+
   /* ------------------------------------------------------------- toasts */
   function toast(message, isError) {
     var host = $('.toasts');
     if (!host) { host = el('div', { className: 'toasts', 'aria-live': 'polite' }); document.body.appendChild(host); }
-    var t = el('div', { className: 'toast' + (isError ? ' error' : '') }, message);
+    var t = el('div', { className: 'toast' + (isError ? ' error' : '') });
+    t.appendChild(icon(isError ? 'circle-alert' : 'circle-check'));
+    t.appendChild(el('span', {}, message));
     host.appendChild(t);
     setTimeout(function () { t.style.opacity = '0'; t.style.transition = 'opacity .2s'; }, 2600);
     setTimeout(function () { if (t.parentNode) t.parentNode.removeChild(t); }, 2900);
@@ -32,6 +51,9 @@
     return new Promise(function (resolve) {
       var back = el('div', { className: 'modal-backdrop', role: 'presentation' });
       var box = el('div', { className: 'modal', role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'modal-title' });
+      var tile = el('div', { className: 'tile tile-lg ' + (danger ? 'red' : 'orange') });
+      tile.appendChild(icon(danger ? 'trash-2' : 'triangle-alert'));
+      box.appendChild(tile);
       box.appendChild(el('h3', { id: 'modal-title' }, title));
       if (detail) box.appendChild(el('p', {}, detail));
       var actions = el('div', { className: 'actions' });
@@ -63,7 +85,7 @@
     btn.disabled = true;
     btn.textContent = '';
     btn.appendChild(el('span', { className: 'spinner', 'aria-hidden': 'true' }));
-    btn.appendChild(document.createTextNode(label || 'Working…'));
+    if (!btn.classList.contains('icon-btn')) btn.appendChild(document.createTextNode(label || 'Working…'));
   }
   function clearBusy(btn) {
     if (!btn || btn.dataset.busy !== '1') return;
@@ -103,6 +125,20 @@
     });
   }
 
+  // Brief "copied" feedback on the button itself, plus a toast.
+  function copied(btn) {
+    toast('Copied');
+    if (!btn || btn.dataset.copied === '1') return;
+    btn.dataset.copied = '1';
+    var before = btn.innerHTML;
+    var isIcon = btn.classList.contains('icon-btn');
+    btn.textContent = '';
+    btn.appendChild(icon('check'));
+    if (!isIcon) btn.appendChild(document.createTextNode('Copied'));
+    btn.classList.add('ok');
+    setTimeout(function () { btn.innerHTML = before; btn.classList.remove('ok'); btn.dataset.copied = ''; }, 1400);
+  }
+
   function randomId() {
     if (window.crypto && crypto.getRandomValues) {
       var a = new Uint8Array(16); crypto.getRandomValues(a);
@@ -126,17 +162,25 @@
         if (input) {
           var show = input.type === 'password';
           input.type = show ? 'text' : 'password';
-          toggle.textContent = show ? 'Hide' : 'Show';
+          toggle.classList.toggle('on', show);
+          toggle.setAttribute('aria-pressed', show ? 'true' : 'false');
+          toggle.setAttribute('aria-label', show ? 'Hide password' : 'Show password');
+          if (toggle.hasAttribute('title')) toggle.setAttribute('title', show ? 'Hide password' : 'Show password');
         }
         return;
       }
       var copy = t.closest('[data-copy-target]');
       if (copy) {
         var src = document.getElementById(copy.getAttribute('data-copy-target'));
-        if (src) copyText(src.value || src.textContent).then(function () { toast('Copied'); }, function () {
+        if (src) copyText(src.value || src.textContent).then(function () { copied(copy); }, function () {
           if (src.select) src.select();
           toast('Press Ctrl+C to copy', true);
         });
+        return;
+      }
+      var copyT = t.closest('[data-copy-text]');
+      if (copyT) {
+        copyText(copyT.getAttribute('data-copy-text')).then(function () { copied(copyT); }, function () { toast('Copy failed', true); });
       }
     });
     document.addEventListener('keydown', function (e) { if (e.key === 'Escape') document.body.classList.remove('nav-open'); });
@@ -148,7 +192,9 @@
         e.preventDefault();
         var btn = form.querySelector('[type=submit]');
         var danger = btn && btn.classList.contains('btn-danger');
-        confirmDialog(form.getAttribute('data-confirm'), form.getAttribute('data-confirm-detail'), btn ? btn.textContent.trim() : 'Continue', danger)
+        danger = danger || (btn && btn.classList.contains('danger'));
+        var okLabel = btn ? (btn.getAttribute('title') || btn.textContent.trim() || 'Continue') : 'Continue';
+        confirmDialog(form.getAttribute('data-confirm'), form.getAttribute('data-confirm-detail'), okLabel, danger)
           .then(function (ok) {
             if (!ok) return;
             form.dataset.confirmed = '1';
@@ -167,6 +213,18 @@
         var btn = form.querySelector('[type=submit]');
         setBusy(btn, btn && btn.getAttribute('data-busy-label'));
         setTimeout(function () { form.dataset.submitting = ''; clearBusy(btn); }, 30000);
+      });
+    });
+
+    // Number steppers (- / +) next to numeric inputs.
+    $$('[data-step]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        var input = document.getElementById(b.getAttribute('data-target'));
+        if (!input) return;
+        var v = parseInt(input.value, 10); if (isNaN(v)) v = 0;
+        var lo = Number(input.min || 1), hi = Number(input.max || 100);
+        input.value = String(Math.min(hi, Math.max(lo, v + Number(b.getAttribute('data-step')))));
+        input.dispatchEvent(new Event('input', { bubbles: true }));
       });
     });
 
@@ -238,11 +296,29 @@
     var cols = owner ? 7 : 6;
     var labels = { active: 'In use', unused: 'Unused', expired: 'Expired', blocked: 'Blocked' };
 
-    function message(text) {
+    function message(text, title, iconName, isError) {
       body.textContent = '';
       var tr = el('tr', { className: 'is-empty' });
-      tr.appendChild(el('td', { colspan: String(cols) }, text));
-      body.appendChild(tr);
+      var td = el('td', { colspan: String(cols) });
+      var box = el('div', { className: 'empty' });
+      var tile = el('div', { className: 'tile ' + (isError ? 'red' : 'gray') });
+      tile.appendChild(icon(iconName || (isError ? 'circle-alert' : 'key-round')));
+      box.appendChild(tile);
+      if (title) box.appendChild(el('b', {}, title));
+      box.appendChild(document.createTextNode(text));
+      td.appendChild(box); tr.appendChild(td); body.appendChild(tr);
+    }
+    function skeleton() {
+      if (body.querySelector('tr:not(.skeleton)') && !body.querySelector('tr.is-empty')) {
+        body.style.opacity = '.55'; return;
+      }
+      body.textContent = '';
+      [62, 48, 56, 40].forEach(function (w) {
+        var tr = el('tr', { className: 'skeleton' });
+        var td = el('td', { colspan: String(cols) });
+        td.appendChild(el('span', { className: 'sk', style: 'width:' + w + '%' }));
+        tr.appendChild(td); body.appendChild(tr);
+      });
     }
     function cell(tr, label, text, cls) {
       var td = el('td', { 'data-label': label }, text);
@@ -251,10 +327,20 @@
     }
     function render(rows) {
       body.textContent = '';
-      if (!rows.length) return message(state.q || state.status ? 'No keys match.' : 'No keys yet. Generate your first key.');
+      body.style.opacity = '';
+      if (!rows.length) {
+        return state.q || state.status
+          ? message('Try a different search or filter.', 'No keys match', 'search')
+          : message('Generate your first key to see it here.', 'No keys yet', 'key-round');
+      }
       rows.forEach(function (r) {
         var tr = el('tr');
-        cell(tr, 'Key', r.user_key, 'key');
+        var kc = cell(tr, 'Key', '', 'primary-cell');
+        var kt = el('span', { className: 'keytext' }, r.user_key);
+        var copy = iconButton('copy', 'Copy ' + r.user_key);
+        copy.addEventListener('click', function () { copyText(r.user_key).then(function () { copied(copy); }, function () { toast('Copy failed', true); }); });
+        kt.appendChild(copy);
+        kc.appendChild(kt);
         cell(tr, 'Duration', r.duration);
         cell(tr, 'Devices', r.devices + ' / ' + r.max_devices);
         var st = cell(tr, 'Status', '');
@@ -262,14 +348,15 @@
         cell(tr, 'Expires', r.expires || 'Not started');
         if (owner) cell(tr, 'Created by', r.registrator);
         var act = el('td', { className: 'actions-cell' });
-        var copy = el('button', { type: 'button', className: 'btn btn-plain btn-sm' }, 'Copy');
-        copy.addEventListener('click', function () { copyText(r.user_key).then(function () { toast('Copied'); }, function () { toast('Copy failed', true); }); });
-        var edit = el('a', { className: 'btn btn-secondary btn-sm', href: '/keys/' + encodeURIComponent(r.id) }, 'Edit');
-        var reset = el('button', { type: 'button', className: 'btn btn-secondary btn-sm' }, 'Reset');
+        var group = el('span', { className: 'row-actions' });
+        var edit = el('a', { className: 'icon-btn', href: '/keys/' + encodeURIComponent(r.id), 'aria-label': 'Edit ' + r.user_key, title: 'Edit' });
+        edit.appendChild(icon('pencil'));
+        var reset = iconButton('rotate-ccw', 'Reset devices');
         reset.addEventListener('click', function () { keyAction('reset', r.user_key, reset, load); });
-        var del = el('button', { type: 'button', className: 'btn btn-danger btn-sm' }, 'Delete');
+        var del = iconButton('trash-2', 'Delete key', 'danger');
         del.addEventListener('click', function () { keyAction('delete', r.user_key, del, load); });
-        [copy, edit, reset, del].forEach(function (b, i) { if (i) act.appendChild(document.createTextNode(' ')); act.appendChild(b); });
+        group.appendChild(edit); group.appendChild(reset); group.appendChild(del);
+        act.appendChild(group);
         tr.appendChild(act);
         body.appendChild(tr);
       });
@@ -279,6 +366,7 @@
       var url = '/keys/api?page=' + state.page + '&per=' + state.per +
         '&q=' + encodeURIComponent(state.q) + '&status=' + encodeURIComponent(state.status);
       prev.disabled = true; next.disabled = true;
+      skeleton();
       fetch(url, { credentials: 'same-origin', headers: { Accept: 'application/json' } })
         .then(function (res) {
           if (res.status === 401 || res.redirected) { location.href = '/login'; throw new Error('Signed out'); }
@@ -300,7 +388,9 @@
         })
         .catch(function (err) {
           if (seq !== state.seq) return;
-          message(err && err.message === 'Failed to fetch' ? 'Network error. Check your connection and try again.' : (err.message || 'Could not load keys.'));
+          body.style.opacity = '';
+          message(err && err.message === 'Failed to fetch' ? 'Check your connection and try again.' : (err.message || 'Please try again.'),
+            'Could not load keys', 'circle-alert', true);
         });
     }
     var timer;
@@ -324,7 +414,13 @@
     var unlimited = form.getAttribute('data-unlimited') === '1';
     var saldo = Number(form.getAttribute('data-saldo') || 0);
     var min = Number(form.getAttribute('data-min') || 4), max = Number(form.getAttribute('data-max') || 10);
-    var duration = form.querySelector('[name=duration]');
+    // Duration is a group of radio cards; fall back to a <select> if present.
+    var duration = {
+      get value() {
+        var r = form.querySelector('[name=duration]:checked') || form.querySelector('select[name=duration]');
+        return r ? r.value : '';
+      }
+    };
     var devices = document.getElementById('max_devices');
     var count = document.getElementById('count');
     var customInput = document.getElementById('custom_key');
@@ -384,5 +480,5 @@
     initGenerate();
   });
 
-  window.AnoyUI = { toast: toast, confirm: confirmDialog, setBusy: setBusy, clearBusy: clearBusy, post: post };
+  window.AnoyUI = { icon: icon, toast: toast, confirm: confirmDialog, setBusy: setBusy, clearBusy: clearBusy, post: post };
 })();

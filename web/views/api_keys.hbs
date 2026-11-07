@@ -1,61 +1,75 @@
 <div class="page-head">
     <div>
         <h1 class="page-title">API keys</h1>
-        <p class="page-sub">Let your website or bot create and manage licence keys. <a href="/api-docs">Read the docs</a></p>
+        <p class="page-sub">Let your website or bot create and manage licence keys.</p>
+    </div>
+    <div class="page-actions">
+        <a href="/api-docs" class="btn btn-secondary">{{icon "book-open"}}Read the docs</a>
     </div>
 </div>
 
 {{> msgStatus}}
 
 {{#if flash.apiKeyPlain}}
-<section class="section keys-out" style="border-top:0;padding-top:0">
-    <div class="row-between">
-        <h2 class="section-title">Your new API key</h2>
-        <button type="button" class="btn btn-primary btn-sm" data-copy-target="new-api-key">Copy</button>
+<section class="card highlight keys-out" style="margin-bottom:20px">
+    <div class="card-head">
+        <div class="tile green">{{icon "circle-check"}}</div>
+        <div><h2 class="card-title">Your new API key</h2><div class="card-sub">Shown once. Anyone with it can spend your balance.</div></div>
+        <span class="spacer"></span>
+        <button type="button" class="btn btn-primary btn-sm" data-copy-target="new-api-key">{{icon "copy"}}Copy</button>
     </div>
     <input type="text" class="input mono" id="new-api-key" value="{{flash.apiKeyPlain}}" readonly aria-label="New API key">
-    <p class="hint">Shown once. Store it somewhere safe; anyone with it can spend your balance.</p>
 </section>
 {{/if}}
 
-<div class="grid-2">
-<form method="post" action="/api-keys" class="form" data-busy-form>
-    <input type="hidden" name="action" value="create">
-    <div class="field">
-        <label class="label" for="api-key-name">Name</label>
-        <input type="text" class="input" name="name" id="api-key-name" required maxlength="80" placeholder="my-telegram-bot" autocomplete="off">
-        <div class="hint">Only for you, to recognise the key later.</div>
+<div class="grid-main" style="grid-template-columns:minmax(0,1fr) minmax(0,1.6fr)">
+<section class="card">
+    <div class="card-head">
+        <div class="tile purple">{{icon "key-square"}}</div>
+        <div><h2 class="card-title">New API key</h2><div class="card-sub">Uses your balance and keys</div></div>
     </div>
-    <button type="submit" class="btn btn-primary" data-busy-label="Creating…">Create API key</button>
-</form>
+    <form method="post" action="/api-keys" class="form" data-busy-form>
+        <input type="hidden" name="action" value="create">
+        <div class="field">
+            <label class="label" for="api-key-name">Name</label>
+            <div class="input-wrap">{{icon "tag" "lead"}}
+            <input type="text" class="input" name="name" id="api-key-name" required maxlength="80" placeholder="my-telegram-bot" autocomplete="off"></div>
+            <div class="hint">Only for you, to recognise the key later.</div>
+        </div>
+        <button type="submit" class="btn btn-primary btn-block" data-busy-label="Creating…">{{icon "plus"}}Create API key</button>
+    </form>
+</section>
 
-<section class="section" style="border-top:0;padding-top:0">
-    <h2 class="section-title">Your keys</h2>
-    <div class="table-wrap" style="margin-top:14px">
+<section class="card card-flush">
+    <div class="card-head" style="padding-bottom:16px;margin-bottom:0;border-bottom:1px solid var(--border)">
+        <div class="tile teal">{{icon "code-xml"}}</div>
+        <div><h2 class="card-title">Your keys</h2><div class="card-sub">Send as the X-API-Key header</div></div>
+    </div>
+    <div class="table-wrap">
         <table class="responsive">
             <thead><tr><th>Name</th><th>Key</th><th>Status</th><th>Last used</th><th class="actions-cell"><span class="sr-only">Actions</span></th></tr></thead>
             <tbody>
                 {{#each apiKeys}}
                 <tr>
-                    <td data-label="Name">{{this.name}}</td>
-                    <td class="key" data-label="Key">{{this.key_prefix}}…{{this.key_last4}}</td>
+                    <td class="primary-cell" data-label="Name">{{this.name}}</td>
+                    <td data-label="Key"><span class="keytext">{{this.key_prefix}}…{{this.key_last4}}</span></td>
                     <td data-label="Status"><span class="status {{#if (eq this.status 1)}}ok{{else}}bad{{/if}}">{{this.statusLabel}}</span></td>
                     <td data-label="Last used">{{this.usedLabel}}</td>
-                    <td class="actions-cell">
+                    <td class="actions-cell"><span class="row-actions">
                         {{#if (eq this.status 1)}}
                         <form method="post" action="/api-keys" style="display:inline" data-confirm="Revoke {{this.name}}?" data-confirm-detail="Apps using it stop working immediately.">
                             <input type="hidden" name="action" value="revoke"><input type="hidden" name="id" value="{{this.id}}">
-                            <button type="submit" class="btn btn-secondary btn-sm">Revoke</button>
+                            <button type="submit" class="icon-btn" aria-label="Revoke {{this.name}}" title="Revoke">{{icon "ban"}}</button>
                         </form>
                         {{/if}}
                         <form method="post" action="/api-keys" style="display:inline" data-confirm="Delete {{this.name}}?" data-confirm-detail="This cannot be undone.">
                             <input type="hidden" name="action" value="delete"><input type="hidden" name="id" value="{{this.id}}">
-                            <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                            <button type="submit" class="icon-btn danger" aria-label="Delete {{this.name}}" title="Delete">{{icon "trash-2"}}</button>
                         </form>
-                    </td>
+                    </span></td>
                 </tr>
                 {{else}}
-                <tr class="is-empty"><td colspan="5">No API keys yet.</td></tr>
+                <tr class="is-empty"><td colspan="5"><div class="empty"><div class="tile gray">{{icon "key-square"}}</div><b>No API keys yet</b>Create one to connect a bot or website.</div></td></tr>
                 {{/each}}
             </tbody>
         </table>

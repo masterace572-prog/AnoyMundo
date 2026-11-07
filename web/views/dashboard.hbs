@@ -3,37 +3,75 @@
         <h1 class="page-title">Dashboard</h1>
         <p class="page-sub">Signed in as {{user.displayName}} · {{user.levelName}}</p>
     </div>
-    <a href="/keys/generate" class="btn btn-primary">Generate keys</a>
+    <div class="page-actions">
+        <a href="/keys" class="btn btn-secondary">{{icon "key-round"}}All keys</a>
+        <a href="/keys/generate" class="btn btn-primary">{{icon "plus"}}Generate keys</a>
+    </div>
 </div>
 
 {{> msgStatus}}
 
+<section class="card" style="margin-bottom:20px">
+    <div class="hero">
+        <div class="tile tile-lg">{{icon "wallet"}}</div>
+        <div style="flex:1;min-width:200px">
+            <div class="hero-label">Balance</div>
+            <div class="hero-value">{{#if unlimited}}{{icon "infinity"}}Unlimited{{else}}₹{{user.saldoLabel}}{{/if}}</div>
+        </div>
+        <div class="list" style="min-width:220px;flex:0 1 300px">
+            <div class="list-row"><span class="lr-label">{{#if user.isOwner}}{{icon "crown" "i-sm"}}{{else}}{{icon "badge-check" "i-sm"}}{{/if}}Role</span><span class="lr-value">{{user.levelName}}</span></div>
+            <div class="list-row"><span class="lr-label">{{icon "calendar" "i-sm"}}Account expires</span><span class="lr-value">{{#if stats.expiryFormatted}}{{stats.expiryFormatted}}{{else}}Never{{/if}}</span></div>
+        </div>
+    </div>
+</section>
+
 <div class="stats" aria-label="Key statistics">
-    <div class="stat"><div class="stat-label">Total keys</div><div class="stat-value" data-stat="keys">{{stats.keys}}</div></div>
-    <div class="stat"><div class="stat-label">In use</div><div class="stat-value" data-stat="active">{{stats.active}}</div></div>
-    <div class="stat"><div class="stat-label">Unused</div><div class="stat-value" data-stat="unused">{{stats.inactive}}</div></div>
-    <div class="stat"><div class="stat-label">Expired</div><div class="stat-value" data-stat="expired">{{stats.expired}}</div></div>
+    <div class="stat">
+        <div class="stat-top"><span class="stat-label">Total keys</span><span class="tile tile-sm">{{icon "key-round"}}</span></div>
+        <div class="stat-value" data-stat="keys">{{stats.keys}}</div>
+        <div class="stat-foot">{{#if user.isOwner}}Across all accounts{{else}}Created by you{{/if}}</div>
+    </div>
+    <div class="stat">
+        <div class="stat-top"><span class="stat-label">In use</span><span class="tile tile-sm green">{{icon "activity"}}</span></div>
+        <div class="stat-value" data-stat="active">{{stats.active}}</div>
+        <div class="stat-foot">Running on a device</div>
+    </div>
+    <div class="stat">
+        <div class="stat-top"><span class="stat-label">Unused</span><span class="tile tile-sm teal">{{icon "sparkles"}}</span></div>
+        <div class="stat-value" data-stat="unused">{{stats.inactive}}</div>
+        <div class="stat-foot">Ready to hand out</div>
+    </div>
+    <div class="stat">
+        <div class="stat-top"><span class="stat-label">Expired</span><span class="tile tile-sm orange">{{icon "hourglass"}}</span></div>
+        <div class="stat-value" data-stat="expired">{{stats.expired}}</div>
+        <div class="stat-foot">Safe to clean up</div>
+    </div>
 </div>
 
 <div class="grid-2">
-    <section class="section">
-        <h2 class="section-title">Account</h2>
-        <div class="list" style="margin-top:14px">
-            <div class="list-row"><span>Username</span><span>{{user.username}}</span></div>
-            <div class="list-row"><span>Role</span><span>{{user.levelName}}</span></div>
-            <div class="list-row"><span>Balance</span><span>{{#if unlimited}}Unlimited{{else}}₹{{user.saldoLabel}}{{/if}}</span></div>
-            <div class="list-row"><span>Account expires</span><span>{{#if stats.expiryFormatted}}{{stats.expiryFormatted}}{{else}}Never{{/if}}</span></div>
-            {{#if user.isAdmin}}<div class="list-row"><span>{{#if user.isOwner}}Users{{else}}Users you invited{{/if}}</span><span>{{stats.users}}</span></div>{{/if}}
+    <section class="card">
+        <div class="card-head">
+            <div class="tile purple">{{icon "user-round"}}</div>
+            <div><h2 class="card-title">Account</h2><div class="card-sub">Your panel identity</div></div>
+        </div>
+        <div class="list">
+            <div class="list-row"><span class="lr-label">{{icon "at-sign" "i-sm"}}Username</span><span class="lr-value">{{user.username}}</span></div>
+            <div class="list-row"><span class="lr-label">{{icon "shield" "i-sm"}}Role</span><span class="lr-value">{{user.levelName}}</span></div>
+            <div class="list-row"><span class="lr-label">{{icon "wallet" "i-sm"}}Balance</span><span class="lr-value">{{#if unlimited}}Unlimited{{else}}₹{{user.saldoLabel}}{{/if}}</span></div>
+            {{#if user.isAdmin}}<div class="list-row"><span class="lr-label">{{icon "users" "i-sm"}}{{#if user.isOwner}}Users{{else}}Users you invited{{/if}}</span><span class="lr-value">{{stats.users}}</span></div>{{/if}}
         </div>
     </section>
-    <section class="section">
-        <h2 class="section-title">Shortcuts</h2>
-        <div class="list" style="margin-top:14px">
-            <a class="list-row" href="/keys"><span>All keys</span><span class="chev">›</span></a>
-            <a class="list-row" href="/keys/generate"><span>Generate keys</span><span class="chev">›</span></a>
-            {{#if user.isAdmin}}<a class="list-row" href="/server"><span>Server settings</span><span class="chev">›</span></a>{{/if}}
-            {{#if user.isOwner}}<a class="list-row" href="/lib"><span>Publish library update</span><span class="chev">›</span></a>{{/if}}
-            <a class="list-row" href="/settings"><span>Account settings</span><span class="chev">›</span></a>
+    <section class="card">
+        <div class="card-head">
+            <div class="tile">{{icon "zap"}}</div>
+            <div><h2 class="card-title">Quick actions</h2><div class="card-sub">Jump to what you need</div></div>
+        </div>
+        <div class="list">
+            <a class="list-row" href="/keys/generate"><span class="lr-label"><span class="tile tile-sm">{{icon "wand-sparkles"}}</span>Generate keys</span>{{icon "chevron-right" "chev"}}</a>
+            <a class="list-row" href="/keys"><span class="lr-label"><span class="tile tile-sm teal">{{icon "key-round"}}</span>All keys</span>{{icon "chevron-right" "chev"}}</a>
+            {{#if user.isAdmin}}<a class="list-row" href="/server"><span class="lr-label"><span class="tile tile-sm green">{{icon "server"}}</span>Server settings</span>{{icon "chevron-right" "chev"}}</a>{{/if}}
+            {{#if user.isOwner}}<a class="list-row" href="/lib"><span class="lr-label"><span class="tile tile-sm purple">{{icon "package"}}</span>Publish library update</span>{{icon "chevron-right" "chev"}}</a>{{/if}}
+            <a class="list-row" href="/settings"><span class="lr-label"><span class="tile tile-sm gray">{{icon "settings"}}</span>Account settings</span>{{icon "chevron-right" "chev"}}</a>
         </div>
     </section>
 </div>

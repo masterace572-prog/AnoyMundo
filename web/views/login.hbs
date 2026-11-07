@@ -7,43 +7,53 @@
     <meta name="color-scheme" content="dark">
     <meta name="robots" content="noindex">
     <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+    <link rel="preload" href="/assets/fonts/inter-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
     <title>Sign In · {{brand}}</title>
     <link rel="stylesheet" href="/assets/css/ui.css">
 </head>
 <body class="auth">
 <main class="auth-shell">
-    <div class="auth-panel">
-        <div class="auth-wordmark">{{brand}}</div>
-        <h1 class="auth-title">Sign In</h1>
-        <p class="muted">Use your panel account to continue.</p>
+    <div class="auth-panel fade-in">
+        <div class="auth-wordmark">{{brand}} <small>Panel</small></div>
+        <div class="auth-card">
+            <div class="tile tile-lg">{{icon "shield-check"}}</div>
+            <h1 class="auth-title">Sign In</h1>
+            <p class="lead">Welcome back. Use your panel account to continue.</p>
 
-        {{> msgStatus}}
+            {{> msgStatus}}
 
-        <form method="post" action="/login" novalidate data-busy-form>
-            <div class="field {{#if errors.username}}invalid{{/if}}">
-                <label class="label" for="username">Username</label>
-                <input class="input" type="text" name="username" id="username" value="{{old.username}}"
-                       autocomplete="username" autocapitalize="none" spellcheck="false" required minlength="3" maxlength="25"
-                       placeholder="Username" {{#unless old.username}}autofocus{{/unless}}>
-                {{#if errors.username}}<div class="error">{{errors.username}}</div>{{/if}}
-            </div>
-            <div class="field {{#if errors.password}}invalid{{/if}}">
-                <label class="label" for="password">Password</label>
-                <div class="input-group">
-                    <input class="input" type="password" name="password" id="password" autocomplete="current-password"
-                           required minlength="6" maxlength="45" placeholder="Password" {{#if old.username}}autofocus{{/if}}>
-                    <button type="button" class="addon-btn" data-toggle-password="password">Show</button>
+            <form method="post" action="/login" class="form" novalidate data-busy-form>
+                <div class="field {{#if errors.username}}invalid{{/if}}">
+                    <label class="label" for="username">Username</label>
+                    <div class="input-wrap">
+                        {{icon "user" "lead"}}
+                        <input class="input" type="text" name="username" id="username" value="{{old.username}}"
+                               autocomplete="username" autocapitalize="none" spellcheck="false" required minlength="3" maxlength="25"
+                               placeholder="Your username" {{#unless old.username}}autofocus{{/unless}}>
+                    </div>
+                    {{#if errors.username}}<div class="error">{{icon "circle-alert"}}<span>{{errors.username}}</span></div>{{/if}}
                 </div>
-                {{#if errors.password}}<div class="error">{{errors.password}}</div>{{/if}}
-            </div>
-            <div class="field">
+                <div class="field {{#if errors.password}}invalid{{/if}}">
+                    <label class="label" for="password">Password</label>
+                    <div class="input-wrap has-trail">
+                        {{icon "lock" "lead"}}
+                        <input class="input" type="password" name="password" id="password" autocomplete="current-password"
+                               required minlength="6" maxlength="45" placeholder="Your password" {{#if old.username}}autofocus{{/if}}>
+                        <div class="trail">
+                            <button type="button" class="icon-btn" data-toggle-password="password" aria-label="Show password" aria-pressed="false">{{icon "eye" "when-off"}}{{icon "eye-off" "when-on"}}</button>
+                        </div>
+                    </div>
+                    {{#if errors.password}}<div class="error">{{icon "circle-alert"}}<span>{{errors.password}}</span></div>{{/if}}
+                </div>
                 <label class="check"><input type="checkbox" name="stay_log" id="stay_log" value="yes"> Keep me signed in</label>
-            </div>
-            <button type="submit" class="btn btn-primary btn-block" data-busy-label="Signing in…">Sign In</button>
-        </form>
+                <button type="submit" class="btn btn-primary btn-block btn-lg" data-busy-label="Signing in…">Sign In {{icon "arrow-right"}}</button>
+            </form>
+        </div>
 
-        <p class="auth-foot">Have a referral code? <a href="/register">Create an account</a><br>
-            Need help? <a href="{{telegram.url}}" target="_blank" rel="noopener">{{telegram.handle}}</a></p>
+        <div class="auth-foot">
+            <span>Have a referral code? <a href="/register">{{icon "user-plus" "i-sm"}}Create an account</a></span>
+            <a href="{{telegram.url}}" target="_blank" rel="noopener">{{icon "send" "i-sm"}}Support {{telegram.handle}}</a>
+        </div>
     </div>
 </main>
 <script src="/assets/js/app-ui.js"></script>

@@ -1,18 +1,26 @@
 <div class="docs">
+    <div class="page-head">
+        <div>
+            <h1 class="page-title">API docs</h1>
+            <p class="page-sub">Key management for your website or Telegram bot.</p>
+        </div>
+        <div class="page-actions"><a href="/api-keys" class="btn btn-primary">{{icon "key-square"}}Manage API keys</a></div>
+    </div>
     {{> msgStatus}}
-
-    <div class="section">
-        <h1 class="page-title" style="margin-bottom:12px">API docs — key management</h1>
+    <section class="card">
+        <div class="card-head">
+            <div class="tile purple">{{icon "book-open"}}</div>
+            <div><h2 class="card-title">Overview</h2></div>
+        </div>
         <p class="muted">Use a <strong>personal API key</strong> to create, list, read, update,
         reset and delete <strong>licence keys</strong> from your own website or Telegram bot.
         Creating a key through the API charges your saldo exactly like the panel does.</p>
         <p class="doc-note" style="margin-top:14px">This API is <strong>only for keys</strong>. It cannot change the mod name,
         status text, floating text, features, maintenance mode or any other server setting.
         For the loader / mod side, see <a href="/docs">Integration docs</a>.</p>
-        <p style="margin-top:14px"><a href="/api-keys" class="btn btn-primary">Create / manage my API keys</a></p>
-    </div>
+    </section>
 
-    <div class="section">
+    <div class="card">
         <div class="doc-section">
             <h2>1. Get an API key</h2>
             <p>Log in to the panel, open <a href="/api-keys">API keys</a>, give the key a name (for example
@@ -43,7 +51,7 @@ Content-Type: application/json</code></pre>
         </div>
     </div>
 
-    <div class="section">
+    <div class="card">
         <div class="doc-section">
             <h2>4. Endpoints</h2>
             <div class="table-scroll">

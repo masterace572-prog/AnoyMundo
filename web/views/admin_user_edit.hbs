@@ -1,49 +1,68 @@
 <div class="page-head">
-    <div>
-        <h1 class="page-title">Edit user</h1>
-        <p class="page-sub">{{target.displayName}}</p>
+    <div class="page-head-main">
+        <a href="/admin/manage-users" class="icon-btn lg" aria-label="Back to users">{{icon "chevron-left"}}</a>
+        <div>
+            <h1 class="page-title">Edit user</h1>
+            <p class="page-sub">{{target.displayName}}</p>
+        </div>
     </div>
-    <a href="/admin/manage-users" class="btn btn-secondary">All users</a>
 </div>
 
 {{> msgStatus}}
 
+<section class="card" style="max-width:760px">
+    <div class="card-head">
+        <div class="avatar" aria-hidden="true" style="width:46px;height:46px;flex-basis:46px;font-size:18px">{{initial target.fullname target.username}}</div>
+        <div><h2 class="card-title">{{target.username}}</h2><div class="card-sub">{{target.email}}</div></div>
+    </div>
 <form method="post" action="/admin/user/{{target.id_users}}" class="form" novalidate data-busy-form>
     <input type="hidden" name="user_id" value="{{target.id_users}}">
-    <div class="field {{#if errors.username}}invalid{{/if}}">
-        <label class="label" for="username">Username</label>
-        <input type="text" class="input" name="username" id="username" value="{{form.username}}" required minlength="4" maxlength="25" autocomplete="off" autocapitalize="none" spellcheck="false">
-        {{#if errors.username}}<div class="error">{{errors.username}}</div>{{else}}<div class="hint">Renaming keeps their keys attached.</div>{{/if}}
+    <div class="field-row">
+        <div class="field {{#if errors.username}}invalid{{/if}}">
+            <label class="label" for="username">Username</label>
+            <div class="input-wrap">{{icon "at-sign" "lead"}}
+            <input type="text" class="input" name="username" id="username" value="{{form.username}}" required minlength="4" maxlength="25" autocomplete="off" autocapitalize="none" spellcheck="false"></div>
+            {{#if errors.username}}<div class="error">{{icon "circle-alert"}}<span>{{errors.username}}</span></div>{{else}}<div class="hint">Renaming keeps their keys attached.</div>{{/if}}
+        </div>
+        <div class="field {{#if errors.fullname}}invalid{{/if}}">
+            <label class="label" for="fullname">Name</label>
+            <div class="input-wrap">{{icon "user" "lead"}}
+            <input type="text" class="input" name="fullname" id="fullname" value="{{form.fullname}}" maxlength="155" autocomplete="off"></div>
+            {{#if errors.fullname}}<div class="error">{{icon "circle-alert"}}<span>{{errors.fullname}}</span></div>{{/if}}
+        </div>
     </div>
-    <div class="field {{#if errors.fullname}}invalid{{/if}}">
-        <label class="label" for="fullname">Name</label>
-        <input type="text" class="input" name="fullname" id="fullname" value="{{form.fullname}}" maxlength="155" autocomplete="off">
-        {{#if errors.fullname}}<div class="error">{{errors.fullname}}</div>{{/if}}
+    <div class="field-row">
+        <div class="field {{#if errors.level}}invalid{{/if}}">
+            <label class="label" for="level">Role</label>
+            {{{selects.level}}}
+            {{#if errors.level}}<div class="error">{{icon "circle-alert"}}<span>{{errors.level}}</span></div>{{/if}}
+        </div>
+        <div class="field {{#if errors.status}}invalid{{/if}}">
+            <label class="label" for="status">Status</label>
+            {{{selects.status}}}
+            {{#if errors.status}}<div class="error">{{icon "circle-alert"}}<span>{{errors.status}}</span></div>{{/if}}
+        </div>
     </div>
-    <div class="field {{#if errors.level}}invalid{{/if}}">
-        <label class="label" for="level">Role</label>
-        {{{selects.level}}}
-        {{#if errors.level}}<div class="error">{{errors.level}}</div>{{/if}}
-    </div>
-    <div class="field {{#if errors.status}}invalid{{/if}}">
-        <label class="label" for="status">Status</label>
-        {{{selects.status}}}
-        {{#if errors.status}}<div class="error">{{errors.status}}</div>{{/if}}
-    </div>
-    <div class="field {{#if errors.saldo}}invalid{{/if}}">
-        <label class="label" for="saldo">Balance (₹)</label>
-        <input type="number" class="input" name="saldo" id="saldo" value="{{form.saldo}}" min="0" max="999999999" step="1" inputmode="numeric" required>
-        {{#if errors.saldo}}<div class="error">{{errors.saldo}}</div>{{/if}}
-    </div>
-    <div class="field {{#if errors.uplink}}invalid{{/if}}">
-        <label class="label" for="uplink">Invited by</label>
-        <input type="text" class="input" name="uplink" id="uplink" value="{{form.uplink}}" required maxlength="25" autocomplete="off">
-        {{#if errors.uplink}}<div class="error">{{errors.uplink}}</div>{{/if}}
+    <div class="field-row">
+        <div class="field {{#if errors.saldo}}invalid{{/if}}">
+            <label class="label" for="saldo">Balance (₹)</label>
+            <div class="input-wrap">{{icon "wallet" "lead"}}
+            <input type="number" class="input" name="saldo" id="saldo" value="{{form.saldo}}" min="0" max="999999999" step="1" inputmode="numeric" required></div>
+            {{#if errors.saldo}}<div class="error">{{icon "circle-alert"}}<span>{{errors.saldo}}</span></div>{{/if}}
+        </div>
+        <div class="field {{#if errors.uplink}}invalid{{/if}}">
+            <label class="label" for="uplink">Invited by</label>
+            <div class="input-wrap">{{icon "user-plus" "lead"}}
+            <input type="text" class="input" name="uplink" id="uplink" value="{{form.uplink}}" required maxlength="25" autocomplete="off"></div>
+            {{#if errors.uplink}}<div class="error">{{icon "circle-alert"}}<span>{{errors.uplink}}</span></div>{{/if}}
+        </div>
     </div>
     <div class="field {{#if errors.expiration}}invalid{{/if}}">
         <label class="label" for="expiration">Account expires (UTC)</label>
-        <input type="text" class="input mono" name="expiration" id="expiration" value="{{form.expiration}}" placeholder="Never" autocomplete="off">
-        {{#if errors.expiration}}<div class="error">{{errors.expiration}}</div>{{else}}<div class="hint">YYYY-MM-DD HH:MM:SS, or empty for never.</div>{{/if}}
+        <div class="input-wrap">{{icon "calendar" "lead"}}
+        <input type="text" class="input mono" name="expiration" id="expiration" value="{{form.expiration}}" placeholder="Never" autocomplete="off"></div>
+        {{#if errors.expiration}}<div class="error">{{icon "circle-alert"}}<span>{{errors.expiration}}</span></div>{{else}}<div class="hint">YYYY-MM-DD HH:MM:SS, or empty for never.</div>{{/if}}
     </div>
-    <button type="submit" class="btn btn-primary btn-block" data-busy-label="Saving…">Save</button>
+    <button type="submit" class="btn btn-primary btn-block" data-busy-label="Saving…">{{icon "check"}}Save changes</button>
 </form>
+</section>

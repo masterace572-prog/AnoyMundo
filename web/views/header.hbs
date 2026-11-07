@@ -1,30 +1,33 @@
 <aside class="sidebar" id="sidebar" aria-label="Main navigation">
     <a href="/dashboard" class="brand">{{brand}} <small>Panel</small></a>
     <nav class="nav">
-        <a href="/dashboard" class="{{#if navDashboard}}active{{/if}}">Dashboard</a>
-        <a href="/keys" class="{{#if navKeys}}active{{/if}}">Keys</a>
-        <a href="/keys/generate" class="{{#if navGenerate}}active{{/if}}">Generate keys</a>
+        <a href="/dashboard" class="{{#if navDashboard}}active{{/if}}">{{icon "layout-dashboard"}}<span>Dashboard</span></a>
+        <a href="/keys" class="{{#if navKeys}}active{{/if}}">{{icon "key-round"}}<span>Keys</span></a>
+        <a href="/keys/generate" class="{{#if navGenerate}}active{{/if}}">{{icon "wand-sparkles"}}<span>Generate keys</span></a>
         {{#if user.isAdmin}}
         <div class="nav-label">Manage</div>
-        <a href="/server" class="{{#if navServer}}active{{/if}}">Server</a>
-        <a href="/admin/create-referral" class="{{#if navReferral}}active{{/if}}">Referral codes</a>
+        <a href="/server" class="{{#if navServer}}active{{/if}}">{{icon "server"}}<span>Server</span></a>
+        <a href="/admin/create-referral" class="{{#if navReferral}}active{{/if}}">{{icon "ticket"}}<span>Referral codes</span></a>
         {{/if}}
         {{#if user.isOwner}}
-        <a href="/admin/manage-users" class="{{#if navUsers}}active{{/if}}">Users</a>
-        <a href="/lib" class="{{#if navLib}}active{{/if}}">Library</a>
+        <a href="/admin/manage-users" class="{{#if navUsers}}active{{/if}}">{{icon "users"}}<span>Users</span></a>
+        <a href="/lib" class="{{#if navLib}}active{{/if}}">{{icon "package"}}<span>Library</span></a>
         {{/if}}
         <div class="nav-label">Developers</div>
-        <a href="/api-keys" class="{{#if navApiKeys}}active{{/if}}">API keys</a>
-        <a href="/api-docs" class="{{#if navApiDocs}}active{{/if}}">API docs</a>
-        <a href="/docs" class="{{#if navIntegration}}active{{/if}}">Integration</a>
+        <a href="/api-keys" class="{{#if navApiKeys}}active{{/if}}">{{icon "key-square"}}<span>API keys</span></a>
+        <a href="/api-docs" class="{{#if navApiDocs}}active{{/if}}">{{icon "code-xml"}}<span>API docs</span></a>
+        <a href="/docs" class="{{#if navIntegration}}active{{/if}}">{{icon "plug-zap"}}<span>Integration</span></a>
         <div class="nav-label">Account</div>
-        <a href="/settings" class="{{#if navSettings}}active{{/if}}">Settings</a>
-        <a href="/logout">Sign out</a>
+        <a href="/settings" class="{{#if navSettings}}active{{/if}}">{{icon "settings"}}<span>Settings</span></a>
     </nav>
     {{#if user}}
     <div class="sidebar-foot">
-        <div class="who">{{user.displayName}}</div>
-        <div class="who-sub">{{user.levelName}} · {{#if user.unlimited}}Unlimited balance{{else}}₹{{user.saldoLabel}}{{/if}}</div>
+        <div class="avatar" aria-hidden="true">{{initial user.fullname user.username}}</div>
+        <div class="who-text">
+            <div class="who">{{user.displayName}}</div>
+            <div class="who-sub">{{#if user.isOwner}}{{icon "crown"}}{{else}}{{icon "badge-check"}}{{/if}}{{user.levelName}} · {{#if user.unlimited}}Unlimited{{else}}₹{{user.saldoLabel}}{{/if}}</div>
+        </div>
+        <a href="/logout" class="icon-btn danger" aria-label="Sign out" title="Sign out">{{icon "log-out"}}</a>
     </div>
     {{/if}}
 </aside>

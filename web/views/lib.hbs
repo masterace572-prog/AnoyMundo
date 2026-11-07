@@ -3,47 +3,64 @@
         <h1 class="page-title">Library</h1>
         <p class="page-sub">Publishing a new version makes every loader update before sign-in.</p>
     </div>
-    <a href="/api/lib/download" class="btn btn-secondary">Download current</a>
+    <div class="page-actions">
+        <a href="/api/lib/download" class="btn btn-secondary">{{icon "download"}}Download current</a>
+    </div>
 </div>
 
 {{> msgStatus}}
 
-<section class="section" style="border-top:0;padding-top:0">
-    <h2 class="section-title">Current release</h2>
-    <div class="list" style="margin-top:14px">
-        <div class="list-row"><span>Version</span><span class="mono">{{currentVersion}}</span></div>
-        <div class="list-row"><span>File</span><span class="mono">{{#if release.file_name}}{{release.file_name}}{{else}}—{{/if}}</span></div>
-        <div class="list-row"><span>Source</span><span>{{#if release.external_url}}External link{{else}}{{#if release.sha256}}Stored file{{else}}<span class="status warn">Nothing published yet</span>{{/if}}{{/if}}</span></div>
-        <div class="list-row"><span>Published by</span><span>{{#if release.uploaded_by}}{{release.uploaded_by}}{{else}}—{{/if}}</span></div>
+<section class="card" style="margin-bottom:20px">
+    <div class="hero">
+        <div class="tile tile-lg purple">{{icon "package"}}</div>
+        <div style="flex:1;min-width:180px">
+            <div class="hero-label">Current version</div>
+            <div class="hero-value mono">{{currentVersion}}</div>
+        </div>
+        <div class="list" style="min-width:240px;flex:0 1 380px">
+            <div class="list-row"><span class="lr-label">{{icon "file-archive" "i-sm"}}File</span><span class="lr-value mono">{{#if release.file_name}}{{release.file_name}}{{else}}—{{/if}}</span></div>
+            <div class="list-row"><span class="lr-label">{{icon "cloud-upload" "i-sm"}}Source</span><span class="lr-value">{{#if release.external_url}}External link{{else}}{{#if release.sha256}}Stored file{{else}}<span class="status warn">Nothing published yet</span>{{/if}}{{/if}}</span></div>
+            <div class="list-row"><span class="lr-label">{{icon "user" "i-sm"}}Published by</span><span class="lr-value">{{#if release.uploaded_by}}{{release.uploaded_by}}{{else}}—{{/if}}</span></div>
+        </div>
     </div>
 </section>
 
 <div class="grid-2">
-<section class="section">
-    <h2 class="section-title">Upload a release</h2>
-    <p class="section-sub">A .so library or a .zip containing it, up to {{maxUploadMb}} MB.</p>
+<section class="card">
+    <div class="card-head">
+        <div class="tile">{{icon "upload"}}</div>
+        <div><h2 class="card-title">Upload a release</h2><div class="card-sub">A .so library or a .zip containing it, up to {{maxUploadMb}} MB.</div></div>
+    </div>
     <form id="lib-form" class="form" novalidate>
         <div class="field">
             <label class="label" for="lib-version">Version</label>
-            <div class="input-group">
+            <div class="input-wrap has-trail">
+                {{icon "tag" "lead"}}
                 <input type="text" class="input mono" name="version" id="lib-version" value="{{suggestedVersion}}" maxlength="32" autocomplete="off" spellcheck="false">
-                <button type="button" class="addon-btn" id="lib-bump">Bump</button>
+                <div class="trail"><button type="button" class="icon-btn accent" id="lib-bump" aria-label="Bump version" title="Bump version">{{icon "plus"}}</button></div>
             </div>
             <div class="hint">Current: {{currentVersion}}</div>
         </div>
         <div class="field">
-            <label class="label" for="lib-file">File</label>
-            <input type="file" class="input" name="myfile" id="lib-file" accept=".so,.zip,application/zip,application/octet-stream">
+            <span class="label">File</span>
+            <label class="dropzone" id="lib-drop">
+                <input type="file" name="myfile" id="lib-file" accept=".so,.zip,application/zip,application/octet-stream" aria-label="Library file">
+                <span class="tile">{{icon "upload"}}</span>
+                <b>Choose a file or drop it here</b>
+                <span class="file-name" id="lib-file-name">.so or .zip</span>
+            </label>
         </div>
         <div class="field">
             <label class="label" for="lib-url">Or an external link</label>
-            <input type="url" class="input" name="external_url" id="lib-url" placeholder="https://…" autocomplete="off">
+            <div class="input-wrap">{{icon "link" "lead"}}
+            <input type="url" class="input" name="external_url" id="lib-url" placeholder="https://…" autocomplete="off"></div>
         </div>
         <div class="field">
             <label class="label" for="lib-notes">Notes (optional)</label>
-            <input type="text" class="input" name="notes" id="lib-notes" maxlength="500" autocomplete="off">
+            <div class="input-wrap">{{icon "pencil" "lead"}}
+            <input type="text" class="input" name="notes" id="lib-notes" maxlength="500" autocomplete="off"></div>
         </div>
-        <button type="submit" class="btn btn-primary btn-block" id="lib-submit">Publish</button>
+        <button type="submit" class="btn btn-primary btn-block" id="lib-submit">{{icon "upload"}}Publish</button>
         <div class="progress" id="lib-progress" hidden>
             <div class="progress-track" role="progressbar" aria-label="Upload progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div class="progress-fill" id="lib-progress-fill"></div></div>
             <div class="progress-meta"><span id="lib-progress-message" aria-live="polite">Preparing…</span><span id="lib-progress-percent">0%</span></div>
@@ -52,19 +69,23 @@
     </form>
 </section>
 
-<section class="section">
-    <h2 class="section-title">Push a link</h2>
-    <p class="section-sub">Change the download link and version without uploading a file.</p>
+<section class="card">
+    <div class="card-head">
+        <div class="tile teal">{{icon "link"}}</div>
+        <div><h2 class="card-title">Push a link</h2><div class="card-sub">Change the download link and version without uploading.</div></div>
+    </div>
     <form id="link-form" class="form" novalidate>
         <div class="field">
             <label class="label" for="link-version">New version</label>
-            <input type="text" class="input mono" id="link-version" value="{{suggestedVersion}}" maxlength="32" autocomplete="off" spellcheck="false">
+            <div class="input-wrap">{{icon "tag" "lead"}}
+            <input type="text" class="input mono" id="link-version" value="{{suggestedVersion}}" maxlength="32" autocomplete="off" spellcheck="false"></div>
         </div>
         <div class="field">
             <label class="label" for="link-url">External link</label>
-            <input type="url" class="input" id="link-url" placeholder="https://…" autocomplete="off">
+            <div class="input-wrap">{{icon "link" "lead"}}
+            <input type="url" class="input" id="link-url" placeholder="https://…" autocomplete="off"></div>
         </div>
-        <button type="submit" class="btn btn-primary btn-block" id="link-submit">Update link</button>
+        <button type="submit" class="btn btn-primary btn-block" id="link-submit">{{icon "send"}}Update link</button>
         <div id="link-result" aria-live="polite"></div>
     </form>
 </section>
@@ -101,8 +122,8 @@
         byId('lib-progress-message').textContent = message;
     }
     function busy(btn, on, label) {
-        if (on) { btn.dataset.label = btn.textContent; btn.textContent = label; btn.disabled = true; }
-        else { btn.textContent = btn.dataset.label || btn.textContent; btn.disabled = false; }
+        if (on) { btn.dataset.html = btn.innerHTML; btn.textContent = label; btn.disabled = true; }
+        else { if (btn.dataset.html) btn.innerHTML = btn.dataset.html; btn.disabled = false; }
     }
     function validVersion(v) { return /^[A-Za-z0-9][A-Za-z0-9._+-]{0,31}$/.test(v); }
     function validUrl(u) { return /^https?:\/\/\S+$/i.test(u); }
@@ -138,6 +159,14 @@
             xhr.send(JSON.stringify(payload));
         });
     }
+
+    var drop = byId('lib-drop'), fileInput = byId('lib-file');
+    fileInput.addEventListener('change', function () {
+        var f = fileInput.files[0];
+        byId('lib-file-name').textContent = f ? f.name + ' · ' + bytes(f.size) : '.so or .zip';
+    });
+    ['dragenter', 'dragover'].forEach(function (t) { drop.addEventListener(t, function () { drop.classList.add('drag'); }); });
+    ['dragleave', 'drop'].forEach(function (t) { drop.addEventListener(t, function () { drop.classList.remove('drag'); }); });
 
     byId('lib-bump').addEventListener('click', function () {
         var el = byId('lib-version'); var m = el.value.trim().match(/^(.*?)(\d+)$/);

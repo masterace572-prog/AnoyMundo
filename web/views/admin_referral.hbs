@@ -7,42 +7,51 @@
 
 {{> msgStatus}}
 
-<div class="grid-2">
+<div class="grid-main" style="grid-template-columns:minmax(0,1fr) minmax(0,1.3fr)">
+<section class="card">
+    <div class="card-head">
+        <div class="tile">{{icon "ticket"}}</div>
+        <div><h2 class="card-title">New code</h2><div class="card-sub">Single use</div></div>
+    </div>
 <form method="post" action="/admin/create-referral" class="form" novalidate data-busy-form>
     <div class="field {{#if errors.accLevel}}invalid{{/if}}">
         <label class="label" for="accLevel">Role</label>
         {{{selects.accLevel}}}
-        {{#if errors.accLevel}}<div class="error">{{errors.accLevel}}</div>{{/if}}
+        {{#if errors.accLevel}}<div class="error">{{icon "circle-alert"}}<span>{{errors.accLevel}}</span></div>{{/if}}
     </div>
     <div class="field {{#if errors.accExpire}}invalid{{/if}}">
         <label class="label" for="accExpire">Account lasts</label>
         {{{selects.accExpire}}}
-        {{#if errors.accExpire}}<div class="error">{{errors.accExpire}}</div>{{/if}}
+        {{#if errors.accExpire}}<div class="error">{{icon "circle-alert"}}<span>{{errors.accExpire}}</span></div>{{/if}}
     </div>
     <div class="field {{#if errors.set_saldo}}invalid{{/if}}">
         <label class="label" for="set_saldo">Starting balance (₹)</label>
-        <input type="number" class="input" name="set_saldo" id="set_saldo" min="0" max="99999" step="1" inputmode="numeric" required value="{{#if old.set_saldo}}{{old.set_saldo}}{{else}}0{{/if}}">
-        {{#if errors.set_saldo}}<div class="error">{{errors.set_saldo}}</div>{{else}}<div class="hint">{{#if unlimited}}Taken from your unlimited balance.{{else}}Taken from your balance (₹{{user.saldoLabel}}).{{/if}}</div>{{/if}}
+        <div class="input-wrap">{{icon "wallet" "lead"}}
+        <input type="number" class="input" name="set_saldo" id="set_saldo" min="0" max="99999" step="1" inputmode="numeric" required value="{{#if old.set_saldo}}{{old.set_saldo}}{{else}}0{{/if}}"></div>
+        {{#if errors.set_saldo}}<div class="error">{{icon "circle-alert"}}<span>{{errors.set_saldo}}</span></div>{{else}}<div class="hint">{{#if unlimited}}Taken from your unlimited balance.{{else}}Taken from your balance (₹{{user.saldoLabel}}).{{/if}}</div>{{/if}}
     </div>
-    <button type="submit" class="btn btn-primary btn-block" data-busy-label="Creating…">Create code</button>
+    <button type="submit" class="btn btn-primary btn-block" data-busy-label="Creating…">{{icon "plus"}}Create code</button>
 </form>
+</section>
 
-<section class="section" style="border-top:0;padding-top:0">
-    <h2 class="section-title">Recent codes</h2>
-    <p class="section-sub">{{totalCodes}} in total</p>
+<section class="card card-flush">
+    <div class="card-head" style="padding-bottom:16px;margin-bottom:0;border-bottom:1px solid var(--border)">
+        <div class="tile teal">{{icon "list-filter"}}</div>
+        <div><h2 class="card-title">Recent codes</h2><div class="card-sub">{{totalCodes}} in total</div></div>
+    </div>
     <div class="table-wrap">
         <table class="responsive">
             <thead><tr><th>Code</th><th>Role</th><th>Balance</th><th>Used by</th></tr></thead>
             <tbody>
                 {{#each codes}}
                 <tr>
-                    <td class="key" data-label="Code">{{this.referral}}</td>
+                    <td class="primary-cell" data-label="Code"><span class="keytext">{{this.referral}}<button type="button" class="icon-btn" data-copy-text="{{this.referral}}" aria-label="Copy code {{this.referral}}" title="Copy">{{icon "copy"}}</button></span></td>
                     <td data-label="Role">{{this.levelName}}</td>
-                    <td data-label="Balance">{{this.saldoLabel}}</td>
+                    <td data-label="Balance" class="num">{{this.saldoLabel}}</td>
                     <td data-label="Used by">{{#if this.used_by}}{{this.used_by}}{{else}}<span class="status unused">Available</span>{{/if}}</td>
                 </tr>
                 {{else}}
-                <tr class="is-empty"><td colspan="4">No codes yet.</td></tr>
+                <tr class="is-empty"><td colspan="4"><div class="empty"><div class="tile gray">{{icon "ticket"}}</div><b>No codes yet</b>Create one to invite a reseller.</div></td></tr>
                 {{/each}}
             </tbody>
         </table>

@@ -1,8 +1,17 @@
 <div class="docs">
+    <div class="page-head">
+        <div>
+            <h1 class="page-title">Integration docs</h1>
+            <p class="page-sub">Connect the loader and mod with one call.</p>
+        </div>
+        <div class="page-actions"><a href="/api-docs" class="btn btn-secondary">{{icon "book-open"}}API docs</a></div>
+    </div>
     {{> msgStatus}}
-
-    <div class="section">
-        <h1 class="page-title" style="margin-bottom:12px">Integration docs</h1>
+    <section class="card">
+        <div class="card-head">
+            <div class="tile teal">{{icon "plug-zap"}}</div>
+            <div><h2 class="card-title">Overview</h2></div>
+        </div>
         <p class="muted">Loader / mod integration: one call does everything —
         <span class="doc-inline">POST /connect</span>. Below is the connect URL, every response field
         (mod name, status text, floating text, mod features, expiry), the error text, and simple C++ code.
@@ -11,9 +20,9 @@
         own site or Telegram bot? That is a different API with personal API keys — see
         <a href="/api-keys">API keys</a> and <a href="/api-docs">API docs (key management)</a>.
         This page is only for the loader / mod side.</p>
-    </div>
+    </section>
 
-    <div class="section">
+    <div class="card">
         <div class="doc-section">
             <h2>Base URL</h2>
             <code class="doc-url">{{apiBase}}</code>
@@ -74,7 +83,7 @@ game=PUBG&amp;user_key=ANOY-2H-LYK0Y&amp;serial=DEVICE123</code></pre>
         </div>
     </div>
 
-    <div class="section">
+    <div class="card">
         <div class="doc-section">
             <h2>4. Response fields</h2>
             <div class="table-scroll">
@@ -127,7 +136,7 @@ game=PUBG&amp;user_key=ANOY-2H-LYK0Y&amp;serial=DEVICE123</code></pre>
         </div>
     </div>
 
-    <div class="section">
+    <div class="card">
         <div class="doc-section">
             <h2>7. Use in C++</h2>
             <p>Minimal libcurl POST — no JSON library needed to see the raw reply:</p>

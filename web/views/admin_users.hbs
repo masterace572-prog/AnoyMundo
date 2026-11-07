@@ -3,38 +3,47 @@
         <h1 class="page-title">Users</h1>
         <p class="page-sub">{{userList.length}} accounts</p>
     </div>
-    <a href="/admin/create-referral" class="btn btn-primary">Invite with a code</a>
+    <div class="page-actions">
+        <a href="/admin/create-referral" class="btn btn-primary">{{icon "user-plus"}}Invite with a code</a>
+    </div>
 </div>
 
 {{> msgStatus}}
 
-<div class="toolbar">
-    <input type="search" class="input" placeholder="Search users" aria-label="Search users" data-filter-table="users-table" autocomplete="off">
-</div>
-<div class="table-wrap">
-    <table class="responsive" id="users-table">
-        <thead><tr><th>Username</th><th>Role</th><th>Balance</th><th>Status</th><th>Expires</th><th>Invited by</th><th class="actions-cell"><span class="sr-only">Actions</span></th></tr></thead>
-        <tbody>
-            {{#each userList}}
-            <tr>
-                <td data-label="Username"><strong>{{this.username}}</strong><div class="faint" style="font-size:13px">{{this.email}}</div></td>
-                <td data-label="Role">{{this.levelName}}</td>
-                <td data-label="Balance">{{this.saldoLabel}}</td>
-                <td data-label="Status"><span class="status {{#if (eq this.status 1)}}ok{{else}}bad{{/if}}">{{this.statusName}}</span></td>
-                <td data-label="Expires">{{this.expiresLabel}}</td>
-                <td data-label="Invited by">{{this.uplink}}</td>
-                <td class="actions-cell">
-                    {{#if this.isOwnerRow}}<span class="faint">Owner</span>{{else}}
-                    <a class="btn btn-secondary btn-sm" href="/admin/user/{{this.id_users}}">Edit</a>
-                    <form method="post" action="/admin/user/delete/{{this.id_users}}" style="display:inline" data-confirm="Delete {{this.username}}?" data-confirm-detail="Their keys are deleted too; never-used keys are refunded. This cannot be undone.">
-                        <button type="submit" class="btn btn-danger btn-sm">Delete</button>
-                    </form>
-                    {{/if}}
-                </td>
-            </tr>
-            {{else}}
-            <tr class="is-empty"><td colspan="7">No users.</td></tr>
-            {{/each}}
-        </tbody>
-    </table>
-</div>
+<section class="card card-flush">
+    <div class="toolbar">
+        <div class="input-wrap">
+            {{icon "search" "lead"}}
+            <input type="search" class="input" placeholder="Search users" aria-label="Search users" data-filter-table="users-table" autocomplete="off">
+        </div>
+    </div>
+    <div class="table-wrap">
+        <table class="responsive" id="users-table">
+            <thead><tr><th>User</th><th>Role</th><th>Balance</th><th>Status</th><th>Expires</th><th>Invited by</th><th class="actions-cell"><span class="sr-only">Actions</span></th></tr></thead>
+            <tbody>
+                {{#each userList}}
+                <tr>
+                    <td class="primary-cell" data-label="User"><div class="cell-user"><div class="avatar" aria-hidden="true">{{initial this.username}}</div><div><strong>{{this.username}}</strong><div class="cell-sub">{{this.email}}</div></div></div></td>
+                    <td data-label="Role">{{this.levelName}}</td>
+                    <td data-label="Balance" class="num">{{this.saldoLabel}}</td>
+                    <td data-label="Status"><span class="status {{#if (eq this.status 1)}}ok{{else}}bad{{/if}}">{{this.statusName}}</span></td>
+                    <td data-label="Expires">{{this.expiresLabel}}</td>
+                    <td data-label="Invited by">{{this.uplink}}</td>
+                    <td class="actions-cell">
+                        {{#if this.isOwnerRow}}<span class="faint row" style="gap:6px;justify-content:flex-end">{{icon "crown" "i-sm"}}Owner</span>{{else}}
+                        <span class="row-actions">
+                            <a class="icon-btn" href="/admin/user/{{this.id_users}}" aria-label="Edit {{this.username}}" title="Edit">{{icon "pencil"}}</a>
+                            <form method="post" action="/admin/user/delete/{{this.id_users}}" style="display:inline" data-confirm="Delete {{this.username}}?" data-confirm-detail="Their keys are deleted too; never-used keys are refunded. This cannot be undone.">
+                                <button type="submit" class="icon-btn danger" aria-label="Delete {{this.username}}" title="Delete">{{icon "trash-2"}}</button>
+                            </form>
+                        </span>
+                        {{/if}}
+                    </td>
+                </tr>
+                {{else}}
+                <tr class="is-empty"><td colspan="7"><div class="empty"><div class="tile gray">{{icon "users"}}</div><b>No users yet</b>Invite someone with a referral code.</div></td></tr>
+                {{/each}}
+            </tbody>
+        </table>
+    </div>
+</section>

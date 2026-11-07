@@ -11,6 +11,7 @@ import {
 import {
   renderPage, sendHtml, sendJson, sendText, buildSelect, sqlDateTime,
   humanDate, longDate, durationLabel, escapeHtml,
+  iconSvg,
 } from './render.mjs';
 import { requestUrl, pathOf, parseBody, redirect, back } from './http.mjs';
 import {
@@ -738,11 +739,14 @@ function plainPage(title, message, detail = '', status = 200) {
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <title>${escapeHtml(title)} · ${escapeHtml(config.brand)}</title>
 <link rel="stylesheet" href="/assets/css/ui.css"></head>
-<body class="auth"><main class="auth-shell"><div class="auth-panel center" data-status="${status}">
+<body class="auth"><main class="auth-shell"><div class="auth-panel center fade-in" data-status="${status}">
+<div class="auth-card">
+<div class="tile tile-lg ${status >= 500 ? 'red' : status >= 400 ? 'orange' : ''}">${iconSvg(status >= 500 ? 'triangle-alert' : status === 404 ? 'search' : 'info')}</div>
 <h1 class="auth-title">${escapeHtml(title)}</h1>
-<p class="muted">${escapeHtml(message)}</p>
-${detail ? `<p class="hint">${escapeHtml(detail)}</p>` : ''}
-<a href="/dashboard" class="btn btn-primary btn-block">Back to dashboard</a>
+<p class="lead">${escapeHtml(message)}</p>
+${detail ? `<p class="hint mono">${escapeHtml(detail)}</p>` : ''}
+<a href="/dashboard" class="btn btn-primary btn-block" style="margin-top:18px">${iconSvg('layout-dashboard')}Back to dashboard</a>
+</div>
 </div></main></body></html>`;
 }
 
@@ -930,6 +934,10 @@ export async function handle(req, res) {
           .map((h) => [h, keyPrefix(user.username, h)]))),
         customMin: config.customSuffixMin,
         customMax: config.customSuffixMax,
+        // Duration cards: label, key token and price per device.
+        durations: Object.entries(config.durations).map(([h, label]) => ({
+          hours: String(h), label, token: config.durationTokens[h] || '', price: inr(config.prices[h]),
+        })),
         selects: {
           game: buildSelect('game', 'game', config.games, 'PUBG'),
           duration: buildSelect('duration', 'duration', Object.fromEntries(Object.entries(config.durations)

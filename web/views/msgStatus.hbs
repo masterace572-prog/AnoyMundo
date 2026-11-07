@@ -1,9 +1,9 @@
 {{#if flash.danger}}
-<div class="alert alert-danger" role="alert"><p>{{flash.danger}}</p><button type="button" class="alert-close" data-dismiss aria-label="Dismiss">&times;</button></div>
+<div class="alert alert-danger" role="alert">{{icon "circle-alert"}}<p>{{flash.danger}}</p><button type="button" class="alert-close" data-dismiss aria-label="Dismiss">{{icon "x" "i-sm"}}</button></div>
 {{else}}{{#if flash.success}}
-<div class="alert alert-success" role="status" data-flash="success"><p>{{flash.success}}</p><button type="button" class="alert-close" data-dismiss aria-label="Dismiss">&times;</button></div>
+<div class="alert alert-success" role="status" data-flash="success">{{icon "circle-check"}}<p>{{flash.success}}</p><button type="button" class="alert-close" data-dismiss aria-label="Dismiss">{{icon "x" "i-sm"}}</button></div>
 {{else}}{{#if flash.warning}}
-<div class="alert alert-warning" role="alert"><p>{{flash.warning}}</p><button type="button" class="alert-close" data-dismiss aria-label="Dismiss">&times;</button></div>
+<div class="alert alert-warning" role="alert">{{icon "triangle-alert"}}<p>{{flash.warning}}</p><button type="button" class="alert-close" data-dismiss aria-label="Dismiss">{{icon "x" "i-sm"}}</button></div>
 {{else}}{{#if pageMessage}}
-<div class="alert {{alertClass pageMessage.type}}" role="status"><p>{{pageMessage.text}}</p><button type="button" class="alert-close" data-dismiss aria-label="Dismiss">&times;</button></div>
+<div class="alert {{alertClass pageMessage.type}}" role="status">{{icon "info"}}<p>{{pageMessage.text}}</p><button type="button" class="alert-close" data-dismiss aria-label="Dismiss">{{icon "x" "i-sm"}}</button></div>
 {{/if}}{{/if}}{{/if}}{{/if}}

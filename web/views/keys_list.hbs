@@ -3,48 +3,55 @@
         <h1 class="page-title">Keys</h1>
         <p class="page-sub">{{keyTotal}} {{#if user.isOwner}}keys in total{{else}}keys created by you{{/if}}</p>
     </div>
-    <div class="row">
-        <a href="/keys/download" class="btn btn-secondary">Export</a>
-        <a href="/keys/generate" class="btn btn-primary">Generate keys</a>
+    <div class="page-actions">
+        <a href="/keys/download" class="btn btn-secondary">{{icon "download"}}Export</a>
+        <a href="/keys/generate" class="btn btn-primary">{{icon "plus"}}Generate keys</a>
     </div>
 </div>
 
 {{> msgStatus}}
 
-<div class="toolbar">
-    <input type="search" class="input" id="keys-search" placeholder="Search keys" aria-label="Search keys" autocomplete="off" spellcheck="false">
-    <select class="input" id="keys-status" aria-label="Filter by status">
-        <option value="">All keys</option>
-        <option value="unused">Unused</option>
-        <option value="used">In use</option>
-        <option value="expired">Expired</option>
-        <option value="blocked">Blocked</option>
-    </select>
-    <span class="spacer"></span>
-    <form method="post" action="/keys/deleteexp" data-confirm="Delete all expired keys?" data-confirm-detail="Expired keys stop working anyway. This cannot be undone.">
-        <button type="submit" class="btn btn-secondary btn-sm">Delete expired</button>
-    </form>
-    <form method="post" action="/keys/deleteunused" data-confirm="Delete all unused keys?" data-confirm-detail="Never-used keys are refunded to their creator. This cannot be undone.">
-        <button type="submit" class="btn btn-danger btn-sm">Delete unused</button>
-    </form>
-</div>
-
-<div class="table-wrap">
-    <table class="responsive" id="keys-table" aria-live="polite">
-        <thead>
-            <tr><th>Key</th><th>Duration</th><th>Devices</th><th>Status</th><th>Expires</th>{{#if user.isOwner}}<th>Created by</th>{{/if}}<th class="actions-cell"><span class="sr-only">Actions</span></th></tr>
-        </thead>
-        <tbody id="keys-body">
-            <tr class="is-empty"><td colspan="7">Loading keys…</td></tr>
-        </tbody>
-    </table>
-</div>
-<div class="pager">
-    <span id="keys-range">&nbsp;</span>
-    <div class="row">
-        <button type="button" class="btn btn-secondary btn-sm" id="keys-prev" disabled>Previous</button>
-        <button type="button" class="btn btn-secondary btn-sm" id="keys-next" disabled>Next</button>
+<section class="card card-flush">
+    <div class="toolbar">
+        <div class="input-wrap">
+            {{icon "search" "lead"}}
+            <input type="search" class="input" id="keys-search" placeholder="Search keys" aria-label="Search keys" autocomplete="off" spellcheck="false">
+        </div>
+        <select class="input" id="keys-status" aria-label="Filter by status">
+            <option value="">All keys</option>
+            <option value="unused">Unused</option>
+            <option value="used">In use</option>
+            <option value="expired">Expired</option>
+            <option value="blocked">Blocked</option>
+        </select>
+        <span class="spacer"></span>
+        <form method="post" action="/keys/deleteexp" data-confirm="Delete all expired keys?" data-confirm-detail="Expired keys stop working anyway. This cannot be undone.">
+            <button type="submit" class="btn btn-secondary btn-sm">{{icon "hourglass"}}Delete expired</button>
+        </form>
+        <form method="post" action="/keys/deleteunused" data-confirm="Delete all unused keys?" data-confirm-detail="Never-used keys are refunded to their creator. This cannot be undone.">
+            <button type="submit" class="btn btn-danger btn-sm">{{icon "trash-2"}}Delete unused</button>
+        </form>
     </div>
-</div>
+
+    <div class="table-wrap">
+        <table class="responsive" id="keys-table" aria-live="polite">
+            <thead>
+                <tr><th>Key</th><th>Duration</th><th>Devices</th><th>Status</th><th>Expires</th>{{#if user.isOwner}}<th>Created by</th>{{/if}}<th class="actions-cell"><span class="sr-only">Actions</span></th></tr>
+            </thead>
+            <tbody id="keys-body">
+                <tr class="skeleton"><td colspan="7"><span class="sk" style="width:62%"></span></td></tr>
+                <tr class="skeleton"><td colspan="7"><span class="sk" style="width:48%"></span></td></tr>
+                <tr class="skeleton"><td colspan="7"><span class="sk" style="width:56%"></span></td></tr>
+            </tbody>
+        </table>
+    </div>
+    <div class="pager">
+        <span id="keys-range" class="num">&nbsp;</span>
+        <div class="row" style="gap:4px">
+            <button type="button" class="icon-btn" id="keys-prev" aria-label="Previous page" disabled>{{icon "chevron-left"}}</button>
+            <button type="button" class="icon-btn" id="keys-next" aria-label="Next page" disabled>{{icon "chevron-right"}}</button>
+        </div>
+    </div>
+</section>
 
 <script>window.ANOY_KEYS = { owner: {{#if user.isOwner}}true{{else}}false{{/if}} };</script>
