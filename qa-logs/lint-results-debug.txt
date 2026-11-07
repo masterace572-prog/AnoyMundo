@@ -1,15 +1,9 @@
-/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/res/layout/activity_login.xml:15: Warning: This LinearLayout should use android:layout_height="wrap_content" [ScrollViewSize]
-        android:layout_height="match_parent"
-        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-   Explanation for issues of type "ScrollViewSize":
-   ScrollView children must set their layout_width or layout_height attributes
-   to wrap_content rather than fill_parent or match_parent in the scrolling
-   dimension
-
-/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/java/com/xlox/ui/UpdateGate.java:130: Warning: Avoid passing null as the view root (needed to resolve layout parameters on the inflated layout's root element) [InflateParams]
-            View root = LayoutInflater.from(dialog.getContext()).inflate(R.layout.dialog_update, null, false);
-                                                                                                 ~~~~
+/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/java/com/xlox/MAct.java:226: Warning: Avoid passing null as the view root (needed to resolve layout parameters on the inflated layout's root element) [InflateParams]
+        View sheetView = LayoutInflater.from(this).inflate(R.layout.sheet_sign_out, null, false);
+                                                                                    ~~~~
+/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/java/com/xlox/ui/UpdateGate.java:179: Warning: Avoid passing null as the view root (needed to resolve layout parameters on the inflated layout's root element) [InflateParams]
+            View root = LayoutInflater.from(activity).inflate(R.layout.dialog_update, null, false);
+                                                                                      ~~~~
 
    Explanation for issues of type "InflateParams":
    When inflating a layout, avoid passing in null as the parent view, since
@@ -17,6 +11,22 @@
    ignored.
 
    https://www.bignerdranch.com/blog/understanding-androids-layoutinflater-inflate/
+
+/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/res/drawable/splash_mark.xml:6: Warning: Limit vector icons sizes to 200×200 to keep icon drawing fast; see https://developer.android.com/studio/write/vector-asset-studio#when for more [VectorRaster]
+    android:width="288dp"
+                   ~~~~~
+
+   Explanation for issues of type "VectorRaster":
+   Vector icons require API 21 or API 24 depending on used features, but when
+   minSdkVersion is less than 21 or 24 and Android Gradle plugin 1.4 or higher
+   is used, a vector drawable placed in the drawable folder is automatically
+   moved to drawable-anydpi-v21 or drawable-anydpi-v24 and bitmap images are
+   generated for different screen resolutions for backwards compatibility.
+
+   However, there are some limitations to this raster image generation, and
+   this lint check flags elements and attributes that are not fully supported.
+   You should manually check whether the generated output is acceptable for
+   those older devices.
 
 /home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/AndroidManifest.xml:55: Warning: Expecting android:screenOrientation="unspecified" or "fullSensor" for this activity so the user can use the application in any orientation and provide a great experience on Chrome OS devices [LockedOrientationActivity]
             android:screenOrientation="portrait"
@@ -37,51 +47,106 @@
 
    https://developer.android.com/topic/arc/window-management
 
-/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/res/layout/activity_splash.xml:3: Warning: This <FrameLayout> can be replaced with a <merge> tag [MergeRootFrame]
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
-^
+/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/res/layout/activity_login.xml:158: Warning: This tag and its children can be replaced by one <TextView/> and a compound drawable [UseCompoundDrawables]
+                    <LinearLayout
+                     ~~~~~~~~~~~~
+/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/res/layout/activity_main.xml:81: Warning: This tag and its children can be replaced by one <TextView/> and a compound drawable [UseCompoundDrawables]
+                <LinearLayout
+                 ~~~~~~~~~~~~
 
-   Explanation for issues of type "MergeRootFrame":
-   If a <FrameLayout> is the root of a layout and does not provide background
-   or padding etc, it can often be replaced with a <merge> tag which is
-   slightly more efficient. Note that this depends on context, so make sure
-   you understand how the <merge> tag works before proceeding.
+   Explanation for issues of type "UseCompoundDrawables":
+   A LinearLayout which contains an ImageView and a TextView can be more
+   efficiently handled as a compound drawable (a single TextView, using the
+   drawableTop, drawableLeft, drawableRight and/or drawableBottom attributes
+   to draw one or more images adjacent to the text).
 
-   https://android-developers.googleblog.com/2009/03/android-layout-tricks-3-optimize-by.html
+   If the two widgets are offset from each other with margins, this can be
+   replaced with a drawablePadding attribute.
 
-/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/res/values/colors.xml:43: Warning: The resource R.color.separator appears to be unused [UnusedResources]
-    <color name="separator">#FF38383A</color>
-           ~~~~~~~~~~~~~~~~
-/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/res/values/dimens.xml:4: Warning: The resource R.dimen.row_height appears to be unused [UnusedResources]
-    <dimen name="row_height">48dp</dimen>
-           ~~~~~~~~~~~~~~~~~
-/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/res/values/dimens.xml:10: Warning: The resource R.dimen.dialog_width appears to be unused [UnusedResources]
-    <dimen name="dialog_width">320dp</dimen>
+   There's a lint quickfix to perform this conversion in the Eclipse plugin.
+
+/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/res/layout/activity_login.xml:13: Warning: Possible overdraw: Root element paints background @color/black with a theme that also paints a background (inferred theme is @style/AppTheme) [Overdraw]
+    android:background="@color/black"
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/res/layout/activity_main.xml:14: Warning: Possible overdraw: Root element paints background @color/black with a theme that also paints a background (inferred theme is @style/AppTheme) [Overdraw]
+    android:background="@color/black">
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/res/layout/activity_splash.xml:13: Warning: Possible overdraw: Root element paints background @color/black with a theme that also paints a background (inferred theme is @style/AppTheme_Starting) [Overdraw]
+    android:background="@color/black">
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+   Explanation for issues of type "Overdraw":
+   If you set a background drawable on a root view, then you should use a
+   custom theme where the theme background is null. Otherwise, the theme
+   background will be painted first, only to have your custom background
+   completely cover it; this is called "overdraw".
+
+   NOTE: This detector relies on figuring out which layouts are associated
+   with which activities based on scanning the Java code, and it's currently
+   doing that using an inexact pattern matching algorithm. Therefore, it can
+   incorrectly conclude which activity the layout is associated with and then
+   wrongly complain that a background-theme is hidden.
+
+   If you want your custom background on multiple pages, then you should
+   consider making a custom theme with your custom background and just using
+   that theme instead of a root element background.
+
+   Of course it's possible that your custom drawable is translucent and you
+   want it to be mixed with the background. However, you will get better
+   performance if you pre-mix the background with your drawable and use that
+   resulting image or color as a custom theme background instead.
+
+/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/res/values/colors.xml:28: Warning: The resource R.color.success_tint appears to be unused [UnusedResources]
+    <color name="success_tint">#2430D158</color>
            ~~~~~~~~~~~~~~~~~~~
-/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/res/values/dimens.xml:14: Warning: The resource R.dimen.max_content_width appears to be unused [UnusedResources]
+/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/res/values/dimens.xml:15: Warning: The resource R.dimen.max_content_width appears to be unused [UnusedResources]
     <dimen name="max_content_width">440dp</dimen>
            ~~~~~~~~~~~~~~~~~~~~~~~~
-/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/res/values/dimens.xml:30: Warning: The resource R.dimen.text_title appears to be unused [UnusedResources]
-    <dimen name="text_title">22sp</dimen>
-           ~~~~~~~~~~~~~~~~~
+/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/res/values/dimens.xml:52: Warning: The resource R.dimen.press_drift appears to be unused [UnusedResources]
+    <dimen name="press_drift">8dp</dimen>
+           ~~~~~~~~~~~~~~~~~~
+/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/res/drawable/ic_calendar.xml:3: Warning: The resource R.drawable.ic_calendar appears to be unused [UnusedResources]
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+^
+/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/res/drawable/ic_circle_x.xml:3: Warning: The resource R.drawable.ic_circle_x appears to be unused [UnusedResources]
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+^
+/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/res/drawable/ic_timer.xml:3: Warning: The resource R.drawable.ic_timer appears to be unused [UnusedResources]
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+^
 /home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/res/drawable/separator.xml:2: Warning: The resource R.drawable.separator appears to be unused [UnusedResources]
 <shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
 ^
-/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/res/values/strings.xml:82: Warning: The resource R.string.row_status appears to be unused [UnusedResources]
+/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/res/values/strings.xml:43: Warning: The resource R.string.need_key appears to be unused [UnusedResources]
+    <string name="need_key">Need a licence key?</string>
+            ~~~~~~~~~~~~~~~
+/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/res/values/strings.xml:80: Warning: The resource R.string.section_licence appears to be unused [UnusedResources]
+    <string name="section_licence">Licence</string>
+            ~~~~~~~~~~~~~~~~~~~~~~
+/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/res/values/strings.xml:83: Warning: The resource R.string.row_status appears to be unused [UnusedResources]
     <string name="row_status">Status</string>
             ~~~~~~~~~~~~~~~~~
-/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/res/values/strings.xml:120: Warning: The resource R.string.sandbox_install_failed appears to be unused [UnusedResources]
+/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/res/values/strings.xml:84: Warning: The resource R.string.row_expires appears to be unused [UnusedResources]
+    <string name="row_expires">Expires</string>
+            ~~~~~~~~~~~~~~~~~~
+/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/res/values/strings.xml:106: Warning: The resource R.string.preparing_progress appears to be unused [UnusedResources]
+    <string name="preparing_progress">Preparing game files · %1$d%%</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/res/values/strings.xml:121: Warning: The resource R.string.sandbox_install_failed appears to be unused [UnusedResources]
     <string name="sandbox_install_failed">Couldn\'t install the game into the container.</string>
             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/res/values/strings.xml:121: Warning: The resource R.string.package_not_found appears to be unused [UnusedResources]
+/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/res/values/strings.xml:122: Warning: The resource R.string.package_not_found appears to be unused [UnusedResources]
     <string name="package_not_found">BGMI is not installed.</string>
             ~~~~~~~~~~~~~~~~~~~~~~~~
-/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/res/values/styles.xml:72: Warning: The resource R.style.Text_Title appears to be unused [UnusedResources]
-    <style name="Text.Title">
-           ~~~~~~~~~~~~~~~~~
-/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/res/values/styles.xml:82: Warning: The resource R.style.Text_Body appears to be unused [UnusedResources]
-    <style name="Text.Body">
-           ~~~~~~~~~~~~~~~~
+/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/res/values/strings.xml:137: Warning: The resource R.string.loading appears to be unused [UnusedResources]
+    <string name="loading">Loading</string>
+            ~~~~~~~~~~~~~~
+/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/res/values/strings.xml:141: Warning: The resource R.string.status_chip_description appears to be unused [UnusedResources]
+    <string name="status_chip_description">%1$s: %2$s</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/res/values/styles.xml:164: Warning: The resource R.style.Text_Headline appears to be unused [UnusedResources]
+    <style name="Text.Headline">
+           ~~~~~~~~~~~~~~~~~~~~
 
    Explanation for issues of type "UnusedResources":
    Unused resources make applications larger and slow down builds.
@@ -97,33 +162,27 @@
    lint.unused-resources.exclude-tests =true.
    ,
 
-/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/res/layout/activity_login.xml:22: Warning: Missing contentDescription attribute on image [ContentDescription]
+/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/res/layout/activity_main.xml:211: Warning: Missing contentDescription attribute on image [ContentDescription]
+                        <ImageView
+                         ~~~~~~~~~
+/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/res/layout/activity_main.xml:235: Warning: Missing contentDescription attribute on image [ContentDescription]
+                        <ImageView
+                         ~~~~~~~~~
+/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/res/layout/activity_main.xml:265: Warning: Missing contentDescription attribute on image [ContentDescription]
+                        <ImageView
+                         ~~~~~~~~~
+/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/res/layout/activity_main.xml:292: Warning: Missing contentDescription attribute on image [ContentDescription]
+                        <ImageView
+                         ~~~~~~~~~
+/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/res/layout/activity_main.xml:347: Warning: Missing contentDescription attribute on image [ContentDescription]
+                        <ImageView
+                         ~~~~~~~~~
+/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/res/layout/activity_main.xml:371: Warning: Missing contentDescription attribute on image [ContentDescription]
+                        <ImageView
+                         ~~~~~~~~~
+/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/res/layout/dialog_update.xml:32: Warning: Missing contentDescription attribute on image [ContentDescription]
         <ImageView
          ~~~~~~~~~
-/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/res/layout/activity_main.xml:89: Warning: Missing contentDescription attribute on image [ContentDescription]
-                <ImageView
-                 ~~~~~~~~~
-/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/res/layout/activity_main.xml:198: Warning: Missing contentDescription attribute on image [ContentDescription]
-                <ImageView
-                 ~~~~~~~~~
-/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/res/layout/activity_main.xml:225: Warning: Missing contentDescription attribute on image [ContentDescription]
-                <ImageView
-                 ~~~~~~~~~
-/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/res/layout/activity_main.xml:252: Warning: Missing contentDescription attribute on image [ContentDescription]
-                <ImageView
-                 ~~~~~~~~~
-/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/res/layout/activity_main.xml:279: Warning: Missing contentDescription attribute on image [ContentDescription]
-                <ImageView
-                 ~~~~~~~~~
-/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/res/layout/activity_main.xml:322: Warning: Missing contentDescription attribute on image [ContentDescription]
-                <ImageView
-                 ~~~~~~~~~
-/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/res/layout/activity_main.xml:349: Warning: Missing contentDescription attribute on image [ContentDescription]
-                <ImageView
-                 ~~~~~~~~~
-/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/res/layout/dialog_update.xml:14: Warning: Missing contentDescription attribute on image [ContentDescription]
-    <ImageView
-     ~~~~~~~~~
 
    Explanation for issues of type "ContentDescription":
    Non-textual widgets like ImageViews and ImageButtons should use the
@@ -144,9 +203,9 @@
 
    https://developer.android.com/guide/topics/ui/accessibility/apps#special-cases
 
-/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/res/layout/activity_login.xml:75: Warning: Missing accessibility label: provide either a view with an android:labelFor that references this view or provide an android:hint, but not both [LabelFor]
-            <EditText
-             ~~~~~~~~
+/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/res/layout/activity_login.xml:92: Warning: Missing accessibility label: provide either a view with an android:labelFor that references this view or provide an android:hint, but not both [LabelFor]
+                <EditText
+                 ~~~~~~~~
 
    Explanation for issues of type "LabelFor":
    Editable text fields should provide an android:hint or, provided your
@@ -159,13 +218,39 @@
    If your view is labeled but by a label in a different layout which includes
    this one, just suppress this warning from lint.
 
-/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/res/layout/activity_main.xml:33: Warning: When you define paddingStart you should probably also define paddingEnd for right-to-left symmetry [RtlSymmetry]
-            android:paddingStart="4dp">
-            ~~~~~~~~~~~~~~~~~~~~
+/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/java/com/xlox/LogAct.java:206: Warning: String literal in setText can not be translated. Use Android resources instead. [SetTextI18n]
+        if (keyInput.getText().length() == 0) keyInput.setText("ANOY-7D-QA7K2");
+                                                               ~~~~~~~~~~~~~~~
+/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/java/com/xlox/LogAct.java:213: Warning: String literal in setText can not be translated. Use Android resources instead. [SetTextI18n]
+            keyInput.setText("AB");
+                             ~~~~
+
+   Explanation for issues of type "SetTextI18n":
+   When calling TextView#setText
+   * Never call Number#toString() to format numbers; it will not handle
+   fraction separators and locale-specific digits properly. Consider using
+   String#format with proper format specifications (%d or %f) instead.
+   * Do not pass a string literal (e.g. "Hello") to display text. Hardcoded
+   text can not be properly translated to other languages. Consider using
+   Android resource strings instead.
+   * Do not build messages by concatenating text chunks. Such messages can not
+   be properly translated.
+
+   https://developer.android.com/guide/topics/resources/localization.html
+
+/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/res/layout/activity_login.xml:162: Warning: When you define paddingEnd you should probably also define paddingStart for right-to-left symmetry [RtlSymmetry]
+                        android:paddingEnd="@dimen/space_8">
+                        ~~~~~~~~~~~~~~~~~~
+/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/res/layout/activity_main.xml:46: Warning: When you define paddingStart you should probably also define paddingEnd for right-to-left symmetry [RtlSymmetry]
+                    android:paddingStart="@dimen/space_4">
+                    ~~~~~~~~~~~~~~~~~~~~
+/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/res/layout/dialog_update.xml:64: Warning: When you define paddingStart you should probably also define paddingEnd for right-to-left symmetry [RtlSymmetry]
+        android:paddingStart="12dp"
+        ~~~~~~~~~~~~~~~~~~~~
 
    Explanation for issues of type "RtlSymmetry":
    If you specify padding or margin on the left side of a layout, you should
    probably also specify padding on the right side (and vice versa) for
    right-to-left layout symmetry.
 
-0 errors, 28 warnings
+0 errors, 41 warnings
