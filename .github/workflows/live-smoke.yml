@@ -36,8 +36,9 @@ jobs:
         working-directory: web
         env:
           BASE: ${{ inputs.base || 'https://anoymundo-panel.vercel.app' }}
-          OWNER_USERNAME: ${{ inputs.username || 'Anoy' }}
-          OWNER_PASSWORD: ${{ inputs.temp_password || secrets.PANEL_OWNER_PASSWORD }}
+          # TEMPORARY: throw-away reseller account (deleted right after this run).
+          OWNER_USERNAME: ${{ inputs.username || 'qalive' }}
+          OWNER_PASSWORD: ${{ inputs.temp_password || 'QaJStBGvBAP38I' }}
         run: |
           if [ -n "$OWNER_PASSWORD" ]; then echo "::add-mask::$OWNER_PASSWORD"; fi
           node scripts/live-smoke.mjs

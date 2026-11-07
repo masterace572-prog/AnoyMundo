@@ -2,7 +2,8 @@
 //   BASE=https://anoymundo-panel.vercel.app OWNER_USERNAME=Anoy OWNER_PASSWORD=... node scripts/live-smoke.mjs
 // Without OWNER_PASSWORD only the public checks run. Everything the signed-in
 // part creates (keys, one API key) is deleted again before it exits.
-// The account must be level 1 (Owner) so no balance is charged.
+// With the Owner account every page is checked and nothing is charged; with a
+// reseller account only reseller pages are checked and charges are verified.
 import crypto from 'node:crypto';
 
 const BASE = (process.env.BASE || 'https://anoymundo-panel.vercel.app').replace(/\/+$/, '');
@@ -136,26 +137,38 @@ async function main() {
   ok(r.status === 302 && r.location === '/dashboard' && cookies.has('am_session'), `${OWNER} signs in`);
   if (!cookies.has('am_session')) throw new Error('cannot continue without a session');
 
-  for (const route of ['/dashboard', '/keys', '/keys/generate', '/settings', '/server', '/admin/manage-users',
-    '/admin/create-referral', '/lib', '/api-keys', '/api-docs', '/docs']) {
+  r = await request('/dashboard');
+  const isOwner = /Unlimited/.test(r.body) && /Owner/.test(r.body);
+  console.log(`  (signed in as ${isOwner ? 'Owner' : 'non-owner'})`);
+  if (OWNER.toLowerCase() === 'anoy') ok(isOwner, 'Anoy is the Owner with an unlimited balance');
+  const routes = ['/dashboard', '/keys', '/keys/generate', '/settings', '/api-keys', '/api-docs', '/docs'];
+  if (isOwner) routes.push('/server', '/admin/manage-users', '/admin/create-referral', '/lib');
+  for (const route of routes) {
     r = await request(route);
     ok(r.status === 200 && /ui\.css/.test(r.body), `GET ${route} -> 200`, String(r.status));
   }
-  r = await request('/dashboard');
-  ok(/Unlimited/.test(r.body) && /Owner/.test(r.body), 'owner dashboard shows an unlimited balance');
+  if (!isOwner) {
+    r = await request('/lib');
+    ok(r.status === 302, 'non-owners cannot open /lib');
+  }
 
   // 4. random + custom keys (owner is never charged)
-  r = await request('/keys/generate', { method: 'POST', headers: SAME, body: form({ game: 'PUBG', duration: '168', max_devices: '1', count: '2', custom: '', request_id: `live-random-${run}-${crypto.randomUUID()}` }) });
+  r = await request('/keys/generate', { method: 'POST', headers: SAME, body: form({ game: 'PUBG', duration: isOwner ? '168' : '2', max_devices: '1', count: '2', custom: '', request_id: `live-random-${run}-${crypto.randomUUID()}` }) });
   let out = await generatedKeys();
   out.keys.forEach((k) => cleanupKeys.add(k));
-  ok(out.keys.length === 2 && out.keys.every((k) => KEY_RE.test(k) && k.startsWith(`${PREFIX}-7D-`)), `random keys: ${out.keys.join(', ')}`);
+  const tok = isOwner ? '7D' : '2H';
+  ok(out.keys.length === 2 && out.keys.every((k) => KEY_RE.test(k) && k.startsWith(`${PREFIX}-${tok}-`)), `random keys: ${out.keys.join(', ')}`);
+  ok(isOwner ? /No charge/.test(out.page.body) : /Charged ₹20/.test(out.page.body), isOwner ? 'Owner is not charged' : 'reseller is charged ₹10 × 2 keys');
   const randomKey = out.keys[0] || '';
 
   const custom = `L${run}`.slice(0, 6);
-  r = await request('/keys/generate', { method: 'POST', headers: SAME, body: form({ game: 'PUBG', duration: '24', max_devices: '1', custom: '1', custom_key: custom.toLowerCase(), request_id: `live-custom-${run}-${crypto.randomUUID()}` }) });
+  r = await request('/keys/generate', { method: 'POST', headers: SAME, body: form({ game: 'PUBG', duration: isOwner ? '24' : '2', max_devices: '1', custom: '1', custom_key: custom.toLowerCase(), request_id: `live-custom-${run}-${crypto.randomUUID()}` }) });
   out = await generatedKeys();
   out.keys.forEach((k) => cleanupKeys.add(k));
-  ok(out.keys.length === 1 && out.keys[0] === `${PREFIX}-1D-${custom}`, `custom key created in upper case: ${out.keys.join(',')}`);
+  ok(out.keys.length === 1 && out.keys[0] === `${PREFIX}-${isOwner ? '1D' : '2H'}-${custom}`, `custom key created in upper case: ${out.keys.join(',')}`);
+  r = await request('/keys/generate', { method: 'POST', headers: SAME, body: form({ game: 'PUBG', duration: isOwner ? '24' : '2', max_devices: '1', custom: '1', custom_key: custom, request_id: `live-dup-${run}-${crypto.randomUUID()}` }) });
+  r = await request('/keys/generate');
+  ok(/already exists/.test(r.body), 'a duplicate custom key is reported, nothing created');
 
   r = await request(`/keys/api?q=${encodeURIComponent(custom)}`);
   ok(r.body?.ok === true && r.body?.total === 1, 'GET /keys/api finds the custom key');
@@ -182,14 +195,17 @@ async function main() {
   const H = { 'X-API-Key': token };
   r = await request('/api/v1/me', { headers: H });
   ok(r.body?.ok === true && String(r.body?.account?.username).toLowerCase() === OWNER.toLowerCase(), 'GET /api/v1/me');
+  const saldoBefore = Number(r.body?.account?.saldo);
   r = await request('/api/v1/keys', { method: 'POST', headers: H, body: { game: 'PUBG', duration: 2, max_devices: 1, count: 1 } });
   const apiKey = r.body?.keys?.[0]?.user_key || '';
   if (apiKey) cleanupKeys.add(apiKey);
   ok(r.status === 201 && KEY_RE.test(apiKey) && apiKey.startsWith(`${PREFIX}-2H-`), `POST /api/v1/keys creates ${apiKey}`);
+  ok(isOwner ? r.body?.charged === 0 : (r.body?.charged === 10 && r.body?.saldo_after === saldoBefore - 10),
+    `API charge is correct (${r.body?.charged}, ${saldoBefore} -> ${r.body?.saldo_after})`);
   r = await request(`/api/v1/keys/${apiKey.toLowerCase()}`, { headers: H });
   ok(r.body?.key?.user_key === apiKey, 'GET /api/v1/keys/{key} (case-insensitive)');
   r = await request(`/api/v1/keys/${apiKey}`, { method: 'DELETE', headers: H });
-  ok(r.body?.deleted === true, 'DELETE /api/v1/keys/{key}');
+  ok(r.body?.deleted === true && (isOwner || r.body?.refund_total === 10), 'DELETE /api/v1/keys/{key} (never-used key refunded)');
   cleanupKeys.delete(apiKey);
 }
 
