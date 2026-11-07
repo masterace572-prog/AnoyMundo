@@ -13,7 +13,7 @@ SplashActivity ──► LogAct (update gate ► licence-key sign in) ──► 
 |---|---|
 | **Splash** (`SplashActivity`, launcher) | Black screen, “Anoy” wordmark, caption and version. No logo image. ~1 s, then sign in. |
 | **Update gate** (`ui/UpdateGate`, dialog over sign in) | Always checks `GET /api/lib/manifest` first. **Update required** when the panel has a newer library or none is installed: the only button is **Update now**, Back closes the app, sign in stays disabled until the download is verified and installed. Shows real progress (`42% · 1.2 MB of 2.9 MB`). Network problems show a plain reason (offline, timeout, DNS, TLS, server error, no space) and **Try again**. If the library is current the dialog closes by itself. |
-| **Sign in** (`LogAct`) | Login-style screen that takes the licence key (`ANOY-7D-GKFHJ`). Upper-case input, paste, show/hide, inline errors for unknown / expired / blocked keys, device limit, clock, invalid token, maintenance message, offline, timeout and VPN. |
+| **Sign in** (`LogAct`) | Login-style screen that takes the licence key (`ANOY-7D-GKFHJ`). Upper-case input, paste, show/hide, inline errors for unknown / expired / blocked keys, device limit, clock, invalid token, maintenance message, offline, timeout and VPN. Asks only for storage access (needed to copy the OBB); it never asks for “Install unknown apps”. |
 | **Home** (`MAct`) | Grouped list: licence status, expiry, live time left, game + state, library version, server status, device. One blue primary action: **Launch**, **Stop**, **Install game** or **Sign in again**. |
 
 The gate runs again silently whenever the app returns to the foreground (at

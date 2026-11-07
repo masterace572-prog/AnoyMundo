@@ -80,7 +80,7 @@ Automatic deploys on push are off for this project.
 | Where | What |
 |---|---|
 | `cd web && npm test` | 130 end-to-end checks against an in-memory DB: sign-in, every page, random + custom keys (format, upper case, duplicates, 4–6 char endings), charging/refunds, `/connect`, maintenance, feature flags, API keys and `/api/v1`, library upload/manifest/download, security guards |
-| **Live deployment smoke test** workflow | `web/scripts/live-smoke.mjs` against the live site: health, pages, assets, manifest vs. download SHA-256, and — when the repository secret `PANEL_OWNER_PASSWORD` is set — Owner sign-in, key creation, `/connect`, API keys, then deletes everything it created |
+| **Live deployment smoke test** workflow | `web/scripts/live-smoke.mjs` against the live site: health, pages, assets, manifest vs. download SHA-256, and — when the repository secret `PANEL_OWNER_PASSWORD` is set — Owner sign-in, key creation (random, custom, duplicate), `/connect`, API keys, then deletes everything it created. With a reseller account (`temp_password` input) it checks reseller pages and verifies charges and refunds instead |
 | `GET /api/health` | `{ ok: true }` with database + schema checks |
 
 ## 5. After deploying
