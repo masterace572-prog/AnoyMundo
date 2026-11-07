@@ -9,7 +9,7 @@
 set -eu
 
 LOG=../qa-logs/emulator-trace.txt
-OUT=../docs/ui-redesign/screenshots
+OUT=${SHOT_DIR:-docs/ui-redesign/after}
 APK=app/build/outputs/apk/debug/app-debug.apk
 RELEASE_APK=app/build/outputs/apk/release/app-release.apk
 
@@ -183,6 +183,9 @@ shot login_key_visible
 # 4. Home (debug-only preview with sample data, no native session needed).
 open_home_preview
 shot home
+adb shell input swipe 540 1700 540 500 400 || true
+sleep 1
+shot home_scrolled
 
 # 5. Large text.
 adb shell settings put system font_scale 1.3
