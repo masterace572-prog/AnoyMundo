@@ -40,39 +40,41 @@
     <uses-permission android:name="android.permission.ACTION_MANAGE_UNKNOWN_APP_SOURCES"/>
 
     <application
+        android:name=".BoxApplication"
+        android:allowBackup="false"
+        android:icon="@drawable/ic_launcher"
+        android:roundIcon="@drawable/ic_launcher"
+        android:label="@string/app_name"
+        android:pageSizeCompat="enabled"
         android:requestLegacyExternalStorage="true"
         android:supportsRtl="true"
-        android:pageSizeCompat="enabled"
-        android:name=".BoxApplication"
-        android:allowBackup="true"
-        android:icon="@drawable/ic_anoy"
-        android:label="@string/app_name"
         android:theme="@style/AppTheme"
         android:usesCleartextTraffic="true">
 
         <activity
-            android:name=".LogAct"
-            android:windowSoftInputMode="adjustResize"
-            android:configChanges="screenSize|orientation"
+            android:name=".SplashActivity"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden|uiMode"
             android:exported="true"
-            android:theme="@style/Theme.App.Splash">
+            android:screenOrientation="portrait"
+            android:theme="@style/AppTheme.Splash">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
 
-        <activity 
-            android:name=".MAct"
-            android:configChanges="screenSize|orientation"
-            android:theme="@style/AppTheme"
-            android:exported="false" />
+        <activity
+            android:name=".LogAct"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden|uiMode"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:windowSoftInputMode="adjustResize|stateHidden" />
 
-        <activity 
-            android:name=".FacebookActivity"
-            android:configChanges="screenSize|orientation"
-            android:theme="@style/AppTheme"
-            android:exported="false" />
+        <activity
+            android:name=".MAct"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden|uiMode"
+            android:exported="false"
+            android:screenOrientation="portrait" />
 
     </application>
 

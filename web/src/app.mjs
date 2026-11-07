@@ -1,8 +1,8 @@
 import crypto from 'node:crypto';
 import { config } from './config.mjs';
 import {
-  db, unwrap, getUserByUsername, listUsers, getKeyById, getKeyByUserKey,
-  getRecentHistory, getReferralCodes, getSettings, deviceList,
+  db, getUserByUsername, listUsers, getKeyById, getKeyByUserKey,
+  getSettings, deviceList,
 } from './db.mjs';
 import {
   currentUser, authenticate, hashPassword, codeHash, verifyPassword,
@@ -15,12 +15,14 @@ import {
 import { requestUrl, pathOf, parseBody, redirect, back } from './http.mjs';
 import {
   handleConnect, handleConnectInfo, handleHealth, handleLibVersion,
-  handleLibDownload, handleLibInfo,
+  handleLibDownload, handleLibInfo, handleLibManifest,
 } from './licensing.mjs';
 import {
   handleApiV1, createApiKeyForUser, listApiKeysForUser, mutateApiKey,
 } from './api-keys.mjs';
-import { createKeysForUser, deleteKeysWithRefund, refundMessage } from './key-service.mjs';
+import {
+  createKeysForUser, deleteKeysWithRefund, refundMessage, keyPrefix, isUnlimited, normalizeKey,
+} from './key-service.mjs';
 
 // ---------------------------------------------------------------------------
 // small utilities
@@ -28,7 +30,9 @@ import { createKeysForUser, deleteKeysWithRefund, refundMessage } from './key-se
 const str = (v) => String(v ?? '').trim();
 const num = (v, fallback = 0) => (Number.isFinite(Number(v)) ? Number(v) : fallback);
 const alnum = (v, min, max) => new RegExp(`^[A-Za-z0-9]{${min},${max}}$`).test(str(v));
-const randomAlnum = (n) => crypto.randomBytes(Math.ceil(n * 2)).toString('base64url').replace(/[^A-Za-z0-9]/g, '').slice(0, n).padEnd(n, 'X');
+const REFERRAL_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+const randomCode = (n) => Array.from({ length: n }, () => REFERRAL_ALPHABET[crypto.randomInt(REFERRAL_ALPHABET.length)]).join('');
+const inr = (v) => `₹${Number(v || 0).toLocaleString('en-IN')}`;
 const nowIso = () => new Date().toISOString();
 
 function userCtx(user) {
@@ -38,15 +42,15 @@ function userCtx(user) {
 async function guard(req, res, { admin = false, owner = false } = {}) {
   const user = await currentUser(req);
   if (!user) {
-    redirect(res, '/login', { msgDanger: 'Please login first' });
+    redirect(res, '/login', { msgWarning: 'Please sign in to continue.' });
     return null;
   }
   if (admin && !user.isAdmin) {
-    redirect(res, '/dashboard', { msgWarning: 'Access Denied!' });
+    redirect(res, '/dashboard', { msgWarning: 'You do not have access to that page.' });
     return null;
   }
   if (owner && !user.isOwner) {
-    redirect(res, '/dashboard', { msgWarning: 'Access Denied!' });
+    redirect(res, '/dashboard', { msgWarning: 'You do not have access to that page.' });
     return null;
   }
   return user;
@@ -106,90 +110,92 @@ function buildDevices(text, max) {
 }
 
 // ---------------------------------------------------------------------------
-// DataTables helpers
+// JSON list endpoint for the keys table (search + pagination)
 // ---------------------------------------------------------------------------
-function dataTableParams(q) {
-  return {
-    draw: num(q.get('draw'), 1),
-    start: Math.max(0, num(q.get('start'), 0)),
-    length: Math.min(500, Math.max(1, num(q.get('length'), 10))),
-    search: str(q.get('search[value]') || '').replace(/[(),*\\]/g, '').slice(0, 80),
-    orderColumn: num(q.get('order[0][column]'), 0),
-    ascending: (q.get('order[0][dir]') || 'desc') !== 'desc',
-  };
+function listParams(q) {
+  const per = Math.min(100, Math.max(5, Math.trunc(num(q.get('per'), 25)) || 25));
+  const pageNo = Math.max(1, Math.trunc(num(q.get('page'), 1)) || 1);
+  // PostgREST `or()` syntax characters are stripped so a search can never
+  // change the shape of the filter.
+  const search = str(q.get('q') || '').replace(/[(),*\\%:."']/g, '').slice(0, 64);
+  const status = ['used', 'unused', 'expired', 'blocked'].includes(q.get('status')) ? q.get('status') : '';
+  return { per, page: pageNo, search, status };
 }
 
-async function keysDataTable(res, user, q) {
-  const { draw, start, length, search, orderColumn, ascending } = dataTableParams(q);
-  const columns = ['id_keys', 'game', 'user_key', 'devices', 'duration', 'expired_date', 'id_keys'];
+async function keysList(res, user, q) {
+  const { per, page: pageNo, search, status } = listParams(q);
   let query = db().from('keys_code').select('*', { count: 'exact' });
   if (!user.isOwner) query = query.eq('registrator', user.username);
   if (search) {
-    query = query.or(`game.ilike.*${search}*,user_key.ilike.*${search}*,registrator.ilike.*${search}*,devices.ilike.*${search}*`);
+    query = query.or(`user_key.ilike.*${search}*,registrator.ilike.*${search}*,game.ilike.*${search}*`);
   }
-  query = query.order(columns[orderColumn] || 'id_keys', { ascending }).range(start, start + length - 1);
+  if (status === 'blocked') query = query.neq('status', 1);
+  else if (status === 'unused') query = query.is('expired_date', null);
+  else if (status === 'used') query = query.gt('expired_date', nowIso());
+  else if (status === 'expired') query = query.lt('expired_date', nowIso());
+  const start = (pageNo - 1) * per;
+  query = query.order('id_keys', { ascending: false }).range(start, start + per - 1);
   const { data, count, error } = await query;
-  if (error) return sendJson(res, { draw, error: error.message }, 500);
-  const rows = (data || []).map((r) => ({
-    id: r.id_keys,
-    game: r.game,
-    user_key: r.user_key,
-    duration: durationLabel(r.duration),
-    expired: humanDate(r.expired_date),
-    max_devices: r.max_devices,
-    devices: deviceList(r.devices).length,
-    status: Number(r.status) === 1 ? 'Active' : 'Inactive',
-    registrator: r.registrator,
-  }));
-  return sendJson(res, { draw, recordsTotal: count ?? rows.length, recordsFiltered: count ?? rows.length, data: rows });
-}
-
-async function usersDataTable(res, user, q) {
-  const { draw, start, length, search, orderColumn, ascending } = dataTableParams(q);
-  const columns = ['id_users', 'username', 'fullname', 'level', 'saldo', 'status', 'uplink'];
-  let query = db().from('users').select('*', { count: 'exact' });
-  if (!user.isOwner) query = query.eq('uplink', user.username);
-  if (search) query = query.or(`username.ilike.*${search}*,fullname.ilike.*${search}*,uplink.ilike.*${search}*`);
-  query = query.order(columns[orderColumn] || 'id_users', { ascending }).range(start, start + length - 1);
-  const { data, count, error } = await query;
-  if (error) return sendJson(res, { draw, error: error.message }, 500);
-  const rows = (data || []).map((r) => ({
-    id: r.id_users, username: r.username,
-    fullname: r.fullname ? str(r.fullname).split(/\s+/)[0] : '',
-    saldo: r.saldo,
-    level: ({ 1: 'Owner', 2: 'Admin', 3: 'Reseller' })[Number(r.level)] || 'Unknown',
-    status: r.status, uplink: r.uplink,
-  }));
-  return sendJson(res, { draw, recordsTotal: count ?? rows.length, recordsFiltered: count ?? rows.length, data: rows });
+  if (error) {
+    console.error('[anoymundo] keys list failed:', error.message);
+    return sendJson(res, { ok: false, error: 'Could not load keys. Please try again.' }, 500);
+  }
+  const now = Date.now();
+  const rows = (data || []).map((r) => {
+    const expiry = r.expired_date ? new Date(r.expired_date).getTime() : null;
+    let state = 'unused';
+    if (Number(r.status) !== 1) state = 'blocked';
+    else if (expiry && expiry <= now) state = 'expired';
+    else if (expiry) state = 'active';
+    return {
+      id: r.id_keys,
+      game: r.game,
+      user_key: r.user_key,
+      duration: durationLabel(r.duration),
+      expires: r.expired_date ? humanDate(r.expired_date) : '',
+      max_devices: Number(r.max_devices || 1),
+      devices: deviceList(r.devices).length,
+      state,
+      registrator: r.registrator,
+    };
+  });
+  const total = count ?? rows.length;
+  return sendJson(res, { ok: true, rows, total, page: pageNo, per, pages: Math.max(1, Math.ceil(total / per)) });
 }
 
 // ---------------------------------------------------------------------------
 // Page data builders
 // ---------------------------------------------------------------------------
+async function countKeys(user, apply = (q) => q) {
+  let query = db().from('keys_code').select('id_keys', { count: 'exact', head: true });
+  if (!user.isOwner) query = query.eq('registrator', user.username);
+  const { count, error } = await apply(query);
+  if (error) throw new Error(error.message);
+  return count || 0;
+}
+
 async function dashboardData(user) {
-  const [{ data: keys }, history] = await Promise.all([
-    db().from('keys_code').select('id_keys,devices'),
-    getRecentHistory(10),
+  const now = nowIso();
+  const usersQuery = user.isOwner
+    ? db().from('users').select('id_users', { count: 'exact', head: true })
+    : db().from('users').select('id_users', { count: 'exact', head: true }).eq('uplink', user.username);
+  const [total, unused, active, expired, usersRes] = await Promise.all([
+    countKeys(user),
+    countKeys(user, (q) => q.is('expired_date', null)),
+    countKeys(user, (q) => q.gt('expired_date', now)),
+    countKeys(user, (q) => q.lt('expired_date', now)),
+    usersQuery,
   ]);
-  const list = keys || [];
-  const stats = {
-    keys: list.length,
-    active: list.filter((k) => k.devices).length,
-    inactive: list.filter((k) => !k.devices).length,
-    users: unwrap(await db().from('users').select('id_users')).length,
-    expiryFormatted: longDate(user.expiration_date),
+  return {
+    stats: {
+      keys: total,
+      active,
+      inactive: unused,
+      expired,
+      users: usersRes.count || 0,
+      expiryFormatted: user.expiration_date ? longDate(user.expiration_date) : '',
+    },
   };
-  const rows = (history || []).map((h) => {
-    const parts = String(h.info || '').split('|');
-    const diff = h.created_at ? Date.now() - new Date(h.created_at).getTime() : 0;
-    return {
-      ...h,
-      parts,
-      durationLabel: durationLabel(parts[2]),
-      createdHuman: `${Math.max(1, Math.round(Math.abs(diff) / 60000))} minutes ago`,
-    };
-  });
-  return { stats, history: rows };
 }
 
 function keyFormData(key) {
@@ -198,8 +204,9 @@ function keyFormData(key) {
     key: {
       ...key,
       deviceTotal: devices.length,
-      deviceRows: devices.length > Number(key.max_devices || 1) ? 3 : Math.max(1, devices.length),
-      expiredHint: key.expired_date ? '' : '(Not started yet)',
+      deviceRows: Math.min(8, Math.max(2, devices.length)),
+      durationLabel: durationLabel(key.duration),
+      expiresLabel: key.expired_date ? humanDate(key.expired_date) : '',
     },
     form: {
       game: key.game, user_key: key.user_key, duration: key.duration,
@@ -208,7 +215,8 @@ function keyFormData(key) {
       devices: devices.join('\n'),
     },
     selects: {
-      status: buildSelect('status', 'status', { 0: 'Banned/Block', 1: 'Active' }, key.status),
+      status: buildSelect('status', 'status', { 1: 'Active', 0: 'Blocked' }, Number(key.status) === 1 ? 1 : 0),
+      game: buildSelect('game', 'game', config.games, key.game),
     },
   };
 }
@@ -245,7 +253,7 @@ async function doLogin(req, res, body) {
   if (await tooManyAttempts(username, ip)) {
     return fail(req, res, '/login', 'Too many sign-in attempts. Wait 10 minutes and try again.', { password: 'Temporarily locked.' }, { username });
   }
-  if (!alnum(username, 4, 25)) errors.username = 'Enter a valid username (4-25 alphanumeric characters).';
+  if (!alnum(username, 3, 25)) errors.username = 'Enter a valid username (letters and numbers only).';
   if (password.length < 6 || password.length > 45) errors.password = 'Password must be 6-45 characters.';
   if (Object.keys(errors).length) {
     await logAttempt(username, ip, false);
@@ -258,8 +266,7 @@ async function doLogin(req, res, body) {
   }
   await logAttempt(username, ip, true);
   setSession(res, auth.user, remember);
-  const expires = auth.user.expiration_date ? sqlDateTime(auth.user.expiration_date) : 'never';
-  return redirect(res, '/dashboard', { msgSuccess: `Account Expires on : ${expires}` });
+  return redirect(res, '/dashboard', { msgSuccess: `Welcome back, ${displayName(auth.user)}.` });
 }
 
 async function doRegister(req, res, body) {
@@ -271,17 +278,13 @@ async function doRegister(req, res, body) {
   const referral = str(body.referral);
   const old = { email, username, fullname, referral };
   const errors = {};
-  if (email.length < 5 || email.length > 40 || !email.includes('@')) errors.email = 'Enter a valid email address.';
+  if (email.length < 5 || email.length > 40 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) errors.email = 'Enter a valid email address.';
   if (!alnum(username, 4, 25)) errors.username = 'Username must be 4-25 alphanumeric characters.';
   else {
     const exists = await getUserByUsername(username);
-    if (exists) errors.username = 'The username has been taken.';
+    if (exists) errors.username = 'That username is taken.';
   }
-  if (!alnum(fullname, 4, 25)) errors.fullname = 'Fullname must be 4-25 alphanumeric characters.';
-  else {
-    const { data } = await db().from('users').select('id_users').eq('fullname', fullname).maybeSingle();
-    if (data) errors.fullname = 'The fullname has been taken.';
-  }
+  if (!/^[A-Za-z][A-Za-z ]{1,39}$/.test(fullname)) errors.fullname = 'Enter your name (letters and spaces, 2-40).';
   if (password.length < 6 || password.length > 45) errors.password = 'Password must be 6-45 characters.';
   else {
     const issue = passwordIssue(password, username);
@@ -292,9 +295,12 @@ async function doRegister(req, res, body) {
 
   let code = null;
   if (!errors.referral) {
-    const { data, error } = await db().from('referral_code').select('*').eq('code', codeHash(referral)).maybeSingle();
-    if (error || !data) errors.referral = 'Wrong referral, please try again.';
-    else if (data.used_by) errors.referral = `Wrong referral, code has been used · ${data.used_by}.`;
+    let { data, error } = await db().from('referral_code').select('*').eq('code', codeHash(referral.toUpperCase())).maybeSingle();
+    if (!error && !data && referral.toUpperCase() !== referral) {
+      ({ data, error } = await db().from('referral_code').select('*').eq('code', codeHash(referral)).maybeSingle());
+    }
+    if (error || !data) errors.referral = 'That referral code is not valid.';
+    else if (data.used_by) errors.referral = 'This referral code has already been used.';
     else if (data.acc_expiration && new Date(data.acc_expiration).getTime() < Date.now()) errors.referral = 'This referral code has expired.';
     else if (![2, 3].includes(Number(data.level)) || Number(data.set_saldo) < 0 || Number(data.set_saldo) > 99999) {
       errors.referral = 'This referral code is not valid. Ask your admin for a new one.';
@@ -331,38 +337,45 @@ async function doRegister(req, res, body) {
   if (insertError) {
     // Roll back the claim so the code is not burned by a failed signup.
     await db().from('referral_code').update({ used_by: '', updated_at: nowIso() }).eq('id_reff', code.id_reff).eq('used_by', username);
-    return fail(req, res, '/register', 'Could not create the account. Please try again.', { username: insertError.message }, old);
+    console.error('[anoymundo] register insert failed:', insertError.message);
+    return fail(req, res, '/register', 'Could not create the account. Please try again.', {}, old);
   }
   return redirect(res, '/login', { msgSuccess: 'Account created. Please sign in.' });
 }
 
 async function doGenerate(req, res, body, user) {
-  const custom = str(body.custominput) === 'custom';
-  // The form now posts the real number of keys. Legacy 1-5 selector values are
-  // still accepted so old bookmarks cannot silently order 100 keys.
-  const legacy = { 1: 5, 2: 10, 3: 50, 4: 100, 5: 1 };
-  const raw = num(body.count ?? body.loopcount, 1);
-  const count = body.count != null ? raw : (legacy[raw] ?? raw);
-  const old = { game: str(body.game) || 'PUBG', max_devices: body.max_devices, duration: body.duration };
+  // The custom toggle posts custom=1 (custominput=custom from older pages).
+  const custom = str(body.custom) === '1' || str(body.custominput) === 'custom';
+  const customKey = custom ? str(body.custom_key ?? body.cuslicense) : '';
+  // A custom key is always exactly one key. The quantity control is hidden in
+  // that mode, so never derive a count from a missing/disabled field.
+  const count = custom ? 1 : Math.trunc(num(body.count, 1));
+  const old = {
+    game: str(body.game) || 'PUBG', max_devices: body.max_devices, duration: body.duration,
+    count: String(count), custom: custom ? '1' : '', custom_key: customKey,
+  };
+  if (custom && !customKey) {
+    return fail(req, res, '/keys/generate', 'Enter the custom part of the key.', { custom_key: 'Required.' }, old);
+  }
   const result = await createKeysForUser(user, {
     game: body.game, duration: body.duration, max_devices: body.max_devices,
-    count, custom_key: custom ? str(body.cuslicense) : '',
-    request_id: body.request_id,
+    count, custom_key: customKey, request_id: body.request_id,
   });
   if (!result.ok) {
-    const errors = result.errors || { duration: result.message };
+    const errors = result.errors || {};
     if (result.code === 'insufficient_balance') {
       return fail(req, res, '/keys/generate',
-        `Not enough balance. This order needs ₹${Number(result.required || result.price).toLocaleString('en-IN')}; you have ₹${Number(result.available ?? 0).toLocaleString('en-IN')}.`,
+        `Not enough balance. This order needs ${inr(result.required || result.price)}; you have ${inr(result.available ?? 0)}.`,
         errors, old);
     }
-    if (result.code === 'account_expired' || result.code === 'account_inactive') {
-      return fail(req, res, '/keys/generate', result.message, { duration: result.message }, old);
-    }
-    return fail(req, res, '/keys/generate', result.message, errors, old);
+    const first = Object.values(errors)[0];
+    const message = result.code === 'invalid_request' && first ? first : result.message;
+    return fail(req, res, '/keys/generate', message, errors, old);
   }
+  const n = result.licenses.length;
+  const charged = result.unlimited ? 'No charge (unlimited balance).' : `Charged ${inr(result.price)}.`;
   return redirect(res, '/keys/generate', {
-    msgSuccess: `Generated ${result.licenses.length} key${result.licenses.length === 1 ? '' : 's'}. Charged ₹${Number(result.price).toLocaleString('en-IN')}.`,
+    msgSuccess: `Created ${n} key${n === 1 ? '' : 's'}. ${charged}`,
     user_key: result.licenses.join('\n'), game: result.game,
     duration: String(result.duration), max_devices: String(result.max_devices),
   });
@@ -377,20 +390,20 @@ async function doKeyEdit(req, res, body, user) {
   let patch = {};
   if (user.isOwner) {
     const game = str(body.game);
-    const userKey = str(body.user_key);
+    const userKey = normalizeKey(body.user_key);
     const duration = num(body.duration, 0);
     const maxDevices = num(body.max_devices, 0);
     const status = num(body.status, 1);
     const registrator = str(body.registrator) || key.registrator;
     if (!config.games[game]) errors.game = 'Invalid game.';
-    if (!/^[A-Za-z0-9_-]{1,32}$/.test(userKey)) errors.user_key = 'Invalid user key.';
-    else if (userKey !== key.user_key && (await getKeyByUserKey(userKey))) errors.user_key = 'The user key has been taken.';
+    if (!/^[A-Z0-9_-]{4,64}$/.test(userKey)) errors.user_key = 'Use 4-64 characters: A-Z, 0-9, - or _.';
+    else if (userKey !== key.user_key && (await getKeyByUserKey(userKey))) errors.user_key = 'That key already exists.';
     if (!Number.isInteger(duration) || duration < 1 || duration > 100000) errors.duration = 'Invalid duration.';
     if (!Number.isInteger(maxDevices) || maxDevices < 1 || maxDevices > 100) errors.max_devices = 'Devices must be 1-100.';
     if (![0, 1].includes(status)) errors.status = 'Invalid status.';
     const expiredDate = str(body.expired_date) ? parseDateInput(body.expired_date) : null;
     if (str(body.expired_date) && !expiredDate) errors.expired_date = 'Invalid expired date.';
-    if (Object.keys(errors).length) return fail(req, res, back(req, '/keys'), 'Please check the error', errors);
+    if (Object.keys(errors).length) return fail(req, res, back(req, '/keys'), 'Please fix the highlighted fields.', errors);
     patch = {
       game, user_key: userKey, duration, max_devices: maxDevices, status, registrator,
       expired_date: expiredDate, devices: buildDevices(body.devices, maxDevices) || null,
@@ -399,12 +412,15 @@ async function doKeyEdit(req, res, body, user) {
   } else {
     const status = num(body.status, 1);
     if (![0, 1].includes(status)) errors.status = 'Invalid status.';
-    if (Object.keys(errors).length) return fail(req, res, back(req, '/keys'), 'Please check the error', errors);
+    if (Object.keys(errors).length) return fail(req, res, back(req, '/keys'), 'Please fix the highlighted fields.', errors);
     patch = { status, updated_at: nowIso() };
   }
   const { error } = await db().from('keys_code').update(patch).eq('id_keys', id);
-  if (error) return fail(req, res, back(req, '/keys'), error.message);
-  return redirect(res, back(req, '/keys'), { msgSuccess: 'User key successfuly updated!' });
+  if (error) {
+    console.error('[anoymundo] key update failed:', error.message);
+    return fail(req, res, back(req, '/keys'), 'Could not save this key. Nothing was changed.');
+  }
+  return redirect(res, back(req, '/keys'), { msgSuccess: 'Key updated.' });
 }
 
 async function doSettings(req, res, body, user, targetUrl) {
@@ -446,7 +462,7 @@ async function doSettings(req, res, body, user, targetUrl) {
 }
 
 async function doServer(req, res, body, user) {
-  const targetUrl = '/Server';
+  const targetUrl = '/server';
   const write = async (table, patch, label) => {
     const { error } = await db().from(table).update(patch).eq('id', 1);
     if (error) {
@@ -488,24 +504,51 @@ async function doServer(req, res, body, user) {
 
 async function doReferral(req, res, body, user) {
   const targetUrl = '/admin/create-referral';
-  if (!user.isAdmin) return redirect(res, '/dashboard', { msgWarning: 'Access Denied!' });
-  const setSaldo = num(body.set_saldo, -1);
+  if (!user.isAdmin) return redirect(res, '/dashboard', { msgWarning: 'You do not have access to that page.' });
+  const setSaldo = Math.trunc(num(body.set_saldo, -1));
   const days = num(body.accExpire, 0);
   const level = num(body.accLevel, 3);
   const errors = {};
-  if (!Number.isFinite(setSaldo) || setSaldo < 0 || setSaldo > 99999) errors.set_saldo = 'Invalid saldo.';
-  if (!config.accExpire[days]) errors.accExpire = 'Invalid days.';
+  if (!Number.isSafeInteger(setSaldo) || setSaldo < 0 || setSaldo > 99999) errors.set_saldo = 'Enter a balance between 0 and 99999.';
+  if (!config.accExpire[days]) errors.accExpire = 'Choose how long the account lasts.';
   if (level === 1 || !config.accLevel[level]) errors.accLevel = 'Choose Admin or Reseller.';
-  if (Object.keys(errors).length) return fail(req, res, targetUrl, 'check the form', errors);
-  const code = randomAlnum(6);
+  // Only the Owner can hand out Admin accounts.
+  if (!errors.accLevel && level === 2 && !user.isOwner) errors.accLevel = 'Only the Owner can create Admin accounts.';
+  if (Object.keys(errors).length) return fail(req, res, targetUrl, 'Please fix the highlighted fields.', errors);
+
+  // Balance given away with a code comes out of the creator's own balance
+  // (the Owner's balance is unlimited). Debit first, conditionally, so two
+  // tabs cannot spend the same balance twice.
+  let debited = false;
+  if (!isUnlimited(user) && setSaldo > 0) {
+    const { data: fresh } = await db().from('users').select('saldo').eq('id_users', user.id_users).maybeSingle();
+    const before = Number(fresh?.saldo || 0);
+    if (before < setSaldo) {
+      return fail(req, res, targetUrl, `Not enough balance. You have ${inr(before)}.`, { set_saldo: 'More than your balance.' });
+    }
+    const { data: rows, error } = await db().from('users')
+      .update({ saldo: before - setSaldo, updated_at: nowIso() })
+      .eq('id_users', user.id_users).eq('saldo', before).select('id_users');
+    if (error || !rows?.length) return fail(req, res, targetUrl, 'Your balance just changed. Please try again.');
+    debited = true;
+  }
+
+  const code = randomCode(7);
   const { error } = await db().from('referral_code').insert({
-    code: codeHash(code), referral: code.slice(0, 7), level: Math.max(2, Math.min(3, level)),
+    code: codeHash(code), referral: code, level: Math.max(2, Math.min(3, level)),
     set_saldo: Math.max(0, setSaldo), used_by: '', created_by: user.username,
     acc_expiration: new Date(Date.now() + days * 86400_000).toISOString(),
     created_at: nowIso(), updated_at: nowIso(),
   });
-  if (error) return fail(req, res, targetUrl, error.message);
-  return redirect(res, targetUrl, { msgSuccess: `Referral : ${code}` });
+  if (error) {
+    console.error('[anoymundo] referral insert failed:', error.message);
+    if (debited) {
+      const { data: now } = await db().from('users').select('saldo').eq('id_users', user.id_users).maybeSingle();
+      await db().from('users').update({ saldo: Number(now?.saldo || 0) + setSaldo, updated_at: nowIso() }).eq('id_users', user.id_users);
+    }
+    return fail(req, res, targetUrl, 'Could not create the referral code. Nothing was charged.');
+  }
+  return redirect(res, targetUrl, { msgSuccess: `Referral code created: ${code}` });
 }
 
 async function doUserEdit(req, res, body, user) {
@@ -526,8 +569,8 @@ async function doUserEdit(req, res, body, user) {
   const uplink = str(body.uplink);
   const expiration = parseDateInput(body.expiration);
   const errors = {};
-  if (!alnum(username, 4, 25)) errors.username = 'Invalid username.';
-  else if (username !== target.data.username && (await getUserByUsername(username))) errors.username = 'The username has taken by other.';
+  if (!alnum(username, 4, 25)) errors.username = 'Use 4-25 letters or numbers.';
+  else if (username.toLowerCase() !== String(target.data.username).toLowerCase() && (await getUserByUsername(username))) errors.username = 'That username is taken.';
   if (fullname && !/^[A-Za-z ]{4,155}$/.test(fullname)) errors.fullname = 'Only alphabetical characters and spaces.';
   if (level === 1 || !config.accLevel[level]) errors.level = 'Choose Admin or Reseller.';
   if (![1, 2, 3].includes(status)) errors.status = 'Invalid status.';
@@ -535,13 +578,21 @@ async function doUserEdit(req, res, body, user) {
   const uplinkUser = await getUserByUsername(uplink);
   if (!uplinkUser) errors.uplink = 'Uplink not registered anymore.';
   if (str(body.expiration) && !expiration) errors.expiration = 'Invalid expiration date.';
-  if (Object.keys(errors).length) return fail(req, res, targetUrl, 'Something wrong! Please check the form', errors);
+  if (Object.keys(errors).length) return fail(req, res, targetUrl, 'Please fix the highlighted fields.', errors);
   const { error } = await db().from('users').update({
     username, fullname, level, status, saldo: Math.max(0, saldo), uplink,
     expiration_date: expiration, updated_at: nowIso(),
   }).eq('id_users', id);
-  if (error) return fail(req, res, targetUrl, error.message);
-  return redirect(res, targetUrl, { msgSuccess: `Successfuly update ${target.data.username}.` });
+  if (error) {
+    console.error('[anoymundo] user update failed:', error.message);
+    return fail(req, res, targetUrl, 'Could not save this user. Nothing was changed.');
+  }
+  // Keys belong to a username; keep them attached when the user is renamed.
+  if (username !== target.data.username) {
+    await db().from('keys_code').update({ registrator: username }).eq('registrator', target.data.username);
+    await db().from('users').update({ uplink: username }).eq('uplink', target.data.username);
+  }
+  return redirect(res, targetUrl, { msgSuccess: `Saved ${username}.` });
 }
 
 function validVersion(value) {
@@ -565,7 +616,7 @@ function urlFileName(url, fallback) {
  * releases (which was the "external link update doesn't work" failure).
  */
 async function doLibUpload(req, res, body, user) {
-  if (!user.isOwner) return sendJson(res, { ok: false, error: 'Access Denied!' }, 403);
+  if (!user.isOwner) return sendJson(res, { ok: false, error: 'Only the Owner can publish releases.' }, 403);
   const action = str(body.action) === 'link' ? 'link' : 'upload';
   const version = str(body.version).slice(0, 32);
   const externalUrl = str(body.external_url).slice(0, 2000);
@@ -662,13 +713,16 @@ function isMutatingGet(lp) {
 function sameOriginMutation(req) {
   const h = req.headers || {};
   const fetchSite = String(h['sec-fetch-site'] || '').toLowerCase();
-  if (fetchSite && fetchSite !== 'same-origin' && fetchSite !== 'none') return false;
-  const source = String(h.origin || h.referer || '');
+  if (fetchSite === 'same-origin') return true; // set by the browser, cannot be forged by a page
+  if (fetchSite && fetchSite !== 'none') return false;
+  // Origin is "null" for some privacy modes; fall back to the Referer then.
+  const origin = String(h.origin || '');
+  const source = origin && origin !== 'null' ? origin : String(h.referer || '');
   if (!source) return true; // non-browser clients
   let sourceHost;
   try { sourceHost = new URL(source).host; } catch { return false; }
   const allowed = new Set();
-  for (const raw of [h['x-forwarded-host'], h.host, config.publicBaseUrl]) {
+  for (const raw of [h['x-forwarded-host'], h.host, config.baseUrl]) {
     if (!raw) continue;
     try { allowed.add(new URL(/^https?:/.test(String(raw)) ? String(raw) : `https://${raw}`).host); }
     catch { /* ignore malformed host */ }
@@ -676,22 +730,24 @@ function sameOriginMutation(req) {
   return allowed.has(sourceHost);
 }
 
-function errorPage(title, message, ref) {
-  const safeRef = escapeHtml(ref);
-  return `<!doctype html><html lang="en" data-theme="light"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="color-scheme" content="light dark">
+/** Standalone page for errors / 404, same look as the rest of the panel. */
+function plainPage(title, message, detail = '', status = 200) {
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#000000"><meta name="color-scheme" content="dark">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <title>${escapeHtml(title)} · ${escapeHtml(config.brand)}</title>
-<link rel="stylesheet" href="/assets/css/tailwind.css">
-<link rel="stylesheet" href="/assets/css/app.css">
-<link rel="stylesheet" href="/assets/css/ios.css"></head>
-<body class="app-body"><main class="auth-shell"><div class="auth-card" style="text-align:center">
-<span class="brand-mark brand-mark-lg" aria-hidden="true">!</span>
+<link rel="stylesheet" href="/assets/css/ui.css"></head>
+<body class="auth"><main class="auth-shell"><div class="auth-panel center" data-status="${status}">
 <h1 class="auth-title">${escapeHtml(title)}</h1>
-<p class="auth-subtitle">${escapeHtml(message)}</p>
-<p class="field-hint">Reference ${safeRef}</p>
-<div style="margin-top:24px"><a href="/dashboard" class="ui-btn auth-submit">Back to dashboard</a></div>
+<p class="muted">${escapeHtml(message)}</p>
+${detail ? `<p class="hint">${escapeHtml(detail)}</p>` : ''}
+<a href="/dashboard" class="btn btn-primary btn-block">Back to dashboard</a>
 </div></main></body></html>`;
+}
+
+function errorPage(title, message, ref) {
+  return plainPage(title, message, `Reference ${ref}`, 500);
 }
 
 function isJsonRoute(p, method, req) {
@@ -700,7 +756,7 @@ function isJsonRoute(p, method, req) {
   const contentType = String(req.headers?.['content-type'] || '');
   return lp.startsWith('/api/') || lp === '/connect' || lp === '/health' ||
     (lp === '/lib' && method === 'POST') ||
-    lp.startsWith('/keys/reset') || lp === '/keys/api' || lp === '/admin/api/users' ||
+    lp.startsWith('/keys/reset') || lp === '/keys/api' ||
     contentType.includes('application/json') || accept.includes('application/json');
 }
 
@@ -724,16 +780,23 @@ function handleFailure(req, res, p, method, error) {
 // Main dispatch
 // ---------------------------------------------------------------------------
 export async function handle(req, res) {
+  // Declared outside the try so the failure handler can always use them.
+  let p = '/';
+  const method = String(req.method || 'GET').toUpperCase();
   try {
     const url = requestUrl(req);
     const q = url.searchParams;
-    const p = pathOf(req);
+    p = pathOf(req);
     const lp = p.toLowerCase();
-    const method = (req.method || 'GET').toUpperCase();
     const body = method === 'POST' || method === 'PUT' || method === 'PATCH' ? await parseBody(req) : {};
 
-    // State-changing legacy GETs must originate from the panel itself.
-    if (method === 'GET' && isMutatingGet(lp) && !sameOriginMutation(req)) {
+    // State-changing requests from a browser must originate from the panel
+    // itself (session cookies are SameSite=Lax; this is the second layer).
+    const machineRoute = lp === '/connect' || lp === '/api/connect' || lp.startsWith('/api/');
+    if (!machineRoute && (method === 'POST' || (method === 'GET' && isMutatingGet(lp))) && !sameOriginMutation(req)) {
+      if (method === 'POST' && (lp === '/login' || lp === '/register')) {
+        return redirect(res, lp, { msgDanger: 'Please submit the form from this site.' });
+      }
       return sendJson(res, {
         ok: false, status: false, code: 'cross_site_blocked',
         error: 'This action must be started from the panel. Nothing was changed.',
@@ -750,6 +813,8 @@ export async function handle(req, res) {
       return handleLibDownload(req, res);
     }
     if (lp === '/api/lib/info') return handleLibInfo(res);
+    if (lp === '/api/lib/manifest') return handleLibManifest(res);
+    if (lp === '/favicon.ico') { res.statusCode = 301; res.setHeader('Location', '/favicon.svg'); return res.end(); }
     // Personal API-key endpoints authenticate with X-API-Key, not a session.
     if (lp === '/api/v1' || lp.startsWith('/api/v1/')) {
       return handleApiV1(req, res, body, q, p, method);
@@ -781,7 +846,7 @@ export async function handle(req, res) {
     }
     if (lp === '/logout') {
       clearSession(res);
-      return redirect(res, '/login', { msgSuccess: 'Logout successfuly.' });
+      return redirect(res, '/login', { msgSuccess: 'You have been signed out.' });
     }
 
     // Everything below requires a valid session.
@@ -790,8 +855,8 @@ export async function handle(req, res) {
 
     // ------------------------------ dashboard ------------------------------
     if (lp === '/dashboard' || lp === '/dbg') {
-      const { stats, history } = await dashboardData(user);
-      return page(req, res, 'dashboard', { user, title: 'Dashboard', stats, history });
+      const { stats } = await dashboardData(user);
+      return page(req, res, 'dashboard', { user, title: 'Dashboard', stats, unlimited: isUnlimited(user) });
     }
 
     // --------------------------- docs (two kinds) ---------------------------
@@ -820,7 +885,8 @@ export async function handle(req, res) {
               apiKeyPlain: token,
             });
           } catch (error) {
-            return redirect(res, '/api-keys', { msgDanger: `Failed: ${error.message}` });
+            console.error('[anoymundo] api key create failed:', error);
+            return redirect(res, '/api-keys', { msgDanger: 'Could not create the API key. Please try again.' });
           }
         }
         if (action === 'revoke' || action === 'delete') {
@@ -831,7 +897,8 @@ export async function handle(req, res) {
               msgSuccess: action === 'revoke' ? 'API key revoked.' : 'API key deleted.',
             });
           } catch (error) {
-            return redirect(res, '/api-keys', { msgDanger: `Could not update the API key: ${error.message}` });
+            console.error('[anoymundo] api key update failed:', error);
+            return redirect(res, '/api-keys', { msgDanger: 'Could not update the API key. Please try again.' });
           }
         }
         return redirect(res, '/api-keys', { msgWarning: 'Unknown action.' });
@@ -849,93 +916,86 @@ export async function handle(req, res) {
 
     // --------------------------------- keys ---------------------------------
     if (lp === '/keys') {
-      let query = db().from('keys_code').select('user_key');
-      if (!user.isOwner) query = query.eq('registrator', user.username);
-      const { data } = await query;
-      const keyList = (data || []).map((k) => k.user_key);
-      return page(req, res, 'keys_list', { user, title: 'Keys', keyList });
+      return page(req, res, 'keys_list', { user, title: 'Keys', keyTotal: await countKeys(user) });
     }
-    if (lp === '/keys/api') return keysDataTable(res, user, q);
+    if (lp === '/keys/api') return keysList(res, user, q);
     if (lp === '/keys/generate') {
       if (method === 'POST') return doGenerate(req, res, body, user);
-      const message = Number(user.saldo) > 0
-        ? { text: `Total Saldo ₹${Number(user.saldo).toLocaleString('en-IN')}`, type: 'success' }
-        : { text: 'Your balance is empty. Ask your admin to top up.', type: 'warning' };
+      const unlimited = isUnlimited(user);
       return page(req, res, 'keys_generate', {
-        user, title: 'Generate', pageMessage: message,
-        form: { max_devices: 1, duration: 24, game: 'PUBG' },
+        user, title: 'Generate keys', unlimited,
+        balanceLow: !unlimited && Number(user.saldo) <= 0,
+        form: { max_devices: 1, duration: 24, game: 'PUBG', count: 1 },
+        prefixJson: JSON.stringify(Object.fromEntries(Object.keys(config.prices)
+          .map((h) => [h, keyPrefix(user.username, h)]))),
+        customMin: config.customSuffixMin,
+        customMax: config.customSuffixMax,
         selects: {
           game: buildSelect('game', 'game', config.games, 'PUBG'),
-          duration: buildSelect('duration', 'duration', config.durations, 24),
+          duration: buildSelect('duration', 'duration', Object.fromEntries(Object.entries(config.durations)
+            .map(([h, label]) => [h, `${label} · ${inr(config.prices[h])} per device`])), 24),
         },
       });
     }
     if (lp === '/keys/edit' && method === 'POST') return doKeyEdit(req, res, body, user);
-    if (lp === '/keys/reset') {
-      const userKey = str(q.get('userkey'));
-      const key = await getKeyByUserKey(userKey);
-      if (!key) return sendJson(res, { registered: false, keys: userKey });
-      const total = deviceList(key.devices).length;
-      const max = Number(key.max_devices || 0);
-      if (q.get('reset') && (user.isOwner || key.registrator === user.username)) {
-        await db().from('keys_code').update({ devices: null, updated_at: nowIso() }).eq('user_key', userKey);
-        return sendJson(res, { registered: true, keys: userKey, reset: true, devices_total: 0, devices_max: max });
+    if (lp === '/keys/reset' || lp === '/keys/resetall') {
+      const userKey = str(body.userkey ?? q.get('userkey'));
+      const key = userKey ? await getKeyByUserKey(userKey) : null;
+      // "Not found" and "not yours" look the same so keys cannot be probed.
+      if (!key || (!user.isOwner && key.registrator !== user.username)) {
+        return sendJson(res, { ok: false, registered: false, keys: userKey, error: 'That key no longer exists.' }, 404);
       }
-      return sendJson(res, { registered: true, keys: userKey, devices_total: total, devices_max: max });
-    }
-    if (lp === '/keys/resetall') {
-      const userKey = str(q.get('userkey'));
-      const key = await getKeyByUserKey(userKey);
-      if (!key) return sendJson(res, { registered: false, keys: userKey });
-      if (!user.isOwner && key.registrator !== user.username) {
-        return sendJson(res, { registered: true, keys: userKey, devices_total: deviceList(key.devices).length, devices_max: key.max_devices });
+      const max = Number(key.max_devices || 1);
+      if (lp === '/keys/reset') {
+        const { error } = await db().from('keys_code').update({ devices: null, updated_at: nowIso() }).eq('id_keys', key.id_keys);
+        if (error) return sendJson(res, { ok: false, registered: true, error: 'Could not reset devices. Please try again.' }, 500);
+        return sendJson(res, { ok: true, registered: true, keys: key.user_key, reset: true, devices_total: 0, devices_max: max });
       }
       const refund = await deleteKeysWithRefund([key.id_keys], user);
-      if (!refund.ok) return sendJson(res, { registered: true, keys: userKey, deleted: false, error: refund.message }, 500);
+      if (!refund.ok) return sendJson(res, { ok: false, registered: true, keys: key.user_key, deleted: false, error: refund.message }, 500);
       return sendJson(res, {
-        registered: true, keys: userKey, deleted: refund.deleted > 0,
+        ok: true, registered: true, keys: key.user_key, deleted: refund.deleted > 0,
         refunded: refund.refunded, refund_total: refund.refund_total,
-        devices_total: 0, devices_max: key.max_devices,
+        devices_total: 0, devices_max: max,
       });
     }
     if (lp === '/keys/deleteexp' || lp === '/keys/deleteunused') {
       let query = db().from('keys_code').select('id_keys,expired_date,registrator').limit(500);
       if (!user.isOwner) query = query.eq('registrator', user.username);
+      query = lp === '/keys/deleteexp' ? query.lt('expired_date', nowIso()) : query.is('expired_date', null);
       const { data, error } = await query;
       if (error) return redirect(res, '/keys', { msgDanger: 'Could not read keys. Nothing was deleted.' });
-      const ids = (data || []).filter((row) => (lp === '/keys/deleteexp'
-        ? !!row.expired_date && new Date(row.expired_date).getTime() < Date.now()
-        : !row.expired_date)).map((row) => row.id_keys);
+      const ids = (data || []).map((row) => row.id_keys);
       const result = await deleteKeysWithRefund(ids, user);
-      return redirect(res, '/keys', { msgSuccess: refundMessage(result) });
+      return redirect(res, '/keys', result.ok ? { msgSuccess: refundMessage(result) } : { msgDanger: refundMessage(result) });
     }
     if (lp === '/keys/download') {
-      let query = db().from('keys_code').select('user_key');
+      let query = db().from('keys_code').select('user_key').order('id_keys', { ascending: false }).limit(10000);
       if (!user.isOwner) query = query.eq('registrator', user.username);
-      const { data } = await query;
+      const { data, error } = await query;
+      if (error) return redirect(res, '/keys', { msgDanger: 'Could not export keys. Please try again.' });
       const text = (data || []).map((r) => r.user_key).join('\n');
-      res.setHeader('Content-Disposition', 'attachment; filename="Allkeys.txt"');
+      res.setHeader('Content-Disposition', 'attachment; filename="keys.txt"');
       return sendText(res, text);
     }
     const keyEditMatch = p.match(/^\/keys\/(\d+)$/i);
     if (keyEditMatch) {
       const key = await getKeyById(Number(keyEditMatch[1]));
-      if (!key) return redirect(res, '/keys', { msgDanger: 'The user key no longer exists.' });
-      if (!user.isOwner && key.registrator !== user.username) {
-        return redirect(res, '/keys', { msgDanger: 'Restricted to this user key.' });
+      if (!key || (!user.isOwner && key.registrator !== user.username)) {
+        return redirect(res, '/keys', { msgDanger: 'That key no longer exists.' });
       }
-      return page(req, res, 'keys_edit', { user, title: 'Key', ...keyFormData(key) });
+      return page(req, res, 'keys_edit', { user, title: 'Edit key', ...keyFormData(key) });
     }
 
     // ------------------------------- settings ------------------------------
     if (lp === '/settings') {
       if (method === 'POST') return doSettings(req, res, body, user, '/settings');
-      return page(req, res, 'settings', { user, title: 'Settings', form: { fullname: user.fullname || '' } });
+      return page(req, res, 'settings', { user, title: 'Settings', unlimited: isUnlimited(user), form: { fullname: user.fullname || '' } });
     }
 
     // ---------------------------- server settings --------------------------
     if (lp === '/server') {
-      if (!user.isAdmin) return redirect(res, '/dashboard', { msgWarning: 'Access Denied' });
+      if (!user.isAdmin) return redirect(res, '/dashboard', { msgWarning: 'You do not have access to that page.' });
       if (method === 'POST') return doServer(req, res, body, user);
       const settings = await getSettings();
       return page(req, res, 'server', { user, title: 'Server', ...serverData(settings) });
@@ -943,28 +1003,43 @@ export async function handle(req, res) {
 
     // --------------------------------- admin --------------------------------
     if (lp === '/admin/create-referral') {
-      if (!user.isAdmin) return redirect(res, '/dashboard', { msgWarning: 'Access Denied!' });
+      if (!user.isAdmin) return redirect(res, '/dashboard', { msgWarning: 'You do not have access to that page.' });
       if (method === 'POST') return doReferral(req, res, body, user);
-      const codes = await getReferralCodes(10);
-      const { count } = await db().from('referral_code').select('*', { count: 'exact', head: true });
+      let codesQuery = db().from('referral_code').select('*', { count: 'exact' }).order('id_reff', { ascending: false }).limit(25);
+      if (!user.isOwner) codesQuery = codesQuery.eq('created_by', user.username);
+      const { data: codes, count, error } = await codesQuery;
+      if (error) throw new Error(error.message);
+      const levels = user.isOwner ? { 3: 'Reseller', 2: 'Admin' } : { 3: 'Reseller' };
       return page(req, res, 'admin_referral', {
-        user, title: 'Referral', codes: codes.map((c) => ({ ...c, codeShort: String(c.code).slice(1, 16) })),
-        totalCodes: count ?? codes.length,
+        user, title: 'Referral codes', unlimited: isUnlimited(user),
+        codes: (codes || []).map((c) => ({
+          ...c,
+          levelName: ({ 2: 'Admin', 3: 'Reseller' })[Number(c.level)] || '—',
+          expiresLabel: c.acc_expiration ? humanDate(c.acc_expiration) : '—',
+          saldoLabel: inr(c.set_saldo),
+        })),
+        totalCodes: count ?? (codes || []).length,
         selects: {
-          accExpire: buildSelect('accExpire', 'accExpire', { '': '— Select Days —', ...config.accExpire }, ''),
-          accLevel: buildSelect('accLevel', 'accLevel', { '': '— Select Roles —', ...config.accLevel }, ''),
+          accExpire: buildSelect('accExpire', 'accExpire', config.accExpire, 30),
+          accLevel: buildSelect('accLevel', 'accLevel', levels, 3),
         },
       });
     }
     if (lp === '/admin/manage-users') {
-      if (!user.isOwner) return redirect(res, '/dashboard', { msgWarning: 'Access Denied!' });
-      const userList = await listUsers();
+      if (!user.isOwner) return redirect(res, '/dashboard', { msgWarning: 'You do not have access to that page.' });
+      const userList = (await listUsers()).map((u) => ({
+        ...u,
+        levelName: ({ 1: 'Owner', 2: 'Admin', 3: 'Reseller' })[Number(u.level)] || 'Unknown',
+        statusName: ({ 1: 'Active', 2: 'Banned', 3: 'Expired' })[Number(u.status)] || 'Unknown',
+        saldoLabel: Number(u.level) === 1 ? 'Unlimited' : inr(u.saldo),
+        expiresLabel: u.expiration_date ? humanDate(u.expiration_date) : 'Never',
+        isOwnerRow: Number(u.level) === 1,
+      }));
       return page(req, res, 'admin_users', { user, title: 'Users', userList });
     }
-    if (lp === '/admin/api/users') return usersDataTable(res, user, q);
     const userDeleteMatch = p.match(/^\/admin\/user\/delete\/(\d+)$/i);
     if (userDeleteMatch) {
-      if (!user.isOwner) return redirect(res, '/dashboard', { msgWarning: 'Access Denied!' });
+      if (!user.isOwner) return redirect(res, '/dashboard', { msgWarning: 'You do not have access to that page.' });
       const targetId = Number(userDeleteMatch[1]);
       if (targetId === user.id_users) return redirect(res, '/admin/manage-users', { msgDanger: 'You cannot delete yourself.' });
       const { data: target } = await db().from('users').select('id_users,username,level').eq('id_users', targetId).maybeSingle();
@@ -973,42 +1048,44 @@ export async function handle(req, res) {
         return redirect(res, '/admin/manage-users', { msgDanger: 'The Owner account cannot be deleted.' });
       }
       const { data: theirKeys } = await db().from('keys_code').select('id_keys').eq('registrator', target.username).limit(500);
-      await deleteKeysWithRefund((theirKeys || []).map((k) => k.id_keys), user);
+      const removed = await deleteKeysWithRefund((theirKeys || []).map((k) => k.id_keys), user);
+      if (!removed.ok) return redirect(res, '/admin/manage-users', { msgDanger: 'Could not remove this user\'s keys. Nothing was deleted.' });
       const { error } = await db().from('users').delete().eq('id_users', targetId);
       if (error) return redirect(res, '/admin/manage-users', { msgDanger: 'Could not delete this user. Please try again.' });
       return redirect(res, '/admin/manage-users', { msgSuccess: 'User and their keys removed.' });
     }
     const userEditMatch = p.match(/^\/admin\/user\/(\d+)$/i);
     if (userEditMatch) {
-      if (!user.isOwner) return redirect(res, '/dashboard', { msgWarning: 'Access Denied!' });
+      if (!user.isOwner) return redirect(res, '/dashboard', { msgWarning: 'You do not have access to that page.' });
       const id = Number(userEditMatch[1]);
       if (method === 'POST') return doUserEdit(req, res, body, user);
       const { data: target } = await db().from('users').select('*').eq('id_users', id).maybeSingle();
       if (!target) return redirect(res, '/admin/manage-users', { msgDanger: 'User no longer exists.' });
+      if (Number(target.level) === 1) return redirect(res, '/admin/manage-users', { msgWarning: 'The Owner account is managed from Settings.' });
       return page(req, res, 'admin_user_edit', {
-        user, title: 'Settings',
+        user, title: 'Edit user',
         target: { ...target, displayName: displayName(target) },
         form: {
           username: target.username, fullname: target.fullname, saldo: target.saldo,
           uplink: target.uplink, expiration: target.expiration_date ? sqlDateTime(target.expiration_date) : '',
         },
         selects: {
-          level: buildSelect('level', 'level', { '': '— Select Roles —', ...config.accLevel }, target.level),
-          status: buildSelect('status', 'status', { '': '— Select Status —', 2: 'Banned/Block', 1: 'Active', 3: 'Expired' }, target.status),
+          level: buildSelect('level', 'level', { 2: 'Admin', 3: 'Reseller' }, target.level),
+          status: buildSelect('status', 'status', { 1: 'Active', 2: 'Banned', 3: 'Expired' }, target.status),
         },
       });
     }
 
     // ---------------------------- library / release ------------------------
     if (lp === '/lib') {
-      if (!user.isOwner) return redirect(res, '/dashboard', { msgWarning: 'Access Denied!' });
+      if (!user.isOwner) return redirect(res, '/dashboard', { msgWarning: 'You do not have access to that page.' });
       if (method === 'POST') return doLibUpload(req, res, body, user);
       const settings = await getSettings();
       return page(req, res, 'lib', { user, title: 'Library', maxUploadMb: config.maxUploadMb, ...serverData(settings) });
     }
 
     // -------------------------------- 404 -----------------------------------
-    return sendHtml(res, `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>404 - ${escapeHtml(config.brand)}</title><link rel="stylesheet" href="/assets/css/tailwind.css"><link rel="stylesheet" href="/assets/css/app.css"><link rel="stylesheet" href="/assets/css/ios.css"></head><body class="app-body"><main class="auth-shell"><div class="auth-card" style="text-align:center"><span class="brand-mark brand-mark-lg" aria-hidden="true">404</span><h1 class="auth-title">Page not found</h1><p class="auth-subtitle">${escapeHtml(p)}</p><div style="margin-top:24px"><a href="/dashboard" class="ui-btn auth-submit">Back to dashboard</a></div></div></main></body></html>`, 404);
+    return sendHtml(res, plainPage('Page not found', 'This page does not exist.', p, 404), 404);
   } catch (error) {
     return handleFailure(req, res, p, method, error);
   }

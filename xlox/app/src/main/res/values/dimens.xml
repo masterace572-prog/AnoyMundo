@@ -1,100 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- 8dp spacing scale, component geometry and the type scale. The only place with dp/sp values. -->
 <resources>
-    <dimen name="space_4">4dp</dimen>
-    <dimen name="space_8">8dp</dimen>
-    <dimen name="space_12">12dp</dimen>
-    <dimen name="space_16">16dp</dimen>
-    <dimen name="space_20">20dp</dimen>
-    <dimen name="space_24">24dp</dimen>
-    <dimen name="space_32">32dp</dimen>
-    <dimen name="space_40">40dp</dimen>
-    <dimen name="space_48">48dp</dimen>
+    <dimen name="screen_padding">24dp</dimen>
+    <dimen name="row_height">48dp</dimen>
+    <dimen name="button_height">52dp</dimen>
+    <dimen name="button_radius">14dp</dimen>
+    <dimen name="field_height">54dp</dimen>
+    <dimen name="field_radius">12dp</dimen>
+    <dimen name="dialog_radius">20dp</dimen>
+    <dimen name="dialog_width">320dp</dimen>
+    <dimen name="hairline">1dp</dimen>
+    <dimen name="progress_height">4dp</dimen>
+    <dimen name="spinner_size">22dp</dimen>
+    <dimen name="max_content_width">440dp</dimen>
 
-    <dimen name="screen_padding">20dp</dimen>
-    <dimen name="section_gap">24dp</dimen>
-    <dimen name="card_padding">20dp</dimen>
-    <dimen name="tile_padding">16dp</dimen>
-    <dimen name="touch_target">48dp</dimen>
-    <dimen name="divider">1dp</dimen>
-    <dimen name="stroke">1dp</dimen>
-    <dimen name="status_rule">2dp</dimen>
-    <dimen name="underline">2dp</dimen>
-
-    <dimen name="radius_button">16dp</dimen>
-    <dimen name="radius_pill">1000dp</dimen>
-    <dimen name="radius_card">20dp</dimen>
-    <dimen name="radius_tile">18dp</dimen>
-    <dimen name="radius_input">14dp</dimen>
-    <dimen name="radius_dialog">24dp</dimen>
-    <dimen name="radius_sheet">24dp</dimen>
-    <dimen name="radius_image">12dp</dimen>
-    <dimen name="radius_avatar">1000dp</dimen>
-    <dimen name="radius_splash">28dp</dimen>
-
-    <dimen name="top_bar_height">56dp</dimen>
-    <dimen name="login_button_height">56dp</dimen>
-    <dimen name="launch_button_height">58dp</dimen>
-    <dimen name="field_height">56dp</dimen>
-    <dimen name="chip_height">32dp</dimen>
-    <dimen name="list_item_single">56dp</dimen>
-    <dimen name="list_item_double">72dp</dimen>
-    <dimen name="state_height">56dp</dimen>
-    <dimen name="banner_height">56dp</dimen>
-    <dimen name="version_pill_height">26dp</dimen>
-    <dimen name="toggle_width">72dp</dimen>
-    <dimen name="toggle_height">36dp</dimen>
-    <dimen name="emblem_size">64dp</dimen>
-    <dimen name="emblem_container">88dp</dimen>
-    <dimen name="splash_icon">108dp</dimen>
-    <dimen name="avatar_size">40dp</dimen>
-    <dimen name="mark_size">40dp</dimen>
-    <dimen name="dot_size">8dp</dimen>
-    <dimen name="dialog_inset">24dp</dimen>
-
-    <dimen name="icon_bar">24dp</dimen>
-    <dimen name="icon_inline">20dp</dimen>
-    <dimen name="icon_button">18dp</dimen>
-    <dimen name="progress_linear">3dp</dimen>
-    <dimen name="progress_circular">20dp</dimen>
-    <dimen name="progress_circular_large">40dp</dimen>
-    <dimen name="stagger_step">40</dimen>
-
-    <!-- Geometric sans scale -->
-    <dimen name="text_display_large">32sp</dimen>
-    <dimen name="line_display_large">4sp</dimen>
-    <dimen name="text_headline_large">28sp</dimen>
-    <dimen name="line_headline_large">4sp</dimen>
-    <dimen name="text_headline_medium">24sp</dimen>
-    <dimen name="line_headline_medium">4sp</dimen>
-    <dimen name="text_headline_small">20sp</dimen>
-    <dimen name="line_headline_small">4sp</dimen>
-    <dimen name="text_title_large">18sp</dimen>
-    <dimen name="line_title_large">4sp</dimen>
-    <dimen name="text_title_medium">16sp</dimen>
-    <dimen name="line_title_medium">4sp</dimen>
-    <dimen name="text_title_small">14sp</dimen>
-    <dimen name="line_title_small">3sp</dimen>
-    <dimen name="text_body_large">16sp</dimen>
-    <dimen name="line_body_large">6sp</dimen>
-    <dimen name="text_body_medium">14sp</dimen>
-    <dimen name="line_body_medium">5sp</dimen>
-    <dimen name="text_body_small">12sp</dimen>
-    <dimen name="line_body_small">4sp</dimen>
-    <dimen name="text_label_large">14sp</dimen>
-    <dimen name="line_label_large">3sp</dimen>
-    <dimen name="text_label_medium">12sp</dimen>
-    <dimen name="line_label_medium">3sp</dimen>
-    <dimen name="text_label_small">11sp</dimen>
-    <dimen name="line_label_small">2sp</dimen>
-
-    <!-- Tabular mono scale for telemetry -->
-    <dimen name="text_mono_hero">40sp</dimen>
-    <dimen name="line_mono_hero">4sp</dimen>
-    <dimen name="text_mono_large">24sp</dimen>
-    <dimen name="line_mono_large">4sp</dimen>
-    <dimen name="text_mono_medium">16sp</dimen>
-    <dimen name="line_mono_medium">4sp</dimen>
-    <dimen name="text_mono_small">12sp</dimen>
-    <dimen name="line_mono_small">3sp</dimen>
+    <dimen name="text_large_title">34sp</dimen>
+    <dimen name="text_title">22sp</dimen>
+    <dimen name="text_headline">17sp</dimen>
+    <dimen name="text_body">17sp</dimen>
+    <dimen name="text_callout">15sp</dimen>
+    <dimen name="text_footnote">13sp</dimen>
+    <dimen name="text_caption">12sp</dimen>
+    <dimen name="text_splash">44sp</dimen>
 </resources>

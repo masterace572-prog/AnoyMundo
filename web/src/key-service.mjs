@@ -22,8 +22,43 @@ import { db, isMemory, getUserById, getKeyByUserKey } from './db.mjs';
 const nowIso = () => new Date().toISOString();
 const str = (v) => String(v ?? '').trim();
 const num = (v, fallback = 0) => (Number.isFinite(Number(v)) ? Number(v) : fallback);
-const randomAlnum = (n) => crypto.randomBytes(Math.ceil(n * 2)).toString('base64url')
-  .replace(/[^A-Za-z0-9]/g, '').slice(0, n).padEnd(n, 'X');
+const KEY_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+
+/** Cryptographically random A-Z0-9 string (uniform, no modulo bias). */
+export function randomKeyPart(length = config.keySuffixLength) {
+  let out = '';
+  for (let i = 0; i < length; i += 1) out += KEY_ALPHABET[crypto.randomInt(KEY_ALPHABET.length)];
+  return out;
+}
+
+/** "ANOY-7D-" for username Anoy and a 168 hour key. Always upper case. */
+export function keyPrefix(username, duration) {
+  const token = config.durationTokens[Number(duration)] || `${Number(duration) || 0}H`;
+  const name = String(username || '').toUpperCase().replace(/[^A-Z0-9]/g, '') || 'KEY';
+  return `${name}-${token}-`;
+}
+
+/** Normalises any licence key the same way everywhere (panel, API, loader). */
+export function normalizeKey(value) {
+  return String(value ?? '').trim().replace(/\s+/g, '').toUpperCase();
+}
+
+/**
+ * Accepts the custom part a seller typed. A full key with the right prefix is
+ * also accepted (people paste whole keys), the prefix is simply stripped.
+ * Returns { suffix } or { error }.
+ */
+export function parseCustomSuffix(value, prefix) {
+  let suffix = normalizeKey(value);
+  if (prefix && suffix.startsWith(prefix)) suffix = suffix.slice(prefix.length);
+  if (!suffix) return { suffix: '' };
+  const min = config.customSuffixMin;
+  const max = config.customSuffixMax;
+  if (!new RegExp(`^[A-Z0-9]{${min},${max}}$`).test(suffix)) {
+    return { error: `Custom part must be ${min}-${max} letters or numbers (A-Z, 0-9).` };
+  }
+  return { suffix };
+}
 
 export const MAX_BULK_KEYS = 100;
 
@@ -45,18 +80,20 @@ function buildPlan(opts) {
   const duration = Number(opts.duration);
   const maxDevices = Number(opts.max_devices);
   const count = Number(opts.count ?? 1);
-  const customKey = str(opts.custom_key);
+  const customRaw = str(opts.custom_key);
   const requestId = str(opts.request_id);
 
   if (!config.games[game]) errors.game = 'Choose a valid game.';
   if (!Number.isInteger(duration) || !config.prices[duration]) errors.duration = 'Choose a valid duration.';
   if (!Number.isInteger(maxDevices) || maxDevices < 1 || maxDevices > 100) errors.max_devices = 'Devices must be 1-100.';
   if (!Number.isInteger(count) || count < 1 || count > MAX_BULK_KEYS) errors.count = `Keys per request must be 1-${MAX_BULK_KEYS}.`;
-  if (customKey) {
-    if (count > 1) errors.custom_key = 'A custom key can only be used for one key.';
-    else if (customKey.length < 4 || customKey.length > 19 || !/^[A-Za-z0-9_-]+$/.test(customKey)) {
-      errors.custom_key = 'Use 4-19 letters, numbers, - or _.';
-    }
+  // The custom part replaces the random part, so it always describes ONE key.
+  let customKey = '';
+  if (customRaw) {
+    if (count !== 1) errors.custom_key = 'A custom key creates exactly one key. Set the quantity to 1.';
+    const parsed = parseCustomSuffix(customRaw, opts.username ? keyPrefix(opts.username, duration) : '');
+    if (parsed.error) errors.custom_key = parsed.error;
+    else customKey = parsed.suffix;
   }
   if (requestId && !/^[A-Za-z0-9_-]{8,80}$/.test(requestId)) errors.request_id = 'Invalid request id.';
 
@@ -74,60 +111,78 @@ function buildPlan(opts) {
   };
 }
 
+async function existingKeys(candidates) {
+  if (!candidates.length) return new Set();
+  const { data, error } = await db().from('keys_code').select('user_key').in('user_key', candidates);
+  if (error) throw new Error(error.message);
+  return new Set((data || []).map((row) => row.user_key));
+}
+
+/**
+ * Builds the final keys: USERNAME-DURATION-RANDOM (all upper case). Random
+ * parts are re-rolled until they are unique in this batch AND in the
+ * database, so a large batch never fails on an unlucky collision.
+ * Returns null when a custom key is already taken.
+ */
 async function makeLicenses(fresh, plan) {
+  const prefix = keyPrefix(fresh.username, plan.duration);
   if (plan.customKey) {
-    if (await getKeyByUserKey(plan.customKey)) return null;
-    return [plan.customKey];
+    const key = `${prefix}${plan.customKey}`;
+    if ((await existingKeys([key])).has(key)) return null;
+    return [key];
   }
-  const licenses = [];
-  for (let i = 0; i < plan.count; i += 1) {
-    let value = '';
-    for (let attempt = 0; attempt < 10; attempt += 1) {
-      const candidate = `${fresh.username}-${plan.duration}-${randomAlnum(5)}`;
-      if (!licenses.includes(candidate)) { value = candidate; break; }
+  const chosen = new Set();
+  for (let round = 0; round < 6 && chosen.size < plan.count; round += 1) {
+    const batch = new Set();
+    while (batch.size < plan.count - chosen.size) {
+      const candidate = `${prefix}${randomKeyPart(round < 3 ? config.keySuffixLength : 6)}`;
+      if (!chosen.has(candidate)) batch.add(candidate);
     }
-    // The transaction re-checks uniqueness against the database; the extra
-    // entropy here just keeps the normal path collision-free.
-    if (!value) value = `${fresh.username}-${plan.duration}-${randomAlnum(5)}${String(i).padStart(2, '0')}`;
-    licenses.push(value);
+    const taken = await existingKeys([...batch]);
+    for (const candidate of batch) if (!taken.has(candidate)) chosen.add(candidate);
   }
-  return licenses;
+  if (chosen.size < plan.count) throw new Error('could not allocate unique keys');
+  return [...chosen];
 }
 
 /** In-process equivalent of the SQL transaction, used only by the offline
  *  memory driver (npm test and the local --memory preview). */
 async function createLocal(fresh, plan, licenses) {
   const saldoBefore = Number(fresh.saldo || 0);
+  const unlimited = isUnlimited(fresh);
+  const charge = unlimited ? 0 : plan.total;
   const { data: existing } = await db().from('key_orders').select('*').eq('request_id', plan.requestId).maybeSingle();
   if (existing?.result) return { ...existing.result, ok: true };
 
-  const { data: debited, error: debitError } = await db().from('users')
-    .update({ saldo: saldoBefore - plan.total, updated_at: nowIso() })
-    .eq('id_users', fresh.id_users).eq('saldo', saldoBefore).select('id_users,saldo');
-  if (debitError || !debited?.length) {
-    return { ok: false, code: 'balance_conflict', message: 'Balance changed. Please try again.' };
+  if (charge > 0) {
+    const { data: debited, error: debitError } = await db().from('users')
+      .update({ saldo: saldoBefore - charge, updated_at: nowIso() })
+      .eq('id_users', fresh.id_users).eq('saldo', saldoBefore).select('id_users,saldo');
+    if (debitError || !debited?.length) {
+      return { ok: false, code: 'balance_conflict', message: 'Balance changed. Please try again.' };
+    }
   }
 
   const rows = licenses.map((license) => ({
     game: plan.game, user_key: license, duration: plan.duration,
     max_devices: plan.maxDevices, registrator: fresh.username, admin_id: fresh.id_users,
-    status: 1, expired_date: null, price_paid: plan.unitPrice,
+    status: 1, expired_date: null, price_paid: unlimited ? 0 : plan.unitPrice,
     created_at: nowIso(), updated_at: nowIso(),
   }));
   const { data: inserted, error: insertError } = await db().from('keys_code').insert(rows).select();
   if (insertError) {
-    await db().from('users').update({ saldo: saldoBefore, updated_at: nowIso() }).eq('id_users', fresh.id_users);
-    return { ok: false, code: 'insert_failed', message: `Could not create keys: ${insertError.message}` };
+    if (charge > 0) await db().from('users').update({ saldo: saldoBefore, updated_at: nowIso() }).eq('id_users', fresh.id_users);
+    return { ok: false, code: 'key_exists', message: 'That key already exists. Nothing was charged.' };
   }
   await db().from('history').insert({
     keys_id: '', user_do: fresh.username,
-    info: `${plan.game}|${licenses[0].slice(0, 5)}|${plan.duration}|${plan.maxDevices}|${plan.count}|${plan.total}`,
+    info: `${plan.game}|${licenses[0].slice(0, 5)}|${plan.duration}|${plan.maxDevices}|${plan.count}|${charge}`,
     created_at: nowIso(), updated_at: nowIso(),
   });
   const result = {
     ok: true, keys: licenses, rows: inserted || [], count: licenses.length,
-    price: plan.total, unit_price: plan.unitPrice,
-    saldo_before: saldoBefore, saldo_after: saldoBefore - plan.total,
+    price: charge, unit_price: unlimited ? 0 : plan.unitPrice, unlimited,
+    saldo_before: saldoBefore, saldo_after: saldoBefore - charge,
   };
   await db().from('key_orders').insert({ request_id: plan.requestId, user_id: fresh.id_users, created_at: nowIso(), result });
   return result;
@@ -139,7 +194,7 @@ async function createLocal(fresh, plan, licenses) {
  *      or { ok:false, code, message, errors, price, required, available }.
  */
 export async function createKeysForUser(user, opts = {}) {
-  const plan = buildPlan(opts);
+  const plan = buildPlan({ ...opts, username: user?.username });
   if (Object.keys(plan.errors).length) {
     return {
       ok: false, code: 'invalid_request', message: 'Please check the key options.',
@@ -161,7 +216,15 @@ export async function createKeysForUser(user, opts = {}) {
     return { ok: false, code: 'account_expired', message: 'Account has expired.', price: plan.total };
   }
   const saldo = Number(fresh.saldo || 0);
-  if (!Number.isSafeInteger(saldo) || saldo < plan.total) {
+  const unlimited = isUnlimited(fresh);
+  // A replayed request (double click, flaky network) returns the original
+  // result instead of failing on its own, already-created custom key.
+  try {
+    const { data: previous } = await db().from('key_orders').select('result')
+      .eq('request_id', plan.requestId).eq('user_id', fresh.id_users).maybeSingle();
+    if (previous?.result?.ok) return finalResult(previous.result, plan, saldo, previous.result.keys || []);
+  } catch { /* the transaction below re-checks idempotency */ }
+  if (!unlimited && (!Number.isSafeInteger(saldo) || saldo < plan.total)) {
     return {
       ok: false, code: 'insufficient_balance', message: 'Not enough balance.',
       errors: { duration: `Need ₹${plan.total.toLocaleString('en-IN')}, you have ₹${saldo.toLocaleString('en-IN')}.` },
@@ -176,7 +239,11 @@ export async function createKeysForUser(user, opts = {}) {
     return { ok: false, code: 'service_unavailable', message: 'Cannot verify key availability. Nothing was charged.', price: plan.total };
   }
   if (!licenses || !licenses.length) {
-    return { ok: false, code: 'key_exists', message: 'That key already exists.', errors: { user_key: 'Already taken.' }, price: plan.total };
+    const taken = `${keyPrefix(fresh.username, plan.duration)}${plan.customKey}`;
+    return {
+      ok: false, code: 'key_exists', message: `${taken} already exists. Choose a different custom part.`,
+      errors: { custom_key: 'Already taken.' }, price: plan.total,
+    };
   }
 
   let result;
@@ -218,19 +285,30 @@ export async function createKeysForUser(user, opts = {}) {
       saldo: result?.saldo ?? saldo,
     };
   }
+  return finalResult(result, plan, saldo, licenses);
+}
+
+function finalResult(result, plan, saldo, licenses) {
+  const price = Number(result.price ?? plan.total);
   return {
     ok: true,
     licenses: result.keys || licenses,
     rows: result.rows || [],
-    price: Number(result.price || plan.total),
-    unit_price: Number(result.unit_price || plan.unitPrice),
-    count: Number(result.count || licenses.length),
+    price,
+    unit_price: Number(result.unit_price ?? plan.unitPrice),
+    unlimited: !!result.unlimited,
+    count: Number(result.count || (result.keys || licenses).length),
     game: plan.game,
     duration: plan.duration,
     max_devices: plan.maxDevices,
     saldo_before: Number(result.saldo_before ?? saldo),
-    saldo_after: Number(result.saldo_after ?? (saldo - plan.total)),
+    saldo_after: Number(result.saldo_after ?? (saldo - price)),
   };
+}
+
+/** The single Owner account has an unlimited balance and is never charged. */
+export function isUnlimited(user) {
+  return Number(user?.level) === 1 && String(user?.username) === config.ownerUsername;
 }
 
 /**
@@ -261,7 +339,7 @@ export async function deleteKeysWithRefund(ids, actor) {
   }
 
   // Offline driver: same rules, no network round trips.
-  const allowAll = Number(actor.level) === 1 && actor.username === config.ownerUsername;
+  const allowAll = isUnlimited(actor);
   const { data: all } = await db().from('keys_code').select('*');
   const owned = (all || []).filter((k) => list.includes(Number(k.id_keys)) &&
     (allowAll || String(k.registrator || '') === String(actor.username)));

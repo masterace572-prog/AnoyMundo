@@ -1,213 +1,126 @@
-# AnoyMundo Panel — PHP → Vercel + Supabase
+# AnoyMundo — licence panel + Android loader (v2.0)
 
-This repository contains the original archives (`Free Source .zip`,
-`XLOX-Loader-Source.zip`) and a **working, free-hosting conversion** of the
-CodeIgniter 4 / PHP 7.4 panel from `Free Source .zip`.
+Two parts, one repository:
 
-**Live site:** https://anoymundo-panel.vercel.app — deployed, tested and healthy.
-See [DEPLOYMENT.md](DEPLOYMENT.md) for the full setup and verification record.
-
-| | Original (PHP 7.4) | Converted (this repo) |
+| Part | Folder | Runs on |
 |---|---|---|
-| Runtime | Apache / PHP + MySQL | Vercel Node.js serverless function |
-| Database | MySQL / MariaDB | Supabase Postgres (free tier) |
-| Sessions | files in `writable/session/` | signed, stateless HTTP-only cookie |
-| Templates | CodeIgniter PHP views | Handlebars (converted 1:1) |
-| Styling | Tailwind Play CDN + local CSS | static Tailwind + flat `app.css` design system, self-hosted Inter |
-| Library upload | writes `TumharaPapaDARK/lib.so` to disk | stored in Supabase `client_release` |
-| Deployment | paid shared hosting | GitHub → Vercel (free) |
+| **Licence panel** (web) | [`web/`](web) | Vercel (Node.js serverless) + Supabase Postgres |
+| **Android loader** (`com.xlox`) | [`xlox/`](xlox) | Android 5.0+ (arm64-v8a), built by GitHub Actions |
 
-The panel is branded **Anoy** (set with `BRAND_NAME`) and the Telegram contact
-is **@libAkAudioVisiual** (`TELEGRAM_USERNAME`, linked as
-`https://t.me/libAkAudioVisiual`). All original page layouts, DataTables,
-SweetAlert2 and every original route are preserved. The visuals were refreshed
-into a flat, gradient-free design system (`web/public/assets/css/app.css`):
-responsive desktop sidebar / mobile drawer, self-hosted Inter typography,
-consistent cards, forms, tables and alerts. `scripts/refresh-ui.py` documents
-the one-off conversion of the legacy inline gradient styles.
+**Live panel:** https://anoymundo-panel.vercel.app
 
-**Interaction feedback** (`web/public/assets/js/app-ui.js`): every normal form
-submit shows a spinner + a "please wait" label, disables the button, shows a
-thin accent progress strip at the top of the viewport and ignores repeat
-submits — sign-in does a server-side bcrypt check, so a click used to look like
-a dead button. Button-style navigation links get the same treatment. The
-`/lib` uploader (`web/views/lib.hbs`) uses XHR for real byte-level progress:
-reading → uploading → saving → done, with accent / success / danger colours,
-percent, bytes sent and an accessible `role="progressbar"`. Both respect
-`prefers-reduced-motion` and release their state on bfcache restores.
+More detail: [DEPLOYMENT.md](DEPLOYMENT.md) (setup, environment, database,
+verification), [API.md](API.md) (personal API keys, `/api/v1`),
+[INTEGRATION.md](INTEGRATION.md) (loader ⇄ panel contract),
+[xlox/README.md](xlox/README.md) (Android app).
 
-Quick actions (create / delete / reset key) use compact `AnoyUI.toast()`
-notices instead of full SweetAlert result dialogs, and success flashes are
-promoted to the same small toast. Errors and warnings stay on the page as
-compact banners. Delete confirmations use a smaller `swal-compact` dialog.
+---
 
-**iOS appearance** (`web/public/assets/css/ios.css`): a site-wide light + dark
-design layer with the iOS grouped palette and one blue accent. The appearance
-button in the top bar (and on both auth pages) toggles Light / Dark; the
-segmented control on Settings also offers **System**. The choice is stored in
-`localStorage` (`anoy-appearance`), applied by a small `<head>` script before
-the stylesheets paint, and kept in sync across tabs and with OS changes.
-`window.AnoyUI.setTheme()` / `getTheme()` expose it to custom views. Every text
-field, select, segmented control, checkbox and 51×31 switch is an iOS-style
-control, buttons are 12px blue pills with an in-button spinner while loading
-(switch-only forms show the spinner in the switch track), and secondary copy
-was shortened so screens stay quiet. No gradients and no CDN font dependency.
+## Owner account
 
-**Billing integrity and error handling (v1.2)** — `supabase/schema.sql` adds an
-idempotent hardening migration that must be applied to the project once:
+The database starts fresh with exactly one user:
 
-- `create_keys_atomic()` debits saldo and inserts the **whole** key batch in one
-  Postgres transaction. A timeout, duplicate key or database error can never
-  leave keys behind without charging (or charge without keys). If the function
-  is unavailable the panel **fails closed** — no keys, no debit.
-- Pricing is `price_per_device(duration) × max_devices × count`: 100 keys cost
-  100× one key. A fresh balance is read server-side on every request, and an
-  order that exceeds it is rejected **before** anything is written.
-- `key_orders` gives every generation request an idempotency id, so a double
-  click or replayed request returns the original batch instead of charging
-  twice. A short abuse throttle caps rapid-fire purchases.
-- `price_paid` is stored on each key. `delete_keys_refund()` deletes keys and
-  refunds the exact price for keys that never had a device and never started
-  their timer — in the same transaction. Used by single deletes, bulk deletes,
-  user deletion and `DELETE /api/v1/keys/{key}`.
-- `users_single_owner_idx` makes a second level-1 Owner row impossible at the
-  database level. Owner-only routes are additionally bound to `admin`; referral
-  codes and the user editor cannot mint another Owner. Login has a failed-attempt
-  throttle and new passwords must be 8+ characters with a letter and a number.
-- All unexpected errors now render an in-panel iOS error page, a compact flash
-  on the form they came from, or JSON for API routes — never a raw Vercel stack
-  trace. Mutating handlers check database errors and report clear messages.
-- Legacy state-changing GET endpoints (`/keys/reset*`, bulk deletes, user
-  deletion) now reject cross-site requests using `Sec-Fetch-Site` and
-  Origin/Referer, so a malicious page cannot act as a signed-in user. Key lists
-  and downloads are scoped to the signed-in reseller's own keys; only the Owner
-  sees every key.
-- Session cookies are bound to the account's password hash. Changing a
-  password (in Settings or by the Owner) revokes every older session; the
-  session that made the change is refreshed so the user stays signed in.
+| Username | Level | Balance | Email |
+|---|---|---|---|
+| `Anoy` | 1 — Owner | Unlimited (never charged) | saabarjun705@gmail.com |
 
-**Library releases**: `/lib` shows the current version, suggests the next one,
-and has a **Bump** button plus a separate **Push a link** action that updates
-the external URL and version without uploading a file. Publish validates first
-and restores the previous current release if the write fails, so there is never
-zero current releases. `MAX_LIB_UPLOAD_MB` defaults to 3 because Vercel caps
-request bodies at 4.5 MB and base64 adds ~33%.
+Owner-only routes are bound to level 1 **and** the `OWNER_USERNAME`
+(default `Anoy`). The password is not stored in this repository; change it from
+**Settings** after the first sign-in. Levels: 1 Owner, 2 Admin, 3 Reseller.
+New resellers register with a referral code that the Owner creates under
+**Referral codes** (no default code exists).
 
-**Mod status**: the Safe switch posts a hidden `floating_form` marker, so
-turning the switch **off** is saved too (previously the handler was skipped).
-`/connect` serves `_ftext._status` fresh on every request.
-
-`GET /api/health` reports the driver, database, library release and all 14
-tables. `GET /api/health?rpc=1` additionally verifies that the atomic billing
-function is callable from the serverless function through PostgREST; it sends a
-purposefully invalid order, so it never changes keys or balances.
-
-**UI clarity**: short iOS section titles, aligned field labels, grouped summary
-rows for prices and release info, a live "per key × keys = total" estimate with
-an insufficient-balance hint, and a tighter 390px phone layout. Flat colours
-only — no gradients, no text overload.
-
-## Layout
+## Licence key format
 
 ```
-web/                     Vercel project (set Root Directory = "web")
-  api/index.js           single serverless function / router
-  src/                   config, Supabase access, auth, rendering, licensing
-  views/*.hbs            converted original CI4 views
-  public/                static CSS/JS/favicon/robots.txt
-  scripts/               build, dev server, offline end-to-end tests
-  vercel.json            filesystem-first routing to the function
-  package.json           npm run build / dev / test
-supabase/schema.sql      Postgres schema + seed data (applied to the project)
-DEPLOYMENT.md            step-by-step deployment / verification guide
+<USERNAME>-<DURATION>-<RANDOM>        e.g.  ANOY-7D-GKFHJ
 ```
 
-`legacy/` and `_extract/` are local-only, untracked copies of the extracted PHP
-source used to build the conversion. **They are not deployed.** The obfuscated
-`load.php` webshell found in the original `public/assets/css/` is deliberately
-excluded.
+- Always **upper case** (input is upper-cased everywhere: panel, API, loader).
+- `USERNAME` = the creator's username, letters and digits only.
+- `DURATION` = `2H`, `5H`, `1D`, `3D`, `7D`, `14D` or `30D`.
+- `RANDOM` = 5 random characters from `A-Z0-9` (cryptographically random; 6 if
+  a collision is ever hit). A **custom** ending replaces it: 4–6 characters
+  `A-Z0-9`, exactly one key per request. Pasting a whole key (`ANOY-1D-VIP01`)
+  into the custom field is accepted — the prefix is stripped.
+- Keys are created and charged in **one database transaction**
+  (`create_keys_atomic`) with an idempotency id, so double clicks or timeouts
+  never create duplicates or charge without creating keys.
 
-## Quick start (offline demo, no credentials)
+Prices per device (INR): 2 h ₹10 · 5 h ₹20 · 1 day ₹80 · 3 days ₹150 ·
+7 days ₹250 · 14 days ₹350 · 30 days ₹500. Total = price × devices × number of
+keys. Deleting a never-used key refunds what it cost.
+
+## Panel (web)
+
+- Server-rendered Handlebars views, no frameworks or CDNs. One stylesheet:
+  `web/public/assets/css/ui.css` — black background, white text, blue rounded
+  buttons, iOS-style grouped lists. Text never has its own background.
+  `web/public/assets/js/app-ui.js` adds busy buttons, confirmations, toasts,
+  copy buttons, the live key preview and the library upload progress.
+- Every error is handled: database outages show a clear message (nothing is
+  charged), forms keep their input and show field errors, JSON endpoints
+  return `{ ok:false, error }`, and unknown pages render a styled 404.
+- Security: signed HTTP-only session cookie, bcrypt passwords, same-origin
+  check on every browser POST, strict CSP, rate-limited sign-in.
+
+Routes: `/login`, `/register`, `/dashboard`, `/keys` (search, filters, paging,
+edit, reset devices, delete), `/keys/generate`, `/settings`, `/server`
+(maintenance, mod status, feature flags), `/admin/manage-users`,
+`/admin/create-referral`, `/lib` (loader library release), `/api-keys`,
+`/api-docs`, `/docs`.
+
+Loader endpoints: `POST /connect` (licence check), `GET /api/lib/manifest`
+(`{version, available, size, sha256}`), `GET /api/lib/version` (plain text),
+`GET /api/lib/download` (ZIP with `X-Release-Version` / `X-Content-SHA256`),
+`GET /api/health`.
 
 ```bash
 cd web
-npm install
-npm run build       # generates templates + compiles Tailwind, validates all modules
-npm test            # 106 end-to-end HTTP tests using an in-memory DB
-npm run dev         # http://localhost:3000  (DB_DRIVER=memory)
+npm ci
+npm run build      # compiles templates + static checks
+npm test           # 130 end-to-end checks against an in-memory database
+npm run dev        # http://localhost:3000 (memory DB unless Supabase env is set)
 ```
 
-`.github/workflows/live-smoke.yml` additionally runs an automated end-to-end
-test against the live Vercel deployment (login, key generation, `/connect`,
-DataTables, library version, logout).
+`node scripts/live-smoke.mjs` runs the same kind of checks against the live
+deployment (see the **Live deployment smoke test** workflow).
 
-Demo login: `admin` / `admin123` — the seeded legacy bcrypt hash is verified
-unchanged (`md5(salt + password)` → bcrypt cost 8).
+## Android loader
 
-## Production
+Splash → **update check** → sign in with the licence key → home.
 
-See [DEPLOYMENT.md](DEPLOYMENT.md). Required Vercel environment variables:
+- **Splash:** black screen with the “Anoy” wordmark, no logo image.
+- **Update gate:** before sign-in the app always asks the panel for the
+  library manifest. If a newer library exists (or none is installed) the only
+  option is **Update now** — sign-in stays blocked until the download is
+  verified (size + SHA-256) and installed. Network errors show a plain reason
+  and **Try again**. If the library is current the app continues on its own.
+  The check repeats silently when the app returns to the foreground.
+- **Sign in:** looks like a normal login but takes the licence key; paste,
+  show/hide, upper-case input, readable errors (unknown / expired / blocked
+  key, device limit, clock, offline, timeout, VPN).
+- **Home:** licence status, expiry and live countdown, game and library state,
+  one blue primary action (Launch / Stop / Install game / Sign in again).
 
-- `SUPABASE_URL`
-- `SUPABASE_SERVICE_ROLE_KEY` (server-only secret, never `NEXT_PUBLIC_`)
-- `AUTH_SECRET`
+Builds run on GitHub Actions (`.github/workflows/build-xlox.yml`), which
+publishes a signed APK as a GitHub release; `android-ui-qa.yml` runs lint, the
+UI gates and emulator screenshots (`docs/ui-redesign/screenshots`).
 
-Optional: `BRAND_NAME` (default `Anoy`), `TELEGRAM_USERNAME`
-(default `libAkAudioVisiual`), `STATIC_WORDS`, `PUBLIC_BASE_URL`,
-`MAX_LIB_UPLOAD_MB`, `FALLBACK_LIB_VERSION`.
+## Repository layout
 
-## Preserved API contract
+```
+web/                     panel (Vercel root directory)
+  api/index.js           single serverless entry
+  src/                   app, auth, licensing, key service, db drivers
+  views/                 Handlebars templates
+  public/assets/         ui.css, app-ui.js, fonts, favicon.svg
+  scripts/               build, checks, smoke tests, dev server
+supabase/schema.sql      full schema (fresh projects)
+supabase/migrations/     applied migrations (v2 fresh start + owner)
+xlox/                    Android loader (Gradle project)
+.github/workflows/       APK build, UI QA, live smoke test
+```
 
-`POST /connect` keeps the exact JSON shape the Android client expects:
-`status`, `reason`, and `data` with `real`, `token` (md5 of `real`), `modname`,
-`mod_status`, `credit`, `ESP/Item/AIM/SilentAim/BulletTrack/Floating/Memory/
-Setting`, `expired_date`, `EXP`, `exdate`, `device`, `rng`.
-
-Other endpoints: `GET /api/health`, `GET /api/lib/version`,
-`GET /api/lib/download`, `GET /keys/api`, `GET /admin/api/users`,
-`GET /keys/reset`, `GET /keys/resetAll`, all legacy page routes.
-
-## Two separate developer docs
-
-| Doc | In panel | What it covers |
-|---|---|---|
-| [`INTEGRATION.md`](INTEGRATION.md) | `/docs` | **Loader / mod integration**: connect URL, `modname`, status text, floating text, mod features, expiry, error text, token check and simple C++ (libcurl + nlohmann/json) code |
-| [`API.md`](API.md) | `/api-docs` | **Key-management REST API** (`/api/v1/*`) with personal API keys: create / list / read / update / reset / delete licence keys, saldo charging, error codes |
-| [`API_AGENT_PROMPT.md`](API_AGENT_PROMPT.md) | – | Copy-paste prompt describing only the API-key API, for building a separate site/bot with another AI agent |
-
-## Personal API keys (`/api/v1`)
-
-Any logged-in user can create personal API keys at **`/api-keys`** (sidebar →
-*Developer*). Tokens start with `amk_`, are shown once and are stored only as a
-SHA-256 hash. Send them as `X-API-Key` on every `/api/v1/*` request. The API is
-scoped to **licence keys only**: it can create, list, read, update, reset and
-delete keys — never mod name, status/floating text, features, maintenance or
-users. Creating a key through the API uses the exact same pricing and saldo
-debit as the panel (`price = price_per_device × max_devices`, one fee per
-generation request, with a conditional atomic debit and automatic refund on
-failure).
-
-## XLOX Android loader
-
-[`xlox/`](xlox/README.md) holds the extracted `XLOX-Loader-Source.zip` app,
-integrated with this panel: `GET /api/lib/version`, `GET /api/lib/download` and
-`POST /connect`, with all URLs in `xlox/app/src/main/jni/panel_config.h`. The
-broken library-download/load logic was rebuilt (HTTP + ZIP + ELF validation,
-nested-release handling, real startup version check, visible errors).
-[`.github/workflows/build-xlox.yml`](.github/workflows/build-xlox.yml) builds the
-signed release APK and a starter `libbgmi.so` ZIP on GitHub Actions and uploads
-both as the `xlox-apk` artifact and commits the signed APK to
-[`dist/Anoy-XLOX-loader.apk`](dist/Anoy-XLOX-loader.apk). A starter
-`libbgmi.so` ZIP is published to `/lib` so `/api/lib/download` is live; replace
-it with the real library at `/lib` (Admin → Library) before shipping.
-
-## Security notes
-
-- All 13 tables have RLS enabled with **no public policies**; only the
-  server-side `service_role` key accesses them, so the anon/publishable key
-  cannot read passwords or license keys.
-- No secret is committed to git (`.env*` is ignored).
-- The PHP webshell, stale session files, and IP/mail logging stubs from the
-  archive were not carried over.
-- Sessions are HMAC-signed cookies with a 30-minute TTL (24 hours with
-  "remember me"); no filesystem writes.
+The original archives (`Free Source .zip`, `XLOX-Loader-Source.zip`) are kept
+for reference only.

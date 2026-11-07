@@ -1,37 +1,48 @@
 package com.xlox.utils;
 
 import android.content.Context;
-import android.content.SharedPreferences;
-import android.os.AsyncTask;
+import android.os.StatFs;
 import android.util.Log;
 
+import com.xlox.BuildConfig;
 import com.xlox.R;
+import com.xlox.ui.Ui;
 
 import net.lingala.zip4j.ZipFile;
+import net.lingala.zip4j.exception.ZipException;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.io.BufferedInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.Locale;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.regex.Pattern;
 
 /**
- * Talks to the Anoy panel's library endpoints.
+ * Library update client for the Anoy panel.
  *
- * Version()  -> GET /api/lib/version  (one plain-text line)
- * Link()     -> GET /api/lib/download (ZIP containing libbgmi.so)
+ * <ul>
+ *   <li>{@link #check(Context)}  GET /api/lib/manifest (falls back to /api/lib/version)</li>
+ *   <li>{@link #download}        GET /api/lib/download, verified and installed atomically</li>
+ * </ul>
  *
- * Fixes applied vs. the original:
- *  - HTTP status / ZIP magic / ELF validation (a 404 HTML page used to be saved
- *    as Xlox.zip and silently reported as success).
- *  - Extract to a staging directory, then install the library at the canonical
- *    files/loader/libbgmi.so path even when the ZIP wraps everything in a folder
- *    or uses the legacy lib.so name.
- *  - Only store the version in prefs after the library really is usable.
- *  - Real timeouts, redirects and a readable failure message for the UI.
+ * Both methods block and must run on a background thread. Every failure is
+ * reported as an {@link UpdateException} whose message can be shown directly.
+ * The native {@code Version()} / {@code Link()} names are JNI entry points and
+ * must not be renamed.
  */
-public class Downtwo extends AsyncTask<String, String, String> {
+public final class Downtwo {
 
     private static final String TAG = "Downtwo";
 
@@ -39,247 +50,427 @@ public class Downtwo extends AsyncTask<String, String, String> {
 
     public static native String Link();
 
-    public interface Callback {
-        void onComplete(boolean success, String result);
+    private static final String FALLBACK_BASE = "https://anoymundo-panel.vercel.app";
+    private static final String USER_AGENT = "Anoy/" + BuildConfig.VERSION_NAME + " (Android)";
+    private static final String PART_NAME = "anoy-release.part";
+
+    private static final int CONNECT_TIMEOUT_MS = 15_000;
+    private static final int READ_TIMEOUT_MS = 30_000;
+    private static final int MAX_ATTEMPTS = 3;
+    private static final int MAX_REDIRECTS = 5;
+    private static final long MAX_DOWNLOAD_BYTES = 64L * 1024L * 1024L;
+    private static final long MIN_FREE_BYTES = 8L * 1024L * 1024L;
+    private static final Pattern VERSION_PATTERN = Pattern.compile("^[A-Za-z0-9._+-]{1,32}$");
+    private static final Pattern SHA_PATTERN = Pattern.compile("^[a-fA-F0-9]{64}$");
+
+    private Downtwo() {
     }
 
-    public interface ProgressListener {
-        void onProgress(int percent);
-    }
+    // ------------------------------------------------------------------ URLs
 
-    public static final String RESULT_NO_UPDATE = "No Update Available";
-    public static final String RESULT_UPDATE = "Update Available";
-    public static final String RESULT_NOTIFIED = "Already Notified";
-    private static final String RESULT_FAILED = "UPDATE_UNAVAILABLE";
-    private static final String ZIP_NAME = "anoy-release.zip";
-
-    // Fallbacks keep the app usable (with a clear error) if libXloX.so failed to
-    // load on a device; the native panel_config.h values are the source of truth.
-    private static final String FALLBACK_VERSION_URL =
-            "https://anoymundo-panel.vercel.app/api/lib/version";
-    private static final String FALLBACK_DOWNLOAD_URL =
-            "https://anoymundo-panel.vercel.app/api/lib/download";
-
-    /** Never let a missing native library crash the UI thread. */
+    /** Never let a missing native library break the update check. */
     public static String versionUrl() {
         try {
             String value = Version();
-            return value != null && value.startsWith("http") ? value : FALLBACK_VERSION_URL;
+            if (value != null && value.startsWith("http")) return value;
         } catch (Throwable t) {
             Log.e(TAG, "Native Version() unavailable", t);
-            return FALLBACK_VERSION_URL;
         }
+        return FALLBACK_BASE + "/api/lib/version";
     }
 
     public static String downloadUrl() {
         try {
             String value = Link();
-            return value != null && value.startsWith("http") ? value : FALLBACK_DOWNLOAD_URL;
+            if (value != null && value.startsWith("http")) return value;
         } catch (Throwable t) {
             Log.e(TAG, "Native Link() unavailable", t);
-            return FALLBACK_DOWNLOAD_URL;
+        }
+        return FALLBACK_BASE + "/api/lib/download";
+    }
+
+    public static String manifestUrl() {
+        String version = versionUrl();
+        String suffix = "/api/lib/version";
+        if (version.endsWith(suffix)) {
+            return version.substring(0, version.length() - suffix.length()) + "/api/lib/manifest";
+        }
+        return FALLBACK_BASE + "/api/lib/manifest";
+    }
+
+    // ----------------------------------------------------------------- types
+
+    /** What the panel currently publishes. */
+    public static final class Release {
+        public final String version;
+        public final boolean available;
+        public final long size;
+        public final String sha256;
+
+        Release(String version, boolean available, long size, String sha256) {
+            this.version = version;
+            this.available = available;
+            this.size = Math.max(0L, size);
+            this.sha256 = sha256 == null ? "" : sha256;
         }
     }
 
-    private final Context context;
-    private final Callback callback;
-    private ProgressListener progressListener;
-    private volatile String serverVersion = "0.0";
-    private volatile String result = "";
-    private volatile String failureMessage = "";
+    /** Result of comparing the published release with the installed one. */
+    public static final class Status {
+        public final Release release;
+        public final String localVersion;
+        public final boolean libUsable;
+        public final boolean updateRequired;
 
-    public Downtwo(Context context, Callback callback) {
-        this.context = context.getApplicationContext();
-        this.callback = callback;
-    }
-
-    public void setProgressListener(ProgressListener listener) {
-        this.progressListener = listener;
-    }
-
-    public String getFetchedServerVersion() {
-        return serverVersion;
-    }
-
-    public String getResult() {
-        return result;
-    }
-
-    public String getFailureMessage() {
-        return failureMessage;
-    }
-
-    @Override
-    protected String doInBackground(String... params) {
-        try {
-            if (params.length == 0 || params[0] == null) {
-                return fail(context.getString(R.string.invalid_download_url));
-            }
-            serverVersion = getServerVersion();
-            if (serverVersion == null || serverVersion.trim().isEmpty()) {
-                return fail(context.getString(R.string.version_endpoint_unreachable));
-            }
-            serverVersion = serverVersion.trim();
-
-            if (params.length > 1 && "check_only".equals(params[1])) {
-                SharedPreferences prefs = LibManager.prefs(context);
-                String localVersion = prefs.getString(LibManager.PREF_VERSION_KEY, "0.0");
-                String lastNotified = prefs.getString(LibManager.PREF_LAST_NOTIFIED, "0.0");
-                // A missing or corrupt library always requires a download, even
-                // when the stored version already matches the server.
-                if (!LibManager.isUsableLib(context)) return RESULT_UPDATE;
-                if (localVersion.equals(serverVersion)) return RESULT_NO_UPDATE;
-                return serverVersion.equals(lastNotified) ? RESULT_NOTIFIED : RESULT_UPDATE;
-            }
-
-            return downloadAndExtract(params[0]);
-        } catch (Exception e) {
-            Log.e(TAG, "doInBackground error", e);
-            return fail(context.getString(R.string.background_error, String.valueOf(e.getMessage())));
+        Status(Release release, String localVersion, boolean libUsable, boolean updateRequired) {
+            this.release = release;
+            this.localVersion = localVersion;
+            this.libUsable = libUsable;
+            this.updateRequired = updateRequired;
         }
     }
 
-    @Override
-    protected void onPostExecute(String outcome) {
-        super.onPostExecute(outcome);
-        result = outcome == null ? "" : outcome;
-        boolean success = outcome == null
-                || RESULT_NO_UPDATE.equals(outcome)
-                || RESULT_UPDATE.equals(outcome)
-                || RESULT_NOTIFIED.equals(outcome);
-        if (callback != null) callback.onComplete(success, result);
+    public interface Progress {
+        /** {@code total} is -1 when the server did not send a length. */
+        void onProgress(long done, long total);
+
+        default void onInstalling() {
+        }
     }
 
-    private String fail(String message) {
-        failureMessage = message;
-        Log.e(TAG, message);
-        return RESULT_FAILED;
+    // ----------------------------------------------------------------- check
+
+    public static Status check(Context context) throws UpdateException {
+        Context app = context.getApplicationContext();
+        if (!Net.isOnline(app)) throw new UpdateException(app.getString(R.string.net_offline), true);
+
+        Release release = fetchManifestWithRetry(app);
+        boolean usable = LibManager.isUsableLib(app);
+        String local = LibManager.localVersion(app);
+        String localSha = LibManager.localSha(app);
+
+        boolean required = release.available && (!usable
+                || !release.version.equals(local)
+                || (!release.sha256.isEmpty() && !localSha.isEmpty()
+                && !release.sha256.equalsIgnoreCase(localSha)));
+        Log.i(TAG, "check: server=" + release.version + " available=" + release.available
+                + " local=" + local + " usable=" + usable + " required=" + required);
+        return new Status(release, local, usable, required);
     }
 
-    /** GET /api/lib/version — plain text, one line, e.g. "1.0". */
-    public String getServerVersion() {
+    private static Release fetchManifestWithRetry(Context app) throws UpdateException {
+        UpdateException last = null;
+        for (int attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+            try {
+                return fetchManifest(app);
+            } catch (UpdateException e) {
+                last = e;
+                if (!e.retryable || attempt == MAX_ATTEMPTS) break;
+                sleepQuietly(700L * attempt);
+            }
+        }
+        throw last;
+    }
+
+    private static Release fetchManifest(Context app) throws UpdateException {
         HttpURLConnection connection = null;
         try {
-            URL url = new URL(versionUrl());
-            connection = (HttpURLConnection) url.openConnection();
-            connection.setConnectTimeout(10000);
-            connection.setReadTimeout(10000);
-            connection.setInstanceFollowRedirects(true);
-            connection.setRequestProperty("User-Agent", "Anoy/1.0");
-            int code = connection.getResponseCode();
-            if (code != HttpURLConnection.HTTP_OK) {
-                Log.e(TAG, "Version endpoint returned HTTP " + code);
-                return null;
-            }
-            InputStream in = connection.getInputStream();
-            byte[] buffer = new byte[256];
-            int read = in.read(buffer);
-            in.close();
-            if (read <= 0) return null;
-            String value = new String(buffer, 0, read, "UTF-8").trim();
-            return value.isEmpty() ? "1.0" : value.split("[\\r\\n]")[0].trim();
-        } catch (Exception e) {
-            Log.e(TAG, "Error fetching server version", e);
-            failureMessage = context.getString(R.string.version_check_failed, String.valueOf(e.getMessage()));
-            return null;
-        } finally {
-            if (connection != null) connection.disconnect();
-        }
-    }
-
-    private String downloadAndExtract(String urlString) {
-        HttpURLConnection connection = null;
-        File zip = new File(context.getFilesDir(), ZIP_NAME);
-        File staging = LibManager.stagingDir(context);
-        try {
-            URL url = new URL(urlString);
-            connection = (HttpURLConnection) url.openConnection();
-            connection.setConnectTimeout(15000);
-            connection.setReadTimeout(60000);
-            connection.setInstanceFollowRedirects(true);
-            connection.setRequestProperty("User-Agent", "Anoy/1.0");
-            connection.setRequestProperty("Accept", "application/zip");
-            connection.connect();
-
+            connection = open(manifestUrl(), "application/json");
             int code = connection.getResponseCode();
             if (code == HttpURLConnection.HTTP_NOT_FOUND) {
-                return fail(context.getString(R.string.no_loader_release));
+                // Older panel without the manifest endpoint.
+                connection.disconnect();
+                connection = null;
+                return fetchLegacyVersion(app);
             }
+            if (code >= 500) throw new UpdateException(app.getString(R.string.update_unavailable), true);
             if (code != HttpURLConnection.HTTP_OK) {
-                return fail(context.getString(R.string.download_http_failed, code));
+                throw new UpdateException(app.getString(R.string.net_http, code), false);
             }
-
-            long totalSize = connection.getContentLength();
-            long downloaded = 0L;
-            InputStream input = connection.getInputStream();
-            OutputStream output = new FileOutputStream(zip, false);
-            byte[] data = new byte[8192];
-            int count;
-            while ((count = input.read(data)) != -1) {
-                output.write(data, 0, count);
-                downloaded += count;
-                if (totalSize > 0 && progressListener != null) {
-                    int percent = (int) ((downloaded * 100L) / totalSize);
-                    progressListener.onProgress(Math.min(99, percent));
-                }
+            JSONObject json = new JSONObject(readBody(connection, 64 * 1024));
+            if (!json.optBoolean("ok", false)) {
+                throw new UpdateException(app.getString(R.string.update_unavailable), true);
             }
-            output.flush();
-            output.close();
-            input.close();
-
-            if (zip.length() < 64 || !isZip(zip)) {
-                return fail(context.getString(R.string.invalid_loader_zip, (int) zip.length()));
+            String version = json.optString("version", "").trim();
+            if (!VERSION_PATTERN.matcher(version).matches()) {
+                throw new UpdateException(app.getString(R.string.error_bad_response), true);
             }
-
-            LibManager.deleteRecursive(staging);
-            if (!staging.mkdirs()) {
-                return fail(context.getString(R.string.staging_failed));
-            }
-            new ZipFile(zip).extractAll(staging.getAbsolutePath());
-
-            File found = LibManager.findLib(staging);
-            if (found == null) {
-                return fail(context.getString(R.string.no_elf_in_zip));
-            }
-            if (!LibManager.installLib(context, found)) {
-                return fail(context.getString(R.string.install_lib_failed));
-            }
-            if (!LibManager.isUsableLib(context)) {
-                return fail(context.getString(R.string.lib_not_usable));
-            }
-
-            LibManager.prefs(context).edit()
-                    .putString(LibManager.PREF_VERSION_KEY, serverVersion)
-                    .putString(LibManager.PREF_LAST_NOTIFIED, serverVersion)
-                    .apply();
-            if (progressListener != null) progressListener.onProgress(100);
-            Log.i(TAG, "Loader release " + serverVersion + " installed");
-            return null; // success
-        } catch (Exception e) {
-            Log.e(TAG, "Error downloading or extracting loader", e);
-            return fail(context.getString(R.string.download_failed, String.valueOf(e.getMessage())));
+            String sha = json.optString("sha256", "").trim();
+            if (!SHA_PATTERN.matcher(sha).matches()) sha = "";
+            return new Release(version, json.optBoolean("available", false),
+                    json.optLong("size", 0L), sha.toLowerCase(Locale.US));
+        } catch (JSONException e) {
+            Log.w(TAG, "Manifest is not JSON", e);
+            throw new UpdateException(app.getString(R.string.error_bad_response), true, e);
+        } catch (IOException e) {
+            Log.w(TAG, "Manifest request failed", e);
+            throw new UpdateException(Net.friendly(app, e), Net.isRetryable(e), e);
         } finally {
             if (connection != null) connection.disconnect();
-            LibManager.deleteRecursive(staging);
-            if (zip.exists()) zip.delete();
         }
     }
 
-    private static boolean isZip(File file) {
-        InputStream in = null;
+    private static Release fetchLegacyVersion(Context app) throws UpdateException {
+        HttpURLConnection connection = null;
         try {
-            in = new java.io.FileInputStream(file);
-            byte[] magic = new byte[4];
-            if (in.read(magic) != 4) return false;
-            return (magic[0] & 0xFF) == 0x50 && (magic[1] & 0xFF) == 0x4B
-                    && (magic[2] & 0xFF) == 0x03 && (magic[3] & 0xFF) == 0x04;
-        } catch (Exception e) {
-            return false;
-        } finally {
-            if (in != null) try {
-                in.close();
-            } catch (Exception ignored) {
+            connection = open(versionUrl(), "text/plain");
+            int code = connection.getResponseCode();
+            if (code >= 500) throw new UpdateException(app.getString(R.string.update_unavailable), true);
+            if (code != HttpURLConnection.HTTP_OK) {
+                throw new UpdateException(app.getString(R.string.net_http, code), false);
             }
+            String body = readBody(connection, 1024).trim();
+            String version = body.isEmpty() ? "" : body.split("[\\r\\n]")[0].trim();
+            if (!VERSION_PATTERN.matcher(version).matches()) {
+                throw new UpdateException(app.getString(R.string.error_bad_response), true);
+            }
+            return new Release(version, true, 0L, "");
+        } catch (IOException e) {
+            throw new UpdateException(Net.friendly(app, e), Net.isRetryable(e), e);
+        } finally {
+            if (connection != null) connection.disconnect();
+        }
+    }
+
+    // -------------------------------------------------------------- download
+
+    public static void download(Context context, Release release, Progress progress,
+                                AtomicBoolean cancelled) throws UpdateException {
+        Context app = context.getApplicationContext();
+        if (!Net.isOnline(app)) throw new UpdateException(app.getString(R.string.net_offline), true);
+        ensureSpace(app, release.size);
+
+        UpdateException last = null;
+        for (int attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+            if (cancelled.get()) throw new UpdateException(app.getString(R.string.net_interrupted), true);
+            try {
+                downloadOnce(app, release, progress, cancelled);
+                return;
+            } catch (UpdateException e) {
+                last = e;
+                Log.w(TAG, "Download attempt " + attempt + " failed: " + e.getMessage(), e.getCause());
+                if (!e.retryable || attempt == MAX_ATTEMPTS || cancelled.get()) break;
+                if (progress != null) progress.onProgress(0L, -1L);
+                sleepQuietly(1500L * attempt);
+            }
+        }
+        throw last;
+    }
+
+    private static void downloadOnce(Context app, Release release, Progress progress,
+                                     AtomicBoolean cancelled) throws UpdateException {
+        File part = new File(app.getFilesDir(), PART_NAME);
+        File staging = LibManager.stagingDir(app);
+        HttpURLConnection connection = null;
+        try {
+            connection = open(downloadUrl(), "application/zip, application/octet-stream");
+            int code = connection.getResponseCode();
+            if (code == HttpURLConnection.HTTP_NOT_FOUND) {
+                throw new UpdateException(app.getString(R.string.update_no_release), false);
+            }
+            if (code >= 500) throw new UpdateException(app.getString(R.string.net_http, code), true);
+            if (code != HttpURLConnection.HTTP_OK) {
+                throw new UpdateException(app.getString(R.string.net_http, code), false);
+            }
+
+            long headerLength = parseLong(connection.getHeaderField("Content-Length"));
+            long total = headerLength > 0 ? headerLength : (release.size > 0 ? release.size : -1L);
+            if (total > MAX_DOWNLOAD_BYTES) {
+                throw new UpdateException(app.getString(R.string.update_invalid_file), false);
+            }
+            String headerSha = connection.getHeaderField("X-Content-SHA256");
+
+            MessageDigest digest = sha256();
+            long done = 0L;
+            long lastReported = -1L;
+            if (progress != null) progress.onProgress(0L, total);
+            try (InputStream in = new BufferedInputStream(connection.getInputStream());
+                 FileOutputStream out = new FileOutputStream(part, false)) {
+                byte[] buffer = new byte[32 * 1024];
+                int read;
+                while ((read = in.read(buffer)) != -1) {
+                    if (cancelled.get()) {
+                        throw new UpdateException(app.getString(R.string.net_interrupted), true);
+                    }
+                    out.write(buffer, 0, read);
+                    digest.update(buffer, 0, read);
+                    done += read;
+                    if (done > MAX_DOWNLOAD_BYTES) {
+                        throw new UpdateException(app.getString(R.string.update_invalid_file), false);
+                    }
+                    if (progress != null && (done - lastReported >= 48 * 1024 || done == total)) {
+                        lastReported = done;
+                        progress.onProgress(done, total);
+                    }
+                }
+                out.flush();
+                try {
+                    out.getFD().sync();
+                } catch (IOException ignored) {
+                    // Best effort; the size + hash checks below still apply.
+                }
+            }
+
+            if (headerLength > 0 && done != headerLength) {
+                throw new UpdateException(app.getString(R.string.net_interrupted), true);
+            }
+            if (done < 64) throw new UpdateException(app.getString(R.string.update_invalid_file), false);
+
+            String actualSha = hex(digest.digest());
+            String expectedSha = !release.sha256.isEmpty() ? release.sha256
+                    : (headerSha != null && SHA_PATTERN.matcher(headerSha.trim()).matches()
+                    ? headerSha.trim() : "");
+            if (!expectedSha.isEmpty() && !expectedSha.equalsIgnoreCase(actualSha)) {
+                Log.w(TAG, "sha256 mismatch: expected " + expectedSha + " got " + actualSha);
+                throw new UpdateException(app.getString(R.string.update_corrupt), true);
+            }
+
+            if (progress != null) progress.onInstalling();
+            install(app, part, staging);
+
+            String version = release.version;
+            String headerVersion = connection.getHeaderField("X-Release-Version");
+            if (headerVersion != null && VERSION_PATTERN.matcher(headerVersion.trim()).matches()) {
+                version = headerVersion.trim();
+            }
+            LibManager.saveInstalled(app, version, actualSha);
+            Log.i(TAG, "Library " + version + " installed (" + done + " bytes, sha256 " + actualSha + ")");
+        } catch (IOException e) {
+            throw new UpdateException(Net.friendly(app, e), Net.isRetryable(e), e);
+        } finally {
+            if (connection != null) connection.disconnect();
+            if (part.exists() && !part.delete()) Log.w(TAG, "Could not delete " + part);
+            LibManager.deleteRecursive(staging);
+        }
+    }
+
+    /** Extracts a ZIP (or accepts a raw ELF) and installs the library atomically. */
+    private static void install(Context app, File file, File staging) throws UpdateException {
+        LibManager.deleteRecursive(staging);
+        if (!staging.mkdirs() && !staging.isDirectory()) {
+            throw new UpdateException(app.getString(R.string.update_install_failed), false);
+        }
+        File found;
+        byte[] magic = readMagic(file);
+        if (magic[0] == 0x50 && magic[1] == 0x4B && magic[2] == 0x03 && magic[3] == 0x04) {
+            try {
+                new ZipFile(file).extractAll(staging.getAbsolutePath());
+            } catch (ZipException e) {
+                Log.w(TAG, "Release ZIP could not be extracted", e);
+                if (Net.isNoSpace(e)) {
+                    throw new UpdateException(app.getString(R.string.update_install_failed), false, e);
+                }
+                throw new UpdateException(app.getString(R.string.update_invalid_file), false, e);
+            }
+            found = LibManager.findLib(staging);
+        } else if (magic[0] == 0x7F && magic[1] == 'E' && magic[2] == 'L' && magic[3] == 'F') {
+            File raw = new File(staging, LibManager.LIB_NAME);
+            if (!file.renameTo(raw)) {
+                throw new UpdateException(app.getString(R.string.update_install_failed), false);
+            }
+            found = raw;
+        } else {
+            throw new UpdateException(app.getString(R.string.update_invalid_file), false);
+        }
+        if (found == null) throw new UpdateException(app.getString(R.string.update_no_library), false);
+        if (!LibManager.installLib(app, found) || !LibManager.isUsableLib(app)) {
+            throw new UpdateException(app.getString(R.string.update_install_failed), false);
+        }
+    }
+
+    // --------------------------------------------------------------- helpers
+
+    private static HttpURLConnection open(String start, String accept) throws IOException {
+        String current = start;
+        for (int hop = 0; hop <= MAX_REDIRECTS; hop++) {
+            URL url = new URL(current);
+            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+            connection.setInstanceFollowRedirects(false);
+            connection.setConnectTimeout(CONNECT_TIMEOUT_MS);
+            connection.setReadTimeout(READ_TIMEOUT_MS);
+            connection.setUseCaches(false);
+            connection.setRequestProperty("User-Agent", USER_AGENT);
+            connection.setRequestProperty("Accept", accept);
+            connection.setRequestProperty("Accept-Encoding", "identity");
+            connection.setRequestProperty("Cache-Control", "no-cache");
+            int code = connection.getResponseCode();
+            if (code == 301 || code == 302 || code == 303 || code == 307 || code == 308) {
+                String location = connection.getHeaderField("Location");
+                connection.disconnect();
+                if (location == null || location.isEmpty()) throw new java.net.ProtocolException("Redirect without location");
+                current = new URL(url, location).toString();
+                continue;
+            }
+            return connection;
+        }
+        throw new java.net.ProtocolException("Too many redirects");
+    }
+
+    private static String readBody(HttpURLConnection connection, int limit) throws IOException {
+        try (InputStream in = connection.getInputStream();
+             ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+            byte[] buffer = new byte[4096];
+            int read;
+            while ((read = in.read(buffer)) != -1) {
+                out.write(buffer, 0, read);
+                if (out.size() > limit) throw new java.net.ProtocolException("Response too large");
+            }
+            return out.toString("UTF-8");
+        }
+    }
+
+    private static void ensureSpace(Context app, long size) throws UpdateException {
+        try {
+            StatFs stat = new StatFs(app.getFilesDir().getAbsolutePath());
+            long free = stat.getAvailableBytes();
+            long need = Math.max(MIN_FREE_BYTES, size * 3L);
+            if (free < need) {
+                throw new UpdateException(app.getString(R.string.update_no_space, Ui.bytes(need)), false);
+            }
+        } catch (IllegalArgumentException e) {
+            Log.w(TAG, "StatFs unavailable", e);
+        }
+    }
+
+    private static byte[] readMagic(File file) {
+        byte[] magic = new byte[4];
+        try (InputStream in = new FileInputStream(file)) {
+            int read = in.read(magic);
+            if (read != 4) return new byte[4];
+        } catch (IOException e) {
+            return new byte[4];
+        }
+        return magic;
+    }
+
+    private static MessageDigest sha256() throws UpdateException {
+        try {
+            return MessageDigest.getInstance("SHA-256");
+        } catch (NoSuchAlgorithmException e) {
+            throw new UpdateException("SHA-256 unavailable", false, e);
+        }
+    }
+
+    private static String hex(byte[] bytes) {
+        StringBuilder sb = new StringBuilder(bytes.length * 2);
+        for (byte b : bytes) sb.append(String.format(Locale.US, "%02x", b & 0xFF));
+        return sb.toString();
+    }
+
+    private static long parseLong(String value) {
+        if (value == null) return -1L;
+        try {
+            return Long.parseLong(value.trim());
+        } catch (NumberFormatException e) {
+            return -1L;
+        }
+    }
+
+    private static void sleepQuietly(long ms) {
+        try {
+            Thread.sleep(ms);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
         }
     }
 }

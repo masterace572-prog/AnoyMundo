@@ -1,113 +1,64 @@
-<div class="container-fluid px-4 py-6">
-    <div class="mb-6">{{> msgStatus}}</div>
-
-    {{#if flash.apiKeyPlain}}
-    <div class="ui-card mb-6">
-        <div class="card-head"><h2>Copy your new API key now</h2></div>
-        <p class="doc-section">Shown once. Only a hash is stored, so if you lose it you must create a new key.</p>
-        <div class="ui-tint" style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;padding:16px;margin-bottom:16px">
-            <code id="new-api-key" class="key-token" style="flex:1 1 240px;min-width:0">{{flash.apiKeyPlain}}</code>
-            <button type="button" id="copy-api-key" class="ui-btn">Copy</button>
-        </div>
-        <p class="doc-section" style="margin-bottom:0">Send it as <span class="doc-inline">X-API-Key</span> on every request to
-        <span class="doc-inline">/api/v1/…</span>. See <a href="/api-docs">API docs</a>.</p>
-    </div>
-    {{/if}}
-
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div class="ui-card">
-            <div class="card-head"><h2>Create API key</h2></div>
-            <p class="doc-section">One key per project (site, bot, script) so you can revoke it independently.</p>
-            <form method="post" action="/api-keys" class="space-y-4">
-                <input type="hidden" name="action" value="create">
-                <div>
-                    <label for="api-key-name" class="block text-sm font-semibold mb-2">Key name</label>
-                    <input type="text" id="api-key-name" name="name" maxlength="80" required
-                           placeholder="my-telegram-bot">
-                </div>
-                <button type="submit" class="ui-btn ui-btn--primary w-full">Create API key</button>
-            </form>
-            <div class="doc-note" style="margin-top:24px">
-                API keys can <strong>only</strong> create, list, update, reset and delete licence keys.
-                They cannot change the mod name, status text, floating text, features or maintenance mode.
-                Creating a key via the API deducts saldo with the same pricing as this panel.
-            </div>
-        </div>
-
-        <div class="lg:col-span-2 ui-card" style="min-width:0">
-            <div class="card-head" style="flex-wrap:wrap;justify-content:space-between">
-                <div style="min-width:0">
-                    <h2>Your API keys</h2>
-                    <p class="field-hint">Available balance: <span data-saldo="{{user.saldo}}">₹{{user.saldo}}</span></p>
-                </div>
-                <a href="/api-docs" class="ui-btn">View API docs</a>
-            </div>
-
-            {{#if apiKeys}}
-            <div class="table-scroll">
-                <table>
-                    <thead>
-                        <tr><th>Name</th><th>Key</th><th>Status</th><th>Created</th><th>Last used</th><th>Actions</th></tr>
-                    </thead>
-                    <tbody>
-                        {{#each apiKeys}}
-                        <tr>
-                            <td class="cell-nowrap"><strong>{{this.name}}</strong></td>
-                            <td><code class="key-token">{{this.key_prefix}}…{{this.key_last4}}</code></td>
-                            <td class="cell-nowrap">
-                                {{#if (eq this.status 1)}}
-                                <span class="status-pill">Active</span>
-                                {{else}}
-                                <span class="status-pill status-pill--danger">Revoked</span>
-                                {{/if}}
-                            </td>
-                            <td class="cell-nowrap">{{this.createdLabel}}</td>
-                            <td class="cell-nowrap">{{this.usedLabel}}</td>
-                            <td>
-                                <div class="row-actions">
-                                    {{#if (eq this.status 1)}}
-                                    <form method="post" action="/api-keys">
-                                        <input type="hidden" name="action" value="revoke">
-                                        <input type="hidden" name="id" value="{{this.id}}">
-                                        <button type="submit" class="row-action row-action--danger">Revoke</button>
-                                    </form>
-                                    {{/if}}
-                                    <form method="post" action="/api-keys">
-                                        <input type="hidden" name="action" value="delete">
-                                        <input type="hidden" name="id" value="{{this.id}}">
-                                        <button type="submit" class="row-action row-action--danger">Delete</button>
-                                    </form>
-                                </div>
-                            </td>
-                        </tr>
-                        {{/each}}
-                    </tbody>
-                </table>
-            </div>
-            {{else}}
-            <div class="ui-tint" style="text-align:center;color:var(--muted);padding:32px">
-                No API keys yet. Create one with the form on the left.
-            </div>
-            {{/if}}
-        </div>
+<div class="page-head">
+    <div>
+        <h1 class="page-title">API keys</h1>
+        <p class="page-sub">Let your website or bot create and manage licence keys. <a href="/api-docs">Read the docs</a></p>
     </div>
 </div>
 
-<script>
-(function () {
-    var button = document.getElementById('copy-api-key');
-    var code = document.getElementById('new-api-key');
-    if (!button || !code) return;
-    button.addEventListener('click', function () {
-        var value = code.textContent.trim();
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-            navigator.clipboard.writeText(value).then(function () { button.textContent = 'Copied'; });
-        } else {
-            var input = document.createElement('textarea');
-            input.value = value; document.body.appendChild(input); input.select();
-            try { document.execCommand('copy'); button.textContent = 'Copied'; } catch (e) { /* ignore */ }
-            document.body.removeChild(input);
-        }
-    });
-})();
-</script>
+{{> msgStatus}}
+
+{{#if flash.apiKeyPlain}}
+<section class="section keys-out" style="border-top:0;padding-top:0">
+    <div class="row-between">
+        <h2 class="section-title">Your new API key</h2>
+        <button type="button" class="btn btn-primary btn-sm" data-copy-target="new-api-key">Copy</button>
+    </div>
+    <input type="text" class="input mono" id="new-api-key" value="{{flash.apiKeyPlain}}" readonly aria-label="New API key">
+    <p class="hint">Shown once. Store it somewhere safe; anyone with it can spend your balance.</p>
+</section>
+{{/if}}
+
+<div class="grid-2">
+<form method="post" action="/api-keys" class="form" data-busy-form>
+    <input type="hidden" name="action" value="create">
+    <div class="field">
+        <label class="label" for="api-key-name">Name</label>
+        <input type="text" class="input" name="name" id="api-key-name" required maxlength="80" placeholder="my-telegram-bot" autocomplete="off">
+        <div class="hint">Only for you, to recognise the key later.</div>
+    </div>
+    <button type="submit" class="btn btn-primary" data-busy-label="Creating…">Create API key</button>
+</form>
+
+<section class="section" style="border-top:0;padding-top:0">
+    <h2 class="section-title">Your keys</h2>
+    <div class="table-wrap" style="margin-top:14px">
+        <table class="responsive">
+            <thead><tr><th>Name</th><th>Key</th><th>Status</th><th>Last used</th><th class="actions-cell"><span class="sr-only">Actions</span></th></tr></thead>
+            <tbody>
+                {{#each apiKeys}}
+                <tr>
+                    <td data-label="Name">{{this.name}}</td>
+                    <td class="key" data-label="Key">{{this.key_prefix}}…{{this.key_last4}}</td>
+                    <td data-label="Status"><span class="status {{#if (eq this.status 1)}}ok{{else}}bad{{/if}}">{{this.statusLabel}}</span></td>
+                    <td data-label="Last used">{{this.usedLabel}}</td>
+                    <td class="actions-cell">
+                        {{#if (eq this.status 1)}}
+                        <form method="post" action="/api-keys" style="display:inline" data-confirm="Revoke {{this.name}}?" data-confirm-detail="Apps using it stop working immediately.">
+                            <input type="hidden" name="action" value="revoke"><input type="hidden" name="id" value="{{this.id}}">
+                            <button type="submit" class="btn btn-secondary btn-sm">Revoke</button>
+                        </form>
+                        {{/if}}
+                        <form method="post" action="/api-keys" style="display:inline" data-confirm="Delete {{this.name}}?" data-confirm-detail="This cannot be undone.">
+                            <input type="hidden" name="action" value="delete"><input type="hidden" name="id" value="{{this.id}}">
+                            <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                        </form>
+                    </td>
+                </tr>
+                {{else}}
+                <tr class="is-empty"><td colspan="5">No API keys yet.</td></tr>
+                {{/each}}
+            </tbody>
+        </table>
+    </div>
+</section>
+</div>

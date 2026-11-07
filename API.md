@@ -100,7 +100,7 @@ curl -sS https://anoymundo-panel.vercel.app/api/v1/me \
 ```json
 {
   "ok": true,
-  "account": { "username": "admin", "fullname": "admin", "level": 1, "saldo": 2147384644, "currency": "INR", "status": 1 },
+  "account": { "username": "reseller1", "fullname": "Reseller One", "level": 3, "saldo": 5000, "currency": "INR", "status": 1 },
   "api_key": { "id": 7, "name": "my-telegram-bot", "prefix": "amk_Xy12AbCd", "last4": "pQ9z", "status": 1,
                "created_at": "2026-11-05T10:00:00.000Z", "last_used_at": "2026-11-05T10:30:00.000Z" }
 }
@@ -116,16 +116,16 @@ Call this first in your site to display the current balance before a create.
 {
   "ok": true,
   "currency": "INR",
-  "rule": "price = price_per_device_for_duration × max_devices",
+  "rule": "price = price_per_device_for_duration × max_devices × count",
   "games": ["PUBG"],
   "durations": [
-    { "duration": 2,   "hours": 2,   "label": "2 Hours — ₹10/Device",  "price_per_device": 10 },
-    { "duration": 5,   "hours": 5,   "label": "5 Hours — ₹20/Device",  "price_per_device": 20 },
-    { "duration": 24,  "hours": 24,  "label": "1 Days — ₹80/Device",   "price_per_device": 80 },
-    { "duration": 72,  "hours": 72,  "label": "3 Days — ₹150/Device",  "price_per_device": 150 },
-    { "duration": 168, "hours": 168, "label": "7 Days — ₹250/Device",  "price_per_device": 250 },
-    { "duration": 336, "hours": 336, "label": "14 Days — ₹350/Device", "price_per_device": 350 },
-    { "duration": 720, "hours": 720, "label": "30 Days — ₹500/Device", "price_per_device": 500 }
+    { "duration": 2,   "hours": 2,   "label": "2 hours",  "price_per_device": 10 },
+    { "duration": 5,   "hours": 5,   "label": "5 hours",  "price_per_device": 20 },
+    { "duration": 24,  "hours": 24,  "label": "1 day",   "price_per_device": 80 },
+    { "duration": 72,  "hours": 72,  "label": "3 days",  "price_per_device": 150 },
+    { "duration": 168, "hours": 168, "label": "7 days",  "price_per_device": 250 },
+    { "duration": 336, "hours": 336, "label": "14 days", "price_per_device": 350 },
+    { "duration": 720, "hours": 720, "label": "30 days", "price_per_device": 500 }
   ]
 }
 ```
@@ -149,7 +149,7 @@ curl -sS 'https://anoymundo-panel.vercel.app/api/v1/keys?limit=20&offset=0&game=
 ```
 
 ```json
-{ "ok": true, "keys": [ { "user_key": "admin-2-lyK0Y", "game": "PUBG", "duration": 2,
+{ "ok": true, "keys": [ { "user_key": "ANOY-2H-LYK0Y", "game": "PUBG", "duration": 2,
   "max_devices": 1, "status": 1, "devices": [], "device_count": 0,
   "expired_date": null, "created_at": "...", "updated_at": "..." } ],
   "total": 1, "limit": 20, "offset": 0 }
@@ -166,8 +166,9 @@ curl -sS 'https://anoymundo-panel.vercel.app/api/v1/keys?limit=20&offset=0&game=
 | `game` | no | default `PUBG`; must be one of `/api/v1/pricing` → `games` |
 | `duration` | **yes** | one of `2, 5, 24, 72, 168, 336, 720` (hours) |
 | `max_devices` | **yes** | integer 1–100 |
-| `count` | no | 1–100, default `1`. Bulk generation is charged once per request (legacy panel behaviour). |
-| `custom_key` | no | 4–19 chars, `[A-Za-z0-9_-]+`, only when `count = 1` |
+| `count` | no | 1–100, default `1`. Every key is charged. |
+| `custom_key` | no | custom ending, 4–6 chars `A-Z0-9` (upper-cased; a full `USER-1D-XXXX` key is accepted and its prefix stripped). Creates exactly one key. |
+| `request_id` | no | 8–80 chars `[A-Za-z0-9_-]`. Replaying the same id returns the original result without charging again. |
 
 ```bash
 curl -sS -X POST https://anoymundo-panel.vercel.app/api/v1/keys \
@@ -179,54 +180,59 @@ curl -sS -X POST https://anoymundo-panel.vercel.app/api/v1/keys \
 ```json
 {
   "ok": true,
-  "keys": [ { "id": 3, "user_key": "admin-24-aB3dE", "game": "PUBG", "duration": 24,
+  "keys": [ { "id": 3, "user_key": "ANOY-1D-GKFHJ", "game": "PUBG", "duration": 24,
               "max_devices": 1, "status": 1, "devices": [], "device_count": 0,
-              "expired_date": null, "created_at": "2026-11-05T10:30:00.000Z",
-              "updated_at": "2026-11-05T10:30:00.000Z" } ],
+              "expired_date": null, "created_at": "2026-11-07T10:30:00.000Z",
+              "updated_at": "2026-11-07T10:30:00.000Z" } ],
   "count": 1,
-  "price": 80, "currency": "INR",
-  "saldo_before": 2147384644,
-  "saldo_after": 2147384564,
+  "price": 80, "unit_price": 80, "currency": "INR",
+  "saldo_before": 5000,
+  "saldo_after": 4920,
   "charged": 80
 }
 ```
 
-HTTP `201 Created`. Generated keys look like `<username>-<duration>-<5 chars>`.
-`expired_date` is `null` until the first `/connect` from the loader.
+HTTP `201 Created`.
+
+### Key format
+
+```
+<USERNAME>-<DURATION>-<RANDOM>        e.g.  ANOY-7D-GKFHJ
+```
+
+Always upper case. `DURATION` is `2H`, `5H`, `1D`, `3D`, `7D`, `14D` or `30D`;
+`RANDOM` is 5 characters `A-Z0-9` (or your 4–6 character `custom_key`).
+`expired_date` is `null` until the first `/connect` from the loader. Key
+look-ups in the path are case-insensitive.
 
 ### Saldo / charging rules
 
 ```
-price            = price_per_device(duration) × max_devices   (one fee per request)
-new_saldo        = current_saldo − price
+price      = price_per_device(duration) × max_devices × count
+new_saldo  = current_saldo − price
 ```
 
-This is exactly the panel's original pricing rule: a generation **request**
-costs `price × max_devices`, and `count` simply creates that many keys for the
-one fee (legacy bulk generation). It is shared by the panel and `/api/v1`, so
-the price shown in the panel and the debit from the API can never differ.
-
-- The balance is read fresh, then debited with an **optimistic conditional
-  update** (`WHERE saldo = previously_read_value`) so two concurrent requests
-  cannot spend the same balance twice. A conflict returns `409
-  balance_conflict` — just retry.
-- If inserting a key fails, the debit is refunded automatically.
-- There is **no refund** when you later delete a key.
-- Updates, resets, deletes and listing are free.
-- Insufficient balance → `402 insufficient_balance`; nothing is created and
-  the balance is unchanged.
+- The debit and every key insert run in **one database transaction**: a
+  timeout, duplicate key or database error never leaves keys without a charge
+  or a charge without keys.
+- Owner accounts (level 1) have an unlimited balance and are never charged.
+- Deleting a key that was never used (no device, not activated) refunds what
+  it cost; used keys are deleted without a refund.
+- Updates, resets and listing are free.
+- Insufficient balance → `402 insufficient_balance`; nothing is created.
+- Duplicate custom key → `409 key_exists`; nothing is charged.
 
 ---
 
 ## 9. `GET /api/v1/keys/{user_key}` — one key
 
 ```bash
-curl -sS https://anoymundo-panel.vercel.app/api/v1/keys/admin-24-aB3dE \
+curl -sS https://anoymundo-panel.vercel.app/api/v1/keys/ANOY-1D-GKFHJ \
   -H 'X-API-Key: amk_YOUR_TOKEN_HERE'
 ```
 
 ```json
-{ "ok": true, "key": { "user_key": "admin-24-aB3dE", "devices": ["DEVICE123"], "device_count": 1, "...": "..." } }
+{ "ok": true, "key": { "user_key": "ANOY-1D-GKFHJ", "devices": ["DEVICE123"], "device_count": 1, "...": "..." } }
 ```
 
 ---
@@ -244,14 +250,14 @@ Send only the fields you want to change. At least one is required.
 | `devices` | comma-separated string or array; sanitised to `[A-Za-z0-9_-]+`, capped at `max_devices` |
 
 ```bash
-curl -sS -X PATCH https://anoymundo-panel.vercel.app/api/v1/keys/admin-24-aB3dE \
+curl -sS -X PATCH https://anoymundo-panel.vercel.app/api/v1/keys/ANOY-1D-GKFHJ \
   -H 'X-API-Key: amk_YOUR_TOKEN_HERE' \
   -H 'Content-Type: application/json' \
   -d '{"max_devices":3,"status":1}'
 ```
 
 ```json
-{ "ok": true, "key": { "user_key": "admin-24-aB3dE", "max_devices": 3, "status": 1, "...": "..." },
+{ "ok": true, "key": { "user_key": "ANOY-1D-GKFHJ", "max_devices": 3, "status": 1, "...": "..." },
   "updated": ["max_devices", "status"] }
 ```
 
@@ -263,12 +269,12 @@ still work.
 ## 11. `POST /api/v1/keys/{user_key}/reset` — clear devices
 
 ```bash
-curl -sS -X POST https://anoymundo-panel.vercel.app/api/v1/keys/admin-24-aB3dE/reset \
+curl -sS -X POST https://anoymundo-panel.vercel.app/api/v1/keys/ANOY-1D-GKFHJ/reset \
   -H 'X-API-Key: amk_YOUR_TOKEN_HERE'
 ```
 
 ```json
-{ "ok": true, "reset": true, "user_key": "admin-24-aB3dE", "devices_cleared": 1,
+{ "ok": true, "reset": true, "user_key": "ANOY-1D-GKFHJ", "devices_cleared": 1,
   "key": { "devices": [], "device_count": 0, "...": "..." } }
 ```
 
@@ -277,12 +283,12 @@ curl -sS -X POST https://anoymundo-panel.vercel.app/api/v1/keys/admin-24-aB3dE/r
 ## 12. `DELETE /api/v1/keys/{user_key}`
 
 ```bash
-curl -sS -X DELETE https://anoymundo-panel.vercel.app/api/v1/keys/admin-24-aB3dE \
+curl -sS -X DELETE https://anoymundo-panel.vercel.app/api/v1/keys/ANOY-1D-GKFHJ \
   -H 'X-API-Key: amk_YOUR_TOKEN_HERE'
 ```
 
 ```json
-{ "ok": true, "deleted": true, "user_key": "admin-24-aB3dE" }
+{ "ok": true, "deleted": true, "user_key": "ANOY-1D-GKFHJ", "refunded": 1, "refund_total": 80 }
 ```
 
 ---

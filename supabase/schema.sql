@@ -37,7 +37,7 @@ create index if not exists users_uplink_idx on public.users (uplink);
 create table if not exists public.keys_code (
   id_keys      serial primary key,
   game         varchar(32) not null,
-  user_key     varchar(32),
+  user_key     varchar(64),
   duration     integer,
   expired_date timestamptz,
   max_devices  integer,
@@ -199,36 +199,17 @@ alter table public.auth_attempt   enable row level security;
 alter table public.api_keys       enable row level security;
 
 -- ---------------------------------------------------------------------------
--- Seed data (same values as the original main.sql dump)
+-- Seed data: the single Owner account. Sign in as Anoy / Anoy1764 and change
+-- the password from Settings. The Owner's balance is unlimited (never charged).
+-- Password hash = bcrypt(md5(PASSWORD_SALT + password)), cost 8.
 -- ---------------------------------------------------------------------------
 insert into public.users
-  (id_users, fullname, username, email, reset_link_token, exp_date, level, saldo,
+  (fullname, username, email, reset_link_token, exp_date, level, saldo,
    status, uplink, password, user_ip, created_at, updated_at, expiration_date)
-values
-  (1, 'admin', 'admin', 'support@aloneboy.com',
-   'a886a84c38036225b4bcabfd81e7d1f0582', '2023-07-23 01:22:54', 1, 2147384644,
-   1, 'Owner', '$2y$08$/CsSVgrGgCqVcievCuR2COPnlMIpRz6kA.hzItBD/xd1Cx0hj0kMK',
-   '42.109.149.*', '2022-06-22 22:15:21', '2025-11-19 17:51:31', '2050-01-01 00:00:00+00')
-on conflict (id_users) do nothing;
-select setval(pg_get_serial_sequence('public.users','id_users'),
-              greatest(1, (select max(id_users) from public.users)));
-
-insert into public.keys_code
-  (id_keys, game, user_key, duration, expired_date, max_devices, devices, status, registrator, created_at, updated_at)
-values
-  (1, 'PUBG', 'admin-2-lyK0Y', 2, null, 1, null, 1, 'admin', '2025-11-19 13:17:39', '2025-11-19 13:17:39'),
-  (2, 'PUBG', 'admin-2-f7VwE', 2, null, 1, null, 1, 'admin', '2025-11-19 17:51:31', '2025-11-19 17:51:31')
-on conflict (id_keys) do nothing;
-select setval(pg_get_serial_sequence('public.keys_code','id_keys'),
-              greatest(1, (select max(id_keys) from public.keys_code)));
-
-insert into public.history (id_history, keys_id, user_do, info, created_at, updated_at)
-values
-  (1, '1', 'admin', 'PUBG|admin|2|1', '2025-11-19 13:17:39', '2025-11-19 13:17:39'),
-  (2, '2', 'admin', 'PUBG|admin|2|1', '2025-11-19 17:51:31', '2025-11-19 17:51:31')
-on conflict (id_history) do nothing;
-select setval(pg_get_serial_sequence('public.history','id_history'),
-              greatest(1, (select max(id_history) from public.history)));
+select 'Anoy', 'Anoy', 'saabarjun705@gmail.com', '', '', 1, 999999999999,
+   1, 'Owner', '$2a$08$sQefH.l6cnpeUwuTifoZvuF1SSh7U6Mw4UwddAO9cawj5pip8blOa',
+   '', now(), now(), '2050-01-01 00:00:00+00'
+where not exists (select 1 from public.users where level = 1);
 
 insert into public.feature (id, esp, item, silentaim, aim, bullettrack, memory, floating, setting)
 values (1, 'on','on','on','on','on','on','on','on') on conflict (id) do nothing;
@@ -240,16 +221,9 @@ values (1, 'lib.so', 'Onlinelib/lib.so', '555 KB', '2022-06-04 23:43:38') on con
 insert into public._ftext  (id, _status, _ftext)
 values (1, 'Safe', 'MOD STATUS :- 100% SAFE') on conflict (id) do nothing;
 
--- Starter referral code so registration is usable immediately.
--- Plain code: WELCOME   (hashed with the legacy md5(salt + code) algorithm)
-insert into public.referral_code
-  (code, referral, level, set_saldo, used_by, created_by, acc_expiration)
-select 'f36d16b166f38a1a148a2069a74c866c', 'WELCOME', 3, 1000, '', 'Owner', now() + interval '365 days'
-where not exists (select 1 from public.referral_code where referral = 'WELCOME');
-
 -- Default loader release marker. Upload a real ZIP from Admin -> Library.
 insert into public.client_release (version, file_name, file_size, sha256, is_current, uploaded_by, notes)
-select '1.0', 'no-release.zip', 0, '', true, 'admin', 'Placeholder - upload a release from Admin -> Library'
+select '1.0', 'no-release.zip', 0, '', true, 'Anoy', 'Placeholder - upload a release from Admin -> Library'
 where not exists (select 1 from public.client_release);
 
 -- ============================================================================
@@ -272,6 +246,12 @@ alter table public.keys_code
 -- if application-level checks are bypassed.
 create unique index if not exists users_single_owner_idx
   on public.users ((level)) where level = 1;
+
+-- v2: usernames are unique regardless of case ("anoy" signs in as "Anoy"),
+-- and licence keys (USERNAME-DURATION-RANDOM) may be up to 64 characters.
+create unique index if not exists users_username_lower_idx
+  on public.users (lower(username));
+alter table public.keys_code alter column user_key type varchar(64);
 
 create table if not exists public.key_orders (
   request_id  text primary key,
@@ -313,6 +293,9 @@ declare
   v_recent   integer;
   v_rows     jsonb;
   v_result   jsonb;
+  v_unlimited boolean;
+  v_charge   bigint;
+  v_unit     bigint;
 begin
   -- Idempotency: a repeated POST (double click, retry, network replay) never
   -- creates a second batch and never charges twice.
@@ -349,7 +332,13 @@ begin
     return public._keys_fail(p_request_id, 'invalid_request', 'Invalid key options.');
   end if;
 
-  if v_user.saldo < p_total_price then
+  -- The Owner (level 1, exactly one exists) has an unlimited balance and is
+  -- never charged; everyone else pays price x devices x keys.
+  v_unlimited := (v_user.level = 1);
+  v_charge := case when v_unlimited then 0 else p_total_price end;
+  v_unit := case when v_unlimited then 0 else p_unit_price end;
+
+  if not v_unlimited and v_user.saldo < p_total_price then
     return public._keys_fail(p_request_id, 'insufficient_balance', 'Insufficient balance.',
       jsonb_build_object('required', p_total_price, 'available', v_user.saldo,
                          'saldo', v_user.saldo, 'price', p_total_price));
@@ -373,17 +362,19 @@ begin
     (game, user_key, duration, max_devices, registrator, admin_id, status,
      expired_date, price_paid, created_at, updated_at)
   select p_game, k, p_duration, p_max_devices, v_user.username, p_user_id, 1,
-         null, p_unit_price, now(), now()
+         null, v_unit, now(), now()
   from unnest(p_keys) as k;
 
-  update public.users
-     set saldo = saldo - p_total_price, updated_at = now()
-   where id_users = p_user_id;
+  if v_charge > 0 then
+    update public.users
+       set saldo = saldo - v_charge, updated_at = now()
+     where id_users = p_user_id;
+  end if;
 
   insert into public.history (keys_id, user_do, info, created_at, updated_at)
   values ('', v_user.username,
           p_game || '|' || left(p_keys[1], 5) || '|' || p_duration || '|' ||
-          p_max_devices || '|' || v_count || '|' || p_total_price,
+          p_max_devices || '|' || v_count || '|' || v_charge,
           now(), now());
 
   select jsonb_agg(to_jsonb(k) order by k.id_keys) into v_rows
@@ -394,10 +385,11 @@ begin
     'keys', to_jsonb(p_keys),
     'rows', coalesce(v_rows, '[]'::jsonb),
     'count', v_count,
-    'price', p_total_price,
-    'unit_price', p_unit_price,
+    'price', v_charge,
+    'unit_price', v_unit,
+    'unlimited', v_unlimited,
     'saldo_before', v_user.saldo,
-    'saldo_after', v_user.saldo - p_total_price
+    'saldo_after', v_user.saldo - v_charge
   );
   update public.key_orders set result = v_result where request_id = p_request_id;
   delete from public.key_orders where created_at < now() - interval '2 days';
@@ -420,7 +412,8 @@ begin
     return jsonb_build_object('ok', false, 'code', 'unauthorized', 'message', 'Please sign in again.');
   end if;
   -- Server-side authority: only the real Owner may delete other users' keys.
-  v_allow_all := (v_actor.level = 1 and v_actor.username = 'admin');
+  -- (A unique index guarantees there is exactly one level-1 account.)
+  v_allow_all := (v_actor.level = 1);
 
   with locked as (
     select k.*,

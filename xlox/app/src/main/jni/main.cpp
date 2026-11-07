@@ -34,6 +34,14 @@ static std::string g_Credit = "";
 
 bool xConnected = false, xServerConnection = false, memek = false;
 
+std::string CalcMD5(std::string s);
+/* Stable 36-char id when java.util.UUID is unavailable (never expected). */
+static std::string CalcFallbackId(const std::string &seed) {
+    std::string h = CalcMD5(seed);
+    return h.substr(0, 8) + "-" + h.substr(8, 4) + "-" + h.substr(12, 4) + "-" +
+           h.substr(16, 4) + "-" + h.substr(20, 12);
+}
+
 
 extern "C"
 JNIEXPORT jstring JNICALL
@@ -85,55 +93,91 @@ Java_com_xlox_BoxApplication_getSdkKey(JNIEnv *env, jclass clazz) {
 }
 
 
-const char *GetAndroidID(JNIEnv *env, jobject context) {
+/* JNI helpers. Each returns an owned std::string and never leaves a pending
+   Java exception behind, so a missing value can never crash the login. */
+static std::string JStringToStd(JNIEnv *env, jstring str) {
+    if (env == nullptr || str == nullptr) return std::string();
+    const char *chars = env->GetStringUTFChars(str, nullptr);
+    if (chars == nullptr) {
+        if (env->ExceptionCheck()) env->ExceptionClear();
+        return std::string();
+    }
+    std::string out(chars);
+    env->ReleaseStringUTFChars(str, chars);
+    return out;
+}
+
+static bool ClearJniException(JNIEnv *env) {
+    if (env->ExceptionCheck()) {
+        env->ExceptionClear();
+        return true;
+    }
+    return false;
+}
+
+std::string GetAndroidID(JNIEnv *env, jobject context) {
+    if (context == nullptr) return std::string();
     jclass contextClass = env->FindClass("android/content/Context");
-    jmethodID getContentResolverMethod = env->GetMethodID(contextClass,"getContentResolver","()Landroid/content/ContentResolver;");
+    if (ClearJniException(env) || contextClass == nullptr) return std::string();
+    jmethodID getContentResolverMethod = env->GetMethodID(contextClass, "getContentResolver",
+                                                          "()Landroid/content/ContentResolver;");
     jclass settingSecureClass = env->FindClass("android/provider/Settings$Secure");
-    jmethodID getStringMethod = env->GetStaticMethodID(settingSecureClass,"getString", "(Landroid/content/ContentResolver;Ljava/lang/String;)Ljava/lang/String;");
-
-    auto obj = env->CallObjectMethod(context, getContentResolverMethod);
-    auto str = (jstring) env->CallStaticObjectMethod(settingSecureClass, getStringMethod, obj,env->NewStringUTF("android_id"));
-    return env->GetStringUTFChars(str, 0);
+    if (ClearJniException(env) || getContentResolverMethod == nullptr || settingSecureClass == nullptr) {
+        return std::string();
+    }
+    jmethodID getStringMethod = env->GetStaticMethodID(settingSecureClass, "getString",
+            "(Landroid/content/ContentResolver;Ljava/lang/String;)Ljava/lang/String;");
+    if (ClearJniException(env) || getStringMethod == nullptr) return std::string();
+    jobject resolver = env->CallObjectMethod(context, getContentResolverMethod);
+    if (ClearJniException(env) || resolver == nullptr) return std::string();
+    jstring name = env->NewStringUTF("android_id");
+    auto str = (jstring) env->CallStaticObjectMethod(settingSecureClass, getStringMethod, resolver, name);
+    if (ClearJniException(env)) return std::string();
+    std::string out = JStringToStd(env, str);
+    env->DeleteLocalRef(name);
+    env->DeleteLocalRef(resolver);
+    if (str != nullptr) env->DeleteLocalRef(str);
+    return out;
 }
 
-const char *GetDeviceModel(JNIEnv *env) {
+static std::string GetBuildField(JNIEnv *env, const char *field) {
     jclass buildClass = env->FindClass("android/os/Build");
-    jfieldID modelId = env->GetStaticFieldID(buildClass, "MODEL","Ljava/lang/String;");
-
-    auto str = (jstring) env->GetStaticObjectField(buildClass, modelId);
-    return env->GetStringUTFChars(str, 0);
+    if (ClearJniException(env) || buildClass == nullptr) return std::string();
+    jfieldID id = env->GetStaticFieldID(buildClass, field, "Ljava/lang/String;");
+    if (ClearJniException(env) || id == nullptr) return std::string();
+    auto str = (jstring) env->GetStaticObjectField(buildClass, id);
+    if (ClearJniException(env)) return std::string();
+    std::string out = JStringToStd(env, str);
+    if (str != nullptr) env->DeleteLocalRef(str);
+    return out;
 }
 
-const char *GetDeviceBrand(JNIEnv *env) {
-    jclass buildClass = env->FindClass("android/os/Build");
-    jfieldID modelId = env->GetStaticFieldID(buildClass, "BRAND","Ljava/lang/String;");
+std::string GetDeviceModel(JNIEnv *env) { return GetBuildField(env, "MODEL"); }
 
-    auto str = (jstring) env->GetStaticObjectField(buildClass, modelId);
-    return env->GetStringUTFChars(str, 0);
-}
+std::string GetDeviceBrand(JNIEnv *env) { return GetBuildField(env, "BRAND"); }
 
-const char *GetPackageName(JNIEnv *env, jobject context) {
-    jclass contextClass = env->FindClass("android/content/Context");
-    jmethodID getPackageNameId = env->GetMethodID(contextClass, "getPackageName","()Ljava/lang/String;");
-
-    auto str = (jstring) env->CallObjectMethod(context, getPackageNameId);
-    return env->GetStringUTFChars(str, 0);
-}
-
-const char *GetDeviceUniqueIdentifier(JNIEnv *env, const char *uuid) {
+std::string GetDeviceUniqueIdentifier(JNIEnv *env, const std::string &seed) {
     jclass uuidClass = env->FindClass("java/util/UUID");
-
-    auto len = strlen(uuid);
-
-    jbyteArray myJByteArray = env->NewByteArray(len);
-    env->SetByteArrayRegion(myJByteArray, 0, len, (jbyte *) uuid);
-
-    jmethodID nameUUIDFromBytesMethod = env->GetStaticMethodID(uuidClass,"nameUUIDFromBytes","([B)Ljava/util/UUID;");
-    jmethodID toStringMethod = env->GetMethodID(uuidClass, "toString","()Ljava/lang/String;");
-
-    auto obj = env->CallStaticObjectMethod(uuidClass, nameUUIDFromBytesMethod, myJByteArray);
-    auto str = (jstring) env->CallObjectMethod(obj, toStringMethod);
-    return env->GetStringUTFChars(str, 0);
+    if (ClearJniException(env) || uuidClass == nullptr) return CalcFallbackId(seed);
+    auto len = (jsize) seed.size();
+    jbyteArray bytes = env->NewByteArray(len);
+    if (bytes == nullptr) {
+        ClearJniException(env);
+        return CalcFallbackId(seed);
+    }
+    env->SetByteArrayRegion(bytes, 0, len, (const jbyte *) seed.data());
+    jmethodID fromBytes = env->GetStaticMethodID(uuidClass, "nameUUIDFromBytes", "([B)Ljava/util/UUID;");
+    jmethodID toString = env->GetMethodID(uuidClass, "toString", "()Ljava/lang/String;");
+    if (ClearJniException(env) || fromBytes == nullptr || toString == nullptr) return CalcFallbackId(seed);
+    jobject uuid = env->CallStaticObjectMethod(uuidClass, fromBytes, bytes);
+    if (ClearJniException(env) || uuid == nullptr) return CalcFallbackId(seed);
+    auto str = (jstring) env->CallObjectMethod(uuid, toString);
+    if (ClearJniException(env)) return CalcFallbackId(seed);
+    std::string out = JStringToStd(env, str);
+    env->DeleteLocalRef(bytes);
+    env->DeleteLocalRef(uuid);
+    if (str != nullptr) env->DeleteLocalRef(str);
+    return out.empty() ? CalcFallbackId(seed) : out;
 }
 
 struct MemoryStruct {
@@ -167,7 +211,7 @@ std::string CalcMD5(std::string s) {
     MD5_Update(&md5, s.c_str(), s.length());
     MD5_Final(hash, &md5);
     for (unsigned char i : hash) {
-        sprintf(tmp, "%02x", i);
+        snprintf(tmp, sizeof(tmp), "%02x", i);
         result += tmp;
     }
     return result;
@@ -184,7 +228,7 @@ std::string CalcSHA256(std::string s) {
     SHA256_Update(&sha256, s.c_str(), s.length());
     SHA256_Final(hash, &sha256);
     for (unsigned char i : hash) {
-        sprintf(tmp, "%02x", i);
+        snprintf(tmp, sizeof(tmp), "%02x", i);
         result += tmp;
     }
     return result;
@@ -204,98 +248,149 @@ Java_com_xlox_LogAct_Check(JNIEnv *env, jclass clazz, jobject mContext, jstring 
     g_ModStatus = "Safe";
     g_Credit.clear();
 
-    auto user_key = env->GetStringUTFChars(mUserKey, 0);
+    std::string user_key = JStringToStd(env, mUserKey);
+    if (user_key.empty() || user_key.size() > 64) {
+        return env->NewStringUTF("INVALID PARAMETER");
+    }
     std::string hwid = user_key;
     hwid += GetAndroidID(env, mContext);
     hwid += GetDeviceModel(env);
     hwid += GetDeviceBrand(env);
-    std::string UUID = GetDeviceUniqueIdentifier(env, hwid.c_str());
+    std::string UUID = GetDeviceUniqueIdentifier(env, hwid);
     std::string errMsg;
     struct MemoryStruct chunk{};
     chunk.memory = (char *) malloc(1);
     chunk.size = 0;
+    if (chunk.memory == nullptr) return env->NewStringUTF("Out of memory");
+    chunk.memory[0] = 0;
 
+    CURL *curl = curl_easy_init();
+    if (curl == nullptr) {
+        free(chunk.memory);
+        return env->NewStringUTF("Network library unavailable");
+    }
 
-    CURL *curl;
-    CURLcode res;
-    curl = curl_easy_init();
-    if (curl) {
-        char lol[1000];
-        sprintf(lol, "%s", oxorany(ANOY_CONNECT_URL));
-        curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, oxorany("POST"));
-        curl_easy_setopt(curl, CURLOPT_URL, lol);
-        curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
-        curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, 10L);
-        curl_easy_setopt(curl, CURLOPT_TIMEOUT, 25L);
-        curl_easy_setopt(curl, CURLOPT_DEFAULT_PROTOCOL, oxorany("https"));
-        struct curl_slist *headers = NULL;
-        headers = curl_slist_append(headers, oxorany("Accept: application/json"));
-        headers = curl_slist_append(headers, oxorany("Content-Type: application/x-www-form-urlencoded"));
-        headers = curl_slist_append(headers, oxorany("Charset: UTF-8"));
-        curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
-        char data[4096];
-        sprintf(data, oxorany("game=PUBG&user_key=%s&serial=%s"), user_key, UUID.c_str());
-        curl_easy_setopt(curl, CURLOPT_POST, 1);
-        curl_easy_setopt(curl, CURLOPT_POSTFIELDS, data);
-        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteMemoryCallback);
-        curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *) &chunk);
-        curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0);
-        curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0);
-        curl_easy_setopt(curl, CURLOPT_SSL_VERIFYSTATUS, 0);
-        curl_easy_setopt(curl, CURLOPT_USERAGENT, oxorany(ANOY_USER_AGENT));
+    char *keyEsc = curl_easy_escape(curl, user_key.c_str(), (int) user_key.size());
+    char *serialEsc = curl_easy_escape(curl, UUID.c_str(), (int) UUID.size());
+    std::string data = oxorany("game=PUBG&user_key=");
+    data += keyEsc ? keyEsc : "";
+    data += "&serial=";
+    data += serialEsc ? serialEsc : "";
+    if (keyEsc) curl_free(keyEsc);
+    if (serialEsc) curl_free(serialEsc);
+
+    struct curl_slist *headers = NULL;
+    headers = curl_slist_append(headers, oxorany("Accept: application/json"));
+    headers = curl_slist_append(headers, oxorany("Content-Type: application/x-www-form-urlencoded"));
+    headers = curl_slist_append(headers, oxorany("Charset: UTF-8"));
+
+    std::string connectUrl = oxorany(ANOY_CONNECT_URL);
+    curl_easy_setopt(curl, CURLOPT_URL, connectUrl.c_str());
+    curl_easy_setopt(curl, CURLOPT_POST, 1L);
+    curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+    curl_easy_setopt(curl, CURLOPT_MAXREDIRS, 3L);
+    curl_easy_setopt(curl, CURLOPT_POSTREDIR, (long) CURL_REDIR_POST_ALL);
+    curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, 12L);
+    curl_easy_setopt(curl, CURLOPT_TIMEOUT, 25L);
+    curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1L);
+    curl_easy_setopt(curl, CURLOPT_DEFAULT_PROTOCOL, oxorany("https"));
+    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, data.c_str());
+    curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, (long) data.size());
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteMemoryCallback);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *) &chunk);
+    curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
+    curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0L);
+    curl_easy_setopt(curl, CURLOPT_SSL_VERIFYSTATUS, 0L);
+    curl_easy_setopt(curl, CURLOPT_USERAGENT, oxorany(ANOY_USER_AGENT));
+
+    CURLcode res = CURLE_OK;
+    long httpCode = 0;
+    // One quiet retry for transient transport failures (DNS hiccup, reset).
+    for (int attempt = 0; attempt < 2; attempt++) {
+        chunk.size = 0;
+        chunk.memory[0] = 0;
         res = curl_easy_perform(curl);
-        long httpCode = 0;
-        curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &httpCode);
-        if (res != CURLE_OK) {
-            errMsg = curl_easy_strerror(res);
-        } else if (httpCode < 200 || httpCode >= 300) {
-            char codeMsg[64];
-            snprintf(codeMsg, sizeof(codeMsg), "Panel returned HTTP %ld", httpCode);
-            errMsg = codeMsg;
+        if (res == CURLE_OK) break;
+        if (res != CURLE_COULDNT_RESOLVE_HOST && res != CURLE_COULDNT_CONNECT &&
+            res != CURLE_SEND_ERROR && res != CURLE_RECV_ERROR && res != CURLE_GOT_NOTHING) {
+            break;
         }
-        if (res == CURLE_OK && httpCode >= 200 && httpCode < 300) {
-            try {
-                json result = json::parse(chunk.memory ? chunk.memory : "{}");
-                // Maintenance mode answers with status:true + reason and no data.
-                if (result.value("reason", std::string{}).empty() == false
-                        && !result.contains("data")) {
-                    errMsg = result["reason"].get<std::string>();
-                } else if (result.value("status", false) == true && result.contains("data")) {
-                    json data = result["data"];
-                    if (data.value("rng", (time_t) 0) + 30 > time(0)) {
-                        std::string auth = oxorany("PUBG");
-                        auth += "-";
-                        auth += user_key;
-                        auth += "-";
-                        auth += UUID;
-                        auth += "-";
-                        auth += oxorany(ANOY_STATIC_WORDS);
-                        g_Token = data.value("token", std::string{});
-                        g_Auth = CalcMD5(auth);
-                        xConnected = !g_Token.empty() && g_Token == g_Auth;
-                        xServerConnection = xConnected;
-                        memek = xConnected;
-                        if (xConnected) {
-                            exdate = data.value("EXP", data.value("exdate", std::string{"NULL"}));
-                            // Admin panel /Server -> Safe Mode + safe text.
-                            g_ModStatus = data.value("mod_status", std::string("Safe"));
-                            g_Credit = data.value("credit", std::string(""));
-                        } else {
-                            errMsg = "INVALID TOKEN";
-                        }
+    }
+    curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &httpCode);
+
+    if (res != CURLE_OK) {
+        errMsg = curl_easy_strerror(res);
+    } else {
+        json result = json::parse(chunk.memory ? chunk.memory : "", nullptr, false);
+        if (result.is_discarded() || !result.is_object()) {
+            if (httpCode < 200 || httpCode >= 300) {
+                char codeMsg[64];
+                snprintf(codeMsg, sizeof(codeMsg), "Panel returned HTTP %ld", httpCode);
+                errMsg = codeMsg;
+            } else {
+                errMsg = "JSON parse_error";
+            }
+        } else {
+            std::string reason;
+            if (result.contains("reason") && result["reason"].is_string()) {
+                reason = result["reason"].get<std::string>();
+            }
+            bool status = result.contains("status") && result["status"].is_boolean()
+                          && result["status"].get<bool>();
+            bool hasData = result.contains("data") && result["data"].is_object();
+            if (!reason.empty() && !hasData) {
+                // Maintenance answers status:true + reason; errors status:false + reason.
+                errMsg = reason;
+            } else if (status && hasData) {
+                json payload = result["data"];
+                time_t serverTime = 0;
+                if (payload.contains("rng") && payload["rng"].is_number()) {
+                    serverTime = (time_t) payload["rng"].get<long long>();
+                }
+                // Replay guard: the answer must be fresh. Allow the phone clock
+                // to run up to 10 minutes ahead of the server.
+                if (serverTime + 600 > time(nullptr)) {
+                    std::string auth = oxorany("PUBG");
+                    auth += "-";
+                    auth += user_key;
+                    auth += "-";
+                    auth += UUID;
+                    auth += "-";
+                    auth += oxorany(ANOY_STATIC_WORDS);
+                    g_Token = payload.contains("token") && payload["token"].is_string()
+                              ? payload["token"].get<std::string>() : std::string();
+                    g_Auth = CalcMD5(auth);
+                    xConnected = !g_Token.empty() && g_Token == g_Auth;
+                    xServerConnection = xConnected;
+                    memek = xConnected;
+                    if (xConnected) {
+                        auto str = [&payload](const char *k, const std::string &fallback) {
+                            return payload.contains(k) && payload[k].is_string()
+                                   ? payload[k].get<std::string>() : fallback;
+                        };
+                        exdate = str("EXP", str("exdate", "NULL"));
+                        g_ModStatus = str("mod_status", "Safe");
+                        g_Credit = str("credit", "");
                     } else {
-                        errMsg = "SERVER TIME OUT OF SYNC";
+                        errMsg = "INVALID TOKEN";
                     }
                 } else {
-                    errMsg = result.value("reason", std::string{"USER OR GAME NOT REGISTERED"});
+                    errMsg = "SERVER TIME OUT OF SYNC";
                 }
-            } catch (json::exception &e) {
-                errMsg = e.what();
+            } else if (httpCode < 200 || httpCode >= 300) {
+                char codeMsg[64];
+                snprintf(codeMsg, sizeof(codeMsg), "Panel returned HTTP %ld", httpCode);
+                errMsg = codeMsg;
+            } else {
+                errMsg = "USER OR GAME NOT REGISTERED";
             }
         }
-        curl_slist_free_all(headers);
     }
+
+    curl_slist_free_all(headers);
     curl_easy_cleanup(curl);
-    if (chunk.memory) free(chunk.memory);
-    return xConnected ? env->NewStringUTF(StrEnc("8q", "\x77\x3A", 2).c_str()) : env->NewStringUTF(errMsg.c_str());
+    free(chunk.memory);
+    return xConnected ? env->NewStringUTF(StrEnc("8q", "\x77\x3A", 2).c_str())
+                      : env->NewStringUTF(errMsg.c_str());
 }

@@ -18,7 +18,9 @@ android {
 
     lint {
         baseline = file('lint-baseline.xml')
+        // Real errors fail the build; warnings are reported in CI.
         abortOnError true
+        warningsAsErrors false
     }
 
     defaultConfig {
@@ -28,11 +30,12 @@ android {
         // behaviour; raising targetSdk breaks its hidden-API bypass.
         //noinspection OldTargetApi,EditedTargetSdkVersion,ExpiredTargetSdkVersion
         targetSdk 28
-        // 1.1.0: clean iOS-style light/dark UI, compact progress + dots.
-        // 1.0.1: 16 KB page-size support (Android 15+/17) + read-only
-        // System.load() so the injected library works on API 37 devices.
-        versionCode 4
-        versionName '1.1.0'
+        // 2.0.0: black iOS-style UI, text-only splash, mandatory library update
+        //        gate before sign in, licence-key login, verified downloads.
+        // 1.1.0: light/dark UI. 1.0.1: 16 KB page-size support (Android 15+/17)
+        //        + read-only System.load() for API 37 devices.
+        versionCode 5
+        versionName '2.0.0'
 
         vectorDrawables {
             useSupportLibrary true
@@ -60,6 +63,10 @@ android {
         }
     }
 
+    buildFeatures {
+        buildConfig true
+    }
+
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8
         targetCompatibility JavaVersion.VERSION_1_8
@@ -80,8 +87,5 @@ dependencies {
     // Already a transitive dependency; pinned so the compat insets API
     // (WindowInsetsControllerCompat / WindowCompat) is guaranteed.
     implementation 'androidx.core:core:1.13.1'
-    implementation 'androidx.core:core-splashscreen:1.0.1'
-    implementation 'androidx.dynamicanimation:dynamicanimation:1.0.0'
-    implementation 'com.google.android.material:material:1.11.0'
     implementation 'net.lingala.zip4j:zip4j:2.9.0'
 }

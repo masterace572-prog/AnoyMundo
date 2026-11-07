@@ -38,6 +38,7 @@ public final class LibManager {
     public static final String PREF_NAME = "com.xlox.download";
     public static final String PREF_VERSION_KEY = "version";
     public static final String PREF_LAST_NOTIFIED = "last_notified_version";
+    public static final String PREF_SHA_KEY = "sha256";
 
     public static final String LOADER_DIR_NAME = "loader";
     public static final String STAGING_DIR_NAME = "loader_staging";
@@ -79,6 +80,25 @@ public final class LibManager {
 
     public static String localVersion(Context context) {
         return prefs(context).getString(PREF_VERSION_KEY, "0.0");
+    }
+
+    public static String localSha(Context context) {
+        return prefs(context).getString(PREF_SHA_KEY, "");
+    }
+
+    /** Version label for the UI, or null when no usable library is installed. */
+    public static String installedVersion(Context context) {
+        return isUsableLib(context) ? localVersion(context) : null;
+    }
+
+    /** Persist the installed release only after the library is verified usable. */
+    @android.annotation.SuppressLint("ApplySharedPref") // called off the main thread
+    public static void saveInstalled(Context context, String version, String sha256) {
+        prefs(context).edit()
+                .putString(PREF_VERSION_KEY, version)
+                .putString(PREF_SHA_KEY, sha256 == null ? "" : sha256)
+                .putString(PREF_LAST_NOTIFIED, version)
+                .commit();
     }
 
     /** True only when the library is present, readable and a real ELF binary. */
@@ -206,6 +226,11 @@ public final class LibManager {
             int read;
             while ((read = in.read(buffer)) != -1) out.write(buffer, 0, read);
             out.flush();
+            try {
+                ((FileOutputStream) out).getFD().sync();
+            } catch (IOException ignored) {
+                // Best effort durability before the rename.
+            }
             closeQuietly(out);
             out = null;
             if (target.exists() && !target.delete()) {

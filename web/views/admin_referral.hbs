@@ -1,121 +1,51 @@
-
-
-
-
-<div class="container-fluid px-4 py-6">
-    <!-- Message Status -->
-    <div class="mb-6">
-        {{> msgStatus}}
-    </div>
-    
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <!-- Generate Referral Card -->
-        <div class="ui-card rounded-2xl p-6 sm:p-8 animate-fade-in-up">
-            <div class="flex items-center mb-6">
-                <div class="ui-icon w-12 h-12 rounded-xl flex items-center justify-center mr-4">
-                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-                    </svg>
-                </div>
-                <h2 class="text-2xl font-bold text-gray-800">Generate {{title}}</h2>
-            </div>
-            
-            <form method="post" action="" class="space-y-6">
-                <!-- Saldo -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Set Saldo</label>
-                    <div class="relative field-prefix">
-                        <div class="field-prefix__icon" aria-hidden="true">
-                            <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                            </svg>
-                        </div>
-                        <input type="number" name="set_saldo" value="5" min="1" max="99999" class="w-full pr-4 py-3 bg-white/50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all">
-                    </div>
-                    {{#if errors.set_saldo}}
-                        <small class="text-red-500 text-xs mt-1">{{errors.set_saldo}}</small>
-                    {{/if}}
-                </div>
-                
-                <!-- Account Expiration -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Account Expiration</label>
-                    {{{selects.accExpire}}}
-                    {{#if errors.accExpire}}
-                        <small class="text-red-500 text-xs mt-1">{{errors.accExpire}}</small>
-                    {{/if}}
-                </div>
-                
-                <!-- Account Level -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Account Level</label>
-                    {{{selects.accLevel}}}
-                    {{#if errors.accLevel}}
-                        <small class="text-red-500 text-xs mt-1">{{errors.accLevel}}</small>
-                    {{/if}}
-                </div>
-                
-                <!-- Submit Button -->
-                <button type="submit" class="w-full py-3 px-6 text-white font-bold rounded-xl transition-all duration-300 shadow-lg ui-btn ui-btn--primary">
-                    Create Referral Code
-                </button>
-            </form>
-        </div>
-        
-        <!-- History Table -->
-        <div class="lg:col-span-2 ui-card rounded-2xl p-6 sm:p-8 animate-fade-in-up" style="animation-delay: 0.1s">
-            <div class="flex items-center mb-6">
-                <div class="ui-icon ui-icon w-12 h-12 rounded-xl flex items-center justify-center mr-4">
-                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                    </svg>
-                </div>
-                <h2 class="text-2xl font-bold text-gray-800">History Generate - Total {{totalCodes}}</h2>
-            </div>
-            
-            {{#if codes}}
-                <div class="overflow-x-auto">
-                    <table class="w-full">
-                        <thead>
-                            <tr class="border-b-2 border-gray-200">
-                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">ID</th>
-                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Referral</th>
-                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Hashed</th>
-                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Saldo</th>
-                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Level</th>
-                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Expiration</th>
-                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Used by</th>
-                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Create by</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {{#each codes}}
-                                <tr class="border-b border-gray-100 hover:bg-gray-50 transition-colors">
-                                    <td class="px-4 py-3 text-sm text-gray-700 cell-mono">{{this.id_reff}}</td>
-                                    <td class="px-4 py-3">
-                                        <span class="status-pill">
-                                            {{this.referral}}
-                                        </span>
-                                    </td>
-                                    <td class="px-4 py-3 text-sm text-gray-500 font-mono">{{this.codeShort}}</td>
-                                    <td class="px-4 py-3">
-                                        <span class="status-pill cell-mono">
-                                            ₹{{this.set_saldo}}
-                                        </span>
-                                    </td>
-                                    <td class="px-4 py-3 text-sm text-gray-700">{{this.level}}</td>
-                                    <td class="px-4 py-3 text-sm text-gray-700">{{this.acc_expiration}}</td>
-                                    <td class="px-4 py-3 text-sm text-gray-700">{{this.used_by}}</td>
-                                    <td class="px-4 py-3 text-sm text-gray-700">{{this.created_by}}</td>
-                                </tr>
-                            {{/each}}
-                        </tbody>
-                    </table>
-                </div>
-            {{else}}
-                <p class="text-center text-gray-500 py-8">No referral codes generated yet</p>
-            {{/if}}
-        </div>
+<div class="page-head">
+    <div>
+        <h1 class="page-title">Referral codes</h1>
+        <p class="page-sub">A code lets one person create a panel account.</p>
     </div>
 </div>
 
+{{> msgStatus}}
+
+<div class="grid-2">
+<form method="post" action="/admin/create-referral" class="form" novalidate data-busy-form>
+    <div class="field {{#if errors.accLevel}}invalid{{/if}}">
+        <label class="label" for="accLevel">Role</label>
+        {{{selects.accLevel}}}
+        {{#if errors.accLevel}}<div class="error">{{errors.accLevel}}</div>{{/if}}
+    </div>
+    <div class="field {{#if errors.accExpire}}invalid{{/if}}">
+        <label class="label" for="accExpire">Account lasts</label>
+        {{{selects.accExpire}}}
+        {{#if errors.accExpire}}<div class="error">{{errors.accExpire}}</div>{{/if}}
+    </div>
+    <div class="field {{#if errors.set_saldo}}invalid{{/if}}">
+        <label class="label" for="set_saldo">Starting balance (₹)</label>
+        <input type="number" class="input" name="set_saldo" id="set_saldo" min="0" max="99999" step="1" inputmode="numeric" required value="{{#if old.set_saldo}}{{old.set_saldo}}{{else}}0{{/if}}">
+        {{#if errors.set_saldo}}<div class="error">{{errors.set_saldo}}</div>{{else}}<div class="hint">{{#if unlimited}}Taken from your unlimited balance.{{else}}Taken from your balance (₹{{user.saldoLabel}}).{{/if}}</div>{{/if}}
+    </div>
+    <button type="submit" class="btn btn-primary btn-block" data-busy-label="Creating…">Create code</button>
+</form>
+
+<section class="section" style="border-top:0;padding-top:0">
+    <h2 class="section-title">Recent codes</h2>
+    <p class="section-sub">{{totalCodes}} in total</p>
+    <div class="table-wrap">
+        <table class="responsive">
+            <thead><tr><th>Code</th><th>Role</th><th>Balance</th><th>Used by</th></tr></thead>
+            <tbody>
+                {{#each codes}}
+                <tr>
+                    <td class="key" data-label="Code">{{this.referral}}</td>
+                    <td data-label="Role">{{this.levelName}}</td>
+                    <td data-label="Balance">{{this.saldoLabel}}</td>
+                    <td data-label="Used by">{{#if this.used_by}}{{this.used_by}}{{else}}<span class="status unused">Available</span>{{/if}}</td>
+                </tr>
+                {{else}}
+                <tr class="is-empty"><td colspan="4">No codes yet.</td></tr>
+                {{/each}}
+            </tbody>
+        </table>
+    </div>
+</section>
+</div>

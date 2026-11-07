@@ -26,7 +26,7 @@ export const config = {
   // The single Owner account. owner-only routes are bound to this username as
   // well as level 1, so a stray level-1 row can never reach the owner panel.
   // The database enforces the same rule with a unique partial index.
-  ownerUsername: 'admin',
+  ownerUsername: String(env.OWNER_USERNAME || 'Anoy').trim(),
   telegramHandle: String(env.TELEGRAM_USERNAME || 'libAkAudioVisiual').replace(/^@/, ''),
   baseUrl: env.PUBLIC_BASE_URL || '',
   maxUploadMb: Number(env.MAX_LIB_UPLOAD_MB || 3),
@@ -34,17 +34,23 @@ export const config = {
   rememberHours: 24,
   passwordSalt: 'XquxmymXDtWRA66D',
   license: 'Qp5KSGTquetnUkjX6UVBAURH8hTkZuLM',
-  version: '1.0.0',
+  version: '2.0.0',
   games: { PUBG: 'PUBG Mobile' },
   durations: {
-    2: '2 Hours — ₹10/Device',
-    5: '5 Hours — ₹20/Device',
-    24: '1 Days — ₹80/Device',
-    72: '3 Days — ₹150/Device',
-    168: '7 Days — ₹250/Device',
-    336: '14 Days — ₹350/Device',
-    720: '30 Days — ₹500/Device',
+    2: '2 hours',
+    5: '5 hours',
+    24: '1 day',
+    72: '3 days',
+    168: '7 days',
+    336: '14 days',
+    720: '30 days',
   },
+  // Short duration token used inside every licence key: USER-7D-AB12C.
+  durationTokens: { 2: '2H', 5: '5H', 24: '1D', 72: '3D', 168: '7D', 336: '14D', 720: '30D' },
+  // Random part of a generated key (A-Z, 0-9). Custom suffixes may be longer.
+  keySuffixLength: 5,
+  customSuffixMin: 4,
+  customSuffixMax: 6,
   prices: { 2: 10, 5: 20, 24: 80, 72: 150, 168: 250, 336: 350, 720: 500 },
   accExpire: { 1: '1 Day', 7: '7 Days', 15: '15 Days', 30: '30 Days', 60: '60 Days' },
   accLevel: { 1: 'Owner', 2: 'Admin', 3: 'Reseller' },

@@ -1,104 +1,127 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- All authored UI copy. Sentence case, plain and direct. No emojis, no exclamation marks. -->
+<!-- All user-facing copy. Sentence case, plain and direct. -->
 <resources>
     <string name="app_name">Anoy</string>
+    <string name="splash_caption">Loader</string>
+    <string name="telegram_url">https://t.me/libAkAudioVisiual</string>
+    <string name="version_footer">App %1$s · Library %2$s</string>
+    <string name="version_footer_app">Version %1$s</string>
+    <string name="not_installed_short">not installed</string>
+    <string name="dash">—</string>
+
+    <!-- Update gate -->
+    <string name="update_checking_title">Checking for updates</string>
+    <string name="update_checking_message">Making sure you have the latest library.</string>
+    <string name="update_required_title">Update required</string>
+    <string name="update_required_message">Library %1$s is available. You have %2$s. Update to continue.</string>
+    <string name="update_required_message_missing">Library %1$s is required to continue.</string>
+    <string name="update_size">Download size %1$s</string>
+    <string name="update_now">Update now</string>
+    <string name="update_downloading_title">Updating</string>
+    <string name="update_downloading_message">Keep the app open until the update finishes.</string>
+    <string name="update_progress">%1$d%% · %2$s of %3$s</string>
+    <string name="update_progress_unknown">%1$s downloaded</string>
+    <string name="update_installing_title">Installing</string>
+    <string name="update_installing_message">Verifying and installing the library.</string>
+    <string name="update_failed_title">Update failed</string>
+    <string name="update_check_failed_title">Can\'t check for updates</string>
+    <string name="update_done_title">You\'re up to date</string>
+    <string name="update_done_message">Library %1$s</string>
+    <string name="try_again">Try again</string>
 
     <!-- Login -->
-    <string name="welcome_heading">Welcome back</string>
-    <string name="welcome_subtitle">Enter your access key to continue</string>
-    <string name="access_key_label">ACCESS KEY</string>
-    <string name="access_key_hint">Enter your key</string>
+    <string name="login_title">Sign in</string>
+    <string name="login_subtitle">Enter the licence key you received to continue.</string>
+    <string name="licence_key">Licence key</string>
+    <string name="licence_key_hint">ANOY-7D-XXXXX</string>
+    <string name="show">Show</string>
+    <string name="hide">Hide</string>
+    <string name="paste">Paste</string>
+    <string name="show_key_description">Show licence key</string>
+    <string name="hide_key_description">Hide licence key</string>
     <string name="sign_in">Sign in</string>
-    <string name="paste_key">Paste from clipboard</string>
-    <string name="enter_your_key">Enter your access key</string>
-    <string name="need_key">Need a key?</string>
-    <string name="get_a_key">Get a key</string>
-    <string name="telegram_handle">\@libAkAudioVisiual</string>
-    <string name="telegram_url">https://t.me/libAkAudioVisiual</string>
-    <string name="show_key">Show key</string>
-    <string name="hide_key">Hide key</string>
-    <string name="loader_library_missing">Loader library missing. Reinstall the app.</string>
-    <string name="clipboard_empty">Nothing to paste</string>
+    <string name="signing_in">Signing in</string>
+    <string name="need_key">Need a licence key?</string>
+    <string name="get_key">Get one on Telegram</string>
+    <string name="clipboard_empty">Clipboard has no licence key.</string>
+    <string name="error_key_empty">Enter your licence key.</string>
+    <string name="error_key_format">Licence keys use letters, numbers and dashes, like ANOY-7D-AB3DE.</string>
+    <string name="error_vpn">Turn off your VPN, then try again.</string>
+    <string name="error_native_missing">This app build is damaged. Reinstall the latest version.</string>
+    <string name="error_key_unknown">This licence key doesn\'t exist. Check it and try again.</string>
+    <string name="error_key_blocked">This licence key has been blocked.</string>
+    <string name="error_key_expired">This licence key has expired.</string>
+    <string name="error_key_devices">This licence key is already used on the maximum number of devices.</string>
+    <string name="error_clock">Your phone\'s date and time look wrong. Turn on automatic date and time, then try again.</string>
+    <string name="error_token">Verification failed. Update the app and try again.</string>
+    <string name="error_server_busy">The server is busy. Try again in a moment.</string>
+    <string name="error_bad_response">Unexpected response from the server. Try again.</string>
+    <string name="error_sign_in_generic">Couldn\'t sign in. Try again.</string>
 
-    <!-- Shared chrome -->
-    <string name="theme_toggle">Switch appearance</string>
-    <string name="switch_to_dark">Use dark appearance</string>
-    <string name="switch_to_light">Use light appearance</string>
-    <string name="back">Back</string>
-    <string name="close">Close</string>
-    <string name="dismiss">Dismiss</string>
-    <string name="content_description_mark">Anoy</string>
-    <string name="version_x">v%1$s</string>
+    <!-- Network -->
+    <string name="net_offline">You\'re offline. Connect to Wi-Fi or mobile data and try again.</string>
+    <string name="net_no_host">Can\'t reach the server. Check your internet connection and try again.</string>
+    <string name="net_timeout">The connection timed out. Check your network and try again.</string>
+    <string name="net_refused">The server can\'t be reached right now. Try again in a moment.</string>
+    <string name="net_ssl">Secure connection failed. Make sure your date and time are correct.</string>
+    <string name="net_interrupted">The download was interrupted. Try again.</string>
+    <string name="net_generic">Network error. Try again.</string>
+    <string name="net_http">The server returned an error (HTTP %1$d). Try again in a moment.</string>
+    <string name="update_unavailable">The update service is temporarily unavailable. Try again in a moment.</string>
+    <string name="update_no_release">No library has been published yet. Try again later.</string>
+    <string name="update_corrupt">The downloaded file was damaged. Try again.</string>
+    <string name="update_invalid_file">The server sent a file that isn\'t a valid library package.</string>
+    <string name="update_no_library">The library package doesn\'t contain a usable library.</string>
+    <string name="update_install_failed">Couldn\'t install the library. Free some storage and try again.</string>
+    <string name="update_no_space">Not enough free storage. Free at least %1$s and try again.</string>
 
-    <!-- Home / telemetry -->
-    <string name="time_left">TIME LEFT</string>
-    <string name="device">DEVICE</string>
-    <string name="status">STATUS</string>
+    <!-- Home -->
+    <string name="home_title">Anoy</string>
+    <string name="sign_out">Sign out</string>
+    <string name="section_licence">Licence</string>
+    <string name="section_game">Game</string>
+    <string name="section_device">Device</string>
+    <string name="row_status">Status</string>
+    <string name="row_expires">Expires</string>
+    <string name="row_time_left">Time left</string>
+    <string name="row_game">Game</string>
+    <string name="row_state">State</string>
+    <string name="row_library">Library</string>
+    <string name="row_server">Server</string>
+    <string name="row_model">Model</string>
+    <string name="row_android">Android</string>
+    <string name="game_name">BGMI</string>
     <string name="active">Active</string>
     <string name="expired">Expired</string>
-    <string name="expires">Expires</string>
-    <string name="ready">Ready</string>
-    <string name="not_installed">Not installed</string>
-    <string name="not_available">Not available</string>
-    <string name="not_available_short">—</string>
+    <string name="time_left_value">%1$dd %2$02dh %3$02dm %4$02ds</string>
+    <string name="time_left_value_short">%1$02dh %2$02dm %3$02ds</string>
+    <string name="state_ready">Ready</string>
+    <string name="state_not_installed">Not installed</string>
+    <string name="state_running">Running</string>
     <string name="launch">Launch</string>
-    <string name="install">Install</string>
+    <string name="install_game">Install BGMI</string>
     <string name="stop">Stop</string>
-    <string name="update">Update</string>
-    <string name="running">Running</string>
-    <string name="updating">Updating</string>
-    <string name="copying">Copying</string>
-    <string name="downloading">Downloading</string>
+    <string name="sign_in_again">Sign in again</string>
+    <string name="help">Help on Telegram</string>
+    <string name="preparing">Preparing game files</string>
+    <string name="preparing_progress">Preparing game files · %1$d%%</string>
     <string name="launching">Launching</string>
-    <string name="clear_data">Clear data</string>
-    <string name="apply_obb">Apply OBB</string>
-    <string name="percent">%1$d%%</string>
-    <string name="time_remaining">%1$dd %2$dh %3$dm</string>
-    <string name="days">DAYS</string>
-    <string name="hours">HRS</string>
-    <string name="minutes">MIN</string>
-    <string name="seconds">SEC</string>
-    <string name="android_device">Android device</string>
-    <string name="game_name">BGMI</string>
+    <string name="game_stopped">Game stopped.</string>
+    <string name="licence_expired_message">Your licence has expired. Sign in with a new key.</string>
+    <string name="error_activation">The game container isn\'t ready. Restart the app and try again.</string>
+    <string name="error_launch">Couldn\'t launch the game. Try again.</string>
+    <string name="error_stop">Couldn\'t stop the game.</string>
+    <string name="error_store">Couldn\'t open the Play Store.</string>
+    <string name="error_obb_missing">Game files not found. Open BGMI once from the Play Store to download them.</string>
+    <string name="error_obb_copy">Couldn\'t prepare game files: %1$s</string>
+    <string name="error_library">Library problem: %1$s</string>
+    <string name="error_link">No app can open this link.</string>
+    <string name="android_version">%1$s (API %2$d)</string>
 
-    <!-- States / errors -->
-    <string name="state_loading">Working</string>
-    <string name="library_missing">Library missing</string>
-    <string name="library_incompatible">Library incompatible</string>
-    <string name="launch_failed">Launch failed</string>
-    <string name="could_not_stop">Could not stop the game</string>
-    <string name="copy_failed">Copy failed</string>
-    <string name="loader_download_unavailable">Loader download unavailable</string>
-    <string name="diagnostic_detail">%1$s</string>
-    <string name="vpn_detected_title">VPN detected</string>
-    <string name="vpn_detected_message">Turn off your VPN to continue.</string>
-
-    <!-- OBB copy (AppManager) -->
-    <string name="dialog_success">Success</string>
-    <string name="dialog_error">Error</string>
-    <string name="app_installed">App installed.</string>
-    <string name="obb_ready">OBB ready.</string>
-    <string name="sandbox_install_failed">Sandbox install failed</string>
-    <string name="package_not_found">Package not found</string>
-    <string name="obb_folder_not_found">OBB folder not found</string>
-    <string name="main_obb_not_found">Main BGMI OBB file not found</string>
-
-    <!-- Panel download diagnostics (Downtwo) -->
-    <string name="invalid_download_url">Invalid download URL provided</string>
-    <string name="version_endpoint_unreachable">Cannot reach the panel version endpoint</string>
-    <string name="background_error">Background error: %1$s</string>
-    <string name="version_check_failed">Version check failed: %1$s</string>
-    <string name="no_loader_release">No loader release uploaded in the panel yet</string>
-    <string name="download_http_failed">Loader download failed with HTTP %1$d</string>
-    <string name="invalid_loader_zip">Panel did not return a valid loader ZIP. Received size: %1$d</string>
-    <string name="staging_failed">Cannot create staging directory</string>
-    <string name="no_elf_in_zip">Loader ZIP has no libbgmi.so or lib.so ELF library</string>
-    <string name="install_lib_failed">Could not install the loader library</string>
-    <string name="lib_not_usable">Installed loader library is not usable</string>
-    <string name="download_failed">Loader download failed: %1$s</string>
-
-    <!-- WebView -->
-    <string name="facebook">Facebook</string>
-    <string name="facebook_login_url">https://www.facebook.com/login</string>
-    <string name="page_loading">Loading page</string>
+    <!-- AppManager -->
+    <string name="sandbox_install_failed">Couldn\'t install the game into the container.</string>
+    <string name="package_not_found">BGMI is not installed.</string>
+    <string name="obb_folder_not_found">Game files folder not found.</string>
+    <string name="main_obb_not_found">Main game file not found.</string>
+    <string name="storage_permission_needed">Allow storage access so game files can be prepared.</string>
 </resources>

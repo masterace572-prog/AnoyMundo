@@ -27,8 +27,8 @@ async function connect(req, res, body) {
   if (!game || !serial || !userKey) {
     return sendJson(res, { status: false, reason: 'INVALID PARAMETER' });
   }
-  if (!/^[A-Za-z0-9_-]+$/.test(game) || !/^[A-Za-z0-9_-]+$/.test(serial) ||
-      userKey.length < 1 || userKey.length > 36) {
+  if (!/^[A-Za-z0-9_-]{1,32}$/.test(game) || !/^[A-Za-z0-9_-]{1,128}$/.test(serial) ||
+      !/^[A-Za-z0-9_-]{1,64}$/.test(userKey)) {
     return sendJson(res, { status: false, reason: 'Bad Parameter' });
   }
 
@@ -63,6 +63,8 @@ async function connect(req, res, body) {
       .eq('id_keys', key.id_keys);
   }
 
+  // The token is derived from the key exactly as the loader sent it, so the
+  // loader's own md5 check matches even for a legacy mixed-case spelling.
   const real = `${game}-${userKey}-${serial}-${config.staticWords}`;
   const feature = settings.feature || {};
   const expiryText = expiry.toISOString();
@@ -178,11 +180,48 @@ export async function handleHealth(res, deep = false) {
 /** Plain-text version string read by the Android loader (Downtwo.java). */
 export async function handleLibVersion(res) {
   try {
-    const { data } = await db().from('client_release').select('version').eq('is_current', true).maybeSingle();
+    const { data, error } = await db().from('client_release').select('version').eq('is_current', true).maybeSingle();
+    if (error) throw new Error(error.message);
     const value = data?.version || process.env.FALLBACK_LIB_VERSION || '1.0';
     return sendText(res, `${value}\n`);
-  } catch {
-    return sendText(res, `${process.env.FALLBACK_LIB_VERSION || '1.0'}\n`);
+  } catch (e) {
+    // Never invent a version on a database error: a made-up number would
+    // force every loader into a pointless (and failing) update.
+    console.error('[anoymundo] /api/lib/version failed:', e);
+    return sendText(res, 'unavailable\n', 503);
+  }
+}
+
+/**
+ * JSON description of the current loader library, read by the app's
+ * mandatory update check before sign-in:
+ *   { ok, version, available, size, sha256, source, notes, updated_at }
+ * `available` is false when nothing downloadable has been published yet.
+ */
+export async function handleLibManifest(res) {
+  try {
+    const { data, error } = await db().from('client_release')
+      .select('version,file_name,file_size,sha256,external_url,notes,created_at')
+      .eq('is_current', true).maybeSingle();
+    if (error) throw new Error(error.message);
+    // An uploaded file always stores its size and sha256; a pushed link clears
+    // both. Reading those avoids transferring the file itself.
+    const hasFile = !!(data && Number(data.file_size) > 0 && data.sha256);
+    const hasLink = !!(data && data.external_url);
+    return sendJson(res, {
+      ok: true,
+      version: data?.version || process.env.FALLBACK_LIB_VERSION || '1.0',
+      available: hasFile || hasLink,
+      size: hasFile ? Number(data.file_size || 0) : 0,
+      sha256: hasFile ? String(data.sha256 || '') : '',
+      source: hasFile ? 'file' : hasLink ? 'link' : 'none',
+      file_name: data?.file_name || '',
+      notes: data?.notes || '',
+      updated_at: data?.created_at || null,
+    });
+  } catch (e) {
+    console.error('[anoymundo] /api/lib/manifest failed:', e);
+    return sendJson(res, { ok: false, error: 'Update service temporarily unavailable.' }, 503);
   }
 }
 
@@ -190,13 +229,14 @@ export async function handleLibVersion(res) {
 export async function handleLibDownload(req, res) {
   try {
     const { data, error } = await db().from('client_release')
-      .select('file_name,content_base64,external_url,file_size,sha256')
+      .select('version,file_name,content_base64,external_url,file_size,sha256')
       .eq('is_current', true).maybeSingle();
     if (error) throw new Error(error.message);
     if (!data) return sendText(res, 'No release has been uploaded yet.', 404);
     // A stored file always wins. Only a release published as a pure link (the
     // /lib "Push a link" action clears content_base64) redirects, so an old
     // external URL can never shadow a freshly uploaded file.
+    res.setHeader('X-Release-Version', String(data.version || ''));
     if (!data.content_base64 && data.external_url) {
       res.statusCode = 302;
       res.setHeader('Location', data.external_url);
@@ -209,10 +249,14 @@ export async function handleLibDownload(req, res) {
     res.setHeader('Content-Type', 'application/zip');
     res.setHeader('Content-Disposition', `attachment; filename="${String(data.file_name || 'release.zip').replace(/["\r\n]/g, '')}"`);
     res.setHeader('Content-Length', buffer.length);
-    res.setHeader('Cache-Control', 'public, max-age=0, must-revalidate');
+    res.setHeader('Cache-Control', 'no-store');
+    // Lets the loader verify the file arrived complete and unmodified.
+    if (data.sha256) res.setHeader('X-Content-SHA256', String(data.sha256));
+    if (String(req.method || 'GET').toUpperCase() === 'HEAD') return res.end();
     return res.end(buffer);
   } catch (e) {
-    return sendText(res, `Download error: ${e.message}`, 500);
+    console.error('[anoymundo] /api/lib/download failed:', e);
+    return sendText(res, 'Download temporarily unavailable. Please try again.', 503);
   }
 }
 

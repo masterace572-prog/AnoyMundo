@@ -1,20 +1,18 @@
-<div class="container-fluid px-4 py-6">
-    <div class="mb-6">
-        {{> msgStatus}}
-    </div>
+<div class="docs">
+    {{> msgStatus}}
 
-    <div class="ui-card rounded-2xl p-6 sm:p-8 mb-6">
-        <h1 class="text-2xl font-bold text-gray-800 mb-2">API docs — key management</h1>
-        <p class="doc-section" style="margin-bottom:0">Use a <strong>personal API key</strong> to create, list, read, update,
+    <div class="section">
+        <h1 class="page-title" style="margin-bottom:12px">API docs — key management</h1>
+        <p class="muted">Use a <strong>personal API key</strong> to create, list, read, update,
         reset and delete <strong>licence keys</strong> from your own website or Telegram bot.
         Creating a key through the API charges your saldo exactly like the panel does.</p>
         <p class="doc-note" style="margin-top:14px">This API is <strong>only for keys</strong>. It cannot change the mod name,
         status text, floating text, features, maintenance mode or any other server setting.
         For the loader / mod side, see <a href="/docs">Integration docs</a>.</p>
-        <p style="margin-top:14px"><a href="/api-keys" class="ui-btn">Create / manage my API keys</a></p>
+        <p style="margin-top:14px"><a href="/api-keys" class="btn btn-primary">Create / manage my API keys</a></p>
     </div>
 
-    <div class="ui-card rounded-2xl p-6 sm:p-8 mb-6">
+    <div class="section">
         <div class="doc-section">
             <h2>1. Get an API key</h2>
             <p>Log in to the panel, open <a href="/api-keys">API keys</a>, give the key a name (for example
@@ -45,11 +43,11 @@ Content-Type: application/json</code></pre>
         </div>
     </div>
 
-    <div class="ui-card rounded-2xl p-6 sm:p-8 mb-6">
+    <div class="section">
         <div class="doc-section">
             <h2>4. Endpoints</h2>
             <div class="table-scroll">
-                <table>
+                <table class="responsive">
                     <thead><tr><th>Method</th><th>Path</th><th>What it does</th></tr></thead>
                     <tbody>
                         <tr><td>GET</td><td><span class="doc-inline">/api/v1</span></td><td>Endpoint index + your API key name</td></tr>
@@ -78,12 +76,16 @@ Content-Type: application/json</code></pre>
             <p>Body fields: <span class="doc-inline">game</span> (default <span class="doc-inline">PUBG</span>),
             <span class="doc-inline">duration</span> (hours: 2, 5, 24, 72, 168, 336, 720),
             <span class="doc-inline">max_devices</span> (1–100), optional <span class="doc-inline">count</span> (1–100)
-            and optional <span class="doc-inline">custom_key</span> (4–19 chars, letters/digits/<span class="doc-inline">_</span>/<span class="doc-inline">-</span>).</p>
+            and optional <span class="doc-inline">custom_key</span> (4–6 letters or digits; replaces the random ending, so
+            <span class="doc-inline">count</span> must be 1).</p>
+            <p>Every key looks like <span class="doc-inline">USERNAME-DURATION-RANDOM</span>, always upper case:
+            <span class="doc-inline">ANOY-7D-GKFHJ</span>. Durations are written as <span class="doc-inline">2H 5H 1D 3D 7D 14D 30D</span>.
+            The Owner account has an unlimited balance and is never charged.</p>
             <pre class="doc-code"><code>{
   "ok": true,
   "keys": [
     {
-      "id": 3, "user_key": "admin-24-aB3dE", "game": "PUBG",
+      "id": 3, "user_key": "ANOY-1D-AB3DE", "game": "PUBG",
       "duration": 24, "max_devices": 1, "status": 1,
       "devices": [], "device_count": 0, "expired_date": null,
       "created_at": "2026-11-05T10:30:00.000Z", "updated_at": "2026-11-05T10:30:00.000Z"
@@ -104,19 +106,19 @@ Content-Type: application/json</code></pre>
 curl -sS {{apiBase}}/api/v1/keys -H 'X-API-Key: amk_YOUR_TOKEN_HERE'
 
 # read one
-curl -sS {{apiBase}}/api/v1/keys/admin-24-aB3dE -H 'X-API-Key: amk_YOUR_TOKEN_HERE'
+curl -sS {{apiBase}}/api/v1/keys/ANOY-1D-AB3DE -H 'X-API-Key: amk_YOUR_TOKEN_HERE'
 
 # update (POST or PATCH)
-curl -sS -X PATCH {{apiBase}}/api/v1/keys/admin-24-aB3dE \
+curl -sS -X PATCH {{apiBase}}/api/v1/keys/ANOY-1D-AB3DE \
   -H 'X-API-Key: amk_YOUR_TOKEN_HERE' -H 'Content-Type: application/json' \
   -d '{"max_devices":3,"status":1}'
 
 # clear bound devices
-curl -sS -X POST {{apiBase}}/api/v1/keys/admin-24-aB3dE/reset \
+curl -sS -X POST {{apiBase}}/api/v1/keys/ANOY-1D-AB3DE/reset \
   -H 'X-API-Key: amk_YOUR_TOKEN_HERE'
 
 # delete
-curl -sS -X DELETE {{apiBase}}/api/v1/keys/admin-24-aB3dE \
+curl -sS -X DELETE {{apiBase}}/api/v1/keys/ANOY-1D-AB3DE \
   -H 'X-API-Key: amk_YOUR_TOKEN_HERE'</code></pre>
         </div>
 
@@ -145,7 +147,7 @@ console.log(made.keys[0].user_key, "charged", made.price);</code></pre>
         <div class="doc-section">
             <h2>8. Error codes</h2>
             <div class="table-scroll">
-                <table>
+                <table class="responsive">
                     <thead><tr><th>HTTP</th><th>code</th><th>Meaning</th></tr></thead>
                     <tbody>
                         <tr><td>401</td><td><span class="doc-inline">missing_api_key</span>, <span class="doc-inline">invalid_api_key</span></td><td>No key, or revoked/unknown key</td></tr>

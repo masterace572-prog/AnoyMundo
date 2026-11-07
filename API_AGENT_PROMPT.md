@@ -46,22 +46,22 @@ invent endpoints — use exactly the ones below.
 ### GET /api/v1/me
 ```json
 { "ok": true,
-  "account": { "username": "admin", "fullname": "admin", "level": 1, "saldo": 2147384644, "currency": "INR", "status": 1 },
+  "account": { "username": "reseller1", "fullname": "Reseller One", "level": 3, "saldo": 5000, "currency": "INR", "status": 1 },
   "api_key": { "id": 7, "name": "my-site", "prefix": "amk_Xy12AbCd", "last4": "pQ9z", "status": 1, "created_at": "...", "last_used_at": "..." } }
 ```
 
 ### GET /api/v1/pricing
 ```json
-{ "ok": true, "currency": "INR", "rule": "price = price_per_device_for_duration × max_devices",
+{ "ok": true, "currency": "INR", "rule": "price = price_per_device_for_duration × max_devices × count",
   "games": ["PUBG"],
   "durations": [
-    { "duration": 2, "hours": 2, "label": "2 Hours — ₹10/Device", "price_per_device": 10 },
-    { "duration": 5, "hours": 5, "label": "5 Hours — ₹20/Device", "price_per_device": 20 },
-    { "duration": 24, "hours": 24, "label": "1 Days — ₹80/Device", "price_per_device": 80 },
-    { "duration": 72, "hours": 72, "label": "3 Days — ₹150/Device", "price_per_device": 150 },
-    { "duration": 168, "hours": 168, "label": "7 Days — ₹250/Device", "price_per_device": 250 },
-    { "duration": 336, "hours": 336, "label": "14 Days — ₹350/Device", "price_per_device": 350 },
-    { "duration": 720, "hours": 720, "label": "30 Days — ₹500/Device", "price_per_device": 500 }
+    { "duration": 2, "hours": 2, "label": "2 hours", "price_per_device": 10 },
+    { "duration": 5, "hours": 5, "label": "5 hours", "price_per_device": 20 },
+    { "duration": 24, "hours": 24, "label": "1 day", "price_per_device": 80 },
+    { "duration": 72, "hours": 72, "label": "3 days", "price_per_device": 150 },
+    { "duration": 168, "hours": 168, "label": "7 days", "price_per_device": 250 },
+    { "duration": 336, "hours": 336, "label": "14 days", "price_per_device": 350 },
+    { "duration": 720, "hours": 720, "label": "30 days", "price_per_device": 500 }
   ] }
 ```
 Use this to populate the duration dropdown and to compute the price preview.
@@ -70,7 +70,7 @@ Use this to populate the duration dropdown and to compute the price preview.
 Optional query params: `limit` (1–200, default 50), `offset` (default 0),
 `game`, `status` (`1` active, `2` blocked, `3` expired).
 ```json
-{ "ok": true, "keys": [ { "id": 1, "user_key": "admin-2-lyK0Y", "game": "PUBG",
+{ "ok": true, "keys": [ { "id": 1, "user_key": "ANOY-2H-LYK0Y", "game": "PUBG",
   "duration": 2, "max_devices": 1, "status": 1, "devices": [], "device_count": 0,
   "expired_date": null, "created_at": "...", "updated_at": "..." } ],
   "total": 1, "limit": 50, "offset": 0 }
@@ -82,7 +82,8 @@ Body (JSON):
 - `duration`: REQUIRED, one of `2, 5, 24, 72, 168, 336, 720` (hours)
 - `max_devices`: REQUIRED, integer 1–100
 - `count`: optional, 1–100, default `1`
-- `custom_key`: optional, 4–19 chars `[A-Za-z0-9_-]+`, only when `count` is 1
+- `custom_key`: optional custom ending, 4–6 chars `A-Z0-9` (upper-cased), creates exactly one key
+- `request_id`: optional idempotency id, 8–80 chars `[A-Za-z0-9_-]`
 
 Example request:
 ```
@@ -94,22 +95,21 @@ Content-Type: application/json
 ```
 Response `201`:
 ```json
-{ "ok": true, "keys": [ { "id": 3, "user_key": "admin-24-aB3dE", "game": "PUBG",
+{ "ok": true, "keys": [ { "id": 3, "user_key": "ANOY-1D-GKFHJ", "game": "PUBG",
   "duration": 24, "max_devices": 1, "status": 1, "devices": [], "device_count": 0,
   "expired_date": null, "created_at": "...", "updated_at": "..." } ],
-  "count": 1, "price": 80, "currency": "INR",
-  "saldo_before": 2147384644, "saldo_after": 2147384564, "charged": 80 }
+  "count": 1, "price": 80, "unit_price": 80, "currency": "INR",
+  "saldo_before": 5000, "saldo_after": 4920, "charged": 80 }
 ```
 
-**Saldo rules:** `price = price_per_device(duration) × max_devices`, charged
-ONCE per `POST /keys` request (the panel's original bulk-generation pricing —
-`count` creates that many keys for the same single fee; it does NOT multiply
-the price). The balance is debited atomically before keys are written; on a
-write failure it is refunded. `402 insufficient_balance` means nothing was
-created and the balance did not change. Deleting a key does NOT refund.
-List/read/update/reset
-are free. Generated keys look like `<username>-<duration>-<5 chars>` and
-`expired_date` stays `null` until the loader's first `/connect`.
+**Saldo rules:** `price = price_per_device(duration) × max_devices × count`.
+The debit and the key inserts happen in one database transaction, so a failure
+never charges without creating keys. `402 insufficient_balance` means nothing
+was created and the balance did not change. Owner accounts are never charged.
+Deleting a never-used key refunds what it cost. List/read/update/reset are
+free. Keys look like `<USERNAME>-<DURATION>-<RANDOM>` in upper case, e.g.
+`ANOY-7D-GKFHJ` (`DURATION` is `2H/5H/1D/3D/7D/14D/30D`, `RANDOM` 5 chars
+`A-Z0-9`), and `expired_date` stays `null` until the loader's first `/connect`.
 
 ### GET /api/v1/keys/{user_key}
 `{ "ok": true, "key": { ...same key object..., "devices": ["DEVICE123"], "device_count": 1 } }`
@@ -124,13 +124,13 @@ or array, sanitised to `[A-Za-z0-9_-]+`, capped at `max_devices`).
 
 ### POST /api/v1/keys/{user_key}/reset — clear devices
 ```json
-{ "ok": true, "reset": true, "user_key": "admin-24-aB3dE", "devices_cleared": 1,
+{ "ok": true, "reset": true, "user_key": "ANOY-1D-GKFHJ", "devices_cleared": 1,
   "key": { "devices": [], "device_count": 0, "...": "..." } }
 ```
 
 ### DELETE /api/v1/keys/{user_key}
 ```json
-{ "ok": true, "deleted": true, "user_key": "admin-24-aB3dE" }
+{ "ok": true, "deleted": true, "user_key": "ANOY-1D-GKFHJ" }
 ```
 
 ### Error codes
@@ -146,8 +146,7 @@ retry once. A `404 key_not_found` also means "not your key".
 1. A dashboard showing current **saldo** (from `/me`) and the API key name.
 2. A **Create key** form: game (from `/pricing`), duration (from `/pricing`),
    `max_devices`, `count`, optional `custom_key`, with a live **price preview**
-   computed as `price_per_device × max_devices` (one fee per request, not per
-   key). Confirm before submit, then show the returned `user_key` values with a
+   computed as `price_per_device × max_devices × count`. Confirm before submit, then show the returned `user_key` values with a
    copy button plus the charged amount and new balance.
 3. A **keys table** from `/keys`: user_key, game, duration, max_devices, status
    badge, device_count, expired_date, created_at. Support pagination

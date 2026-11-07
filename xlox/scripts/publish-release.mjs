@@ -3,7 +3,7 @@
  * Publish a loader ZIP (containing libbgmi.so) to the Anoy panel.
  *
  *   PANEL_BASE_URL=https://anoymundo-panel.vercel.app \
- *   PANEL_ADMIN_USERNAME=admin PANEL_ADMIN_PASSWORD=... \
+ *   PANEL_ADMIN_USERNAME=Anoy PANEL_ADMIN_PASSWORD=... \
  *   node scripts/publish-release.mjs ../dist/xlox-loader.zip 1.0.1
  *
  * The panel stores the ZIP in client_release.content_base64 and serves it at
@@ -15,7 +15,7 @@ import path from 'node:path';
 const base = (process.env.PANEL_BASE_URL || 'https://anoymundo-panel.vercel.app').replace(/\/$/, '');
 const zipPath = process.argv[2];
 const version = (process.argv[3] || '1.0').trim();
-const username = process.env.PANEL_ADMIN_USERNAME || 'admin';
+const username = process.env.PANEL_ADMIN_USERNAME || 'Anoy';
 const password = process.env.PANEL_ADMIN_PASSWORD;
 
 if (!zipPath) {

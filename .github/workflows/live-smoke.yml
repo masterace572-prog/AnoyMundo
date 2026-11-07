@@ -1,220 +1,43 @@
 name: Live deployment smoke test
 
-# Exercises the deployed Vercel functions against the real Supabase project.
-# GitHub Actions can reach the public deployment; the sandbox cannot.
+# Exercises the deployed Vercel panel against the real Supabase project.
+# Signed-in checks need the repository secret PANEL_OWNER_PASSWORD (Owner
+# account). Without it only the public checks run. Everything the test
+# creates is deleted again.
 on:
   workflow_dispatch:
+    inputs:
+      base:
+        description: 'Panel URL'
+        type: string
+        default: 'https://anoymundo-panel.vercel.app'
+      username:
+        description: 'Owner username used for the signed-in checks'
+        type: string
+        default: 'Anoy'
+      temp_password:
+        description: 'Optional password of a TEMPORARY test account (public repo: never enter a real password here)'
+        type: string
+        default: ''
   push:
-    branches: [arena/b2fac70f-anoymundo]
-    paths: ['.github/workflows/live-smoke.yml']
+    branches: [arena/2e95185a-anoymundo]
+    paths: ['.github/workflows/live-smoke.yml', 'web/scripts/live-smoke.mjs']
 
 jobs:
   smoke:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 8
     steps:
-      - name: End-to-end checks against Vercel
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: End-to-end checks against the live panel
+        working-directory: web
         env:
-          BASE: https://anoymundo-panel.vercel.app
+          BASE: ${{ inputs.base || 'https://anoymundo-panel.vercel.app' }}
+          OWNER_USERNAME: ${{ inputs.username || 'Anoy' }}
+          OWNER_PASSWORD: ${{ inputs.temp_password || secrets.PANEL_OWNER_PASSWORD }}
         run: |
-          set -euo pipefail
-          JAR=$(mktemp)
-          pass() { echo "PASS  $1"; }
-          fail() { echo "FAIL  $1"; exit 1; }
-
-          health=$(curl -sS --max-time 30 "$BASE/api/health")
-          echo "$health" | grep -q '"ok":true' && echo "$health" | grep -Fq '13/13 expected tables present' \
-            && pass "GET /api/health (Supabase + 13 tables)" || fail "health: $health"
-
-          home=$(curl -sS --max-time 30 "$BASE/")
-          echo "$home" | grep -q 'Sign In' && pass "GET / renders the login page" || fail "login page"
-          echo "$home" | grep -q '>Anoy</' && echo "$home" | grep -q '<title>Anoy' \
-            && ! echo "$home" | grep -q '𝙋' \
-            && pass "login page shows the Anoy panel name (old brand removed)" || fail "login page panel name"
-          echo "$home" | grep -q '@libAkAudioVisiual' \
-            && echo "$home" | grep -q 'https://t.me/libAkAudioVisiual' \
-            && ! echo "$home" | grep -qi 'aalyanmods\|aloneboy_boss' \
-            && pass "login page uses @libAkAudioVisiual (old handles removed)" || fail "login page Telegram handle"
-
-          reg=$(curl -sS --max-time 30 "$BASE/register")
-          echo "$reg" | grep -q 'Create Account' && pass "GET /register renders" || fail "register page"
-          echo "$reg" | grep -q '@libAkAudioVisiual' \
-            && echo "$reg" | grep -q 'https://t.me/libAkAudioVisiual' \
-            && ! echo "$reg" | grep -qi 'aalyanmods\|aloneboy_boss' \
-            && pass "register page uses @libAkAudioVisiual" || fail "register page Telegram handle"
-
-          info=$(curl -sS --max-time 30 "$BASE/connect")
-          echo "$info" | grep -q '"_client":"Anoy"' \
-            && echo "$info" | grep -q '"author":"@libAkAudioVisiual"' \
-            && pass "GET /connect info reports Anoy + @libAkAudioVisiual" || fail "connect info: $info"
-
-          ver=$(curl -sS --max-time 30 "$BASE/api/lib/version" | tr -d '\n')
-          [ -n "$ver" ] && echo "$ver" | grep -Eq '^[0-9]+\.[0-9]+' \
-            && pass "GET /api/lib/version -> $ver" || fail "lib version: $ver"
-
-          LIBZIP=$(mktemp)
-          libcode=$(curl -sS --max-time 30 -o "$LIBZIP" -w '%{http_code}' "$BASE/api/lib/download")
-          [ "$libcode" = "200" ] && [ "$(head -c 2 "$LIBZIP")" = "PK" ] \
-            && pass "GET /api/lib/download serves a real ZIP (HTTP 200)" \
-            || fail "lib download: HTTP $libcode, $(head -c 80 "$LIBZIP")"
-          unzip -l "$LIBZIP" | grep -Fq 'libbgmi.so' \
-            && pass "published loader ZIP contains libbgmi.so (XLOX app can load it)" \
-            || fail "loader ZIP has no libbgmi.so"
-
-          css=$(curl -sS --max-time 30 -o /dev/null -w '%{http_code}' "$BASE/assets/css/tailwind.css")
-          [ "$css" = "200" ] && pass "GET /assets/css/tailwind.css -> 200" || fail "static CSS: $css"
-
-          unauth=$(curl -sS --max-time 30 "$BASE/api/v1/keys")
-          echo "$unauth" | grep -Fq '"code":"missing_api_key"' \
-            && pass "GET /api/v1/keys refuses requests without an API key" || fail "unauth api: $unauth"
-
-          preflight=$(curl -sS --max-time 30 -o /dev/null -w '%{http_code}' -X OPTIONS "$BASE/api/v1/keys")
-          [ "$preflight" = "204" ] && pass "OPTIONS /api/v1/keys -> 204 CORS preflight" || fail "preflight: $preflight"
-
-          status=$(curl -sS --max-time 30 -o /dev/null -w '%{http_code}' -b "$JAR" -c "$JAR" \
-            -X POST -d 'username=admin&password=admin123&stay_log=1' "$BASE/login")
-          [ "$status" = "302" ] && pass "POST /login (legacy bcrypt hash) -> 302" || fail "login: $status"
-          grep -q 'am_session' "$JAR" && pass "signed session cookie issued" || fail "session cookie"
-
-          for route in dashboard docs api-docs api-keys keys keys/generate settings Server admin/manage-users admin/create-referral lib; do
-            code=$(curl -sS --max-time 30 -o /dev/null -w '%{http_code}' -b "$JAR" -c "$JAR" "$BASE/$route")
-            [ "$code" = "200" ] && pass "GET /$route -> 200" || fail "/$route returned $code"
-          done
-
-          uicss=$(curl -sS --max-time 30 "$BASE/assets/css/app.css")
-          [ -n "$uicss" ] && ! echo "$uicss" | grep -q 'linear-gradient' \
-            && pass "flat app.css is served with no gradients" || fail "app.css contains gradients or is empty"
-          echo "$uicss" | grep -Fq '.field-prefix > input' \
-            && echo "$uicss" | grep -Fq 'padding-left: 2.875rem' \
-            && pass "app.css reserves saldo icon padding" || fail "saldo icon padding fix missing"
-
-          edit=$(curl -sS --max-time 30 -b "$JAR" -c "$JAR" "$BASE/admin/user/1")
-          echo "$edit" | grep -Fq 'field-prefix' \
-            && pass "edit-user saldo input has the icon-spacing wrapper" || fail "saldo wrapper missing"
-
-          docs=$(curl -sS --max-time 30 -b "$JAR" -c "$JAR" "$BASE/docs")
-          echo "$docs" | grep -Fq 'Integration docs' && echo "$docs" | grep -Fq 'curl_easy_perform' \
-            && echo "$docs" | grep -Fq 'expired_date' && echo "$docs" | grep -Fq 'mod_status' \
-            && echo "$docs" | grep -Fq 'Floating' \
-            && pass "GET /docs serves the loader integration reference with C++ code" || fail "docs page content"
-
-          apidocs=$(curl -sS --max-time 30 -b "$JAR" -c "$JAR" "$BASE/api-docs")
-          echo "$apidocs" | grep -Fq 'X-API-Key' && echo "$apidocs" | grep -Fq '/api/v1/keys' \
-            && echo "$apidocs" | grep -Fq 'saldo' \
-            && pass "GET /api-docs serves the separate key-management API reference" || fail "api-docs content"
-
-          font=$(curl -sS --max-time 30 -o /dev/null -w '%{http_code}' "$BASE/assets/fonts/inter-latin-wght-normal.woff2")
-          [ "$font" = "200" ] && pass "self-hosted Inter font -> 200" || fail "font: $font"
-
-          settings=$(curl -sS --max-time 30 -b "$JAR" -c "$JAR" "$BASE/settings")
-          ! echo "$settings" | grep -q '<?=\|old(.fullname.)' \
-            && pass "settings has no untranslated PHP" || fail "settings leaked PHP source"
-          echo "$settings" | grep -q 'name="fullname"' \
-            && pass "settings fullname input renders" || fail "settings fullname input missing"
-
-          generate=$(curl -sS --max-time 30 -b "$JAR" -c "$JAR" "$BASE/keys/generate")
-          echo "$generate" | grep -q 'Total Saldo' && ! echo "$generate" | grep -q '&lt;i class\|bi-wallet' \
-            && pass "saldo notice is plain text" || fail "saldo notice shows escaped HTML"
-
-          keys=$(curl -sS --max-time 30 -b "$JAR" -c "$JAR" "$BASE/keys/api?draw=1&start=0&length=10")
-          echo "$keys" | grep -q 'recordsTotal' && pass "GET /keys/api -> DataTables JSON" || fail "keys api: $keys"
-
-          users=$(curl -sS --max-time 30 -b "$JAR" -c "$JAR" "$BASE/admin/api/users?draw=1&start=0&length=10")
-          echo "$users" | grep -q 'recordsTotal' && pass "GET /admin/api/users -> DataTables JSON" || fail "users api: $users"
-
-          gen=$(curl -sS --max-time 30 -o /dev/null -w '%{http_code}' -b "$JAR" -c "$JAR" \
-            -X POST -d 'game=PUBG&max_devices=1&duration=2&loopcount=5&custominput=auto' "$BASE/keys/generate")
-          [ "$gen" = "302" ] && pass "POST /keys/generate -> 302" || fail "generate: $gen"
-
-          generated=$(curl -sS --max-time 30 -b "$JAR" -c "$JAR" "$BASE/keys/generate" \
-            | grep -o 'id="mytext"[^>]*>[^<]*' | head -1 | sed 's/.*>//')
-          [ -n "$generated" ] && pass "generated key persisted: $generated" || fail "no generated key in flash"
-
-          connect=$(curl -sS --max-time 30 -X POST \
-            -d 'game=PUBG' --data-urlencode "user_key=$generated" -d 'serial=GITHUBACTIONSTEST1' "$BASE/connect")
-          echo "$connect" | grep -q '"status":true' \
-            && pass "POST /connect accepts the generated key" || fail "connect: $connect"
-          echo "$connect" | grep -q '"token"' && pass "/connect returns md5 token" || fail "connect token"
-
-          bad=$(curl -sS --max-time 30 -X POST -d 'game=PUBG&user_key=not-a-real-key&serial=X1' "$BASE/connect")
-          echo "$bad" | grep -q 'USER OR GAME NOT REGISTERED' \
-            && pass "POST /connect rejects unknown keys" || fail "connect rejection: $bad"
-
-          del=$(curl -sS --max-time 30 -b "$JAR" -c "$JAR" "$BASE/keys/resetAll?userkey=$generated&reset=1")
-          echo "$del" | grep -q '"deleted":true' && pass "GET /keys/resetAll cleans up test key" || fail "cleanup: $del"
-
-          # --- Personal API keys + /api/v1 key management against the live DB ---
-          apistatus=$(curl -sS --max-time 30 -o /dev/null -w '%{http_code}' -b "$JAR" -c "$JAR" \
-            -X POST -d 'action=create&name=live-smoke-bot' "$BASE/api-keys")
-          [ "$apistatus" = "302" ] && pass "POST /api-keys creates a personal API key" || fail "api key create: $apistatus"
-
-          akeys=$(curl -sS --max-time 30 -b "$JAR" -c "$JAR" "$BASE/api-keys")
-          TOKEN=$(echo "$akeys" | grep -o 'amk_[A-Za-z0-9_-]\{20,\}' | head -1 || true)
-          [ -n "$TOKEN" ] && pass "new amk_ token is shown once on /api-keys" || fail "no api key token in flash"
-          KEYID=$(echo "$akeys" | grep -o 'name="id" value="[0-9]*"' | head -1 | grep -o '[0-9]*' || true)
-
-          me=$(curl -sS --max-time 30 -H "X-API-Key: $TOKEN" "$BASE/api/v1/me")
-          echo "$me" | grep -q '"ok":true' && echo "$me" | grep -Fq 'live-smoke-bot' \
-            && pass "GET /api/v1/me authenticates the live API key" || fail "me: $me"
-          BEFORE=$(echo "$me" | grep -o '"saldo":[0-9]*' | head -1 | cut -d: -f2)
-          [ -n "$BEFORE" ] || fail "no saldo in /me"
-
-          pricing=$(curl -sS --max-time 30 -H "X-API-Key: $TOKEN" "$BASE/api/v1/pricing")
-          echo "$pricing" | grep -q '"ok":true' && echo "$pricing" | grep -Fq 'price_per_device' \
-            && pass "GET /api/v1/pricing returns the duration price list" || fail "pricing: $pricing"
-
-          list=$(curl -sS --max-time 30 -H "X-API-Key: $TOKEN" "$BASE/api/v1/keys")
-          echo "$list" | grep -q '"ok":true' && echo "$list" | grep -q '"keys"' \
-            && pass "GET /api/v1/keys lists the caller keys" || fail "list: $list"
-
-          made=$(curl -sS --max-time 30 -X POST -H "X-API-Key: $TOKEN" \
-            -H 'Content-Type: application/json' \
-            -d '{"game":"PUBG","duration":2,"max_devices":1}' "$BASE/api/v1/keys")
-          echo "$made" | grep -q '"ok":true' && echo "$made" | grep -Fq '"charged":10' \
-            && pass "POST /api/v1/keys creates a key and charges ₹10 saldo" || fail "create: $made"
-          AFTER=$(echo "$made" | grep -o '"saldo_after":[0-9]*' | head -1 | cut -d: -f2)
-          [ "$AFTER" = "$((BEFORE - 10))" ] \
-            && pass "saldo was cut by the exact panel price ($BEFORE -> $AFTER)" || fail "saldo debit: $BEFORE -> $AFTER"
-          MADEKEY=$(echo "$made" | grep -o '"user_key":"[^"]*"' | head -1 | cut -d'"' -f4)
-          [ -n "$MADEKEY" ] || fail "no created user_key"
-
-          one=$(curl -sS --max-time 30 -H "X-API-Key: $TOKEN" "$BASE/api/v1/keys/$MADEKEY")
-          echo "$one" | grep -Fq "\"user_key\":\"$MADEKEY\"" \
-            && pass "GET /api/v1/keys/{key} reads one key" || fail "read one: $one"
-
-          upd=$(curl -sS --max-time 30 -X PATCH -H "X-API-Key: $TOKEN" \
-            -H 'Content-Type: application/json' -d '{"max_devices":3}' "$BASE/api/v1/keys/$MADEKEY")
-          echo "$upd" | grep -Fq '"max_devices":3' \
-            && pass "PATCH /api/v1/keys/{key} manages a key" || fail "patch: $upd"
-
-          rst=$(curl -sS --max-time 30 -X POST -H "X-API-Key: $TOKEN" "$BASE/api/v1/keys/$MADEKEY/reset")
-          echo "$rst" | grep -Fq '"reset":true' \
-            && pass "POST /api/v1/keys/{key}/reset clears devices" || fail "reset: $rst"
-
-          gone=$(curl -sS --max-time 30 -X DELETE -H "X-API-Key: $TOKEN" "$BASE/api/v1/keys/$MADEKEY")
-          echo "$gone" | grep -Fq '"deleted":true' \
-            && pass "DELETE /api/v1/keys/{key} deletes a key" || fail "delete: $gone"
-
-          blocked=$(curl -sS --max-time 30 -X POST -H "X-API-Key: $TOKEN" \
-            -H 'Content-Type: application/json' -d '{"modname":"HACKED"}' "$BASE/api/v1/Server")
-          echo "$blocked" | grep -Fq '"code":"not_found"' \
-            && pass "API keys cannot reach mod-name/server settings routes" || fail "scope: $blocked"
-
-          if [ -n "$KEYID" ]; then
-            revoke=$(curl -sS --max-time 30 -o /dev/null -w '%{http_code}' -b "$JAR" -c "$JAR" \
-              -X POST -d "action=delete&id=$KEYID" "$BASE/api-keys")
-            [ "$revoke" = "302" ] && pass "POST /api-keys deletes the test API key" || fail "api key delete: $revoke"
-          fi
-
-          out=$(curl -sS --max-time 30 -o /dev/null -w '%{http_code}' -b "$JAR" -c "$JAR" "$BASE/logout")
-          [ "$out" = "302" ] && pass "GET /logout -> 302" || fail "logout: $out"
-          after=$(curl -sS --max-time 30 -o /dev/null -w '%{http_code}' -b "$JAR" -c "$JAR" "$BASE/dashboard")
-          [ "$after" = "302" ] && pass "session invalid after logout" || fail "post-logout: $after"
-
-          echo "ALL LIVE CHECKS PASSED"
-
-# Re-run live checks against the API-key release.
-
-# Final re-run against the personal API-key production deployment.
-
-# Re-run live checks after publishing the XLOX loader release.
+          if [ -n "$OWNER_PASSWORD" ]; then echo "::add-mask::$OWNER_PASSWORD"; fi
+          node scripts/live-smoke.mjs

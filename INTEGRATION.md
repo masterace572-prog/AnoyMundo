@@ -21,8 +21,9 @@ flags, expiry fields, error text, and simple C++ integration code.
 | `GET` | `/connect?game=…&user_key=…&serial=…` | same as POST, for loaders that use GET |
 | `GET` | `/connect` (no params) | `web_info` / `web__dev` panel information |
 | `GET` | `/api/health` | `ok`, Supabase connection, lib version, `13/13` schema check |
-| `GET` | `/api/lib/version` | plain text version, e.g. `1.0\n` (read by the loader) |
-| `GET` | `/api/lib/download` | the current loader ZIP (or 302 to an external URL) |
+| `GET` | `/api/lib/manifest` | JSON `{ ok, version, available, size, sha256, file_name, source, notes, updated_at }` — what the Android app checks before sign-in (`503` if the database is unreachable) |
+| `GET` | `/api/lib/version` | plain text version, e.g. `1.0\n` (legacy loaders) |
+| `GET` | `/api/lib/download` | the current loader ZIP with `X-Release-Version` and `X-Content-SHA256` headers (or 302 to an external URL, 404 when nothing is published) |
 | `GET` | `/api/lib/info` | JSON list of uploaded releases |
 
 `POST /connect` is also reachable as `/api/connect`.
@@ -37,13 +38,13 @@ Legacy aliases still work: `/version.txt`, `/api/version`, `/lib/version.txt`,
 POST https://anoymundo-panel.vercel.app/connect
 Content-Type: application/x-www-form-urlencoded
 
-game=PUBG&user_key=admin-2-lyK0Y&serial=DEVICE123
+game=PUBG&user_key=ANOY-2H-LYK0Y&serial=DEVICE123
 ```
 
 ```bash
 curl -sS -X POST https://anoymundo-panel.vercel.app/connect \
   -d 'game=PUBG' \
-  -d 'user_key=admin-2-lyK0Y' \
+  -d 'user_key=ANOY-2H-LYK0Y' \
   -d 'serial=DEVICE123'
 ```
 
@@ -56,7 +57,7 @@ curl -sS -X POST https://anoymundo-panel.vercel.app/connect \
 `GET` alternative (same validation, same JSON):
 
 ```
-https://anoymundo-panel.vercel.app/connect?game=PUBG&user_key=admin-2-lyK0Y&serial=DEVICE123
+https://anoymundo-panel.vercel.app/connect?game=PUBG&user_key=ANOY-2H-LYK0Y&serial=DEVICE123
 ```
 
 ---
@@ -67,8 +68,8 @@ https://anoymundo-panel.vercel.app/connect?game=PUBG&user_key=admin-2-lyK0Y&seri
 {
   "status": true,
   "data": {
-    "real": "PUBG-admin-2-lyK0Y-DEVICE123-Vm8Lk7Uj2JmsjCPVPVjrLa7zgfx3uz9E",
-    "token": "1aa36c890b3155533de4ed2e09714704",
+    "real": "PUBG-ANOY-2H-LYK0Y-DEVICE123-Vm8Lk7Uj2JmsjCPVPVjrLa7zgfx3uz9E",
+    "token": "7692e827a9d2ea57f2a39f9bc2e2560b",
     "modname": "VIP MOD",
     "mod_status": "Safe",
     "credit": "MOD STATUS :- 100% SAFE",
@@ -211,7 +212,7 @@ std::string post(const std::string& url, const std::string& body) {
 
 int main() {
     std::string json = post("https://anoymundo-panel.vercel.app/connect",
-                            "game=PUBG&user_key=admin-2-lyK0Y&serial=DEVICE123");
+                            "game=PUBG&user_key=ANOY-2H-LYK0Y&serial=DEVICE123");
     std::cout << json << std::endl;
 }
 ```
@@ -266,10 +267,24 @@ void apply(const std::string& json) {
 `ShowMessage`, `DrawFloatingText`, `EnableFeatures`, etc. are placeholders for
 your own UI/hooks — the API itself is pure JSON over HTTPS.
 
-**JNI / Android note:** the Java loader reads the version from
-`GET /api/lib/version` (first line of plain text) and downloads the loader ZIP
-from `GET /api/lib/download`. Call `/connect` from native code after your HTTP
-stack is up, cache `expired_date`, and re-check on each launch.
+**Android app (v2.0) flow:**
+
+1. Splash, then the update gate. The app calls `GET /api/lib/manifest`
+   (falls back to `/api/lib/version`) and compares the version with the
+   library it has installed.
+2. If a newer version exists, or nothing is installed, the only option is
+   **Update now**: the ZIP from `/api/lib/download` is downloaded to a
+   temporary file (3 attempts, resumable errors retried), its size and SHA-256
+   are checked against the manifest, `libbgmi.so` is extracted, ELF-validated
+   and atomically swapped in. Sign-in stays blocked until this succeeds.
+3. Sign-in calls `POST /connect` from native code (`libXloX.so`) with the
+   upper-cased licence key and the device serial. The token must equal
+   `md5("PUBG-" + key + "-" + serial + "-" + STATIC_WORDS)` and `rng` must not
+   be more than 10 minutes old; non-2xx answers are reported as
+   `Panel returned HTTP <code>`.
+4. The check repeats silently whenever the app returns to the foreground (at
+   most once a minute), so a release published while the app is open is still
+   enforced.
 
 ---
 

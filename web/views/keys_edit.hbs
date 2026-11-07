@@ -1,148 +1,73 @@
-
-
-
-<div class="container-fluid px-4 py-6">
-    <div class="max-w-4xl mx-auto">
-        <!-- Message Status -->
-        <div class="mb-6">
-            {{> msgStatus}}
-        </div>
-        
-        <!-- Key Edit Card -->
-        <div class="ui-card rounded-2xl p-6 sm:p-8 animate-fade-in-up">
-            <div class="flex items-center justify-between mb-6">
-                <div class="flex items-center">
-                    <div class="ui-icon w-12 h-12 rounded-xl flex items-center justify-center mr-4">
-                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
-                        </svg>
-                    </div>
-                    <h2 class="text-2xl font-bold text-gray-800">Key Information</h2>
-                </div>
-                
-                <div class="flex space-x-2">
-                    <a href="/keys/generate" class="ui-btn" aria-label="Generate a key">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-                        </svg>
-                    </a>
-                    <a href="/keys" class="ui-btn" aria-label="All keys">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
-                        </svg>
-                    </a>
-                </div>
-            </div>
-            
-            <form method="post" action="/keys/edit" class="space-y-6">
-                <input type="hidden" name="id_keys" value="{{key.id_keys}}">
-                
-                {{#if (or (eq user.level 1) (eq user.level 2))}}
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <!-- Game -->
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Game</label>
-                            <input type="text" name="game" value="{{form.game}}" class="w-full px-4 py-3 bg-white/50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all" placeholder="Game name">
-                            {{#if errors.game}}
-                                <small class="text-red-500 text-xs mt-1">{{errors.game}}</small>
-                            {{/if}}
-                        </div>
-                        
-                        <!-- User Key -->
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">User Key</label>
-                            <input type="text" name="user_key" value="{{form.user_key}}" class="w-full px-4 py-3 bg-white/50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all font-mono" placeholder="Key">
-                            {{#if errors.user_key}}
-                                <small class="text-red-500 text-xs mt-1">{{errors.user_key}}</small>
-                            {{/if}}
-                        </div>
-                        
-                        <!-- Duration -->
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Duration <span class="text-gray-500 text-xs">(in hours)</span></label>
-                            <input type="number" name="duration" value="{{form.duration}}" class="w-full px-4 py-3 bg-white/50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all" placeholder="3">
-                            {{#if errors.duration}}
-                                <small class="text-red-500 text-xs mt-1">{{errors.duration}}</small>
-                            {{/if}}
-                        </div>
-                        
-                        <!-- Max Devices -->
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Max Devices</label>
-                            <input type="number" name="max_devices" id="max_devices" value="{{form.max_devices}}" class="w-full px-4 py-3 bg-white/50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all" placeholder="3">
-                            {{#if errors.max_devices}}
-                                <small class="text-red-500 text-xs mt-1">{{errors.max_devices}}</small>
-                            {{/if}}
-                        </div>
-                    </div>
-                {{/if}}
-                
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <!-- Status -->
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Status</label>
-                        
-                        {{{selects.status}}}
-                        {{#if errors.status}}
-                            <small class="text-red-500 text-xs mt-1">{{errors.status}}</small>
-                        {{/if}}
-                    </div>
-                    
-                    <!-- Registrator -->
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Registrator</label>
-                        <input type="text" name="registrator" id="registrator" value="{{form.registrator}}" class="w-full px-4 py-3 bg-white/50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all" placeholder="Username">
-                        {{#if errors.registrator}}
-                            <small class="text-red-500 text-xs mt-1">{{errors.registrator}}</small>
-                        {{/if}}
-                    </div>
-                </div>
-                
-                <!-- Expired Date -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Expired {{key.expiredHint}}</label>
-                    <input type="text" name="expired_date" id="expired_date" value="{{form.expired_date}}" class="w-full px-4 py-3 bg-white/50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all" placeholder="{{now}}">
-                    {{#if errors.expired_date}}
-                        <small class="text-red-500 text-xs mt-1">{{errors.expired_date}}</small>
-                    {{/if}}
-                </div>
-                
-                <!-- Devices -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">
-                        Devices 
-                        <span class="px-2 py-1 text-blue-700 rounded-lg text-xs font-semibold maxDev ui-tint">
-                            {{key.deviceTotal}}/{{key.max_devices}}
-                        </span>
-                        <span class="text-gray-500 text-xs">(Separately with enter)</span>
-                    </label>
-                    <textarea name="devices" id="devices" rows="{{key.deviceRows}}" class="w-full px-4 py-3 bg-white/50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all font-mono text-sm">{{form.devices}}</textarea>
-                    {{#if errors.devices}}
-                        <small class="text-red-500 text-xs mt-1">{{errors.devices}}</small>
-                    {{/if}}
-                </div>
-                
-                <!-- Submit Button -->
-                <button type="submit" class="btnUpdate w-full py-4 px-6 text-white font-bold rounded-xl transition-all duration-300 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed ui-btn ui-btn--primary" disabled>
-                    Update User Key
-                </button>
-            </form>
-        </div>
+<div class="page-head">
+    <div>
+        <h1 class="page-title">Edit key</h1>
+        <p class="page-sub mono">{{key.user_key}}</p>
     </div>
+    <a href="/keys" class="btn btn-secondary">All keys</a>
 </div>
 
-<script>
-    $(document).ready(function() {
-        var level = "{{user.level}}";
-        if (level != 1) $("#registrator, #expired_date, #devices").attr('disabled', true);
-        $("input, select, textarea").change(function() {
-            $(".btnUpdate").attr('disabled', false);
-        });
-    });
-    
-    var total = "{{key.deviceTotal}}";
-    $("#max_devices").change(function() {
-        $(".maxDev").html(total + '/' + $(this).val());
-        $("#devices").attr('rows', $(this).val());
-    });
-</script>
+{{> msgStatus}}
+
+<div class="grid-2">
+<form method="post" action="/keys/edit" class="form" novalidate data-busy-form>
+    <input type="hidden" name="id_keys" value="{{key.id_keys}}">
+    {{#if user.isOwner}}
+    <div class="field {{#if errors.user_key}}invalid{{/if}}">
+        <label class="label" for="user_key">Key</label>
+        <input type="text" class="input mono upper" name="user_key" id="user_key" value="{{form.user_key}}" required maxlength="64" autocomplete="off" autocapitalize="characters" spellcheck="false">
+        {{#if errors.user_key}}<div class="error">{{errors.user_key}}</div>{{/if}}
+    </div>
+    <div class="field {{#if errors.game}}invalid{{/if}}">
+        <label class="label" for="game">Game</label>
+        {{{selects.game}}}
+        {{#if errors.game}}<div class="error">{{errors.game}}</div>{{/if}}
+    </div>
+    <div class="field {{#if errors.duration}}invalid{{/if}}">
+        <label class="label" for="duration">Duration (hours)</label>
+        <input type="number" class="input" name="duration" id="duration" value="{{form.duration}}" min="1" max="100000" required inputmode="numeric">
+        {{#if errors.duration}}<div class="error">{{errors.duration}}</div>{{/if}}
+    </div>
+    <div class="field {{#if errors.max_devices}}invalid{{/if}}">
+        <label class="label" for="max_devices">Devices allowed</label>
+        <input type="number" class="input" name="max_devices" id="max_devices" value="{{form.max_devices}}" min="1" max="100" required inputmode="numeric">
+        {{#if errors.max_devices}}<div class="error">{{errors.max_devices}}</div>{{/if}}
+    </div>
+    <div class="field {{#if errors.expired_date}}invalid{{/if}}">
+        <label class="label" for="expired_date">Expires (UTC)</label>
+        <input type="text" class="input mono" name="expired_date" id="expired_date" value="{{form.expired_date}}" placeholder="Not started yet" autocomplete="off">
+        {{#if errors.expired_date}}<div class="error">{{errors.expired_date}}</div>{{else}}<div class="hint">Format YYYY-MM-DD HH:MM:SS. Leave empty for a key that has not been used yet.</div>{{/if}}
+    </div>
+    <div class="field {{#if errors.registrator}}invalid{{/if}}">
+        <label class="label" for="registrator">Created by</label>
+        <input type="text" class="input" name="registrator" id="registrator" value="{{form.registrator}}" maxlength="32" autocomplete="off">
+        {{#if errors.registrator}}<div class="error">{{errors.registrator}}</div>{{/if}}
+    </div>
+    <div class="field {{#if errors.devices}}invalid{{/if}}">
+        <label class="label" for="devices">Registered devices</label>
+        <textarea class="input mono" name="devices" id="devices" rows="{{key.deviceRows}}" spellcheck="false" placeholder="No devices yet">{{form.devices}}</textarea>
+        {{#if errors.devices}}<div class="error">{{errors.devices}}</div>{{else}}<div class="hint">One device ID per line.</div>{{/if}}
+    </div>
+    {{/if}}
+    <div class="field {{#if errors.status}}invalid{{/if}}">
+        <label class="label" for="status">Status</label>
+        {{{selects.status}}}
+        {{#if errors.status}}<div class="error">{{errors.status}}</div>{{/if}}
+    </div>
+    <button type="submit" class="btn btn-primary btn-block" data-busy-label="Saving…">Save</button>
+</form>
+
+<section class="section" style="padding-top:0;border-top:0">
+    <h2 class="section-title">Details</h2>
+    <div class="list" style="margin-top:14px">
+        <div class="list-row"><span>Game</span><span>{{key.game}}</span></div>
+        <div class="list-row"><span>Duration</span><span>{{key.durationLabel}}</span></div>
+        <div class="list-row"><span>Devices</span><span>{{key.deviceTotal}} of {{key.max_devices}}</span></div>
+        <div class="list-row"><span>Expires</span><span>{{#if key.expiresLabel}}{{key.expiresLabel}}{{else}}Not started yet{{/if}}</span></div>
+        <div class="list-row"><span>Created by</span><span>{{key.registrator}}</span></div>
+    </div>
+    <div class="actions" style="margin-top:18px">
+        <button type="button" class="btn btn-secondary" data-key-action="reset" data-key="{{key.user_key}}">Reset devices</button>
+        <button type="button" class="btn btn-danger" data-key-action="delete" data-key="{{key.user_key}}" data-after="/keys">Delete key</button>
+    </div>
+</section>
+</div>

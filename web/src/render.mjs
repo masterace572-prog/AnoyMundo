@@ -15,7 +15,7 @@ Handlebars.registerHelper('or', (...args) => args.slice(0, -1).some(Boolean));
 Handlebars.registerHelper('json', (value) => JSON.stringify(value ?? null));
 Handlebars.registerHelper('alertClass', (type) => {
   const allowed = ['success', 'warning', 'danger', 'info'];
-  return `ui-alert--${allowed.includes(String(type)) ? String(type) : 'info'}`;
+  return `alert-${allowed.includes(String(type)) ? String(type) : 'info'}`;
 });
 
 Handlebars.registerPartial('header', templates.header);
@@ -38,10 +38,10 @@ export function escapeHtml(value) {
 
 /** Build <select> markup with an optional selected value. */
 export function buildSelect(name, id, options, selected, extraClass = '') {
-  const cls = extraClass || 'w-full px-4 py-3 bg-white/50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all';
+  const cls = extraClass || 'input';
   const opts = Object.entries(options).map(([value, label]) => {
     const sel = String(selected ?? '') === String(value) ? ' selected' : '';
-    return `<option value="${escapeHtml(value)}"${sel}>${label}</option>`;
+    return `<option value="${escapeHtml(value)}"${sel}>${escapeHtml(label)}</option>`;
   }).join('');
   return `<select name="${escapeHtml(name)}" id="${escapeHtml(id)}" class="${cls}">${opts}</select>`;
 }
@@ -59,7 +59,7 @@ export function humanDate(value) {
   const d = new Date(value);
   if (Number.isNaN(d.getTime())) return String(value);
   const p = (n) => String(n).padStart(2, '0');
-  return `${p(d.getUTCDate())} ${months[d.getUTCMonth()]} ${String(d.getUTCFullYear()).slice(2)} - ${p(d.getUTCHours())}:${p(d.getUTCMinutes())}`;
+  return `${p(d.getUTCDate())} ${months[d.getUTCMonth()]} ${d.getUTCFullYear()}, ${p(d.getUTCHours())}:${p(d.getUTCMinutes())} UTC`;
 }
 
 export function longDate(value) {
@@ -79,6 +79,12 @@ export function durationLabel(hours) {
   if (h === 24) return '1 Day';
   if (h > 24) return `${h / 24} Days`;
   return String(hours ?? '');
+}
+
+function reselect(html, value) {
+  const wanted = `value="${escapeHtml(value)}"`;
+  if (!String(html).includes(wanted)) return html;
+  return String(html).replace(/ selected(?=>)/g, '').replace(wanted, `${wanted} selected`);
 }
 
 function humanizeDiff(ms) {
@@ -160,12 +166,22 @@ export function renderPage(req, res, name, data = {}) {
   };
   // data overrides above, but keep the derived collections coherent
   base.user = user
-    ? { ...user, initial: String(user.displayName || user.username || 'U').trim().charAt(0).toUpperCase() }
+    ? {
+      ...user,
+      initial: String(user.displayName || user.username || 'U').trim().charAt(0).toUpperCase(),
+      // The single Owner account has an unlimited balance.
+      unlimited: !!user.isOwner,
+      saldoLabel: Number(user.saldo || 0).toLocaleString('en-IN'),
+    }
     : null;
   base.flash = { ...flash, ...(data.flash || {}) };
   base.old = { ...old, ...(data.old || {}) };
   base.errors = { ...errors, ...(data.errors || {}) };
   base.form = { ...form, ...(data.form || {}), ...old };
+  base.appVersion = config.version;
+  // A failed POST re-renders with the previous choices kept selected.
+  base.selects = Object.fromEntries(Object.entries(base.selects || {})
+    .map(([key, html]) => [key, old[key] !== undefined ? reselect(html, old[key]) : html]));
 
   if (name === 'login' || name === 'register') return compile(name)(base);
   const content = compile(name)(base);
@@ -175,13 +191,13 @@ export function renderPage(req, res, name, data = {}) {
 function securityHeaders(res, html) {
   res.setHeader('Cache-Control', 'no-store');
   res.setHeader('X-Content-Type-Options', 'nosniff');
-  res.setHeader('Referrer-Policy', 'no-referrer');
+  res.setHeader('Referrer-Policy', 'same-origin');
   if (html) {
     // No frame restriction: the panel is shown inside the Arena live preview.
     res.setHeader('Content-Security-Policy',
-      "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline' https:; " +
-      "script-src 'self' 'unsafe-inline' https:; font-src 'self' data: https:; " +
-      "connect-src 'self'; base-uri 'self'; form-action 'self'");
+      "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; " +
+      "script-src 'self' 'unsafe-inline'; font-src 'self' data:; " +
+      "connect-src 'self'; base-uri 'self'; form-action 'self'; object-src 'none'");
   }
 }
 

@@ -1,282 +1,50 @@
-<div class="container-fluid px-4 py-6">
-    <div class="mb-6">{{> msgStatus}}</div>
-
-    <div class="ui-card">
-        <div class="card-head" style="flex-wrap:wrap;justify-content:space-between">
-            <div style="display:flex;align-items:center;gap:12px;min-width:0">
-                <h2>Keys registered</h2>
-                <button type="button" id="blur-out" class="row-action">
-                    <svg class="w-4 h-4 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"></path>
-                    </svg>
-                    Eye Protect
-                </button>
-            </div>
-
-            <div class="relative" style="position:relative">
-                <button type="button" id="actions-menu-btn" class="ui-btn">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"></path>
-                    </svg>
-                    <span>Actions</span>
-                </button>
-
-                <div id="actions-menu" class="hidden actions-menu" style="position:absolute;right:0;top:100%;margin-top:8px;z-index:10">
-                    <a href="/keys/generate" class="actions-menu-link">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
-                        <span>Generate key</span>
-                    </a>
-                    <a href="/keys/deleteExp" class="actions-menu-link">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                        <span>Delete expired keys</span>
-                    </a>
-                    <a href="/keys/deleteUnused" class="actions-menu-link">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path></svg>
-                        <span>Delete unused keys</span>
-                    </a>
-                    <p class="actions-menu-note">Never-used keys are refunded automatically.</p>
-                </div>
-            </div>
-        </div>
-
-        {{#if keyList}}
-        <p id="keys-loading" class="table-loading" role="status">Loading keys</p>
-        <div class="table-scroll">
-            <table id="datatable" class="w-full">
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Game</th>
-                        <th>User key</th>
-                        <th>Devices</th>
-                        <th>Duration</th>
-                        <th>Expired</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-            </table>
-        </div>
-        {{else}}
-        <p class="field-hint">No keys to show</p>
-        {{/if}}
+<div class="page-head">
+    <div>
+        <h1 class="page-title">Keys</h1>
+        <p class="page-sub">{{keyTotal}} {{#if user.isOwner}}keys in total{{else}}keys created by you{{/if}}</p>
+    </div>
+    <div class="row">
+        <a href="/keys/download" class="btn btn-secondary">Export</a>
+        <a href="/keys/generate" class="btn btn-primary">Generate keys</a>
     </div>
 </div>
 
-<link rel="stylesheet" href="https://cdn.datatables.net/1.10.25/css/dataTables.bootstrap5.min.css">
-<script src="https://cdn.datatables.net/1.10.25/js/jquery.dataTables.min.js"></script>
-<script src="https://cdn.datatables.net/1.10.25/js/dataTables.bootstrap5.min.js"></script>
-<script>
-    // Actions menu toggle
-    const actionsBtn = document.getElementById('actions-menu-btn');
-    const actionsMenu = document.getElementById('actions-menu');
+{{> msgStatus}}
 
-    if (actionsBtn && actionsMenu) {
-        actionsBtn.addEventListener('click', () => {
-            actionsMenu.classList.toggle('hidden');
-        });
+<div class="toolbar">
+    <input type="search" class="input" id="keys-search" placeholder="Search keys" aria-label="Search keys" autocomplete="off" spellcheck="false">
+    <select class="input" id="keys-status" aria-label="Filter by status">
+        <option value="">All keys</option>
+        <option value="unused">Unused</option>
+        <option value="used">In use</option>
+        <option value="expired">Expired</option>
+        <option value="blocked">Blocked</option>
+    </select>
+    <span class="spacer"></span>
+    <form method="post" action="/keys/deleteexp" data-confirm="Delete all expired keys?" data-confirm-detail="Expired keys stop working anyway. This cannot be undone.">
+        <button type="submit" class="btn btn-secondary btn-sm">Delete expired</button>
+    </form>
+    <form method="post" action="/keys/deleteunused" data-confirm="Delete all unused keys?" data-confirm-detail="Never-used keys are refunded to their creator. This cannot be undone.">
+        <button type="submit" class="btn btn-danger btn-sm">Delete unused</button>
+    </form>
+</div>
 
-        document.addEventListener('click', (e) => {
-            if (!actionsBtn.contains(e.target) && !actionsMenu.contains(e.target)) {
-                actionsMenu.classList.add('hidden');
-            }
-        });
-    }
+<div class="table-wrap">
+    <table class="responsive" id="keys-table" aria-live="polite">
+        <thead>
+            <tr><th>Key</th><th>Duration</th><th>Devices</th><th>Status</th><th>Expires</th>{{#if user.isOwner}}<th>Created by</th>{{/if}}<th class="actions-cell"><span class="sr-only">Actions</span></th></tr>
+        </thead>
+        <tbody id="keys-body">
+            <tr class="is-empty"><td colspan="7">Loading keys…</td></tr>
+        </tbody>
+    </table>
+</div>
+<div class="pager">
+    <span id="keys-range">&nbsp;</span>
+    <div class="row">
+        <button type="button" class="btn btn-secondary btn-sm" id="keys-prev" disabled>Previous</button>
+        <button type="button" class="btn btn-secondary btn-sm" id="keys-next" disabled>Next</button>
+    </div>
+</div>
 
-    $(document).ready(function() {
-        var loading = document.getElementById('keys-loading');
-        var labels = ['ID', 'Game', 'User key', 'Devices', 'Duration', 'Expired', 'Actions'];
-
-        if ($('#datatable').length) {
-            $('#datatable').DataTable({
-                processing: false,
-                serverSide: true,
-                autoWidth: false,
-                order: [[0, "desc"]],
-                ajax: {
-                    url: "/keys/api",
-                    error: function () {
-                        if (loading) {
-                            loading.textContent = 'Could not load keys. Refresh the page to try again.';
-                            loading.className = 'table-error';
-                        }
-                    }
-                },
-                language: {
-                    processing: 'Loading keys',
-                    search: 'Search',
-                    searchPlaceholder: 'Search keys',
-                    lengthMenu: 'Show _MENU_ keys',
-                    info: 'Showing _START_ to _END_ of _TOTAL_ keys',
-                    infoEmpty: 'No keys yet',
-                    infoFiltered: '(filtered from _MAX_ keys)',
-                    zeroRecords: 'No keys match your search',
-                    emptyTable: 'No keys to show'
-                },
-                columns: [{
-                        data: 'id',
-                        name: 'id_keys',
-                        className: 'cell-mono'
-                    },
-                    {
-                        data: 'game'
-                    },
-                    {
-                        data: 'user_key',
-                        render: function(data, type, row, meta) {
-                            var value = row.user_key ? row.user_key : '&mdash;';
-                            return '<span class="key-token keyBlur key-sensi">' + value + '</span>';
-                        }
-                    },
-                    {
-                        data: 'devices',
-                        render: function(data, type, row, meta) {
-                            var totalDevice = (row.devices ? row.devices : 0);
-                            return '<span id="devMax-' + row.user_key + '" class="cell-mono">' + totalDevice + '/' + row.max_devices + '</span>';
-                        }
-                    },
-                    {
-                        data: 'duration',
-                        render: function(data, type, row, meta) {
-                            return row.duration;
-                        }
-                    },
-                    {
-                        data: 'expired',
-                        name: 'expired_date',
-                        render: function(data, type, row, meta) {
-                            return row.expired ? '<span class="status-pill cell-nowrap">' + row.expired + '</span>' : '(not started yet)';
-                        }
-                    },
-                    {
-                        data: null,
-                        render: function(data, type, row, meta) {
-                            var key = row.user_key;
-                            return '<div class="row-actions">' +
-                                '<button type="button" class="row-action" title="Reset key" onclick="resetUserKey(\'' + key + '\', this)">Reset</button> ' +
-                                '<button type="button" class="row-action row-action--danger" title="Delete key" onclick="resetUserKey1(\'' + key + '\', this)">Delete</button> ' +
-                                '<a class="row-action" title="Edit key information" href="' + window.location.origin + '/keys/' + row.id + '">Edit</a>' +
-                                '</div>';
-                        }
-                    }
-                ],
-                createdRow: function(row) {
-                    $(row).children('td').each(function(i) {
-                        $(this).attr('data-label', labels[i] || '');
-                    });
-                },
-                initComplete: function() {
-                    if (loading) loading.remove();
-                }
-            });
-        } else if (loading) {
-            loading.remove();
-        }
-
-        $("#blur-out").click(function() {
-            if ($(".keyBlur").hasClass("key-sensi")) {
-                $(".keyBlur").removeClass("key-sensi");
-                $("#blur-out").html(`<svg class="w-4 h-4 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg> Eye Protect`);
-            } else {
-                $(".keyBlur").addClass("key-sensi");
-                $("#blur-out").html(`<svg class="w-4 h-4 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"></path></svg> Eye Protect`);
-            }
-        });
-    });
-
-    /* Compact notifications for delete / reset instead of full-screen modals. */
-    function notify(message, kind) {
-        if (window.AnoyUI && window.AnoyUI.toast) {
-            window.AnoyUI.toast(message, kind || 'info');
-        } else if (window.Swal) {
-            Swal.fire(message, '', kind || 'info');
-        }
-    }
-
-    function startAction(btn) {
-        if (btn && window.AnoyUI && window.AnoyUI.busyButton) {
-            window.AnoyUI.busyButton(btn, 'Working…');
-        }
-        return (window.AnoyUI && window.AnoyUI.toast)
-            ? window.AnoyUI.toast('Working…', 'info', 0) : null;
-    }
-
-    function endAction(btn, pending) {
-        if (pending) pending.dismiss();
-        if (btn && window.AnoyUI && window.AnoyUI.releaseButton) {
-            window.AnoyUI.releaseButton(btn);
-        }
-    }
-
-    function confirmAction(title, confirmText, detail) {
-        return Swal.fire({
-            title: title,
-            text: detail || '',
-            icon: 'warning',
-            showCancelButton: true,
-            customClass: { popup: 'swal-compact', confirmButton: 'swal-confirm-danger' },
-            confirmButtonColor: '#E15A48',
-            cancelButtonColor: '#22221C',
-            confirmButtonText: confirmText
-        });
-    }
-
-    function resetUserKey1(keys, btn) {
-        confirmAction('Delete this key?', 'Yes, delete', 'Unused keys are refunded.').then((result) => {
-            if (!result.isConfirmed) return;
-            var pending = startAction(btn);
-            var api_url = `${window.location.origin}/keys/resetAll`;
-            $.getJSON(api_url, { userkey: keys, reset: 1 }, function (data, textStatus) {
-                endAction(btn, pending);
-                if (textStatus == 'success') {
-                    if (data.registered) {
-                        if (data.deleted || data.reset) {
-                            $(`#devMax-${keys}`).html(`0/${data.devices_max}`);
-                            notify(Number(data.refund_total) > 0
-                                ? 'Key deleted · refunded ₹' + Number(data.refund_total).toLocaleString('en-IN')
-                                : 'Key deleted', 'success');
-                        } else {
-                            notify(data.devices_total
-                                ? "You don't have any access to this user."
-                                : 'User key devices already reset.',
-                                data.devices_total ? 'error' : 'warning');
-                        }
-                    } else {
-                        notify('User key no longer exists.', 'error');
-                    }
-                }
-            }).fail(function () {
-                endAction(btn, pending);
-                notify('Could not reach the server.', 'error');
-            });
-        });
-    }
-
-    function resetUserKey(keys, btn) {
-        confirmAction('Reset devices?', 'Yes, reset').then((result) => {
-            if (!result.isConfirmed) return;
-            var pending = startAction(btn);
-            var api_url = `${window.location.origin}/keys/reset`;
-            $.getJSON(api_url, { userkey: keys, reset: 1 }, function (data, textStatus) {
-                endAction(btn, pending);
-                if (textStatus == 'success') {
-                    if (data.registered) {
-                        if (data.deleted || data.reset) {
-                            $(`#devMax-${keys}`).html(`0/${data.devices_max}`);
-                            notify('Devices reset', 'success');
-                        } else {
-                            notify(data.devices_total
-                                ? "You don't have any access to this user."
-                                : 'User key devices already reset.',
-                                data.devices_total ? 'error' : 'warning');
-                        }
-                    } else {
-                        notify('User key no longer exists.', 'error');
-                    }
-                }
-            }).fail(function () {
-                endAction(btn, pending);
-                notify('Could not reach the server.', 'error');
-            });
-        });
-    }
-</script>
+<script>window.ANOY_KEYS = { owner: {{#if user.isOwner}}true{{else}}false{{/if}} };</script>

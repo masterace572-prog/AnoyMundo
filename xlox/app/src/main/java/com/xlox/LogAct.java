@@ -1,352 +1,473 @@
 package com.xlox;
 
 import android.Manifest;
+import android.content.ActivityNotFoundException;
+import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
-import android.graphics.drawable.Drawable;
-import android.graphics.drawable.TransitionDrawable;
-import android.net.ConnectivityManager;
-import android.net.Network;
-import android.net.NetworkCapabilities;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
-import android.os.Message;
+import android.os.Looper;
 import android.provider.Settings;
+import android.text.Editable;
+import android.text.InputFilter;
 import android.text.InputType;
+import android.text.Spanned;
+import android.text.TextWatcher;
 import android.util.Log;
+import android.view.KeyEvent;
 import android.view.View;
+import android.view.inputmethod.EditorInfo;
+import android.view.inputmethod.InputMethodManager;
+import android.widget.Button;
 import android.widget.EditText;
-import android.widget.ImageButton;
-import android.widget.LinearLayout;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.content.ContextCompat;
-import androidx.core.splashscreen.SplashScreen;
+import androidx.core.app.ActivityCompat;
 
-import com.xlox.ui.ThemeMode;
-import com.xlox.ui.designsystem.DesignSystem;
-import com.xlox.ui.designsystem.DsMotion;
-import com.xlox.ui.designsystem.Haptics;
-import com.xlox.ui.designsystem.PrimaryButton;
-import com.xlox.ui.designsystem.ThemeToggleView;
-import com.xlox.ui.designsystem.Tokens;
+import com.xlox.ui.Ui;
+import com.xlox.ui.UpdateGate;
+import com.xlox.utils.LibManager;
+import com.xlox.utils.Net;
 import com.xlox.utils.Prefs;
 
+import java.util.Locale;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.regex.Pattern;
+
+/**
+ * Sign in with a licence key.
+ *
+ * Order on every launch: mandatory library update gate, then storage /
+ * install permissions, then the form becomes usable. JNI: {@code Check} keeps
+ * its native name and signature.
+ */
 public class LogAct extends AppCompatActivity {
 
     static {
         try {
             System.loadLibrary("XloX");
-        } catch (UnsatisfiedLinkError ignored) {
+        } catch (UnsatisfiedLinkError e) {
+            Log.e("LogAct", "libXloX.so failed to load", e);
         }
     }
 
+    private static native String Check(Context mContext, String userKey);
+
+    private static final String TAG = "LogAct";
+    private static final String PREF_USER = "USER";
+    private static final Pattern KEY_PATTERN = Pattern.compile("^[A-Z0-9_-]{4,64}$");
+    private static final int MAX_KEY_LENGTH = 64;
+    private static final int REQUEST_STORAGE = 100;
+    private static final int REQUEST_UNKNOWN_SOURCES = 200;
+
+    private final ExecutorService executor = Executors.newSingleThreadExecutor(r -> new Thread(r, "anoy-login"));
+    private final Handler main = new Handler(Looper.getMainLooper());
+
     private Prefs prefs;
-    private final String USER = "USER";
+    private EditText keyInput;
+    private View keyField;
+    private Button toggleKey;
+    private Button pasteKey;
+    private TextView keyError;
+    private Button loginButton;
+    private ProgressBar loginSpinner;
 
-    private EditText textUsername;
-    private PrimaryButton btnLogin;
-    private ThemeToggleView themeToggle;
-    private ImageButton eyeToggle;
-    private LinearLayout mainContainer;
-    private LinearLayout loginCard;
-    private LinearLayout accessKeyField;
-    private View pasteKey;
-    private TransitionDrawable fieldFocus;
-    private boolean isPasswordVisible = false;
-
-    private static final int REQUEST_MANAGE_STORAGE_PERMISSION = 100;
-    private static final int REQUEST_MANAGE_UNKNOWN_APP_SOURCES = 200;
+    private UpdateGate gate;
+    private boolean gatePassed;
+    private boolean signingIn;
+    private boolean keyVisible;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        // AndroidX SplashScreen must be installed before super.onCreate().
-        SplashScreen splash = com.xlox.ui.designsystem.Splash.install(this);
-        ThemeMode.apply(this);
         super.onCreate(savedInstanceState);
-
-        // The splash owns the system bars until its view is removed; restore
-        // the palette-aware icon contrast as soon as it has gone.
-        Runnable restoreBars = () -> {
-            if (!isFinishing() && !isDestroyed()) ThemeMode.applyWindow(this);
-        };
-
-        if (iskokofm()) {
-            DesignSystem.showMessage(this, getString(R.string.vpn_detected_title),
-                    getString(R.string.vpn_detected_message));
-            com.xlox.ui.designsystem.Splash.exit(splash, restoreBars);
-            return;
-        }
-
         setContentView(R.layout.activity_login);
-        ThemeMode.applyWindow(this);
-        DesignSystem.applySafeDrawing(findViewById(R.id.loginRoot), true, true, true);
-        com.xlox.ui.designsystem.Splash.exit(splash, restoreBars);
-
         prefs = new Prefs(this);
-        checkAndRequestPermissions();
 
-        textUsername = findViewById(R.id.userkey);
-        btnLogin = findViewById(R.id.login);
-        themeToggle = findViewById(R.id.themeToggle);
-        eyeToggle = findViewById(R.id.eyeToggle);
-        mainContainer = findViewById(R.id.mainContainer);
-        loginCard = findViewById(R.id.loginCard);
-        accessKeyField = findViewById(R.id.accessKeyField);
+        keyInput = findViewById(R.id.userkey);
+        keyField = findViewById(R.id.keyField);
+        toggleKey = findViewById(R.id.toggleKey);
         pasteKey = findViewById(R.id.pasteKey);
+        keyError = findViewById(R.id.keyError);
+        loginButton = findViewById(R.id.login);
+        loginSpinner = findViewById(R.id.loginSpinner);
 
-        textUsername.setText(prefs.getSt(USER, ""));
-        ThemeMode.decorateToggle(this, themeToggle);
-
-        // Recessed field with a crossfading coral focus ring.
-        fieldFocus = new TransitionDrawable(new Drawable[]{
-                ContextCompat.getDrawable(this, R.drawable.ds_field_rest),
-                ContextCompat.getDrawable(this, R.drawable.ds_field_focus)});
-        fieldFocus.setCrossFadeEnabled(true);
-        accessKeyField.setBackground(fieldFocus);
-        textUsername.setOnFocusChangeListener((v, hasFocus) -> {
-            if (hasFocus) fieldFocus.startTransition((int) DsMotion.STATE);
-            else fieldFocus.reverseTransition((int) DsMotion.STATE);
-        });
-
-        eyeToggle.setOnClickListener(v -> {
-            Haptics.toggle(v);
-            if (isPasswordVisible) {
-                textUsername.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
-                eyeToggle.setImageResource(R.drawable.ds_ic_eye);
-                eyeToggle.setContentDescription(getString(R.string.show_key));
-            } else {
-                textUsername.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD);
-                eyeToggle.setImageResource(R.drawable.ds_ic_eye_off);
-                eyeToggle.setContentDescription(getString(R.string.hide_key));
+        keyInput.setFilters(new InputFilter[]{new KeyFilter(), new InputFilter.LengthFilter(MAX_KEY_LENGTH)});
+        String saved = prefs.getSt(PREF_USER, "");
+        if (saved != null && !saved.isEmpty()) {
+            keyInput.setText(sanitize(saved));
+            keyInput.setSelection(keyInput.getText().length());
+        }
+        keyInput.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
             }
-            isPasswordVisible = !isPasswordVisible;
-            textUsername.setSelection(textUsername.getText().length());
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {
+                clearError();
+                updateLoginEnabled();
+            }
+        });
+        keyInput.setOnEditorActionListener((v, actionId, event) -> {
+            boolean enter = event != null && event.getKeyCode() == KeyEvent.KEYCODE_ENTER
+                    && event.getAction() == KeyEvent.ACTION_DOWN;
+            if (actionId == EditorInfo.IME_ACTION_DONE || enter) {
+                attemptSignIn();
+                return true;
+            }
+            return false;
         });
 
+        toggleKey.setOnClickListener(v -> {
+            Ui.tap(v);
+            setKeyVisible(!keyVisible);
+        });
         pasteKey.setOnClickListener(v -> {
-            Haptics.tick(v);
-            ClipboardManager clipboard = (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
-            if (clipboard != null && clipboard.hasPrimaryClip()
-                    && clipboard.getPrimaryClip() != null
-                    && clipboard.getPrimaryClip().getItemCount() > 0) {
-                CharSequence copiedKey = clipboard.getPrimaryClip().getItemAt(0).coerceToText(this);
-                if (copiedKey != null && copiedKey.length() > 0) {
-                    textUsername.setText(copiedKey);
-                    textUsername.setSelection(textUsername.getText().length());
-                    clearFieldError();
-                    DsMotion.fadeIn(accessKeyField);
-                    return;
-                }
-            }
-            DesignSystem.snackbarError(this, getString(R.string.clipboard_empty));
+            Ui.tap(v);
+            pasteFromClipboard();
+        });
+        loginButton.setOnClickListener(v -> attemptSignIn());
+        findViewById(R.id.getKey).setOnClickListener(v -> {
+            Ui.tap(v);
+            Ui.openUrl(this, getString(R.string.telegram_url));
         });
 
-        View buyKeyRow = findViewById(R.id.buyKey);
-        buyKeyRow.setOnClickListener(v -> openExternalUrl(getString(R.string.telegram_url)));
+        updateVersionFooter();
+        setFormEnabled(false);
+        Ui.reveal(findViewById(R.id.loginContent), 0);
 
-        themeToggle.setOnClickListener(v -> ThemeMode.toggle(this));
+        // Every launch: check the library first. Sign in stays disabled until
+        // the gate reports the library is current.
+        gate = UpdateGate.start(this, this::onGatePassed);
+    }
 
-        DsMotion.springScale(findViewById(R.id.logo), 0.82f, 1f);
-        DsMotion.stagger(findViewById(R.id.loginTopBar),
-                findViewById(R.id.emblemContainer),
-                findViewById(R.id.welcomeHeading),
-                findViewById(R.id.premium),
-                loginCard,
-                buyKeyRow,
-                findViewById(R.id.telegramCaption));
-
-        btnLogin.setOnClickListener(v -> {
-            String userKey = textUsername.getText().toString().trim();
-            if (userKey.isEmpty()) {
-                failSignIn(getString(R.string.enter_your_key));
-                return;
-            }
-            clearFieldError();
-            if (iskokofm()) {
-                DesignSystem.showMessage(this, getString(R.string.vpn_detected_title),
-                        getString(R.string.vpn_detected_message));
-                return;
-            }
-
-            prefs.setSt(USER, userKey);
-            setAuthenticating(true);
-            Login(this, userKey);
-        });
+    private void onGatePassed() {
+        gatePassed = true;
+        updateVersionFooter();
+        setFormEnabled(true);
+        requestPermissionsIfNeeded();
+        if (keyInput.getText().length() == 0) {
+            keyInput.requestFocus();
+        }
     }
 
     @Override
-    public void onWindowFocusChanged(boolean hasFocus) {
-        super.onWindowFocusChanged(hasFocus);
-        // Safety net in case a platform splash implementation never delivers
-        // an exit-animation callback. Cosmetic only: never let a bar refresh
-        // abort startup on an OEM window implementation.
-        if (hasFocus) {
-            try {
-                ThemeMode.applyWindow(this);
-            } catch (RuntimeException ignored) {
-                // Keep the activity usable; the splash callback retries.
-            }
-        }
+    protected void onDestroy() {
+        if (gate != null) gate.dispose();
+        main.removeCallbacksAndMessages(null);
+        executor.shutdownNow();
+        super.onDestroy();
     }
 
-    private void setAuthenticating(boolean active) {
-        btnLogin.setBusy(active);
-        textUsername.setEnabled(!active);
-        eyeToggle.setEnabled(!active);
-        pasteKey.setEnabled(!active);
+    // ------------------------------------------------------------------ form
+
+    private void setFormEnabled(boolean enabled) {
+        keyInput.setEnabled(enabled);
+        toggleKey.setEnabled(enabled);
+        pasteKey.setEnabled(enabled);
+        updateLoginEnabled();
     }
 
-    private void failSignIn(String reason) {
-        setAuthenticating(false);
-        Haptics.error(btnLogin);
-        DsMotion.shake(accessKeyField);
-        showFieldError();
-        DesignSystem.snackbarError(this, reason);
+    private void updateLoginEnabled() {
+        loginButton.setEnabled(gatePassed && !signingIn && keyInput.getText().toString().trim().length() > 0);
     }
 
-    private void showFieldError() {
-        accessKeyField.setBackgroundResource(R.drawable.ds_field_error);
-        textUsername.setHintTextColor(Tokens.errorInk(this));
+    private void setKeyVisible(boolean visible) {
+        keyVisible = visible;
+        int selection = keyInput.getSelectionEnd();
+        keyInput.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS
+                | (visible ? InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD
+                : InputType.TYPE_TEXT_VARIATION_PASSWORD));
+        // setInputType resets the typeface on some versions; keep the mono face.
+        keyInput.setTypeface(androidx.core.content.res.ResourcesCompat.getFont(this, R.font.jetbrains_mono_regular));
+        keyInput.setSelection(Math.max(0, Math.min(selection, keyInput.getText().length())));
+        toggleKey.setText(visible ? R.string.hide : R.string.show);
+        toggleKey.setContentDescription(getString(visible ? R.string.hide_key_description
+                : R.string.show_key_description));
     }
 
-    private void clearFieldError() {
-        accessKeyField.setBackground(fieldFocus);
-        fieldFocus.resetTransition();
-        textUsername.setHintTextColor(Tokens.textTertiary(this));
-    }
-
-    private void Login(final Context m_Context, final String userKey) {
-        Handler loginHandler = new Handler(msg -> {
-            if (msg.what == 0) {
-                Haptics.success(btnLogin);
-                Intent i = new Intent(m_Context, MAct.class);
-                startActivity(i);
-                overridePendingTransition(R.anim.ds_enter, R.anim.ds_exit);
-                finish();
-            } else {
-                failSignIn(String.valueOf(msg.obj));
-            }
-            return true;
-        });
-
-        new Thread(() -> {
-            String result;
-            try {
-                result = Check(m_Context, userKey);
-            } catch (Throwable t) {
-                Log.e("LogAct", "Native licence check unavailable", t);
-                result = getString(R.string.loader_library_missing);
-            }
-            if ("OK".equals(result)) {
-                loginHandler.sendEmptyMessage(0);
-            } else {
-                Message msg = Message.obtain();
-                msg.what = 1;
-                msg.obj = result;
-                loginHandler.sendMessage(msg);
-            }
-        }).start();
-    }
-
-    private void openExternalUrl(String url) {
+    private void pasteFromClipboard() {
+        String text = null;
         try {
-            startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url)));
-        } catch (Exception e) {
-            Log.e("LogAct", "Unable to open contact link", e);
-        }
-    }
-
-    private void checkAndRequestPermissions() {
-        // A missing OEM settings activity must never abort startup: the login
-        // screen has to survive even on ROMs without special-access pages.
-        try {
-            if (!isStoragePermissionGranted()) {
-                requestStoragePermissionDirect();
-            } else if (!canRequestPackageInstalls()) {
-                requestUnknownAppPermissionsDirect();
+            ClipboardManager clipboard = (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
+            ClipData clip = clipboard == null ? null : clipboard.getPrimaryClip();
+            if (clip != null && clip.getItemCount() > 0) {
+                CharSequence value = clip.getItemAt(0).coerceToText(this);
+                if (value != null) text = sanitize(value.toString());
             }
         } catch (RuntimeException e) {
-            Log.w("LogAct", "Special-access settings unavailable", e);
+            Log.w(TAG, "Clipboard unavailable", e);
+        }
+        if (text == null || text.isEmpty()) {
+            showError(getString(R.string.clipboard_empty));
+            return;
+        }
+        keyInput.setText(text);
+        keyInput.setSelection(keyInput.getText().length());
+    }
+
+    private void showError(String message) {
+        keyError.setText(message);
+        keyError.setVisibility(View.VISIBLE);
+        keyField.setActivated(true);
+        Ui.reject(keyField);
+    }
+
+    private void clearError() {
+        if (keyError.getVisibility() != View.GONE) keyError.setVisibility(View.GONE);
+        keyField.setActivated(false);
+    }
+
+    private void updateVersionFooter() {
+        String lib = LibManager.installedVersion(this);
+        TextView footer = findViewById(R.id.versionFooter);
+        footer.setText(getString(R.string.version_footer, BuildConfig.VERSION_NAME,
+                lib != null ? lib : getString(R.string.not_installed_short)));
+    }
+
+    // --------------------------------------------------------------- sign in
+
+    private void attemptSignIn() {
+        if (signingIn || !gatePassed) return;
+        String key = sanitize(keyInput.getText().toString());
+        if (!key.equals(keyInput.getText().toString())) {
+            keyInput.setText(key);
+            keyInput.setSelection(key.length());
+        }
+        if (key.isEmpty()) {
+            showError(getString(R.string.error_key_empty));
+            return;
+        }
+        if (!KEY_PATTERN.matcher(key).matches()) {
+            showError(getString(R.string.error_key_format));
+            return;
+        }
+        if (!Net.isOnline(this)) {
+            showError(getString(R.string.net_offline));
+            return;
+        }
+        if (Net.isVpn(this)) {
+            showError(getString(R.string.error_vpn));
+            return;
+        }
+
+        hideKeyboard();
+        clearError();
+        prefs.setSt(PREF_USER, key);
+        setSigningIn(true);
+        Ui.tap(loginButton);
+
+        final Context app = getApplicationContext();
+        try {
+            executor.execute(() -> {
+                String result;
+                try {
+                    result = Check(app, key);
+                } catch (Throwable t) {
+                    Log.e(TAG, "Native licence check unavailable", t);
+                    result = null;
+                    final String message = getString(R.string.error_native_missing);
+                    main.post(() -> onSignInResult(false, message));
+                    return;
+                }
+                final boolean ok = "OK".equals(result);
+                final String message = ok ? null : friendlyLoginError(result);
+                main.post(() -> onSignInResult(ok, message));
+            });
+        } catch (java.util.concurrent.RejectedExecutionException e) {
+            setSigningIn(false);
         }
     }
 
-    private boolean isStoragePermissionGranted() {
-        return Build.VERSION.SDK_INT < Build.VERSION_CODES.R || Environment.isExternalStorageManager();
+    private void onSignInResult(boolean ok, String message) {
+        if (!Ui.alive(this)) return;
+        if (ok) {
+            Intent intent = new Intent(this, MAct.class);
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+            startActivity(intent);
+            overridePendingTransition(R.anim.fade_in, R.anim.fade_out);
+            finish();
+            return;
+        }
+        setSigningIn(false);
+        showError(message);
     }
 
-    private void requestStoragePermissionDirect() {
+    private void setSigningIn(boolean busy) {
+        signingIn = busy;
+        keyInput.setEnabled(!busy);
+        toggleKey.setEnabled(!busy);
+        pasteKey.setEnabled(!busy);
+        Ui.setBusy(loginButton, loginSpinner, busy, getString(busy ? R.string.signing_in : R.string.sign_in));
+        if (!busy) loginButton.setText(R.string.sign_in);
+        updateLoginEnabled();
+    }
+
+    /** Maps raw panel / libcurl messages to plain language. */
+    private String friendlyLoginError(String raw) {
+        if (raw == null || raw.trim().isEmpty()) return getString(R.string.error_sign_in_generic);
+        String r = raw.trim();
+        String u = r.toUpperCase(Locale.US);
+        if (u.contains("RESOLVE HOST") || u.contains("RESOLVE PROXY")) {
+            return getString(Net.isOnline(this) ? R.string.net_no_host : R.string.net_offline);
+        }
+        if (u.contains("TIMEOUT") || u.contains("TIMED OUT")) return getString(R.string.net_timeout);
+        if (u.contains("CONNECT TO SERVER") || u.contains("COULDN'T CONNECT")) return getString(R.string.net_refused);
+        if (u.contains("SSL") || u.contains("CERTIFICATE")) return getString(R.string.net_ssl);
+        if (u.contains("SEND FAILURE") || u.contains("RECV FAILURE") || u.contains("EMPTY REPLY")
+                || u.contains("PARTIAL FILE")) {
+            return getString(R.string.net_interrupted);
+        }
+        if (u.contains("NOT REGISTERED")) return getString(R.string.error_key_unknown);
+        if (u.contains("BLOCKED")) return getString(R.string.error_key_blocked);
+        if (u.contains("EXPIRED")) return getString(R.string.error_key_expired);
+        if (u.contains("MAX DEVICE")) return getString(R.string.error_key_devices);
+        if (u.contains("OUT OF SYNC")) return getString(R.string.error_clock);
+        if (u.contains("INVALID TOKEN")) return getString(R.string.error_token);
+        if (u.contains("BAD PARAMETER") || u.contains("INVALID PARAMETER")) return getString(R.string.error_key_format);
+        if (u.contains("SERVER UNAVAILABLE") || u.contains("HTTP 5")) return getString(R.string.error_server_busy);
+        if (u.contains("HTTP ")) return getString(R.string.error_sign_in_generic) + " (" + r + ")";
+        if (u.contains("PARSE_ERROR") || u.contains("JSON") || u.contains("TYPE_ERROR")) {
+            return getString(R.string.error_bad_response);
+        }
+        // Maintenance text and any other panel reason are already readable.
+        return r.length() > 160 ? r.substring(0, 160) : r;
+    }
+
+    private void hideKeyboard() {
+        try {
+            InputMethodManager imm = (InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
+            if (imm != null) imm.hideSoftInputFromWindow(keyInput.getWindowToken(), 0);
+        } catch (RuntimeException ignored) {
+            // Keyboard service unavailable.
+        }
+    }
+
+    static String sanitize(String raw) {
+        if (raw == null) return "";
+        StringBuilder sb = new StringBuilder(raw.length());
+        String upper = raw.trim().toUpperCase(Locale.US);
+        for (int i = 0; i < upper.length() && sb.length() < MAX_KEY_LENGTH; i++) {
+            char c = upper.charAt(i);
+            if ((c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '-' || c == '_') sb.append(c);
+        }
+        return sb.toString();
+    }
+
+    /** Uppercases input and drops anything that can't be part of a key. */
+    private static final class KeyFilter implements InputFilter {
+        @Override
+        public CharSequence filter(CharSequence source, int start, int end, Spanned dest, int dstart, int dend) {
+            StringBuilder out = null;
+            for (int i = start; i < end; i++) {
+                char c = source.charAt(i);
+                char u = Character.toUpperCase(c);
+                boolean allowed = (u >= 'A' && u <= 'Z') || (u >= '0' && u <= '9') || u == '-' || u == '_';
+                if (!allowed || u != c) {
+                    if (out == null) out = new StringBuilder(source.subSequence(start, i));
+                    if (allowed) out.append(u);
+                } else if (out != null) {
+                    out.append(c);
+                }
+            }
+            return out == null ? null : out.toString();
+        }
+    }
+
+    // ----------------------------------------------------------- permissions
+
+    private void requestPermissionsIfNeeded() {
+        // A missing OEM settings page must never block sign in.
+        try {
+            if (!hasStorageAccess()) {
+                requestStorageAccess();
+            } else if (!canInstallPackages()) {
+                requestInstallPackages();
+            }
+        } catch (RuntimeException e) {
+            Log.w(TAG, "Special-access settings unavailable", e);
+        }
+    }
+
+    static boolean hasStorageAccess(Context context) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) return Environment.isExternalStorageManager();
+        return ActivityCompat.checkSelfPermission(context, Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                == android.content.pm.PackageManager.PERMISSION_GRANTED;
+    }
+
+    private boolean hasStorageAccess() {
+        return hasStorageAccess(this);
+    }
+
+    private void requestStorageAccess() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             try {
-                Intent intent = new Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION);
-                intent.setData(Uri.fromParts("package", getPackageName(), null));
-                startActivityForResult(intent, REQUEST_MANAGE_STORAGE_PERMISSION);
-            } catch (android.content.ActivityNotFoundException e) {
-                // Fall back to the generic list; some OEM builds ship none.
+                Intent intent = new Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION,
+                        Uri.fromParts("package", getPackageName(), null));
+                startActivityForResult(intent, REQUEST_STORAGE);
+            } catch (ActivityNotFoundException e) {
                 try {
-                    startActivityForResult(
-                            new Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION),
-                            REQUEST_MANAGE_STORAGE_PERMISSION);
+                    startActivityForResult(new Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION),
+                            REQUEST_STORAGE);
                 } catch (RuntimeException nested) {
-                    Log.w("LogAct", "All-files-access settings unavailable", nested);
+                    Log.w(TAG, "All-files-access settings unavailable", nested);
                 }
             }
         } else {
-            androidx.core.app.ActivityCompat.requestPermissions(this,
-                    new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE},
-                    REQUEST_MANAGE_STORAGE_PERMISSION);
+            ActivityCompat.requestPermissions(this,
+                    new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE,
+                            Manifest.permission.READ_EXTERNAL_STORAGE}, REQUEST_STORAGE);
         }
     }
 
-    private boolean canRequestPackageInstalls() {
+    private boolean canInstallPackages() {
         return Build.VERSION.SDK_INT < Build.VERSION_CODES.O || getPackageManager().canRequestPackageInstalls();
     }
 
-    private void requestUnknownAppPermissionsDirect() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            try {
-                Intent intent = new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
-                        Uri.parse("package:" + getPackageName()));
-                startActivityForResult(intent, REQUEST_MANAGE_UNKNOWN_APP_SOURCES);
-            } catch (RuntimeException e) {
-                Log.w("LogAct", "Install-unknown-apps settings unavailable", e);
-            }
+    private void requestInstallPackages() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return;
+        try {
+            startActivityForResult(new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
+                    Uri.parse("package:" + getPackageName())), REQUEST_UNKNOWN_SOURCES);
+        } catch (RuntimeException e) {
+            Log.w(TAG, "Install-unknown-apps settings unavailable", e);
         }
     }
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        // Never kill the process here: canRequestPackageInstalls() is queried
-        // live, so a restart is unnecessary, and self-terminating reads as a
-        // crash on launch. Never loop back into the same settings screen.
-        if (requestCode == REQUEST_MANAGE_STORAGE_PERMISSION
-                && isStoragePermissionGranted() && !canRequestPackageInstalls()) {
-            requestUnknownAppPermissionsDirect();
-        }
-    }
-
-    private boolean iskokofm() {
-        try {
-            ConnectivityManager cm = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
-            if (cm == null) return false;
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                Network activeNetwork = cm.getActiveNetwork();
-                if (activeNetwork != null) {
-                    NetworkCapabilities caps = cm.getNetworkCapabilities(activeNetwork);
-                    if (caps != null && caps.hasTransport(NetworkCapabilities.TRANSPORT_VPN)) return true;
-                }
+        if (requestCode == REQUEST_STORAGE && hasStorageAccess() && !canInstallPackages()) {
+            try {
+                requestInstallPackages();
+            } catch (RuntimeException e) {
+                Log.w(TAG, "Install-unknown-apps settings unavailable", e);
             }
-        } catch (Exception ignored) {
         }
-        return false;
     }
 
-    private static native String Check(Context mContext, String userKey);
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == REQUEST_STORAGE && !canInstallPackages()) {
+            try {
+                requestInstallPackages();
+            } catch (RuntimeException e) {
+                Log.w(TAG, "Install-unknown-apps settings unavailable", e);
+            }
+        }
+    }
 }

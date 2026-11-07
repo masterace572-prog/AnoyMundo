@@ -1,6 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources xmlns:tools="http://schemas.android.com/tools"
-    tools:keep="@dimen/space_20,@dimen/space_40,@dimen/icon_button,@dimen/radius_image,@dimen/radius_avatar,@dimen/radius_sheet,@dimen/list_item_double,@dimen/progress_circular_large,@dimen/banner_height,@dimen/stagger_step,@dimen/avatar_size,@dimen/dialog_inset,@dimen/mark_size,@dimen/stroke,@dimen/dot_size,@drawable/ds_sheet,@drawable/ds_chip,@drawable/ds_avatar,@drawable/ds_card,@drawable/ds_tile,@drawable/ds_pill,@drawable/ds_badge" />
-<!-- The 8dp spacing scale, shape radii and defined-but-not-instantiated
-     component styles are design tokens: every value is intentionally
-     available even where a particular screen does not consume it yet. -->

@@ -1,5 +1,5 @@
-// Build-time validation: templates compile, every module imports, legacy
-// password hash verifies, and the compiled stylesheet exists.
+// Build-time validation: templates compile, every module imports, the Owner
+// password hash verifies, the stylesheet exists and key rules hold.
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -15,7 +15,7 @@ Handlebars.registerHelper('lt', () => true);
 Handlebars.registerHelper('and', () => true);
 Handlebars.registerHelper('or', () => true);
 Handlebars.registerHelper('json', () => '');
-Handlebars.registerHelper('alertClass', () => 'ui-alert--info');
+Handlebars.registerHelper('alertClass', () => 'alert-info');
 
 const { templates } = await import('../src/templates.generated.mjs');
 Handlebars.registerPartial('header', templates.header);
@@ -41,106 +41,70 @@ for (const mod of ['../src/config.mjs', '../src/memory-db.mjs', '../src/db.mjs',
 
 try {
   const { verifyPassword, hashPassword } = await import('../src/auth.mjs');
+  const owner = '$2a$08$sQefH.l6cnpeUwuTifoZvuF1SSh7U6Mw4UwddAO9cawj5pip8blOa';
+  if (!verifyPassword('Anoy1764', owner)) errors.push('Owner bcrypt hash did not verify');
+  else process.stdout.write('  ok  Owner password hash (Anoy)\n');
   const legacy = '$2y$08$/CsSVgrGgCqVcievCuR2COPnlMIpRz6kA.hzItBD/xd1Cx0hj0kMK';
-  if (!verifyPassword('admin123', legacy)) errors.push('legacy admin bcrypt hash did not verify');
-  else process.stdout.write('  ok  legacy password compatibility (admin/admin123)\n');
+  if (!verifyPassword('admin123', legacy)) errors.push('legacy $2y$ bcrypt hash did not verify');
   const fresh = hashPassword('test1234');
   if (!verifyPassword('test1234', fresh) || verifyPassword('wrong', fresh)) errors.push('password hashing round-trip failed');
 } catch (e) { errors.push(`password check: ${e.message}`); }
 
-const css = path.join(root, 'public', 'assets', 'css', 'tailwind.css');
-if (!fs.existsSync(css) || fs.statSync(css).size < 1000) errors.push('compiled Tailwind CSS is missing or too small');
-else process.stdout.write(`  ok  tailwind.css (${(fs.statSync(css).size / 1024).toFixed(0)} KB)\n`);
-
-// ---- UI regression guards -------------------------------------------------
-const viewsDir = path.join(root, 'views');
-const leaked = [];
-for (const file of fs.readdirSync(viewsDir).filter((f) => f.endsWith('.hbs'))) {
-  const source = fs.readFileSync(path.join(viewsDir, file), 'utf8');
-  if (/<\?|&lt;\?|linear-gradient|bg-gradient|glass-card|gradient-bg/.test(source)) {
-    leaked.push(`${file}: untranslated PHP or gradient markup`);
-  }
-}
-if (leaked.length) errors.push(...leaked);
-else process.stdout.write('  ok  views contain no PHP tags and no gradients\n');
-
-const appSource = fs.readFileSync(path.join(root, 'src', 'app.mjs'), 'utf8');
-if (/<i class|<strong>|&middot;/.test(appSource)) errors.push('server messages still contain HTML markup');
-else process.stdout.write('  ok  flash/error messages are plain text\n');
-
-const uiCss = path.join(root, 'public', 'assets', 'css', 'app.css');
-if (!fs.existsSync(uiCss) || fs.statSync(uiCss).size < 5000) errors.push('app.css design system is missing');
-else if (/linear-gradient|radial-gradient/.test(fs.readFileSync(uiCss, 'utf8'))) errors.push('app.css contains a gradient');
-else process.stdout.write(`  ok  app.css flat design system (${(fs.statSync(uiCss).size / 1024).toFixed(0)} KB)\n`);
-
-// The global form padding shorthand overrides Tailwind's pl-* utilities, so
-// icon-prefixed inputs (saldo) need an explicit, stronger padding rule.
-const uiCssSource = fs.existsSync(uiCss) ? fs.readFileSync(uiCss, 'utf8') : '';
-if (!/\.field-prefix > input[\s\S]{0,160}padding-left:\s*2\.875rem\s*!important/.test(uiCssSource)) {
-  errors.push('app.css is missing the icon-prefix input padding fix (saldo digits overlap the icon)');
-} else process.stdout.write('  ok  saldo icon-prefix padding fix present\n');
-for (const view of ['admin_user_edit.hbs', 'admin_referral.hbs']) {
-  const src = fs.readFileSync(path.join(viewsDir, view), 'utf8');
-  if (!/class="relative field-prefix"/.test(src) || !/class="field-prefix__icon"/.test(src)) {
-    errors.push(`${view} is missing the field-prefix wrapper/icon classes`);
-  }
-}
-
-for (const asset of ['public/assets/css/ios.css', 'public/assets/js/app-ui.js', 'public/assets/fonts/inter-latin-wght-normal.woff2',
-  'public/assets/fonts/INTER-LICENSE.txt']) {
+// ---- static assets ----------------------------------------------------------
+for (const asset of ['public/assets/css/ui.css', 'public/assets/js/app-ui.js', 'public/favicon.svg',
+  'public/assets/fonts/inter-latin-wght-normal.woff2', 'public/assets/fonts/INTER-LICENSE.txt']) {
   if (!fs.existsSync(path.join(root, asset))) errors.push(`missing static asset: ${asset}`);
 }
-
-// ---- v1.2 security / billing regression guards -----------------------------
 const src = (rel) => fs.readFileSync(path.join(root, rel), 'utf8');
+const uiCss = src('public/assets/css/ui.css');
+if (/gradient\(/.test(uiCss)) errors.push('ui.css contains a gradient');
+if (!/--bg:\s*#000/.test(uiCss) || !/--blue:\s*#0a84ff/i.test(uiCss)) errors.push('ui.css must keep the black / blue palette');
+
+// ---- views: no CDN, no logo, no PHP, no legacy frameworks -------------------
+const viewsDir = path.join(root, 'views');
+for (const file of fs.readdirSync(viewsDir).filter((f) => f.endsWith('.hbs'))) {
+  const source = fs.readFileSync(path.join(viewsDir, file), 'utf8');
+  if (/<\?|&lt;\?/.test(source)) errors.push(`${file}: untranslated PHP`);
+  if (/https?:\/\/(cdn|code\.jquery|cdnjs|unpkg)/.test(source)) errors.push(`${file}: loads a CDN asset`);
+  if (/ic_anoy|logo\.(png|svg)|brand-mark/.test(source)) errors.push(`${file}: uses a logo`);
+  if (/\$\(|jQuery|DataTable|Swal\./.test(source)) errors.push(`${file}: legacy jQuery/DataTables/SweetAlert code`);
+  if (/tailwind|bg-white|text-gray-|rounded-xl/.test(source)) errors.push(`${file}: leftover Tailwind classes`);
+}
+const appSource = src('src/app.mjs');
+if (/<i class|<strong>|&middot;/.test(appSource)) errors.push('server messages still contain HTML markup');
+
+// ---- billing / security / key format guards ---------------------------------
 const keyService = src('src/key-service.mjs');
-if (!/create_keys_atomic/.test(keyService) || !/p_total_price/.test(keyService)) {
-  errors.push('key-service.mjs must use the atomic SQL transaction');
+if (!/create_keys_atomic/.test(keyService) || !/p_total_price/.test(keyService)) errors.push('key-service.mjs must use the atomic SQL transaction');
+if (!/FAIL CLOSED/.test(keyService)) errors.push('key-service.mjs must fail closed when the transaction is unavailable');
+if (!/delete_keys_refund/.test(keyService) || !/price_paid/.test(keyService)) errors.push('key-service.mjs must refund never-used keys');
+if (!/handleFailure/.test(appSource) || !/sameOriginMutation/.test(appSource) || !/cross_site_blocked/.test(appSource)) {
+  errors.push('app.mjs must keep the friendly error handler and the same-origin guard');
 }
-if (!/FAIL CLOSED/.test(keyService)) {
-  errors.push('key-service.mjs must fail closed when the transaction is unavailable');
-}
-if (!/unitPrice \* \(Number\.isInteger\(count\) \? count : 0\)/.test(keyService)) {
-  errors.push('key-service.mjs must charge price x devices x number of keys');
-}
-if (!/delete_keys_refund/.test(keyService) || !/price_paid/.test(keyService)) {
-  errors.push('key-service.mjs must refund never-used keys by their stored price');
-}
-const appSrc = src('src/app.mjs');
-if (!/config\.ownerUsername/.test(appSrc) || !/handleFailure/.test(appSrc)) {
-  errors.push('app.mjs must bind the Owner identity and use the friendly error handler');
-}
-if (!/sameOriginMutation/.test(appSrc) || !/cross_site_blocked/.test(appSrc)) {
-  errors.push('app.mjs must block cross-site state-changing GET requests');
-}
-if (!/pv:/.test(src('src/auth.mjs')) || !/session\.pv/.test(src('src/auth.mjs'))) {
-  errors.push('sessions must be bound to the password hash so old sessions are revoked');
-}
-if (!/if \(!user\.isOwner\) query = query\.eq\('registrator', user\.username\);/.test(appSrc)) {
+if (!/let p = '\/';/.test(appSource)) errors.push('handle() must declare the path outside try so the error handler can use it');
+if (!/if \(!user\.isOwner\) query = query\.eq\('registrator', user\.username\);/.test(appSource)) {
   errors.push('non-owner key lists and downloads must be scoped to their own keys');
 }
-if (/Charged once per request|charged once, not per key|Please top up to your beloved admin/.test(appSrc + src('views/keys_generate.hbs'))) {
-  errors.push('outdated pricing copy is still present');
-}
+if (!/pv:/.test(src('src/auth.mjs')) || !/session\.pv/.test(src('src/auth.mjs'))) errors.push('sessions must be bound to the password hash');
 const generateView = src('views/keys_generate.hbs');
-if (!/name="count"/.test(generateView) || !/name="request_id"/.test(generateView)) {
-  errors.push('generate view must post a real key count and an idempotency id');
+if (!/name="count"/.test(generateView) || !/name="request_id"/.test(generateView) || !/name="custom"/.test(generateView)) {
+  errors.push('generate view must post count, custom and an idempotency id');
 }
-if (!/floating_form/.test(src('views/server.hbs'))) {
-  errors.push('server view must post the hidden floating_form marker');
-}
-const libView = src('views/lib.hbs');
-if (!/action: 'link'/.test(libView) || !/id="link-form"/.test(libView)) {
-  errors.push('library view must support pushing an external link');
-}
-const iosCss = src('public/assets/css/ios.css');
-if (/linear-gradient|radial-gradient|conic-gradient/.test(iosCss)) {
-  errors.push('ios.css contains a gradient function');
-}
-if (!/\.ui-section-title/.test(iosCss) || !/\.ui-summary__row/.test(iosCss)) {
-  errors.push('ios.css is missing the clarity/typography layer');
-}
-if (errors.length === 0) process.stdout.write('  ok  v1.2 security + billing guards\n');
+if (!/floating_form/.test(src('views/server.hbs'))) errors.push('server view must post the hidden floating_form marker');
+if (!/action: 'link'/.test(src('views/lib.hbs'))) errors.push('library view must support pushing an external link');
+
+try {
+  const ks = await import('../src/key-service.mjs');
+  const samples = [];
+  for (const h of [2, 5, 24, 72, 168, 336, 720]) samples.push(ks.keyPrefix('Anoy', h) + ks.randomKeyPart());
+  const bad = samples.filter((k) => !/^ANOY-(2H|5H|1D|3D|7D|14D|30D)-[A-Z0-9]{5}$/.test(k));
+  if (bad.length) errors.push(`key format wrong: ${bad.join(', ')}`);
+  if (ks.parseCustomSuffix('anoy-7d-vip1', 'ANOY-7D-').suffix !== 'VIP1') errors.push('custom key prefix stripping failed');
+  if (!ks.parseCustomSuffix('ab', 'ANOY-7D-').error) errors.push('too-short custom key accepted');
+  if (!errors.length) process.stdout.write(`  ok  key format (${samples[4]})\n`);
+} catch (e) { errors.push(`key format check: ${e.message}`); }
+
+if (!errors.length) process.stdout.write('  ok  billing, security and UI guards\n');
 
 if (errors.length) {
   console.error('\n[check] FAILED:');

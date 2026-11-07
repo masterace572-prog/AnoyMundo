@@ -1,563 +1,388 @@
-/* Progressive enhancement for the flat responsive layout.
-   No framework dependency. Class hooks only: no form fields, names, actions or
-   server routes are touched here. */
+/* Anoy panel — small progressive enhancement layer. No dependencies.
+   Every feature is optional: without JavaScript the forms still post and the
+   server still validates everything. All server text is inserted as text. */
 (function () {
   'use strict';
 
-  function content() {
-    return document.getElementById('main-content');
+  var $ = function (sel, root) { return (root || document).querySelector(sel); };
+  var $$ = function (sel, root) { return Array.prototype.slice.call((root || document).querySelectorAll(sel)); };
+
+  function el(tag, attrs, text) {
+    var node = document.createElement(tag);
+    Object.keys(attrs || {}).forEach(function (k) {
+      if (k === 'className') node.className = attrs[k];
+      else node.setAttribute(k, attrs[k]);
+    });
+    if (text != null) node.textContent = String(text);
+    return node;
   }
 
-  /* Give every table a horizontal scroll wrapper on wide screens. */
-  function wrapTables() {
-    var main = content();
-    if (!main) return;
-    var tables = main.querySelectorAll('table');
-    Array.prototype.forEach.call(tables, function (table) {
-      var parent = table.parentElement;
-      if (!parent) return;
-      // DataTables and several views already provide their own scroll wrapper.
-      if (parent.closest('.table-scroll, .dataTables_wrapper')) return;
-      if (parent.classList.contains('overflow-x-auto')) return;
-      var style = window.getComputedStyle(parent);
-      if (style.overflowX === 'auto' || style.overflowX === 'scroll') return;
-      var wrapper = document.createElement('div');
-      wrapper.className = 'table-scroll';
-      parent.insertBefore(wrapper, table);
-      wrapper.appendChild(table);
+  /* ------------------------------------------------------------- toasts */
+  function toast(message, isError) {
+    var host = $('.toasts');
+    if (!host) { host = el('div', { className: 'toasts', 'aria-live': 'polite' }); document.body.appendChild(host); }
+    var t = el('div', { className: 'toast' + (isError ? ' error' : '') }, message);
+    host.appendChild(t);
+    setTimeout(function () { t.style.opacity = '0'; t.style.transition = 'opacity .2s'; }, 2600);
+    setTimeout(function () { if (t.parentNode) t.parentNode.removeChild(t); }, 2900);
+  }
+
+  /* -------------------------------------------------------------- modal */
+  function confirmDialog(title, detail, okLabel, danger) {
+    return new Promise(function (resolve) {
+      var back = el('div', { className: 'modal-backdrop', role: 'presentation' });
+      var box = el('div', { className: 'modal', role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'modal-title' });
+      box.appendChild(el('h3', { id: 'modal-title' }, title));
+      if (detail) box.appendChild(el('p', {}, detail));
+      var actions = el('div', { className: 'actions' });
+      var cancel = el('button', { type: 'button', className: 'btn btn-secondary' }, 'Cancel');
+      var ok = el('button', { type: 'button', className: 'btn ' + (danger ? 'btn-danger' : 'btn-primary') }, okLabel || 'Continue');
+      actions.appendChild(cancel); actions.appendChild(ok); box.appendChild(actions); back.appendChild(box);
+      var last = document.activeElement;
+      function close(result) {
+        document.removeEventListener('keydown', onKey);
+        back.classList.remove('show');
+        setTimeout(function () { if (back.parentNode) back.parentNode.removeChild(back); if (last && last.focus) last.focus(); }, 150);
+        resolve(result);
+      }
+      function onKey(e) { if (e.key === 'Escape') close(false); }
+      cancel.addEventListener('click', function () { close(false); });
+      ok.addEventListener('click', function () { close(true); });
+      back.addEventListener('click', function (e) { if (e.target === back) close(false); });
+      document.addEventListener('keydown', onKey);
+      document.body.appendChild(back);
+      requestAnimationFrame(function () { back.classList.add('show'); ok.focus(); });
     });
   }
 
-  /* Copy the column heading into every cell so CSS can turn rows into
-     labelled cards below 800px. DataTables injects its rows after load, so the
-     same pass runs from a MutationObserver. */
-  function labelTableCells() {
-    var main = content();
-    if (!main) return;
-    Array.prototype.forEach.call(main.querySelectorAll('table'), function (table) {
-      var heads = table.querySelectorAll('thead th');
-      if (!heads.length) return;
-      var labels = Array.prototype.map.call(heads, function (th) {
-        return (th.textContent || '').replace(/\s+/g, ' ').trim();
+  /* ---------------------------------------------------------- busy state */
+  function setBusy(btn, label) {
+    if (!btn || btn.dataset.busy === '1') return;
+    btn.dataset.busy = '1';
+    btn.dataset.idleHtml = btn.innerHTML;
+    btn.disabled = true;
+    btn.textContent = '';
+    btn.appendChild(el('span', { className: 'spinner', 'aria-hidden': 'true' }));
+    btn.appendChild(document.createTextNode(label || 'Working…'));
+  }
+  function clearBusy(btn) {
+    if (!btn || btn.dataset.busy !== '1') return;
+    btn.innerHTML = btn.dataset.idleHtml || btn.innerHTML;
+    btn.disabled = false;
+    btn.dataset.busy = '';
+  }
+  // Back/forward cache restores a page with the spinner still showing.
+  window.addEventListener('pageshow', function () { $$('[data-busy="1"]').forEach(clearBusy); });
+
+  /* ---------------------------------------------------------- JSON fetch */
+  function post(url, data) {
+    var body = new URLSearchParams();
+    Object.keys(data || {}).forEach(function (k) { body.append(k, data[k]); });
+    var ctrl = window.AbortController ? new AbortController() : null;
+    var timer = setTimeout(function () { if (ctrl) ctrl.abort(); }, 25000);
+    return fetch(url, {
+      method: 'POST', body: body, credentials: 'same-origin',
+      headers: { Accept: 'application/json' }, signal: ctrl ? ctrl.signal : undefined
+    }).then(function (res) {
+      return res.json().catch(function () { return {}; }).then(function (json) {
+        if (!res.ok || json.ok === false) throw new Error(json.error || ('Request failed (' + res.status + ').'));
+        return json;
       });
-      Array.prototype.forEach.call(table.querySelectorAll('tbody tr'), function (row) {
-        Array.prototype.forEach.call(row.cells, function (cell, i) {
-          if (!cell.hasAttribute('data-label')) {
-            cell.setAttribute('data-label', labels[i] || '');
-          }
+    }, function (err) {
+      throw new Error(err && err.name === 'AbortError' ? 'The server took too long. Please try again.' : 'Network error. Check your connection.');
+    }).then(function (v) { clearTimeout(timer); return v; }, function (e) { clearTimeout(timer); throw e; });
+  }
+
+  function copyText(text) {
+    if (navigator.clipboard && window.isSecureContext) return navigator.clipboard.writeText(text);
+    return new Promise(function (resolve, reject) {
+      var area = el('textarea', { readonly: '', style: 'position:fixed;opacity:0' });
+      area.value = text; document.body.appendChild(area); area.select();
+      try { document.execCommand('copy') ? resolve() : reject(new Error('copy failed')); }
+      catch (e) { reject(e); } finally { document.body.removeChild(area); }
+    });
+  }
+
+  function randomId() {
+    if (window.crypto && crypto.getRandomValues) {
+      var a = new Uint8Array(16); crypto.getRandomValues(a);
+      return Array.prototype.map.call(a, function (b) { return ('0' + b.toString(16)).slice(-2); }).join('');
+    }
+    return String(Date.now()) + Math.random().toString(16).slice(2);
+  }
+
+  /* ----------------------------------------------------------- generic */
+  function initGeneric() {
+    document.addEventListener('click', function (e) {
+      var t = e.target.closest ? e.target : null;
+      if (!t) return;
+      if (t.closest('[data-nav-open]')) { document.body.classList.add('nav-open'); return; }
+      if (t.closest('[data-nav-close]')) { document.body.classList.remove('nav-open'); return; }
+      var dismiss = t.closest('[data-dismiss]');
+      if (dismiss) { var a = dismiss.closest('.alert'); if (a) a.remove(); return; }
+      var toggle = t.closest('[data-toggle-password]');
+      if (toggle) {
+        var input = document.getElementById(toggle.getAttribute('data-toggle-password'));
+        if (input) {
+          var show = input.type === 'password';
+          input.type = show ? 'text' : 'password';
+          toggle.textContent = show ? 'Hide' : 'Show';
+        }
+        return;
+      }
+      var copy = t.closest('[data-copy-target]');
+      if (copy) {
+        var src = document.getElementById(copy.getAttribute('data-copy-target'));
+        if (src) copyText(src.value || src.textContent).then(function () { toast('Copied'); }, function () {
+          if (src.select) src.select();
+          toast('Press Ctrl+C to copy', true);
+        });
+      }
+    });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') document.body.classList.remove('nav-open'); });
+
+    // Forms that need a confirmation first.
+    $$('form[data-confirm]').forEach(function (form) {
+      form.addEventListener('submit', function (e) {
+        if (form.dataset.confirmed === '1') return;
+        e.preventDefault();
+        var btn = form.querySelector('[type=submit]');
+        var danger = btn && btn.classList.contains('btn-danger');
+        confirmDialog(form.getAttribute('data-confirm'), form.getAttribute('data-confirm-detail'), btn ? btn.textContent.trim() : 'Continue', danger)
+          .then(function (ok) {
+            if (!ok) return;
+            form.dataset.confirmed = '1';
+            setBusy(btn, 'Working…');
+            form.submit();
+          });
+      });
+    });
+
+    // One submit per click: spinner + disabled button, no double charges.
+    $$('form[data-busy-form]').forEach(function (form) {
+      form.addEventListener('submit', function (e) {
+        if (form.dataset.submitting === '1') { e.preventDefault(); return; }
+        if (e.defaultPrevented) return;
+        form.dataset.submitting = '1';
+        var btn = form.querySelector('[type=submit]');
+        setBusy(btn, btn && btn.getAttribute('data-busy-label'));
+        setTimeout(function () { form.dataset.submitting = ''; clearBusy(btn); }, 30000);
+      });
+    });
+
+    // Upper-case inputs keep the caret where it was.
+    $$('input.upper').forEach(function (input) {
+      input.addEventListener('input', function () {
+        var pos = input.selectionStart;
+        var up = input.value.toUpperCase();
+        if (up !== input.value) { input.value = up; try { input.setSelectionRange(pos, pos); } catch (e) { /* type=email */ } }
+      });
+    });
+
+    // Client-side table filter (users list).
+    $$('[data-filter-table]').forEach(function (input) {
+      var table = document.getElementById(input.getAttribute('data-filter-table'));
+      if (!table) return;
+      input.addEventListener('input', function () {
+        var q = input.value.trim().toLowerCase();
+        $$('tbody tr', table).forEach(function (row) {
+          if (row.classList.contains('is-empty')) return;
+          row.hidden = q && row.textContent.toLowerCase().indexOf(q) < 0;
         });
       });
     });
-  }
 
-  /* Indian digit grouping for the saldo figure, in both the sidebar and the
-     top bar. The raw number stays in the markup as a no-JS fallback. */
-  function formatSaldo() {
-    var nodes = document.querySelectorAll('[data-saldo]');
-    Array.prototype.forEach.call(nodes, function (el) {
-      var n = Number(el.getAttribute('data-saldo'));
-      if (!isFinite(n)) return;
-      var formatted;
-      try {
-        formatted = new Intl.NumberFormat('en-IN').format(n);
-      } catch (e) {
-        formatted = String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-      }
-      el.textContent = '₹' + formatted;
+    // Success messages fade after a while; errors stay until dismissed.
+    $$('.alert[data-flash="success"]').forEach(function (a) {
+      setTimeout(function () { a.style.transition = 'opacity .3s'; a.style.opacity = '0'; setTimeout(function () { a.remove(); }, 320); }, 6000);
+    });
+
+    // Key detail page actions.
+    $$('[data-key-action]').forEach(function (btn) {
+      btn.addEventListener('click', function () { keyAction(btn.getAttribute('data-key-action'), btn.getAttribute('data-key'), btn); });
     });
   }
 
-  /* Render the real account expiry as YYYY-MM-DD. */
-  function formatExpiry() {
-    var el = document.getElementById('expiry-date');
-    if (!el) return;
-    var raw = el.getAttribute('datetime') || '';
-    if (/^\d{4}-\d{2}-\d{2}/.test(raw)) el.textContent = raw.slice(0, 10);
-  }
-
-  /* An empty flash slot should not eat the first screen on a phone. */
-  function hideEmptySlots() {
-    var main = content();
-    if (!main) return;
-    Array.prototype.forEach.call(main.querySelectorAll('.mb-6, .mb-4'), function (el) {
-      if (el.querySelector('img, svg, input, button, a, .ui-alert, .ui-card')) return;
-      if ((el.textContent || '').trim()) return;
-      el.style.display = 'none';
+  function keyAction(action, key, btn, done) {
+    var isDelete = action === 'delete';
+    var title = isDelete ? 'Delete ' + key + '?' : 'Reset devices for ' + key + '?';
+    var detail = isDelete
+      ? 'The key stops working immediately. A never-used key is refunded. This cannot be undone.'
+      : 'Every registered device is removed. The next device to sign in is registered again.';
+    confirmDialog(title, detail, isDelete ? 'Delete' : 'Reset', isDelete).then(function (ok) {
+      if (!ok) return;
+      setBusy(btn, isDelete ? 'Deleting…' : 'Resetting…');
+      post(isDelete ? '/keys/resetall' : '/keys/reset', { userkey: key }).then(function (res) {
+        clearBusy(btn);
+        if (isDelete) {
+          toast(res.refunded ? 'Deleted and refunded ₹' + res.refund_total : 'Key deleted');
+          var after = btn.getAttribute('data-after');
+          if (after) setTimeout(function () { location.href = after; }, 600);
+        } else toast('Devices reset');
+        if (done) done();
+      }, function (err) { clearBusy(btn); toast(err.message, true); });
     });
   }
 
-  /* ------------------------------------------------------------------ *
-   * Feedback: button busy state + page progress bar.
-   *
-   * Account login does a bcrypt verification on the server, so a click used
-   * to look like a dead button for a second or two. Every normal form submit
-   * now shows a spinner and a "please wait" label, disables the button and
-   * ignores repeat submits until the new page arrives.
-   * ------------------------------------------------------------------ */
+  /* ---------------------------------------------------------- keys list */
+  function initKeysList() {
+    var body = document.getElementById('keys-body');
+    if (!body || !window.ANOY_KEYS) return;
+    var owner = !!window.ANOY_KEYS.owner;
+    var state = { page: 1, per: 25, q: '', status: '', pages: 1, seq: 0 };
+    var search = document.getElementById('keys-search');
+    var filter = document.getElementById('keys-status');
+    var prev = document.getElementById('keys-prev');
+    var next = document.getElementById('keys-next');
+    var range = document.getElementById('keys-range');
+    var cols = owner ? 7 : 6;
+    var labels = { active: 'In use', unused: 'Unused', expired: 'Expired', blocked: 'Blocked' };
 
-  var BUSY_LABELS = {
-    'Sign In': 'Signing in…',
-    'Create Account': 'Creating account…',
-    'Create API key': 'Creating key…',
-    'Revoke': 'Revoking…',
-    'Delete': 'Deleting…',
-    'Update Account': 'Saving…',
-    'Update Password': 'Saving…',
-    'Update Account Information': 'Saving…',
-    'Update User Key': 'Saving…',
-    'Update Settings': 'Saving…',
-    'Update Features': 'Saving…',
-    'Update Mod Name': 'Saving…',
-    'Update Floating Text': 'Saving…',
-    'Generate License Key': 'Generating…',
-    'Create Referral Code': 'Generating…',
-    'Upload': 'Uploading…',
-    'Copy': 'Copied'
-  };
-  var BUSY_FALLBACK = 'Please wait…';
-  /* Failsafe in case a request stalls: never leave a permanently dead form. */
-  var RELEASE_AFTER_MS = 30000;
-  var timers = [];
-
-  function addTimer(fn, ms) {
-    var id = window.setTimeout(fn, ms);
-    timers.push(id);
-    return id;
-  }
-
-  function makeSpinner() {
-    var el = document.createElement('span');
-    el.className = 'ui-spinner';
-    el.setAttribute('aria-hidden', 'true');
-    return el;
-  }
-
-  /* Wrap (never replace) the button's original children, so inline icons and
-     listeners survive and can be restored byte-for-byte. */
-  function busyButton(btn, label) {
-    if (!btn || btn.getAttribute('data-anoy-busy') === '1') return false;
-    var original = (btn.textContent || '').replace(/\s+/g, ' ').trim();
-    var text = btn.getAttribute('data-busy-label') || label ||
-               BUSY_LABELS[original] || BUSY_FALLBACK;
-
-    var originalContent = document.createElement('span');
-    originalContent.className = 'ui-btn__content';
-    while (btn.firstChild) originalContent.appendChild(btn.firstChild);
-
-    var busyLabel = document.createElement('span');
-    busyLabel.className = 'ui-btn__busy-label';
-    busyLabel.textContent = text;
-
-    var spinner = makeSpinner();
-    btn.appendChild(spinner);
-    btn.appendChild(busyLabel);
-    btn.appendChild(originalContent);
-
-    btn.__anoyBusy = {
-      wasDisabled: !!btn.disabled,
-      spinner: spinner,
-      label: busyLabel,
-      content: originalContent
-    };
-    btn.classList.add('is-busy');
-    btn.setAttribute('data-anoy-busy', '1');
-    btn.setAttribute('aria-busy', 'true');
-    btn.setAttribute('aria-disabled', 'true');
-    btn.disabled = true;
-    return true;
-  }
-
-  function releaseButton(btn) {
-    if (!btn || btn.getAttribute('data-anoy-busy') !== '1') return false;
-    var state = btn.__anoyBusy;
-    if (state) {
-      var wrapper = state.content;
-      while (wrapper.firstChild) btn.insertBefore(wrapper.firstChild, wrapper);
-      if (wrapper.parentNode) wrapper.parentNode.removeChild(wrapper);
-      if (state.spinner.parentNode) state.spinner.parentNode.removeChild(state.spinner);
-      if (state.label.parentNode) state.label.parentNode.removeChild(state.label);
-      btn.disabled = state.wasDisabled;
-      delete btn.__anoyBusy;
+    function message(text) {
+      body.textContent = '';
+      var tr = el('tr', { className: 'is-empty' });
+      tr.appendChild(el('td', { colspan: String(cols) }, text));
+      body.appendChild(tr);
     }
-    btn.classList.remove('is-busy');
-    btn.removeAttribute('data-anoy-busy');
-    btn.removeAttribute('aria-busy');
-    btn.removeAttribute('aria-disabled');
-    return true;
-  }
-
-  /* Switch-only forms have no submit button, so the spinner lives in the
-     switch track instead. Keeps every tap on a control visibly loading. */
-  function releaseSwitchBusy(form) {
-    Array.prototype.forEach.call(form.querySelectorAll('.ui-switch.is-busy'), function (sw) {
-      sw.classList.remove('is-busy');
-      var sp = sw.querySelector('.ui-spinner--switch');
-      if (sp && sp.parentNode) sp.parentNode.removeChild(sp);
-    });
-  }
-
-  function releaseAll() {
-    Array.prototype.forEach.call(
-      document.querySelectorAll('[data-anoy-busy="1"]'), releaseButton);
-    Array.prototype.forEach.call(document.forms, function (form) {
-      if (form.getAttribute('data-anoy-busy') === '1') {
-        form.removeAttribute('data-anoy-busy');
-        form.classList.remove('is-submitting');
-      }
-      releaseSwitchBusy(form);
-    });
-    hidePageProgress();
-  }
-
-  function pageProgress() {
-    var el = document.getElementById('anoy-page-progress');
-    if (el) return el;
-    el = document.createElement('div');
-    el.id = 'anoy-page-progress';
-    el.className = 'anoy-page-progress';
-    el.setAttribute('role', 'progressbar');
-    el.setAttribute('aria-label', 'Loading next page');
-    el.hidden = true;
-    var bar = document.createElement('span');
-    bar.className = 'anoy-page-progress__bar';
-    el.appendChild(bar);
-    document.body.appendChild(el);
-    return el;
-  }
-
-  function showPageProgress() {
-    var el = pageProgress();
-    el.hidden = false;
-    el.classList.add('is-active');
-    /* Restart the indeterminate animation even on a repeat submit. */
-    var bar = el.firstChild;
-    if (bar) { bar.style.animation = 'none'; void bar.offsetWidth; bar.style.animation = ''; }
-  }
-
-  function hidePageProgress() {
-    var el = document.getElementById('anoy-page-progress');
-    if (!el) return;
-    el.classList.remove('is-active');
-    el.hidden = true;
-  }
-
-  function submitterOf(form, event) {
-    if (event && event.submitter && event.submitter.form === form) return event.submitter;
-    return form.querySelector('button[type="submit"]:not([disabled]), input[type="submit"]:not([disabled])') ||
-           form.querySelector('button[type="submit"], input[type="submit"]');
-  }
-
-  /* Bubble phase on purpose: forms with their own JS (the library uploader)
-     call preventDefault() first, so they own their feedback UI. */
-  function onFormSubmit(e) {
-    var form = e.target;
-    if (!form || form.nodeName !== 'FORM') return;
-    if (e.defaultPrevented) return;
-    if (form.getAttribute('data-anoy-nobusy') === '1') return;
-    /* Spam guard: a second Enter/click while the first request is in flight. */
-    if (form.getAttribute('data-anoy-busy') === '1') {
-      e.preventDefault();
-      return;
+    function cell(tr, label, text, cls) {
+      var td = el('td', { 'data-label': label }, text);
+      if (cls) td.className = cls;
+      tr.appendChild(td); return td;
     }
-    var btn = submitterOf(form, e);
-    if (!btn) {
-      /* A form made only of switches still needs loading feedback. */
-      var sw = form.querySelector('.ui-switch');
-      form.setAttribute('data-anoy-busy', '1');
-      form.classList.add('is-submitting');
-      if (sw) {
-        var track = sw.querySelector('.ui-switch__track');
-        if (track) {
-          var swSpinner = makeSpinner();
-          swSpinner.className = 'ui-spinner ui-spinner--switch';
-          track.appendChild(swSpinner);
-          sw.classList.add('is-busy');
-        }
-      }
-      showPageProgress();
-      addTimer(function () {
-        if (form.getAttribute('data-anoy-busy') !== '1') return;
-        form.removeAttribute('data-anoy-busy');
-        form.classList.remove('is-submitting');
-        releaseSwitchBusy(form);
-        hidePageProgress();
-      }, RELEASE_AFTER_MS);
-      return;
-    }
-    form.setAttribute('data-anoy-busy', '1');
-    form.classList.add('is-submitting');
-    busyButton(btn);
-    showPageProgress();
-    addTimer(function () {
-      if (form.getAttribute('data-anoy-busy') !== '1') return;
-      form.removeAttribute('data-anoy-busy');
-      form.classList.remove('is-submitting');
-      releaseButton(btn);
-      hidePageProgress();
-    }, RELEASE_AFTER_MS);
-  }
-
-  /* Plain navigation links styled as buttons get the same feedback. Downloads,
-     new tabs, external hosts and same-page anchors are deliberately excluded. */
-  function onButtonLinkClick(e) {
-    if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
-    var node = e.target;
-    var link = node && node.closest ? node.closest('a.ui-btn, a.btn') : null;
-    if (!link || link.getAttribute('data-anoy-busy') === '1') return;
-    if (link.hasAttribute('download') || link.target === '_blank') return;
-    var href = link.getAttribute('href') || '';
-    if (!href || href.charAt(0) === '#' || /^javascript:/i.test(href)) return;
-    if (/^https?:/i.test(href) && link.host !== window.location.host) return;
-    if (/\/api\/lib\/download/i.test(link.getAttribute('href'))) return;
-    if (link.pathname === window.location.pathname && link.search === window.location.search) return;
-    busyButton(link, 'Opening…');
-    showPageProgress();
-    addTimer(function () { releaseButton(link); hidePageProgress(); }, RELEASE_AFTER_MS);
-  }
-
-  /* File/URL upload progress. Used by the /lib uploader and reusable anywhere.
-     `state` is one of '' | 'working' | 'done' | 'error'. */
-  function setProgress(root, percent, message, detail, state) {
-    if (!root) return;
-    var pct = Math.max(0, Math.min(100, Math.round(Number(percent) || 0)));
-    var fill = root.querySelector('.anoy-progress__fill');
-    var track = root.querySelector('.anoy-progress__track');
-    var pctEl = root.querySelector('.anoy-progress__percent');
-    var msgEl = root.querySelector('.anoy-progress__message');
-    var hintEl = root.querySelector('.anoy-progress__hint');
-    root.hidden = false;
-    root.classList.remove('is-working', 'is-done', 'is-error');
-    if (state) root.classList.add('is-' + state);
-    if (fill) fill.style.width = pct + '%';
-    if (track) track.setAttribute('aria-valuenow', String(pct));
-    if (pctEl) pctEl.textContent = pct + '%';
-    if (msgEl && message != null) msgEl.textContent = message;
-    if (hintEl && detail != null) hintEl.textContent = detail;
-  }
-
-  function humanBytes(n) {
-    n = Number(n) || 0;
-    if (n < 1024) return n + ' B';
-    if (n < 1024 * 1024) return (n / 1024).toFixed(1) + ' KB';
-    return (n / (1024 * 1024)).toFixed(2) + ' MB';
-  }
-
-  /* ------------------------------------------------------------------ *
-   * Appearance: System / Light / Dark.
-   * One preference (localStorage) is shared by every page. The top-bar
-   * button toggles Light <-> Dark; the Settings segmented control can also
-   * return to System. An inline script in <head> applies the theme before
-   * the stylesheets paint, so there is never a flash of the wrong colours.
-   * ------------------------------------------------------------------ */
-  var THEME_KEY = 'anoy-appearance';
-
-  function readTheme() {
-    try {
-      var m = window.localStorage.getItem(THEME_KEY) || 'system';
-      return (m === 'light' || m === 'dark') ? m : 'system';
-    } catch (e) { return 'system'; }
-  }
-
-  function systemDark() {
-    return !!(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
-  }
-
-  function resolvedTheme(mode) {
-    return mode === 'system' ? (systemDark() ? 'dark' : 'light') : mode;
-  }
-
-  function syncAppearanceControls(mode) {
-    var resolved = resolvedTheme(mode);
-    Array.prototype.forEach.call(
-      document.querySelectorAll('input[name="appearance"]'), function (radio) {
-        radio.checked = radio.value === mode;
+    function render(rows) {
+      body.textContent = '';
+      if (!rows.length) return message(state.q || state.status ? 'No keys match.' : 'No keys yet. Generate your first key.');
+      rows.forEach(function (r) {
+        var tr = el('tr');
+        cell(tr, 'Key', r.user_key, 'key');
+        cell(tr, 'Duration', r.duration);
+        cell(tr, 'Devices', r.devices + ' / ' + r.max_devices);
+        var st = cell(tr, 'Status', '');
+        st.appendChild(el('span', { className: 'status ' + r.state }, labels[r.state] || r.state));
+        cell(tr, 'Expires', r.expires || 'Not started');
+        if (owner) cell(tr, 'Created by', r.registrator);
+        var act = el('td', { className: 'actions-cell' });
+        var copy = el('button', { type: 'button', className: 'btn btn-plain btn-sm' }, 'Copy');
+        copy.addEventListener('click', function () { copyText(r.user_key).then(function () { toast('Copied'); }, function () { toast('Copy failed', true); }); });
+        var edit = el('a', { className: 'btn btn-secondary btn-sm', href: '/keys/' + encodeURIComponent(r.id) }, 'Edit');
+        var reset = el('button', { type: 'button', className: 'btn btn-secondary btn-sm' }, 'Reset');
+        reset.addEventListener('click', function () { keyAction('reset', r.user_key, reset, load); });
+        var del = el('button', { type: 'button', className: 'btn btn-danger btn-sm' }, 'Delete');
+        del.addEventListener('click', function () { keyAction('delete', r.user_key, del, load); });
+        [copy, edit, reset, del].forEach(function (b, i) { if (i) act.appendChild(document.createTextNode(' ')); act.appendChild(b); });
+        tr.appendChild(act);
+        body.appendChild(tr);
       });
-    Array.prototype.forEach.call(
-      document.querySelectorAll('[data-theme-toggle]'), function (btn) {
-        var label = resolved === 'dark' ? 'Switch to light appearance' : 'Switch to dark appearance';
-        btn.setAttribute('aria-label', label);
-        btn.setAttribute('title', label);
-      });
-  }
-
-  function setTheme(mode, persist) {
-    var m = (mode === 'light' || mode === 'dark') ? mode : 'system';
-    var resolved = resolvedTheme(m);
-    var root = document.documentElement;
-    root.setAttribute('data-theme', m);
-    root.setAttribute('data-theme-resolved', resolved);
-    root.style.colorScheme = resolved;
-    var meta = document.querySelector('meta[name="theme-color"]');
-    if (meta) meta.setAttribute('content', resolved === 'dark' ? '#000000' : '#F2F2F7');
-    if (persist !== false) {
-      try { window.localStorage.setItem(THEME_KEY, m); } catch (e) { /* private mode */ }
     }
-    syncAppearanceControls(m);
-    return m;
-  }
-
-  function initAppearance() {
-    setTheme(readTheme(), false);
-    document.addEventListener('click', function (e) {
-      var node = e.target;
-      var btn = node && node.closest ? node.closest('[data-theme-toggle]') : null;
-      if (!btn) return;
-      e.preventDefault();
-      setTheme(resolvedTheme(readTheme()) === 'dark' ? 'light' : 'dark', true);
-    });
-    document.addEventListener('change', function (e) {
-      var radio = e.target;
-      if (!radio || radio.name !== 'appearance') return;
-      if (!/^(system|light|dark)$/.test(radio.value)) return;
-      setTheme(radio.value, true);
-    });
-    if (window.matchMedia) {
-      var mq = window.matchMedia('(prefers-color-scheme: dark)');
-      var onSystemChange = function () {
-        if (readTheme() === 'system') setTheme('system', false);
-      };
-      if (mq.addEventListener) mq.addEventListener('change', onSystemChange);
-      else if (mq.addListener) mq.addListener(onSystemChange);
+    function load() {
+      var seq = ++state.seq;
+      var url = '/keys/api?page=' + state.page + '&per=' + state.per +
+        '&q=' + encodeURIComponent(state.q) + '&status=' + encodeURIComponent(state.status);
+      prev.disabled = true; next.disabled = true;
+      fetch(url, { credentials: 'same-origin', headers: { Accept: 'application/json' } })
+        .then(function (res) {
+          if (res.status === 401 || res.redirected) { location.href = '/login'; throw new Error('Signed out'); }
+          return res.json().then(function (json) {
+            if (!res.ok || !json.ok) throw new Error(json.error || 'Could not load keys.');
+            return json;
+          });
+        })
+        .then(function (data) {
+          if (seq !== state.seq) return;
+          state.pages = data.pages || 1;
+          if (state.page > state.pages && data.total) { state.page = state.pages; return load(); }
+          render(data.rows || []);
+          var from = data.total ? (data.page - 1) * data.per + 1 : 0;
+          var to = Math.min(data.total, data.page * data.per);
+          range.textContent = data.total ? from + '–' + to + ' of ' + data.total : '';
+          prev.disabled = state.page <= 1;
+          next.disabled = state.page >= state.pages;
+        })
+        .catch(function (err) {
+          if (seq !== state.seq) return;
+          message(err && err.message === 'Failed to fetch' ? 'Network error. Check your connection and try again.' : (err.message || 'Could not load keys.'));
+        });
     }
-    /* Another tab changing the preference updates this one immediately. */
-    window.addEventListener('storage', function (e) {
-      if (e.key === THEME_KEY) setTheme(readTheme(), false);
+    var timer;
+    search.addEventListener('input', function () {
+      clearTimeout(timer);
+      timer = setTimeout(function () { state.q = search.value.trim(); state.page = 1; load(); }, 250);
     });
+    filter.addEventListener('change', function () { state.status = filter.value; state.page = 1; load(); });
+    prev.addEventListener('click', function () { if (state.page > 1) { state.page -= 1; load(); } });
+    next.addEventListener('click', function () { if (state.page < state.pages) { state.page += 1; load(); } });
+    load();
   }
 
-  /* ------------------------------------------------------------------ *
-   * Compact toast notifications. Used for quick actions (create / delete
-   * key) instead of a full-screen SweetAlert modal or a wide flash banner.
-   * No CDN dependency, so it also works when SweetAlert/jQuery are blocked.
-   * ------------------------------------------------------------------ */
-  function toastHost() {
-    var host = document.getElementById('anoy-toasts');
-    if (host) return host;
-    host = document.createElement('div');
-    host.id = 'anoy-toasts';
-    host.className = 'anoy-toasts';
-    host.setAttribute('aria-live', 'polite');
-    document.body.appendChild(host);
-    return host;
-  }
+  /* ------------------------------------------------------ generate keys */
+  function initGenerate() {
+    var form = document.getElementById('generate-form');
+    if (!form) return;
+    var prices = {}, prefixes = {};
+    try { prices = JSON.parse(form.getAttribute('data-prices') || '{}'); } catch (e) { /* keep empty */ }
+    try { prefixes = JSON.parse(form.getAttribute('data-prefixes') || '{}'); } catch (e) { /* keep empty */ }
+    var unlimited = form.getAttribute('data-unlimited') === '1';
+    var saldo = Number(form.getAttribute('data-saldo') || 0);
+    var min = Number(form.getAttribute('data-min') || 4), max = Number(form.getAttribute('data-max') || 10);
+    var duration = form.querySelector('[name=duration]');
+    var devices = document.getElementById('max_devices');
+    var count = document.getElementById('count');
+    var customInput = document.getElementById('custom_key');
+    var countField = document.getElementById('count-field');
+    var customField = document.getElementById('custom-field');
+    var prefixEl = document.getElementById('custom-prefix');
+    var example = document.getElementById('key-example');
+    var unitEl = document.getElementById('unit-price');
+    var totalEl = document.getElementById('total-price');
+    var balanceErr = document.getElementById('balance-error');
+    var submit = document.getElementById('generate-submit');
+    var reqId = document.getElementById('request_id');
+    if (reqId && !reqId.value) reqId.value = randomId();
 
-  /* duration 0 keeps the toast on screen until dismiss() is called. */
-  function toast(message, kind, duration) {
-    var type = kind || 'info';
-    var host = toastHost();
-    var el = document.createElement('div');
-    el.className = 'anoy-toast anoy-toast--' + type;
-    el.setAttribute('role', type === 'error' ? 'alert' : 'status');
-
-    var dot = document.createElement('span');
-    dot.className = 'anoy-toast__dot';
-    dot.setAttribute('aria-hidden', 'true');
-    var text = document.createElement('span');
-    text.className = 'anoy-toast__text';
-    text.textContent = String(message == null ? '' : message);
-    var close = document.createElement('button');
-    close.type = 'button';
-    close.className = 'anoy-toast__close';
-    close.setAttribute('aria-label', 'Dismiss notification');
-    close.textContent = '×';
-
-    el.appendChild(dot);
-    el.appendChild(text);
-    el.appendChild(close);
-    host.appendChild(el);
-
-    var timer = null;
-    function dismiss() {
-      if (timer) { window.clearTimeout(timer); timer = null; }
-      if (!el.parentNode) return;
-      el.classList.add('is-leaving');
-      window.setTimeout(function () {
-        if (el.parentNode) el.parentNode.removeChild(el);
-      }, 180);
+    function isCustom() { var r = form.querySelector('[name=custom]:checked'); return !!(r && r.value === '1'); }
+    function inr(n) { return '₹' + Number(n || 0).toLocaleString('en-IN'); }
+    function int(input, fallback) { var n = parseInt(input && input.value, 10); return isNaN(n) ? fallback : n; }
+    function suffix() {
+      var prefix = prefixes[duration.value] || '';
+      var v = (customInput.value || '').toUpperCase().replace(/\s+/g, '');
+      if (prefix && v.indexOf(prefix) === 0) v = v.slice(prefix.length);
+      return v;
     }
-    function update(msg, newKind) {
-      text.textContent = String(msg == null ? '' : msg);
-      if (newKind) {
-        el.className = 'anoy-toast anoy-toast--' + newKind;
-        el.setAttribute('role', newKind === 'error' ? 'alert' : 'status');
-      }
+    function update() {
+      var custom = isCustom();
+      countField.hidden = custom;
+      customField.hidden = !custom;
+      var prefix = prefixes[duration.value] || '';
+      prefixEl.textContent = prefix;
+      var n = custom ? 1 : Math.max(0, int(count, 1));
+      var d = Math.max(0, int(devices, 1));
+      var unit = Number(prices[duration.value] || 0) * d;
+      var total = unit * n;
+      var s = custom ? suffix() : '';
+      example.textContent = prefix + (custom ? (s || '…') : 'XXXXX');
+      unitEl.textContent = unlimited ? 'Free' : inr(unit);
+      totalEl.textContent = unlimited ? 'Free · ' + n + ' key' + (n === 1 ? '' : 's') : inr(total);
+      var short = !unlimited && total > saldo;
+      balanceErr.hidden = !short;
+      var validCustom = !custom || new RegExp('^[A-Z0-9]{' + min + ',' + max + '}$').test(s);
+      var validCount = custom || (n >= 1 && n <= 100);
+      submit.disabled = short || !validCustom || !validCount || d < 1 || d > 100;
     }
-    close.addEventListener('click', dismiss);
-    var ms = duration === 0 ? 0 : (duration || 3200);
-    if (ms > 0) timer = window.setTimeout(dismiss, ms);
-    return { element: el, dismiss: dismiss, update: update };
+    form.addEventListener('input', update);
+    form.addEventListener('change', update);
+    update();
+    var out = document.getElementById('generated-keys');
+    if (out) out.scrollIntoView({ block: 'nearest' });
   }
 
-  /* Success flashes (e.g. "key generated") become small toasts. Errors and
-     warnings stay on the page as compact banners so they cannot be missed. */
-  function promoteFlashToasts() {
-    Array.prototype.forEach.call(
-      document.querySelectorAll('.ui-alert[data-flash="success"]'), function (el) {
-        var body = el.querySelector('.ui-alert-body');
-        var message = body ? body.textContent : el.textContent;
-        message = (message || '').replace(/\s+/g, ' ').trim();
-        if (!message) return;
-        toast(message, 'success');
-        el.hidden = true;
-        var wrap = el.parentElement;
-        if (wrap && (wrap.classList.contains('mb-6') || wrap.classList.contains('mb-4')) &&
-            !wrap.querySelector('.ui-alert:not([hidden]), input, button:not(.ui-alert-close)')) {
-          wrap.style.display = 'none';
-        }
-      });
+  function ready(fn) {
+    if (document.readyState !== 'loading') fn(); else document.addEventListener('DOMContentLoaded', fn);
   }
+  ready(function () {
+    initGeneric();
+    initKeysList();
+    initGenerate();
+  });
 
-  /* Small public API so views with custom async forms stay consistent. */
-  window.AnoyUI = {
-    busyButton: busyButton,
-    releaseButton: releaseButton,
-    setProgress: setProgress,
-    showPageProgress: showPageProgress,
-    hidePageProgress: hidePageProgress,
-    humanBytes: humanBytes,
-    toast: toast,
-    setTheme: setTheme,
-    getTheme: readTheme
-  };
-
-  /* Runs as soon as this file loads: the head script already set the theme,
-     this wires the controls and keeps the OS setting in sync. */
-  initAppearance();
-
-  function init() {
-    wrapTables();
-    labelTableCells();
-    formatSaldo();
-    formatExpiry();
-    hideEmptySlots();
-    promoteFlashToasts();
-
-    document.addEventListener('submit', onFormSubmit, false);
-    document.addEventListener('click', onButtonLinkClick, false);
-    /* A back/forward navigation can restore a page from bfcache with its
-       spinner still frozen on screen. */
-    window.addEventListener('pageshow', function (e) { if (e.persisted) releaseAll(); });
-    window.addEventListener('pagehide', function () {
-      timers.forEach(window.clearTimeout);
-      timers = [];
-    });
-
-    var main = content();
-    if (!main || !window.MutationObserver) return;
-    var pending = false;
-    var observer = new MutationObserver(function () {
-      if (pending) return;
-      pending = true;
-      window.requestAnimationFrame(function () {
-        pending = false;
-        labelTableCells();
-        formatSaldo();
-        hideEmptySlots();
-      });
-    });
-    observer.observe(main, { childList: true, subtree: true });
-  }
-
-  if (document.readyState !== 'loading') init();
-  else document.addEventListener('DOMContentLoaded', init);
+  window.AnoyUI = { toast: toast, confirm: confirmDialog, setBusy: setBusy, clearBusy: clearBusy, post: post };
 })();

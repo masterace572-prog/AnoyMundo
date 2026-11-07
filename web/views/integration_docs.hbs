@@ -1,11 +1,9 @@
-<div class="container-fluid px-4 py-6">
-    <div class="mb-6">
-        {{> msgStatus}}
-    </div>
+<div class="docs">
+    {{> msgStatus}}
 
-    <div class="ui-card rounded-2xl p-6 sm:p-8 mb-6">
-        <h1 class="text-2xl font-bold text-gray-800 mb-2">Integration docs</h1>
-        <p class="doc-section" style="margin-bottom:0">Loader / mod integration: one call does everything —
+    <div class="section">
+        <h1 class="page-title" style="margin-bottom:12px">Integration docs</h1>
+        <p class="muted">Loader / mod integration: one call does everything —
         <span class="doc-inline">POST /connect</span>. Below is the connect URL, every response field
         (mod name, status text, floating text, mod features, expiry), the error text, and simple C++ code.
         The full reference also lives in <span class="doc-inline">INTEGRATION.md</span> in the repo.</p>
@@ -15,7 +13,7 @@
         This page is only for the loader / mod side.</p>
     </div>
 
-    <div class="ui-card rounded-2xl p-6 sm:p-8 mb-6">
+    <div class="section">
         <div class="doc-section">
             <h2>Base URL</h2>
             <code class="doc-url">{{apiBase}}</code>
@@ -27,12 +25,12 @@
             <pre class="doc-code"><code>POST {{apiBase}}/connect
 Content-Type: application/x-www-form-urlencoded
 
-game=PUBG&amp;user_key=admin-2-lyK0Y&amp;serial=DEVICE123</code></pre>
+game=PUBG&amp;user_key=ANOY-2H-LYK0Y&amp;serial=DEVICE123</code></pre>
             <p>GET is also supported for loaders that use a query string:
             <span class="doc-inline">/connect?game=PUBG&amp;user_key=…&amp;serial=…</span>.
             <span class="doc-inline">/api/connect</span> is an alias.</p>
             <div class="table-scroll">
-                <table>
+                <table class="responsive">
                     <thead><tr><th>Parameter</th><th>Rules</th><th>What it is</th></tr></thead>
                     <tbody>
                         <tr><td><span class="doc-inline">game</span></td><td>required, letters / digits / <span class="doc-inline">_</span> / <span class="doc-inline">-</span></td><td>Game the key was generated for (default <span class="doc-inline">PUBG</span>)</td></tr>
@@ -47,7 +45,7 @@ game=PUBG&amp;user_key=admin-2-lyK0Y&amp;serial=DEVICE123</code></pre>
             <h2>2. curl example</h2>
             <pre class="doc-code"><code>curl -sS -X POST {{apiBase}}/connect \
   -d 'game=PUBG' \
-  -d 'user_key=admin-2-lyK0Y' \
+  -d 'user_key=ANOY-2H-LYK0Y' \
   -d 'serial=DEVICE123'</code></pre>
         </div>
 
@@ -56,7 +54,7 @@ game=PUBG&amp;user_key=admin-2-lyK0Y&amp;serial=DEVICE123</code></pre>
             <pre class="doc-code"><code>{
   "status": true,
   "data": {
-    "real": "PUBG-admin-2-lyK0Y-DEVICE123-STATIC_WORDS",
+    "real": "PUBG-ANOY-2H-LYK0Y-DEVICE123-STATIC_WORDS",
     "token": "1aa36c890b3155533de4ed2e09714704",
     "modname": "VIP MOD",
     "mod_status": "Safe",
@@ -76,11 +74,11 @@ game=PUBG&amp;user_key=admin-2-lyK0Y&amp;serial=DEVICE123</code></pre>
         </div>
     </div>
 
-    <div class="ui-card rounded-2xl p-6 sm:p-8 mb-6">
+    <div class="section">
         <div class="doc-section">
             <h2>4. Response fields</h2>
             <div class="table-scroll">
-                <table>
+                <table class="responsive">
                     <thead><tr><th>Field</th><th>Meaning / how to use it</th></tr></thead>
                     <tbody>
                         <tr><td><span class="doc-inline">status</span></td><td><span class="doc-inline">true</span> = authorised. On <span class="doc-inline">false</span>, read <span class="doc-inline">reason</span>.</td></tr>
@@ -113,7 +111,7 @@ game=PUBG&amp;user_key=admin-2-lyK0Y&amp;serial=DEVICE123</code></pre>
             <h2>6. Status / error text</h2>
             <p>All rejections are HTTP 200 with <span class="doc-inline">status:false</span>:</p>
             <div class="table-scroll">
-                <table>
+                <table class="responsive">
                     <thead><tr><th>reason</th><th>Cause</th></tr></thead>
                     <tbody>
                         <tr><td><span class="doc-inline">INVALID PARAMETER</span></td><td>A parameter is missing or empty</td></tr>
@@ -129,7 +127,7 @@ game=PUBG&amp;user_key=admin-2-lyK0Y&amp;serial=DEVICE123</code></pre>
         </div>
     </div>
 
-    <div class="ui-card rounded-2xl p-6 sm:p-8 mb-6">
+    <div class="section">
         <div class="doc-section">
             <h2>7. Use in C++</h2>
             <p>Minimal libcurl POST — no JSON library needed to see the raw reply:</p>
@@ -159,7 +157,7 @@ std::string post(const std::string&amp; url, const std::string&amp; body) {
 
 int main() {
     std::string json = post("{{apiBase}}/connect",
-        "game=PUBG&amp;user_key=admin-2-lyK0Y&amp;serial=DEVICE123");
+        "game=PUBG&amp;user_key=ANOY-2H-LYK0Y&amp;serial=DEVICE123");
     std::cout &lt;&lt; json &lt;&lt; std::endl;
 }</code></pre>
             <p>Then parse it (example with <span class="doc-inline">nlohmann/json</span>):</p>
@@ -211,12 +209,13 @@ void apply(const std::string&amp; json) {
         <div class="doc-section">
             <h2>8. Other endpoints</h2>
             <div class="table-scroll">
-                <table>
+                <table class="responsive">
                     <thead><tr><th>Method / path</th><th>Returns</th></tr></thead>
                     <tbody>
                         <tr><td><span class="doc-inline">GET /api/health</span></td><td><span class="doc-inline">ok</span>, DB + lib channel, <span class="doc-inline">13/13</span> schema check</td></tr>
                         <tr><td><span class="doc-inline">GET /api/lib/version</span></td><td>plain text version, e.g. <span class="doc-inline">1.0</span> — first line read by the loader</td></tr>
                         <tr><td><span class="doc-inline">GET /api/lib/download</span></td><td>current loader ZIP (or 302 to an external URL)</td></tr>
+                        <tr><td><span class="doc-inline">GET /api/lib/manifest</span></td><td>JSON <span class="doc-inline">{ ok, version, available, size, sha256, source }</span> — read by the loader's mandatory update check before sign-in</td></tr>
                         <tr><td><span class="doc-inline">GET /api/lib/info</span></td><td>JSON list of uploaded releases</td></tr>
                         <tr><td><span class="doc-inline">GET /connect</span> (no params)</td><td><span class="doc-inline">web_info</span> / <span class="doc-inline">web__dev</span> panel info</td></tr>
                         <tr><td><span class="doc-inline">GET /api/v1/keys</span> …</td><td>Key-management REST API — needs a personal API key, documented at <a href="/api-docs">/api-docs</a></td></tr>
@@ -228,7 +227,7 @@ void apply(const std::string&amp; json) {
         <div class="doc-section">
             <h2>9. Where to change the values</h2>
             <div class="table-scroll">
-                <table>
+                <table class="responsive">
                     <thead><tr><th>Value</th><th>Panel location</th></tr></thead>
                     <tbody>
                         <tr><td><span class="doc-inline">modname</span></td><td><span class="doc-inline">/Server → Change Mod Name</span></td></tr>

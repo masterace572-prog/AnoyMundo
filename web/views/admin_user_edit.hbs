@@ -1,114 +1,49 @@
-
-
-
-
-<div class="container-fluid px-4 py-6">
-    <div class="max-w-4xl mx-auto">
-        <!-- Message Status -->
-        <div class="mb-6">
-            {{> msgStatus}}
-        </div>
-        
-        <!-- User Edit Card -->
-        <div class="ui-card rounded-2xl p-6 sm:p-8 animate-fade-in-up">
-            <div class="flex items-center justify-between mb-6">
-                <div class="flex items-center">
-                    <div class="ui-icon w-12 h-12 rounded-xl flex items-center justify-center mr-4">
-                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
-                        </svg>
-                    </div>
-                    <div>
-                        <h2 class="text-2xl font-bold text-gray-800">Account Information</h2>
-                        <p class="text-sm text-gray-600">{{target.displayName}}</p>
-                    </div>
-                </div>
-                
-                <a href="/admin/manage-users" class="px-4 py-2 text-white rounded-lg transition-all flex items-center space-x-2 ui-btn">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
-                    </svg>
-                    <span>Back</span>
-                </a>
-            </div>
-            
-            <form method="post" action="" class="space-y-6">
-                <input type="hidden" name="user_id" value="{{target.id_users}}">
-                
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <!-- Username -->
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Username</label>
-                        <input type="text" name="username" value="{{form.username}}" class="w-full px-4 py-3 bg-white/50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all" placeholder="Username">
-                        {{#if errors.username}}
-                            <small class="text-red-500 text-xs mt-1">{{errors.username}}</small>
-                        {{/if}}
-                    </div>
-                    
-                    <!-- Fullname -->
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Fullname</label>
-                        <input type="text" name="fullname" value="{{form.fullname}}" class="w-full px-4 py-3 bg-white/50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all" placeholder="Full name">
-                        {{#if errors.fullname}}
-                            <small class="text-red-500 text-xs mt-1">{{errors.fullname}}</small>
-                        {{/if}}
-                    </div>
-                    
-                    <!-- Roles -->
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Roles</label>
-                        
-                        {{{selects.level}}}
-                    </div>
-                    
-                    <!-- Status -->
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Status</label>
-                        
-                        {{{selects.status}}}
-                    </div>
-                    
-                    <!-- Saldo -->
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Saldo</label>
-                        <div class="relative field-prefix">
-                            <div class="field-prefix__icon" aria-hidden="true">
-                                <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                </svg>
-                            </div>
-                            <input type="number" name="saldo" value="{{form.saldo}}" class="w-full pr-4 py-3 bg-white/50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all" placeholder="0">
-                        </div>
-                        {{#if errors.saldo}}
-                            <small class="text-red-500 text-xs mt-1">{{errors.saldo}}</small>
-                        {{/if}}
-                    </div>
-                    
-                    <!-- Uplink -->
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Uplink</label>
-                        <input type="text" name="uplink" value="{{form.uplink}}" class="w-full px-4 py-3 bg-white/50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all" placeholder="Uplink">
-                        {{#if errors.uplink}}
-                            <small class="text-red-500 text-xs mt-1">{{errors.uplink}}</small>
-                        {{/if}}
-                    </div>
-                    
-                    <!-- Expiration -->
-                    <div class="md:col-span-2">
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Expiration Date</label>
-                        <input type="text" name="expiration" value="{{form.expiration}}" class="w-full px-4 py-3 bg-white/50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all" placeholder="YYYY-MM-DD HH:MM:SS">
-                        {{#if errors.expiration}}
-                            <small class="text-red-500 text-xs mt-1">{{errors.expiration}}</small>
-                        {{/if}}
-                    </div>
-                </div>
-                
-                <!-- Submit Button -->
-                <button type="submit" class="w-full py-4 px-6 text-white font-bold rounded-xl transition-all duration-300 shadow-lg ui-btn ui-btn--primary">
-                    Update Account Information
-                </button>
-            </form>
-        </div>
+<div class="page-head">
+    <div>
+        <h1 class="page-title">Edit user</h1>
+        <p class="page-sub">{{target.displayName}}</p>
     </div>
+    <a href="/admin/manage-users" class="btn btn-secondary">All users</a>
 </div>
 
+{{> msgStatus}}
+
+<form method="post" action="/admin/user/{{target.id_users}}" class="form" novalidate data-busy-form>
+    <input type="hidden" name="user_id" value="{{target.id_users}}">
+    <div class="field {{#if errors.username}}invalid{{/if}}">
+        <label class="label" for="username">Username</label>
+        <input type="text" class="input" name="username" id="username" value="{{form.username}}" required minlength="4" maxlength="25" autocomplete="off" autocapitalize="none" spellcheck="false">
+        {{#if errors.username}}<div class="error">{{errors.username}}</div>{{else}}<div class="hint">Renaming keeps their keys attached.</div>{{/if}}
+    </div>
+    <div class="field {{#if errors.fullname}}invalid{{/if}}">
+        <label class="label" for="fullname">Name</label>
+        <input type="text" class="input" name="fullname" id="fullname" value="{{form.fullname}}" maxlength="155" autocomplete="off">
+        {{#if errors.fullname}}<div class="error">{{errors.fullname}}</div>{{/if}}
+    </div>
+    <div class="field {{#if errors.level}}invalid{{/if}}">
+        <label class="label" for="level">Role</label>
+        {{{selects.level}}}
+        {{#if errors.level}}<div class="error">{{errors.level}}</div>{{/if}}
+    </div>
+    <div class="field {{#if errors.status}}invalid{{/if}}">
+        <label class="label" for="status">Status</label>
+        {{{selects.status}}}
+        {{#if errors.status}}<div class="error">{{errors.status}}</div>{{/if}}
+    </div>
+    <div class="field {{#if errors.saldo}}invalid{{/if}}">
+        <label class="label" for="saldo">Balance (₹)</label>
+        <input type="number" class="input" name="saldo" id="saldo" value="{{form.saldo}}" min="0" max="999999999" step="1" inputmode="numeric" required>
+        {{#if errors.saldo}}<div class="error">{{errors.saldo}}</div>{{/if}}
+    </div>
+    <div class="field {{#if errors.uplink}}invalid{{/if}}">
+        <label class="label" for="uplink">Invited by</label>
+        <input type="text" class="input" name="uplink" id="uplink" value="{{form.uplink}}" required maxlength="25" autocomplete="off">
+        {{#if errors.uplink}}<div class="error">{{errors.uplink}}</div>{{/if}}
+    </div>
+    <div class="field {{#if errors.expiration}}invalid{{/if}}">
+        <label class="label" for="expiration">Account expires (UTC)</label>
+        <input type="text" class="input mono" name="expiration" id="expiration" value="{{form.expiration}}" placeholder="Never" autocomplete="off">
+        {{#if errors.expiration}}<div class="error">{{errors.expiration}}</div>{{else}}<div class="hint">YYYY-MM-DD HH:MM:SS, or empty for never.</div>{{/if}}
+    </div>
+    <button type="submit" class="btn btn-primary btn-block" data-busy-label="Saving…">Save</button>
+</form>

@@ -13,8 +13,9 @@ on:
         description: 'Version string to publish (only used when publishing)'
         type: string
         default: '1.0.0'
+  # Ordinary pushes build and attach the APK; they never touch the live panel.
   push:
-    branches: [arena/b2fac70f-anoymundo]
+    branches: [arena/2e95185a-anoymundo]
     paths:
       - 'xlox/**'
       - '.github/workflows/build-xlox.yml'
@@ -93,6 +94,17 @@ jobs:
           chmod +x gradlew
           ./gradlew assembleRelease --no-daemon --stacktrace -x lintVitalRelease
 
+      - name: Android lint (errors fail the build)
+        run: ./gradlew lintRelease --no-daemon
+
+      - name: Upload lint report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lint-report
+          path: xlox/app/build/reports/lint-results-release.*
+          if-no-files-found: ignore
+
       - name: Build starter loader ZIP (arm64-v8a libbgmi.so)
         run: |
           SDK="${ANDROID_HOME:-$ANDROID_SDK_ROOT}"
@@ -155,7 +167,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          TAG="xlox-v1.0.0-run${{ github.run_number }}"
+          TAG="xlox-v2.0.0-run${{ github.run_number }}"
           gh release create "$TAG" \
             dist/Anoy-XLOX-loader.apk dist/xlox-loader.zip \
             --title "Anoy XLOX loader – build ${{ github.run_number }}" \
@@ -170,7 +182,7 @@ jobs:
           git add -f dist/Anoy-XLOX-loader.apk dist/xlox-loader.zip
           git diff --cached --quiet && { echo "No deliverable changes"; exit 0; }
           git commit -m "Add built XLOX loader APK (build ${{ github.run_number }}) [skip ci]"
-          git push origin HEAD:arena/b2fac70f-anoymundo
+          git push origin HEAD:arena/2e95185a-anoymundo
 
       - name: Check the panel lib + version endpoints
         run: |
@@ -184,8 +196,8 @@ jobs:
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.publish_loader_zip }}
         env:
           PANEL_BASE_URL: https://anoymundo-panel.vercel.app
-          PANEL_ADMIN_USERNAME: admin
-          PANEL_ADMIN_PASSWORD: ${{ secrets.PANEL_ADMIN_PASSWORD }}
+          PANEL_ADMIN_USERNAME: Anoy
+          PANEL_ADMIN_PASSWORD: ${{ secrets.PANEL_OWNER_PASSWORD }}
         run: |
           node scripts/publish-release.mjs ../dist/xlox-loader.zip \
             "${{ inputs.panel_version }}"

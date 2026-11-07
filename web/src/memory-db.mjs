@@ -4,23 +4,21 @@
 
 const seed = () => ({
   users: [{
-    id_users: 1, fullname: 'admin', username: 'admin', email: 'support@aloneboy.com',
-    reset_link_token: '', exp_date: '', level: 1, saldo: 2147384644, status: 1,
-    uplink: 'Owner', password: '$2y$08$/CsSVgrGgCqVcievCuR2COPnlMIpRz6kA.hzItBD/xd1Cx0hj0kMK',
-    user_ip: '42.109.149.*', created_at: '2022-06-22T22:15:21Z',
-    updated_at: '2025-11-19T17:51:31Z', expiration_date: '2050-01-01T00:00:00Z',
+    // Same Owner account as the production seed: Anoy / Anoy1764.
+    id_users: 1, fullname: 'Anoy', username: 'Anoy', email: 'saabarjun705@gmail.com',
+    reset_link_token: '', exp_date: '', level: 1, saldo: 999999999999, status: 1,
+    uplink: 'Owner', password: '$2a$08$sQefH.l6cnpeUwuTifoZvuF1SSh7U6Mw4UwddAO9cawj5pip8blOa',
+    user_ip: '', created_at: '2026-01-01T00:00:00Z',
+    updated_at: '2026-01-01T00:00:00Z', expiration_date: '2050-01-01T00:00:00Z',
   }],
   keys_code: [
-    { id_keys: 1, game: 'PUBG', user_key: 'admin-2-lyK0Y', duration: 2, expired_date: null, max_devices: 1, devices: null, status: 1, registrator: 'admin', price_paid: 10, created_at: '2025-11-19T13:17:39Z', updated_at: '2025-11-19T13:17:39Z' },
-    { id_keys: 2, game: 'PUBG', user_key: 'admin-2-f7VwE', duration: 2, expired_date: null, max_devices: 1, devices: null, status: 1, registrator: 'admin', price_paid: 10, created_at: '2025-11-19T17:51:31Z', updated_at: '2025-11-19T17:51:31Z' },
+    { id_keys: 1, game: 'PUBG', user_key: 'ANOY-2H-LYK0Y', duration: 2, expired_date: null, max_devices: 1, devices: null, status: 1, registrator: 'Anoy', price_paid: 0, created_at: '2026-01-01T00:00:00Z', updated_at: '2026-01-01T00:00:00Z' },
+    { id_keys: 2, game: 'PUBG', user_key: 'ANOY-2H-F7VWE', duration: 2, expired_date: null, max_devices: 1, devices: null, status: 1, registrator: 'Anoy', price_paid: 0, created_at: '2026-01-01T00:00:00Z', updated_at: '2026-01-01T00:00:00Z' },
   ],
-  history: [
-    { id_history: 1, keys_id: '1', user_do: 'admin', info: 'PUBG|admin|2|1', created_at: '2025-11-19T13:17:39Z', updated_at: '2025-11-19T13:17:39Z' },
-    { id_history: 2, keys_id: '2', user_do: 'admin', info: 'PUBG|admin|2|1', created_at: '2025-11-19T17:51:31Z', updated_at: '2025-11-19T17:51:31Z' },
-  ],
+  history: [],
   referral_code: [{
     id_reff: 1, code: 'f36d16b166f38a1a148a2069a74c866c', referral: 'WELCOME', level: 3,
-    set_saldo: 1000, used_by: '', created_by: 'Owner', acc_expiration: '2030-01-01T00:00:00Z',
+    set_saldo: 1000, used_by: '', created_by: 'Anoy', acc_expiration: '2030-01-01T00:00:00Z',
   }],
   feature: [{ id: 1, esp: 'on', item: 'on', silentaim: 'on', aim: 'on', bullettrack: 'on', memory: 'on', floating: 'on', setting: 'on' }],
   modname: [{ id: 1, modname: 'VIP MOD' }],
@@ -40,6 +38,11 @@ const serials = {
   credit: 'id', lib: 'id', _ftext: 'id', client_release: 'id', auth_attempt: 'id',
   api_keys: 'id', key_orders: 'request_id',
 };
+
+function compare(a, b) {
+  if (typeof a === 'number' || (typeof b === 'number' && !Number.isNaN(Number(a)))) return Number(a) - Number(b);
+  return new Date(a).getTime() - new Date(b).getTime();
+}
 
 function clone(value) {
   return value == null ? value : JSON.parse(JSON.stringify(value));
@@ -70,8 +73,9 @@ class Query {
   }
   eq(col, value) { this.filters.push((r) => String(r[col]) === String(value)); return this; }
   neq(col, value) { this.filters.push((r) => String(r[col]) !== String(value)); return this; }
-  lt(col, value) { this.filters.push((r) => new Date(r[col]).getTime() < new Date(value).getTime()); return this; }
-  gt(col, value) { this.filters.push((r) => new Date(r[col]).getTime() > new Date(value).getTime()); return this; }
+  // SQL semantics: comparisons against NULL never match.
+  lt(col, value) { this.filters.push((r) => r[col] != null && compare(r[col], value) < 0); return this; }
+  gt(col, value) { this.filters.push((r) => r[col] != null && compare(r[col], value) > 0); return this; }
   ilike(col, pattern) {
     const needle = String(pattern).replace(/%/g, '').toLowerCase();
     this.filters.push((r) => String(r[col] ?? '').toLowerCase().includes(needle));
@@ -124,7 +128,7 @@ class Query {
         const pk = serials[table];
         const next = Math.max(0, ...this.store[table].map((r) => Number(r[pk]) || 0)) + 1;
         const record = { ...clone(row), [pk]: row[pk] ?? next };
-        if (table === 'users' && this.store.users.some((u) => u.username === record.username)) {
+        if (table === 'users' && this.store.users.some((u) => u.username.toLowerCase() === String(record.username).toLowerCase())) {
           return { data: null, error: { message: 'duplicate key value violates unique constraint "users_username_key"', code: '23505' }, count: null };
         }
         if (table === 'keys_code' && this.store.keys_code.some((k) => k.user_key === record.user_key)) {

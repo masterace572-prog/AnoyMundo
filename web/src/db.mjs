@@ -39,9 +39,17 @@ export async function getUserById(id) {
 }
 
 export async function getUserByUsername(username) {
-  const { data, error } = await db().from('users').select('*').eq('username', username).maybeSingle();
+  const name = String(username ?? '').trim();
+  if (!name) return null;
+  const { data, error } = await db().from('users').select('*').eq('username', name).maybeSingle();
   if (error) throw new Error(error.message);
-  return data;
+  if (data || !/^[A-Za-z0-9]+$/.test(name)) return data;
+  // Usernames are unique case-insensitively in practice: "anoy" signs in as
+  // "Anoy". Only alphanumeric names reach this lookup, so no LIKE wildcards.
+  const { data: rows, error: ciError } = await db().from('users').select('*').ilike('username', name).limit(5);
+  if (ciError) throw new Error(ciError.message);
+  const matches = (rows || []).filter((row) => String(row.username).toLowerCase() === name.toLowerCase());
+  return matches.length === 1 ? matches[0] : null;
 }
 
 export async function listUsers() {
@@ -89,11 +97,21 @@ export async function getKeyById(id) {
 }
 
 export async function getKeyByUserKey(userKey) {
-  return unwrap(await db().from('keys_code').select('*').eq('user_key', userKey).maybeSingle());
+  const raw = String(userKey ?? '').trim();
+  if (!raw) return null;
+  const found = unwrap(await db().from('keys_code').select('*').eq('user_key', raw).maybeSingle());
+  if (found || raw.toUpperCase() === raw) return found;
+  return unwrap(await db().from('keys_code').select('*').eq('user_key', raw.toUpperCase()).maybeSingle());
 }
 
+/** Licence lookup used by /connect. Keys are upper case; legacy mixed-case
+ *  keys are still found by their exact spelling. */
 export async function getKeyForGame(userKey, game) {
-  return unwrap(await db().from('keys_code').select('*').eq('user_key', userKey).eq('game', game).maybeSingle());
+  const raw = String(userKey ?? '').trim();
+  const upper = raw.toUpperCase();
+  const found = unwrap(await db().from('keys_code').select('*').eq('user_key', upper).eq('game', game).maybeSingle());
+  if (found || upper === raw) return found;
+  return unwrap(await db().from('keys_code').select('*').eq('user_key', raw).eq('game', game).maybeSingle());
 }
 
 export async function getRecentHistory(limit = 10) {
