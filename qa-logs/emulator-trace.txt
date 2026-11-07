@@ -1,73 +1,75 @@
-=== emulator QA started Sat Nov  7 15:26:55 UTC 2026 ===
+=== emulator QA started Sat Nov  7 15:38:47 UTC 2026 ===
 direct install failed (Performing Streamed Install
 adb: failed to install app/build/outputs/apk/debug/app-debug.apk: Failure [INSTALL_FAILED_NO_MATCHING_ABIS: INSTALL_FAILED_NO_MATCHING_ABIS: Failed to extract native libraries, res=-113]); stripping native libs
 ABI-neutral install ok: app/build/outputs/apk/debug/app-debug.apk
 Starting: Intent { cmp=com.xlox/.SplashActivity }
-focus for splash:   mCurrentFocus=Window{440df7e u0 com.xlox/com.xlox.LogAct}
-captured splash.png (100061 bytes)
-focus for update_required:   mCurrentFocus=Window{440df7e u0 com.xlox/com.xlox.LogAct}
-captured update_required.png (100061 bytes)
-gate texts: text="" text="" text="" text="" text="" text="" text="Update required" text="Library 1.10 is required to continue." text="Download size 2.9 MB" text="Update now" 
-focus for update_downloading:   mCurrentFocus=Window{440df7e u0 com.xlox/com.xlox.LogAct}
-captured update_downloading.png (91338 bytes)
+Status: ok
+LaunchState: COLD
+Activity: com.xlox/.SplashActivity
+TotalTime: 3548
+WaitTime: 3660
+Complete
+focus for splash:   mCurrentFocus=Window{3797f98 u0 com.xlox/com.xlox.LogAct}
+captured splash.png (99157 bytes)
+focus for update_required:   mCurrentFocus=Window{3797f98 u0 com.xlox/com.xlox.LogAct}
+captured update_required.png (97721 bytes)
+gate texts: text="" text="" text="" text="" text="" text="" text="Update required" text="Library 1.11 is required to continue." text="Download size 2.9 MB" text="Update now" 
+focus for update_downloading:   mCurrentFocus=Window{3797f98 u0 com.xlox/com.xlox.LogAct}
+captured update_downloading.png (90080 bytes)
 update gate passed
-gate result focus:   mCurrentFocus=Window{d9d6b7d u0 com.android.settings/com.android.settings.Settings$ManageAppExternalSourcesActivity}
-WARN: sign-in form missing after the gate
-focus for login:   mCurrentFocus=Window{d9d6b7d u0 com.android.settings/com.android.settings.Settings$ManageAppExternalSourcesActivity}
-captured login.png (137529 bytes)
-WARN: keyField not on screen
-keyboard state:   mShowRequested=false mShowExplicitlyRequested=false mShowForced=false mInputShown=false
-focus for login_keyboard:   mCurrentFocus=Window{d9d6b7d u0 com.android.settings/com.android.settings.Settings$ManageAppExternalSourcesActivity}
-captured login_keyboard.png (137529 bytes)
-WARN: login not on screen
-focus for login_error:   mCurrentFocus=Window{d9d6b7d u0 com.android.settings/com.android.settings.Settings$ManageAppExternalSourcesActivity}
-captured login_error.png (137335 bytes)
+gate result focus:   mCurrentFocus=Window{6598fae u0 com.xlox/com.xlox.LogAct}
+focus for login:   mCurrentFocus=Window{6598fae u0 com.xlox/com.xlox.LogAct}
+captured login.png (77619 bytes)
+keyboard state:   mShowRequested=true mShowExplicitlyRequested=true mShowForced=false mInputShown=true
+focus for login_keyboard:   mCurrentFocus=Window{6598fae u0 com.xlox/com.xlox.LogAct}
+captured login_keyboard.png (135860 bytes)
+focus for login_error:   mCurrentFocus=Window{6598fae u0 com.xlox/com.xlox.LogAct}
+captured login_error.png (138845 bytes)
 Starting: Intent { cmp=com.xlox/.MAct (has extras) }
 Status: ok
 LaunchState: COLD
 Activity: com.xlox/.MAct
-TotalTime: 1110
-WaitTime: 1115
+TotalTime: 1901
+WaitTime: 1944
 Complete
-focus for home:   mCurrentFocus=Window{37ecb89 u0 com.xlox/com.xlox.MAct}
-captured home.png (113748 bytes)
-Starting: Intent { cmp=com.xlox/.LogAct }
-Status: ok
-LaunchState: UNKNOWN (0)
-Activity: com.xlox/.LogAct
-WaitTime: 197
-Complete
-WARN: sign-in form missing
-focus for login_font130:   mCurrentFocus=Window{fa8f7f3 u0 com.android.settings/com.android.settings.Settings$ManageAppExternalSourcesActivity}
-captured login_font130.png (166545 bytes)
-Starting: Intent { cmp=com.xlox/.MAct (has extras) }
-Status: ok
-LaunchState: COLD
-Activity: com.xlox/.MAct
-TotalTime: 1146
-WaitTime: 1147
-Complete
-focus for home_font130:   mCurrentFocus=Window{4a2cf45 u0 com.xlox/com.xlox.MAct}
-captured home_font130.png (126269 bytes)
+focus for home:   mCurrentFocus=Window{2efd4f3 u0 com.xlox/com.xlox.MAct}
+captured home.png (112512 bytes)
 Starting: Intent { cmp=com.xlox/.LogAct }
 Status: ok
 LaunchState: COLD
 Activity: com.xlox/.LogAct
-TotalTime: 1520
-WaitTime: 1598
+TotalTime: 1766
+WaitTime: 1856
 Complete
-WARN: sign-in form missing
-focus for login_320:   mCurrentFocus=Window{6806f64 u0 com.android.settings/com.android.settings.Settings$ManageAppExternalSourcesActivity}
-captured login_320.png (84970 bytes)
+focus for login_font130:   mCurrentFocus=Window{dc35f04 u0 com.xlox/com.xlox.LogAct}
+captured login_font130.png (96372 bytes)
 Starting: Intent { cmp=com.xlox/.MAct (has extras) }
 Status: ok
 LaunchState: COLD
 Activity: com.xlox/.MAct
-TotalTime: 1054
-WaitTime: 1067
+TotalTime: 1586
+WaitTime: 1608
 Complete
-focus for home_320:   mCurrentFocus=Window{a2c640c u0 com.xlox/com.xlox.MAct}
-captured home_320.png (53247 bytes)
+focus for home_font130:   mCurrentFocus=Window{9dd3edb u0 com.xlox/com.xlox.MAct}
+captured home_font130.png (124001 bytes)
+Starting: Intent { cmp=com.xlox/.LogAct }
+Status: ok
+LaunchState: COLD
+Activity: com.xlox/.LogAct
+TotalTime: 2188
+WaitTime: 2229
+Complete
+focus for login_320:   mCurrentFocus=Window{a4bdcae u0 com.xlox/com.xlox.LogAct}
+captured login_320.png (51117 bytes)
+Starting: Intent { cmp=com.xlox/.MAct (has extras) }
+Status: ok
+LaunchState: COLD
+Activity: com.xlox/.MAct
+TotalTime: 1824
+WaitTime: 1828
+Complete
+focus for home_320:   mCurrentFocus=Window{4fd77b3 u0 com.xlox/com.xlox.MAct}
+captured home_320.png (52236 bytes)
 direct install failed (Performing Streamed Install
 adb: failed to install app/build/outputs/apk/release/app-release.apk: Failure [INSTALL_FAILED_NO_MATCHING_ABIS: INSTALL_FAILED_NO_MATCHING_ABIS: Failed to extract native libraries, res=-113]); stripping native libs
 ABI-neutral install ok: app/build/outputs/apk/release/app-release.apk
@@ -75,10 +77,10 @@ Starting: Intent { cmp=com.xlox/.SplashActivity }
 Status: ok
 LaunchState: COLD
 Activity: com.xlox/.SplashActivity
-TotalTime: 1781
-WaitTime: 2001
+TotalTime: 1806
+WaitTime: 1830
 Complete
-release focus:   mCurrentFocus=Window{1102f8f u0 com.android.settings/com.android.settings.Settings$ManageAppExternalSourcesActivity}
-focus for release_login:   mCurrentFocus=Window{1102f8f u0 com.android.settings/com.android.settings.Settings$ManageAppExternalSourcesActivity}
-captured release_login.png (136283 bytes)
-=== emulator QA finished Sat Nov  7 15:30:13 UTC 2026 ===
+release focus:   mCurrentFocus=Window{a24003f u0 com.xlox/com.xlox.LogAct}
+focus for release_login:   mCurrentFocus=Window{a24003f u0 com.xlox/com.xlox.LogAct}
+captured release_login.png (76966 bytes)
+=== emulator QA finished Sat Nov  7 15:41:17 UTC 2026 ===
