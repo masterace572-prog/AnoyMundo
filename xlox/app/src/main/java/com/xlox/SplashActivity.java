@@ -21,6 +21,7 @@ public class SplashActivity extends AppCompatActivity {
     private final Handler handler = new Handler(Looper.getMainLooper());
     private final Runnable next = this::openLogin;
     private boolean opened;
+    private boolean timerStarted;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -50,11 +51,18 @@ public class SplashActivity extends AppCompatActivity {
             openLogin();
             return;
         }
-        // Count the splash time from the first drawn frame, not from onCreate:
-        // on a slow cold start the splash would otherwise flash by unseen.
-        getWindow().getDecorView().post(() -> handler.postDelayed(next, SPLASH_MS));
-        // Safety net in case the frame callback never runs.
-        handler.postDelayed(next, SPLASH_MS + 2500L);
+        // The visible time is counted from onEnterAnimationComplete() (window
+        // really on screen), not from onCreate: on a slow cold start the splash
+        // would otherwise flash by unseen. Safety net if that callback never comes.
+        handler.postDelayed(next, SPLASH_MS + 6000L);
+    }
+
+    @Override
+    public void onEnterAnimationComplete() {
+        super.onEnterAnimationComplete();
+        if (timerStarted) return;
+        timerStarted = true;
+        handler.postDelayed(next, SPLASH_MS);
     }
 
     private void openLogin() {
