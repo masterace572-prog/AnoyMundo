@@ -18,7 +18,11 @@ let cleanupApiKeyId = '';
 
 function ok(condition, label, extra = '') {
   if (condition) { passed += 1; console.log(`  PASS  ${label}`); }
-  else { failed += 1; console.error(`  FAIL  ${label} ${extra}`); }
+  else {
+    failed += 1;
+    console.error(`  FAIL  ${label} ${extra}`);
+    if (process.env.GITHUB_ACTIONS) console.log(`::error::${label} ${String(extra).slice(0, 300)}`);
+  }
 }
 
 function storeCookies(response) {

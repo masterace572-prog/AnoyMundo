@@ -73,8 +73,15 @@ jobs:
           chmod +x gradlew
           set -o pipefail
           mkdir -p ../qa-logs
-          ./gradlew :app:assembleDebug :app:assembleRelease --no-daemon --stacktrace -x lintVitalRelease 2>&1 \
-            | tee ../qa-logs/assemble.log
+          set +e
+          ./gradlew :app:assembleDebug :app:assembleRelease --no-daemon -x lintVitalRelease > ../qa-logs/assemble.log 2>&1
+          rc=$?
+          cat ../qa-logs/assemble.log
+          if [ $rc -ne 0 ]; then
+            grep -E "error:|: error|e: |ERROR:|What went wrong|AAPT|Execution failed|cannot find symbol" ../qa-logs/assemble.log \
+              | grep -v "^\s*at " | head -40 | while IFS= read -r line; do echo "::error::$(echo "$line" | cut -c1-400)"; done
+          fi
+          exit $rc
 
       - name: Android Lint (errors fail the job)
         run: |
@@ -176,7 +183,9 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -f docs/ui-redesign/screenshots/ qa-logs/ 2>/dev/null || true
+          mkdir -p docs/ui-redesign/screenshots qa-logs
+          git add -f qa-logs || true
+          git add -f docs/ui-redesign/screenshots || true
           git diff --cached --quiet && { echo "nothing to commit"; exit 0; }
           git commit -q -m "UI QA screenshots + logs (run ${{ github.run_number }}) [skip ci]"
           for attempt in 1 2 3 4 5 6 7 8; do

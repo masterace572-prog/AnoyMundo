@@ -92,10 +92,33 @@ jobs:
       - name: Assemble signed release APK
         run: |
           chmod +x gradlew
-          ./gradlew assembleRelease --no-daemon --stacktrace -x lintVitalRelease
+          set +e
+          ./gradlew assembleRelease --no-daemon -x lintVitalRelease > /tmp/assemble.log 2>&1
+          rc=$?
+          cat /tmp/assemble.log
+          if [ $rc -ne 0 ]; then
+            # Surface compiler / resource errors as annotations (readable via the API).
+            grep -E "error:|: error|e: |ERROR:|What went wrong|AAPT|Execution failed|not found|cannot find symbol" /tmp/assemble.log \
+              | grep -v "^\s*at " | head -40 | while IFS= read -r line; do
+                echo "::error::$(echo "$line" | cut -c1-400)"
+              done
+            grep -A3 -E "error:" /tmp/assemble.log | head -60 | tr '\n' ' ' | cut -c1-3500 | sed 's/^/::error title=context::/'
+          fi
+          exit $rc
 
       - name: Android lint (errors fail the build)
-        run: ./gradlew lintRelease --no-daemon
+        run: |
+          set +e
+          ./gradlew lintRelease --no-daemon > /tmp/lint.log 2>&1
+          rc=$?
+          cat /tmp/lint.log
+          R=$(ls app/build/reports/lint-results-release.txt app/build/intermediates/lint_intermediate_text_report/release/*.txt 2>/dev/null | head -1)
+          if [ -n "$R" ]; then
+            grep -E ": Error:" "$R" | head -40 | while IFS= read -r line; do echo "::error::$(echo "$line" | cut -c1-400)"; done
+            grep -E ": Warning:" "$R" | head -20 | while IFS= read -r line; do echo "::warning::$(echo "$line" | cut -c1-400)"; done
+          fi
+          [ $rc -ne 0 ] && grep -E "What went wrong|Lint found" /tmp/lint.log | head -5 | sed 's/^/::error::/'
+          exit $rc
 
       - name: Upload lint report
         if: always()
