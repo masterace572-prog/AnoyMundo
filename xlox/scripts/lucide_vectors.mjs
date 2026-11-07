@@ -66,7 +66,7 @@ function tokenize(d) {
 const f = (n) => String(Math.round(Number(n) * 1000) / 1000);
 function attrs(tag) {
   const o = {};
-  for (const m of tag.matchAll(/([a-z-]+)="([^"]*)"/g)) o[m[1]] = m[2];
+  for (const m of tag.matchAll(/([a-z][a-z0-9-]*)="([^"]*)"/g)) o[m[1]] = m[2];
   return o;
 }
 function toPath(el, a) {
@@ -113,7 +113,9 @@ for (const [name, suffix, colour, size = 24] of ICONS) {
   for (const m of svg.matchAll(/<(path|line|polyline|polygon|circle|ellipse|rect)\b([^>]*?)\/?>/g)) {
     const a = attrs(m[2]);
     const filled = a.fill === 'currentColor';
-    paths.push({ d: toPath(m[1], a), filled });
+    const d = toPath(m[1], a);
+    if (/NaN|undefined/.test(d)) throw new Error(`${name}: bad <${m[1]}> -> ${d}`);
+    paths.push({ d, filled });
   }
   const colourRef = colour ? `@color/${colour}` : '@color/white';
   const body = paths.map((p) => p.filled

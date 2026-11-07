@@ -161,6 +161,18 @@ for f in java_files:
             arg_problems.append(f"{rel(f)}: {name} needs {need} args, got {got}")
 gate("Format strings receive the right number of arguments", arg_problems)
 
+# ------------------------------------------------- 2b. vector paths parse
+bad_paths = []
+for f in xml_files:
+    src = f.read_text()
+    if "<vector" not in src:
+        continue
+    for m in re.finditer(r'android:pathData="([^"]*)"', src):
+        d = m.group(1)
+        if re.search(r"NaN|undefined|Infinity", d) or not re.match(r"^\s*[Mm]", d):
+            bad_paths.append(f"{rel(f)}: {d[:60]}")
+gate("Vector drawables have valid path data", bad_paths)
+
 # ------------------------------------------------------------ 3. no logo
 logo = []
 for p in MAIN.rglob("*"):

@@ -84,6 +84,11 @@ server.stderr.on('data', (d) => { serverLog += d.toString(); });
 
 try {
   if (!await waitForServer()) throw new Error(`server did not start:\n${serverLog}`);
+
+  {
+    const { longDate } = await import('../src/render.mjs');
+    ok(longDate('2050-01-01T00:00:00Z') === 'January 01 2050 at 00:00:00', 'longDate shows midnight as 00:00, not 24:00', longDate('2050-01-01T00:00:00Z'));
+  }
   console.log('\n=== AnoyMundo panel smoke tests (offline memory DB) ===\n');
 
   const form = (o) => new URLSearchParams(o);
