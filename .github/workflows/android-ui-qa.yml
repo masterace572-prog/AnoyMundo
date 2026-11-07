@@ -78,7 +78,7 @@ jobs:
           rc=$?
           cat ../qa-logs/assemble.log
           if [ $rc -ne 0 ]; then
-            grep -E "error:|: error|e: |ERROR:|What went wrong|AAPT|Execution failed|cannot find symbol" ../qa-logs/assemble.log \
+            grep -E "Duplicate class|error:|: error|e: |ERROR:|What went wrong|AAPT|Execution failed|cannot find symbol" ../qa-logs/assemble.log \
               | grep -v "^\s*at " | head -40 | while IFS= read -r line; do echo "::error::$(echo "$line" | cut -c1-400)"; done
           fi
           exit $rc
