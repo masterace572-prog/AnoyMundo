@@ -1,4 +1,4 @@
-=== emulator QA started Sat Nov  7 16:41:02 UTC 2026 ===
+=== emulator QA started Sat Nov  7 16:53:19 UTC 2026 ===
 direct install failed (Performing Streamed Install
 adb: failed to install app/build/outputs/apk/debug/app-debug.apk: Failure [INSTALL_FAILED_NO_MATCHING_ABIS: INSTALL_FAILED_NO_MATCHING_ABIS: Failed to extract native libraries, res=-113]); stripping native libs
 ABI-neutral install ok: app/build/outputs/apk/debug/app-debug.apk
@@ -6,77 +6,80 @@ Starting: Intent { cmp=com.xlox/.SplashActivity (has extras) }
 Status: ok
 LaunchState: COLD
 Activity: com.xlox/.SplashActivity
-TotalTime: 2434
-WaitTime: 2477
+TotalTime: 3224
+WaitTime: 3237
 Complete
-focus for splash:   mCurrentFocus=Window{cf8257f u0 com.xlox/com.xlox.SplashActivity}
-captured splash.png (43351 bytes)
+focus for splash:   mCurrentFocus=Window{9a0eb4 u0 com.xlox/com.xlox.SplashActivity}
+captured splash.png (43340 bytes)
 Starting: Intent { cmp=com.xlox/.SplashActivity }
 Status: ok
 LaunchState: COLD
 Activity: com.xlox/.SplashActivity
-TotalTime: 1262
-WaitTime: 1271
+TotalTime: 1976
+WaitTime: 2013
 Complete
 WARN: no update action shown (already current or check failed)
-focus for update_state:   mCurrentFocus=Window{39657fc u0 com.google.android.apps.nexuslauncher/com.google.android.apps.nexuslauncher.NexusLauncherActivity}
-captured update_state.png (1355667 bytes)
-gate result focus:   mCurrentFocus=Window{39657fc u0 com.google.android.apps.nexuslauncher/com.google.android.apps.nexuslauncher.NexusLauncherActivity}
+focus for update_state:   mCurrentFocus=Window{2a4dbdd u0 com.google.android.apps.nexuslauncher/com.google.android.apps.nexuslauncher.NexusLauncherActivity}
+captured update_state.png (1355711 bytes)
+gate result focus:   mCurrentFocus=Window{2a4dbdd u0 com.google.android.apps.nexuslauncher/com.google.android.apps.nexuslauncher.NexusLauncherActivity}
 WARN: sign-in form missing after the gate
-focus for login:   mCurrentFocus=Window{39657fc u0 com.google.android.apps.nexuslauncher/com.google.android.apps.nexuslauncher.NexusLauncherActivity}
-captured login.png (1355772 bytes)
+focus for login:   mCurrentFocus=Window{2a4dbdd u0 com.google.android.apps.nexuslauncher/com.google.android.apps.nexuslauncher.NexusLauncherActivity}
+captured login.png (1356199 bytes)
 WARN: keyField not on screen
 keyboard state:   mShowRequested=false mShowExplicitlyRequested=false mShowForced=false mInputShown=false
-focus for login_keyboard:   mCurrentFocus=Window{39657fc u0 com.google.android.apps.nexuslauncher/com.google.android.apps.nexuslauncher.NexusLauncherActivity}
-captured login_keyboard.png (1355356 bytes)
+focus for login_keyboard:   mCurrentFocus=Window{2a4dbdd u0 com.google.android.apps.nexuslauncher/com.google.android.apps.nexuslauncher.NexusLauncherActivity}
+captured login_keyboard.png (1356199 bytes)
 WARN: login not on screen
-focus for login_error:   mCurrentFocus=Window{39657fc u0 com.google.android.apps.nexuslauncher/com.google.android.apps.nexuslauncher.NexusLauncherActivity}
-captured login_error.png (1355356 bytes)
+focus for login_error:   mCurrentFocus=Window{2a4dbdd u0 com.google.android.apps.nexuslauncher/com.google.android.apps.nexuslauncher.NexusLauncherActivity}
+captured login_error.png (1356199 bytes)
 WARN: toggleKey not on screen
-focus for login_key_visible:   mCurrentFocus=Window{39657fc u0 com.google.android.apps.nexuslauncher/com.google.android.apps.nexuslauncher.NexusLauncherActivity}
-captured login_key_visible.png (1355356 bytes)
+focus for login_key_visible:   mCurrentFocus=Window{2a4dbdd u0 com.google.android.apps.nexuslauncher/com.google.android.apps.nexuslauncher.NexusLauncherActivity}
+captured login_key_visible.png (1356009 bytes)
 Starting: Intent { cmp=com.xlox/.MAct (has extras) }
 Status: ok
-LaunchState: UNKNOWN (0)
+LaunchState: COLD
 Activity: com.xlox/.MAct
-WaitTime: 929
+TotalTime: 1496
+WaitTime: 1500
 Complete
-focus for home:   mCurrentFocus=Window{39657fc u0 com.google.android.apps.nexuslauncher/com.google.android.apps.nexuslauncher.NexusLauncherActivity}
-captured home.png (1355356 bytes)
+focus for home:   mCurrentFocus=Window{29aeee4 u0 com.xlox/com.xlox.MAct}
+captured home.png (113721 bytes)
 Starting: Intent { cmp=com.xlox/.LogAct }
 Status: ok
 LaunchState: UNKNOWN (0)
 Activity: com.xlox/.LogAct
-WaitTime: 679
+WaitTime: 746
 Complete
 WARN: sign-in form missing
-focus for login_font130:   mCurrentFocus=Window{2fef2bd u0 com.google.android.apps.nexuslauncher/com.google.android.apps.nexuslauncher.NexusLauncherActivity}
-captured login_font130.png (1360515 bytes)
+focus for login_font130:   mCurrentFocus=Window{61e5fd8 u0 com.google.android.apps.nexuslauncher/com.google.android.apps.nexuslauncher.NexusLauncherActivity}
+captured login_font130.png (1361529 bytes)
 Starting: Intent { cmp=com.xlox/.MAct (has extras) }
 Status: ok
-LaunchState: UNKNOWN (0)
+LaunchState: COLD
 Activity: com.xlox/.MAct
-WaitTime: 624
+TotalTime: 1194
+WaitTime: 1197
 Complete
-focus for home_font130:   mCurrentFocus=Window{2fef2bd u0 com.google.android.apps.nexuslauncher/com.google.android.apps.nexuslauncher.NexusLauncherActivity}
-captured home_font130.png (1360515 bytes)
+focus for home_font130:   mCurrentFocus=Window{7d607ae u0 com.xlox/com.xlox.MAct}
+captured home_font130.png (127582 bytes)
 Starting: Intent { cmp=com.xlox/.LogAct }
 Status: ok
 LaunchState: UNKNOWN (0)
 Activity: com.xlox/.LogAct
-WaitTime: 718
+WaitTime: 981
 Complete
 WARN: sign-in form missing
-focus for login_320:   mCurrentFocus=Window{6aa5e49 u0 com.google.android.apps.nexuslauncher/com.google.android.apps.nexuslauncher.NexusLauncherActivity}
-captured login_320.png (620222 bytes)
+focus for login_320:   mCurrentFocus=Window{883484f u0 com.google.android.apps.nexuslauncher/com.google.android.apps.nexuslauncher.NexusLauncherActivity}
+captured login_320.png (620278 bytes)
 Starting: Intent { cmp=com.xlox/.MAct (has extras) }
 Status: ok
-LaunchState: UNKNOWN (0)
+LaunchState: COLD
 Activity: com.xlox/.MAct
-WaitTime: 580
+TotalTime: 1198
+WaitTime: 1200
 Complete
-focus for home_320:   mCurrentFocus=Window{6aa5e49 u0 com.google.android.apps.nexuslauncher/com.google.android.apps.nexuslauncher.NexusLauncherActivity}
-captured home_320.png (620222 bytes)
+focus for home_320:   mCurrentFocus=Window{c5c0b09 u0 com.xlox/com.xlox.MAct}
+captured home_320.png (54590 bytes)
 direct install failed (Performing Streamed Install
 adb: failed to install app/build/outputs/apk/release/app-release.apk: Failure [INSTALL_FAILED_NO_MATCHING_ABIS: INSTALL_FAILED_NO_MATCHING_ABIS: Failed to extract native libraries, res=-113]); stripping native libs
 ABI-neutral install ok: app/build/outputs/apk/release/app-release.apk
@@ -84,10 +87,10 @@ Starting: Intent { cmp=com.xlox/.SplashActivity }
 Status: ok
 LaunchState: COLD
 Activity: com.xlox/.SplashActivity
-TotalTime: 1059
-WaitTime: 1097
+TotalTime: 1312
+WaitTime: 1321
 Complete
-release focus:   mCurrentFocus=Window{403a4a6 u0 com.google.android.apps.nexuslauncher/com.google.android.apps.nexuslauncher.NexusLauncherActivity}
-focus for release_login:   mCurrentFocus=Window{403a4a6 u0 com.google.android.apps.nexuslauncher/com.google.android.apps.nexuslauncher.NexusLauncherActivity}
-captured release_login.png (1355406 bytes)
-=== emulator QA finished Sat Nov  7 16:47:16 UTC 2026 ===
+release focus:   mCurrentFocus=Window{1484aa6 u0 com.google.android.apps.nexuslauncher/com.google.android.apps.nexuslauncher.NexusLauncherActivity}
+focus for release_login:   mCurrentFocus=Window{1484aa6 u0 com.google.android.apps.nexuslauncher/com.google.android.apps.nexuslauncher.NexusLauncherActivity}
+captured release_login.png (1355998 bytes)
+=== emulator QA finished Sat Nov  7 16:59:44 UTC 2026 ===
