@@ -1,0 +1,144 @@
+/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/res/layout/activity_login.xml:14: Warning: This LinearLayout should use android:layout_height="wrap_content" [ScrollViewSize]
+        android:layout_height="match_parent"
+        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+   Explanation for issues of type "ScrollViewSize":
+   ScrollView children must set their layout_width or layout_height attributes
+   to wrap_content rather than fill_parent or match_parent in the scrolling
+   dimension
+
+/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/java/com/xlox/ui/UpdateGate.java:127: Warning: Avoid passing null as the view root (needed to resolve layout parameters on the inflated layout's root element) [InflateParams]
+            View root = LayoutInflater.from(dialog.getContext()).inflate(R.layout.dialog_update, null, false);
+                                                                                                 ~~~~
+
+   Explanation for issues of type "InflateParams":
+   When inflating a layout, avoid passing in null as the parent view, since
+   otherwise any layout parameters on the root of the inflated layout will be
+   ignored.
+
+   https://www.bignerdranch.com/blog/understanding-androids-layoutinflater-inflate/
+
+/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/AndroidManifest.xml:58: Warning: Expecting android:screenOrientation="unspecified" or "fullSensor" for this activity so the user can use the application in any orientation and provide a great experience on Chrome OS devices [LockedOrientationActivity]
+            android:screenOrientation="portrait"
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/AndroidManifest.xml:70: Warning: Expecting android:screenOrientation="unspecified" or "fullSensor" for this activity so the user can use the application in any orientation and provide a great experience on Chrome OS devices [LockedOrientationActivity]
+            android:screenOrientation="portrait"
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/AndroidManifest.xml:77: Warning: Expecting android:screenOrientation="unspecified" or "fullSensor" for this activity so the user can use the application in any orientation and provide a great experience on Chrome OS devices [LockedOrientationActivity]
+            android:screenOrientation="portrait" />
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+   Explanation for issues of type "LockedOrientationActivity":
+   The <activity> element should not be locked to any orientation so that
+   users can take advantage of the multi-window environments and larger
+   screens available on Android. To fix the issue, consider declaring the
+   corresponding activity element with `screenOrientation="unspecified"or
+   "fullSensor"` attribute.
+
+   https://developer.android.com/topic/arc/window-management
+
+/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/java/com/xlox/ui/Ui.java:38: Warning: Unnecessary; SDK_INT is never < 21 [ObsoleteSdkInt]
+        return Build.VERSION.SDK_INT < Build.VERSION_CODES.JELLY_BEAN_MR1 || !activity.isDestroyed();
+               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+   Explanation for issues of type "ObsoleteSdkInt":
+   This check flags version checks that are not necessary, because the
+   minSdkVersion (or surrounding known API level) is already at least as high
+   as the version checked for.
+
+   Similarly, it also looks for resources in -vNN folders, such as values-v14
+   where the version qualifier is less than or equal to the minSdkVersion,
+   where the contents should be merged into the best folder.
+
+/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/res/layout/activity_login.xml:7: Warning: Possible overdraw: Root element paints background @color/black with a theme that also paints a background (inferred theme is @style/AppTheme) [Overdraw]
+    android:background="@color/black"
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/res/layout/activity_main.xml:7: Warning: Possible overdraw: Root element paints background @color/black with a theme that also paints a background (inferred theme is @style/AppTheme) [Overdraw]
+    android:background="@color/black"
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/res/layout/activity_splash.xml:6: Warning: Possible overdraw: Root element paints background @color/black with a theme that also paints a background (inferred theme is @style/AppTheme_Splash) [Overdraw]
+    android:background="@color/black">
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+   Explanation for issues of type "Overdraw":
+   If you set a background drawable on a root view, then you should use a
+   custom theme where the theme background is null. Otherwise, the theme
+   background will be painted first, only to have your custom background
+   completely cover it; this is called "overdraw".
+
+   NOTE: This detector relies on figuring out which layouts are associated
+   with which activities based on scanning the Java code, and it's currently
+   doing that using an inexact pattern matching algorithm. Therefore, it can
+   incorrectly conclude which activity the layout is associated with and then
+   wrongly complain that a background-theme is hidden.
+
+   If you want your custom background on multiple pages, then you should
+   consider making a custom theme with your custom background and just using
+   that theme instead of a root element background.
+
+   Of course it's possible that your custom drawable is translucent and you
+   want it to be mixed with the background. However, you will get better
+   performance if you pre-mix the background with your drawable and use that
+   resulting image or color as a custom theme background instead.
+
+/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/res/values/colors.xml:30: Warning: The resource R.color.scrim appears to be unused [UnusedResources]
+    <color name="scrim">#B3000000</color>
+           ~~~~~~~~~~~~
+/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/res/values/dimens.xml:10: Warning: The resource R.dimen.dialog_width appears to be unused [UnusedResources]
+    <dimen name="dialog_width">320dp</dimen>
+           ~~~~~~~~~~~~~~~~~~~
+/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/res/values/dimens.xml:14: Warning: The resource R.dimen.max_content_width appears to be unused [UnusedResources]
+    <dimen name="max_content_width">440dp</dimen>
+           ~~~~~~~~~~~~~~~~~~~~~~~~
+/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/res/values/dimens.xml:17: Warning: The resource R.dimen.text_title appears to be unused [UnusedResources]
+    <dimen name="text_title">22sp</dimen>
+           ~~~~~~~~~~~~~~~~~
+/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/res/values/dimens.xml:22: Warning: The resource R.dimen.text_caption appears to be unused [UnusedResources]
+    <dimen name="text_caption">12sp</dimen>
+           ~~~~~~~~~~~~~~~~~~~
+/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/res/drawable/separator.xml:2: Warning: The resource R.drawable.separator appears to be unused [UnusedResources]
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+^
+/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/res/values/strings.xml:122: Warning: The resource R.string.sandbox_install_failed appears to be unused [UnusedResources]
+    <string name="sandbox_install_failed">Couldn\'t install the game into the container.</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/res/values/strings.xml:123: Warning: The resource R.string.package_not_found appears to be unused [UnusedResources]
+    <string name="package_not_found">BGMI is not installed.</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~
+/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/res/values/styles.xml:66: Warning: The resource R.style.Text_Title appears to be unused [UnusedResources]
+    <style name="Text.Title">
+           ~~~~~~~~~~~~~~~~~
+/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/res/values/styles.xml:76: Warning: The resource R.style.Text_Body appears to be unused [UnusedResources]
+    <style name="Text.Body">
+           ~~~~~~~~~~~~~~~~
+
+   Explanation for issues of type "UnusedResources":
+   Unused resources make applications larger and slow down builds.
+
+
+   The unused resource check can ignore tests. If you want to include
+   resources that are only referenced from tests, consider packaging them in a
+   test source set instead.
+
+   You can include test sources in the unused resource check by setting the
+   system property lint.unused-resources.include-tests =true, and to exclude
+   them (usually for performance reasons), use
+   lint.unused-resources.exclude-tests =true.
+   ,
+
+/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/res/layout/activity_login.xml:58: Warning: Missing accessibility label: provide either a view with an android:labelFor that references this view or provide an android:hint, but not both [LabelFor]
+            <EditText
+             ~~~~~~~~
+
+   Explanation for issues of type "LabelFor":
+   Editable text fields should provide an android:hint or, provided your
+   minSdkVersion is at least 17, they may be referenced by a view with a
+   android:labelFor attribute.
+
+   When using android:labelFor, be sure to provide an android:text or an
+   android:contentDescription.
+
+   If your view is labeled but by a label in a different layout which includes
+   this one, just suppress this warning from lint.
+
+0 errors, 20 warnings
