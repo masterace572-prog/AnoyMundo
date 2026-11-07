@@ -17,11 +17,12 @@ import com.xlox.ui.Ui;
 public class SplashActivity extends AppCompatActivity {
 
     private static final long SPLASH_MS = 1100L;
+    /** Debug builds only: hold the splash (used by the screenshot QA). */
+    public static final String EXTRA_HOLD = "qa_hold";
 
     private final Handler handler = new Handler(Looper.getMainLooper());
     private final Runnable next = this::openLogin;
     private boolean opened;
-    private boolean timerStarted;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -51,18 +52,14 @@ public class SplashActivity extends AppCompatActivity {
             openLogin();
             return;
         }
-        // The visible time is counted from onEnterAnimationComplete() (window
-        // really on screen), not from onCreate: on a slow cold start the splash
-        // would otherwise flash by unseen. Safety net if that callback never comes.
-        handler.postDelayed(next, SPLASH_MS + 6000L);
-    }
-
-    @Override
-    public void onEnterAnimationComplete() {
-        super.onEnterAnimationComplete();
-        if (timerStarted) return;
-        timerStarted = true;
-        handler.postDelayed(next, SPLASH_MS);
+        // QA only (debug builds): keep the splash on screen for a screenshot.
+        if (BuildConfig.DEBUG && getIntent() != null && getIntent().getBooleanExtra(EXTRA_HOLD, false)) return;
+        // Count the visible time from the first frame, not from onCreate, so a
+        // slow cold start does not eat into it. (onEnterAnimationComplete is not
+        // used: it never fires when the user has animations turned off.)
+        getWindow().getDecorView().post(() -> handler.postDelayed(next, SPLASH_MS));
+        // Safety net in case the frame callback never runs.
+        handler.postDelayed(next, SPLASH_MS + 2500L);
     }
 
     private void openLogin() {
