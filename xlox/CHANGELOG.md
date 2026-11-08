@@ -5,6 +5,8 @@
 - "Welcome To" now dissolves upward (fade + 10 dp drift) instead of being
   sliced; "Loader" cross-dissolves into "Hax" instead of squashing, and the
   re-centre rides the same 400 ms motion. Same words, order and length.
+- Cold start no longer dims the system "Anoy", flashes an empty black frame
+  and fades the app in: the identical wordmark hands over instantly.
 
 ## 2.1.0 follow-up — Anoy wordmark and splash film
 
