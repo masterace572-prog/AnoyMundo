@@ -1,4 +1,4 @@
-=== emulator QA started Sun Nov  8 14:07:20 UTC 2026 ===
+=== emulator QA started Sun Nov  8 14:28:06 UTC 2026 ===
 direct install failed (Performing Streamed Install
 adb: failed to install app/build/outputs/apk/debug/app-debug.apk: Failure [INSTALL_FAILED_NO_MATCHING_ABIS: INSTALL_FAILED_NO_MATCHING_ABIS: Failed to extract native libraries, res=-113]); stripping native libs
 ABI-neutral install ok: app/build/outputs/apk/debug/app-debug.apk
@@ -6,341 +6,249 @@ Starting: Intent { cmp=com.xlox/.SplashActivity (has extras) }
 Status: ok
 LaunchState: COLD
 Activity: com.xlox/.SplashActivity
-TotalTime: 2631
-WaitTime: 2795
+TotalTime: 2570
+WaitTime: 2573
 Complete
-focus for splash_t000:   mCurrentFocus=Window{f111653 u0 com.xlox/com.xlox.SplashActivity}
-captured splash_t000.png (22680 bytes)
+focus for splash_t000:   mCurrentFocus=Window{67fea99 u0 com.xlox/com.xlox.SplashActivity}
+captured splash_t000.png (26389 bytes)
 Starting: Intent { cmp=com.xlox/.SplashActivity (has extras) }
 Status: ok
 LaunchState: COLD
 Activity: com.xlox/.SplashActivity
-TotalTime: 2709
-WaitTime: 2711
+TotalTime: 2287
+WaitTime: 2388
 Complete
-focus for splash_t025:   mCurrentFocus=Window{e75a25f u0 com.xlox/com.xlox.SplashActivity}
-captured splash_t025.png (51876 bytes)
+focus for splash_t025:   mCurrentFocus=Window{9c75ed4 u0 com.xlox/com.xlox.SplashActivity}
+captured splash_t025.png (52089 bytes)
 Starting: Intent { cmp=com.xlox/.SplashActivity (has extras) }
 Status: ok
 LaunchState: COLD
 Activity: com.xlox/.SplashActivity
-TotalTime: 2437
-WaitTime: 2461
+TotalTime: 1486
+WaitTime: 1488
 Complete
-focus for splash_t080:   mCurrentFocus=Window{5040796 u0 com.xlox/com.xlox.SplashActivity}
-captured splash_t080.png (50154 bytes)
+focus for splash_t080:   mCurrentFocus=Window{6acd995 u0 com.xlox/com.xlox.SplashActivity}
+captured splash_t080.png (49398 bytes)
 Starting: Intent { cmp=com.xlox/.SplashActivity (has extras) }
 Status: ok
 LaunchState: COLD
 Activity: com.xlox/.SplashActivity
-TotalTime: 2062
-WaitTime: 2106
+TotalTime: 1678
+WaitTime: 1720
 Complete
-focus for splash_t130:   mCurrentFocus=Window{7bd8271 u0 com.xlox/com.xlox.SplashActivity}
-captured splash_t130.png (47429 bytes)
+focus for splash_t130:   mCurrentFocus=Window{c8edbe6 u0 com.xlox/com.xlox.SplashActivity}
+captured splash_t130.png (48437 bytes)
 Starting: Intent { cmp=com.xlox/.SplashActivity (has extras) }
 Status: ok
 LaunchState: COLD
 Activity: com.xlox/.SplashActivity
-TotalTime: 1980
-WaitTime: 1981
+TotalTime: 1325
+WaitTime: 1362
 Complete
-focus for splash_t142:   mCurrentFocus=Window{3178d70 u0 com.xlox/com.xlox.SplashActivity}
-captured splash_t142.png (50574 bytes)
+focus for splash_t142:   mCurrentFocus=Window{35cd70a u0 com.xlox/com.xlox.SplashActivity}
+captured splash_t142.png (51770 bytes)
 Starting: Intent { cmp=com.xlox/.SplashActivity (has extras) }
 Status: ok
 LaunchState: COLD
 Activity: com.xlox/.SplashActivity
-TotalTime: 1931
-WaitTime: 1934
+TotalTime: 1488
+WaitTime: 1489
 Complete
-focus for splash_t155:   mCurrentFocus=Window{fc0e786 u0 com.xlox/com.xlox.SplashActivity}
-captured splash_t155.png (46804 bytes)
+focus for splash_t155:   mCurrentFocus=Window{ad8e210 u0 com.xlox/com.xlox.SplashActivity}
+captured splash_t155.png (48031 bytes)
 Starting: Intent { cmp=com.xlox/.SplashActivity (has extras) }
 Status: ok
 LaunchState: COLD
 Activity: com.xlox/.SplashActivity
-TotalTime: 2056
-WaitTime: 2094
+TotalTime: 2055
+WaitTime: 2075
 Complete
-focus for splash_t220:   mCurrentFocus=Window{51f2b6e u0 com.xlox/com.xlox.SplashActivity}
-captured splash_t220.png (40556 bytes)
+focus for splash_t220:   mCurrentFocus=Window{77d2204 u0 com.xlox/com.xlox.SplashActivity}
+captured splash_t220.png (39442 bytes)
 Starting: Intent { cmp=com.xlox/.SplashActivity (has extras) }
 Status: ok
 LaunchState: COLD
 Activity: com.xlox/.SplashActivity
-TotalTime: 1628
-WaitTime: 1656
+TotalTime: 1828
+WaitTime: 1870
 Complete
-focus for splash_reduced_welcome:   mCurrentFocus=Window{6e3aba6 u0 com.xlox/com.xlox.SplashActivity}
-captured splash_reduced_welcome.png (48722 bytes)
-focus for splash:   mCurrentFocus=Window{6e3aba6 u0 com.xlox/com.xlox.SplashActivity}
-captured splash.png (40277 bytes)
+focus for splash_reduced_welcome:   mCurrentFocus=Window{2d1cc1 u0 com.xlox/com.xlox.SplashActivity}
+captured splash_reduced_welcome.png (48072 bytes)
+focus for splash:   mCurrentFocus=Window{2d1cc1 u0 com.xlox/com.xlox.SplashActivity}
+captured splash.png (41114 bytes)
 Starting: Intent { cmp=com.xlox/.SplashActivity }
-focus for splash_live_cold:   mCurrentFocus=Window{be3278f u0 com.xlox/com.xlox.SplashActivity}
-captured splash_live_cold.png (37748 bytes)
-focus for live_gate_required:   mCurrentFocus=Window{4861217 u0 com.xlox/com.xlox.LogAct}
-captured live_gate_required.png (103842 bytes)
+focus for splash_live_cold:   mCurrentFocus=Window{16ee446 u0 com.xlox/com.xlox.SplashActivity}
+captured splash_live_cold.png (38529 bytes)
+focus for live_gate_required:   mCurrentFocus=Window{a037154 u0 com.xlox/com.xlox.LogAct}
+captured live_gate_required.png (104399 bytes)
 gate texts: text="Update required" text="Library 1.13 is required to continue." text="2.9 MB" text="Update now" 
-focus for live_gate_downloading:   mCurrentFocus=Window{4861217 u0 com.xlox/com.xlox.LogAct}
-captured live_gate_downloading.png (86155 bytes)
+focus for live_gate_downloading:   mCurrentFocus=Window{a037154 u0 com.xlox/com.xlox.LogAct}
+captured live_gate_downloading.png (86691 bytes)
 update gate passed
-gate result focus:   mCurrentFocus=Window{97085e9 u0 com.xlox/com.xlox.LogAct}
-focus for login:   mCurrentFocus=Window{97085e9 u0 com.xlox/com.xlox.LogAct}
-captured login.png (81470 bytes)
+gate result focus:   mCurrentFocus=Window{5d04ec0 u0 com.xlox/com.xlox.LogAct}
+focus for login:   mCurrentFocus=Window{5d04ec0 u0 com.xlox/com.xlox.LogAct}
+captured login.png (81057 bytes)
 keyboard state:   mShowRequested=true mShowExplicitlyRequested=true mShowForced=false mInputShown=true
-focus for login_keyboard:   mCurrentFocus=Window{97085e9 u0 com.xlox/com.xlox.LogAct}
-captured login_keyboard.png (126691 bytes)
-focus for login_error_empty:   mCurrentFocus=Window{97085e9 u0 com.xlox/com.xlox.LogAct}
-captured login_error_empty.png (134145 bytes)
-focus for login_error_malformed:   mCurrentFocus=Window{97085e9 u0 com.xlox/com.xlox.LogAct}
-captured login_error_malformed.png (137724 bytes)
-focus for login_key_visible:   mCurrentFocus=Window{97085e9 u0 com.xlox/com.xlox.LogAct}
-captured login_key_visible.png (123259 bytes)
+focus for login_keyboard:   mCurrentFocus=Window{5d04ec0 u0 com.xlox/com.xlox.LogAct}
+captured login_keyboard.png (125715 bytes)
+focus for login_error_empty:   mCurrentFocus=Window{5d04ec0 u0 com.xlox/com.xlox.LogAct}
+captured login_error_empty.png (133105 bytes)
+focus for login_error_malformed:   mCurrentFocus=Window{5d04ec0 u0 com.xlox/com.xlox.LogAct}
+captured login_error_malformed.png (136167 bytes)
+focus for login_key_visible:   mCurrentFocus=Window{5d04ec0 u0 com.xlox/com.xlox.LogAct}
+captured login_key_visible.png (121881 bytes)
 airplane mode enable
 Starting: Intent { cmp=com.xlox/.LogAct }
 Status: ok
 LaunchState: COLD
 Activity: com.xlox/.LogAct
-TotalTime: 2706
-WaitTime: 2842
+TotalTime: 2750
+WaitTime: 2800
 Complete
-focus for gate_check_failed_live:   mCurrentFocus=Window{fab15a1 u0 com.xlox/com.xlox.LogAct}
-captured gate_check_failed_live.png (99073 bytes)
+focus for gate_check_failed_live:   mCurrentFocus=Window{cd0ac49 u0 com.xlox/com.xlox.LogAct}
+captured gate_check_failed_live.png (98333 bytes)
 offline gate texts: text="Can't check for updates" text="You're offline. Connect to Wi-Fi or mobile data and try again." text="Try again" 
 airplane mode disable
 airplane mode enable
-focus for login_offline:   mCurrentFocus=Window{6fbed44 u0 com.xlox/com.xlox.LogAct}
-captured login_offline.png (103682 bytes)
+focus for login_offline:   mCurrentFocus=Window{da2689c u0 com.xlox/com.xlox.LogAct}
+captured login_offline.png (103474 bytes)
 airplane mode disable
 Starting: Intent { cmp=com.xlox/.LogAct (has extras) }
 Status: ok
 LaunchState: COLD
 Activity: com.xlox/.LogAct
-TotalTime: 2077
-WaitTime: 2138
+TotalTime: 1736
+WaitTime: 1803
 Complete
-focus for login_loading:   mCurrentFocus=Window{ae74411 u0 com.xlox/com.xlox.LogAct}
-captured login_loading.png (90511 bytes)
+focus for login_loading:   mCurrentFocus=Window{e7817cc u0 com.xlox/com.xlox.LogAct}
+captured login_loading.png (90337 bytes)
 Starting: Intent { cmp=com.xlox/.LogAct (has extras) }
 Status: ok
 LaunchState: COLD
 Activity: com.xlox/.LogAct
-TotalTime: 1454
-WaitTime: 1457
+TotalTime: 1437
+WaitTime: 1477
 Complete
-focus for login_wrong:   mCurrentFocus=Window{75d64fe u0 com.xlox/com.xlox.LogAct}
-captured login_wrong.png (107388 bytes)
+focus for login_wrong:   mCurrentFocus=Window{81daa96 u0 com.xlox/com.xlox.LogAct}
+captured login_wrong.png (107238 bytes)
 Starting: Intent { cmp=com.xlox/.LogAct (has extras) }
 Status: ok
 LaunchState: COLD
 Activity: com.xlox/.LogAct
-TotalTime: 1310
-WaitTime: 1366
+TotalTime: 1474
+WaitTime: 1482
 Complete
-focus for login_maintenance:   mCurrentFocus=Window{76d6390 u0 com.xlox/com.xlox.LogAct}
-captured login_maintenance.png (99365 bytes)
+focus for login_maintenance:   mCurrentFocus=Window{51a3e61 u0 com.xlox/com.xlox.LogAct}
+captured login_maintenance.png (99862 bytes)
 Starting: Intent { cmp=com.xlox/.LogAct (has extras) }
 Status: ok
 LaunchState: COLD
 Activity: com.xlox/.LogAct
-TotalTime: 1764
-WaitTime: 1776
+TotalTime: 1263
+WaitTime: 1278
 Complete
-focus for login_server:   mCurrentFocus=Window{a4c7c84 u0 com.xlox/com.xlox.LogAct}
-captured login_server.png (95926 bytes)
+focus for login_server:   mCurrentFocus=Window{ff995c0 u0 com.xlox/com.xlox.LogAct}
+captured login_server.png (96407 bytes)
 Starting: Intent { cmp=com.xlox/.LogAct (has extras) }
 Status: ok
 LaunchState: COLD
 Activity: com.xlox/.LogAct
-TotalTime: 1312
-WaitTime: 1322
+TotalTime: 1404
+WaitTime: 1465
 Complete
-focus for login_vpn:   mCurrentFocus=Window{29b07e u0 com.xlox/com.xlox.LogAct}
-captured login_vpn.png (93923 bytes)
+focus for login_vpn:   mCurrentFocus=Window{57b8aaa u0 com.xlox/com.xlox.LogAct}
+captured login_vpn.png (93880 bytes)
 Starting: Intent { cmp=com.xlox/.LogAct (has extras) }
 Status: ok
 LaunchState: COLD
 Activity: com.xlox/.LogAct
-TotalTime: 1587
-WaitTime: 1608
+TotalTime: 1294
+WaitTime: 1311
 Complete
-focus for login_success:   mCurrentFocus=Window{d6000be u0 com.xlox/com.xlox.LogAct}
-captured login_success.png (89455 bytes)
+focus for login_success:   mCurrentFocus=Window{9e1fa6 u0 com.xlox/com.xlox.LogAct}
+captured login_success.png (89521 bytes)
 Starting: Intent { cmp=com.xlox/.LogAct (has extras) }
 Status: ok
 LaunchState: COLD
 Activity: com.xlox/.LogAct
-TotalTime: 1286
-WaitTime: 1292
+TotalTime: 1274
+WaitTime: 1287
 Complete
 WARN: sign-in form missing
-focus for login_ok_home:   mCurrentFocus=Window{b799cc0 u0 com.xlox/com.xlox.MAct}
-captured login_ok_home.png (176707 bytes)
+focus for login_ok_home:   mCurrentFocus=Window{de16c13 u0 com.xlox/com.xlox.MAct}
+captured login_ok_home.png (178200 bytes)
 Starting: Intent { cmp=com.xlox/.LogAct (has extras) }
 Status: ok
 LaunchState: COLD
 Activity: com.xlox/.LogAct
-TotalTime: 1161
-WaitTime: 1183
+TotalTime: 1281
+WaitTime: 1286
 Complete
-focus for gate_checking:   mCurrentFocus=Window{12f1de2 u0 com.xlox/com.xlox.LogAct}
-captured gate_checking.png (83678 bytes)
+focus for gate_checking:   mCurrentFocus=Window{c044ef9 u0 com.xlox/com.xlox.LogAct}
+captured gate_checking.png (84208 bytes)
 Starting: Intent { cmp=com.xlox/.LogAct (has extras) }
 Status: ok
 LaunchState: COLD
 Activity: com.xlox/.LogAct
-TotalTime: 1499
-WaitTime: 1573
+TotalTime: 1435
+WaitTime: 1523
 Complete
-focus for gate_required:   mCurrentFocus=Window{f5d4199 u0 com.xlox/com.xlox.LogAct}
-captured gate_required.png (101008 bytes)
+focus for gate_required:   mCurrentFocus=Window{c8aa188 u0 com.xlox/com.xlox.LogAct}
+captured gate_required.png (101484 bytes)
 Starting: Intent { cmp=com.xlox/.LogAct (has extras) }
 Status: ok
 LaunchState: COLD
 Activity: com.xlox/.LogAct
-TotalTime: 1285
-WaitTime: 1289
+TotalTime: 1461
+WaitTime: 1505
 Complete
-focus for gate_downloading:   mCurrentFocus=Window{bcb8e8e u0 com.xlox/com.xlox.LogAct}
-captured gate_downloading.png (84565 bytes)
+focus for gate_downloading:   mCurrentFocus=Window{6be450 u0 com.xlox/com.xlox.LogAct}
+captured gate_downloading.png (85027 bytes)
 Starting: Intent { cmp=com.xlox/.LogAct (has extras) }
 Status: ok
 LaunchState: COLD
 Activity: com.xlox/.LogAct
-TotalTime: 1490
-WaitTime: 1497
+TotalTime: 1572
+WaitTime: 1577
 Complete
-focus for gate_downloading_unknown:   mCurrentFocus=Window{32c4b19 u0 com.xlox/com.xlox.LogAct}
-captured gate_downloading_unknown.png (84510 bytes)
+focus for gate_downloading_unknown:   mCurrentFocus=Window{ba7af39 u0 com.xlox/com.xlox.LogAct}
+captured gate_downloading_unknown.png (84969 bytes)
 Starting: Intent { cmp=com.xlox/.LogAct (has extras) }
 Status: ok
 LaunchState: COLD
 Activity: com.xlox/.LogAct
-TotalTime: 1679
-WaitTime: 1686
+TotalTime: 1448
+WaitTime: 1485
 Complete
-focus for gate_installing:   mCurrentFocus=Window{711d958 u0 com.xlox/com.xlox.LogAct}
-captured gate_installing.png (78531 bytes)
+focus for gate_installing:   mCurrentFocus=Window{7dba257 u0 com.xlox/com.xlox.LogAct}
+captured gate_installing.png (78986 bytes)
 Starting: Intent { cmp=com.xlox/.LogAct (has extras) }
 Status: ok
 LaunchState: COLD
 Activity: com.xlox/.LogAct
-TotalTime: 1542
-WaitTime: 1587
+TotalTime: 1481
+WaitTime: 1503
 Complete
-focus for gate_done:   mCurrentFocus=Window{4672bc6 u0 com.xlox/com.xlox.LogAct}
-captured gate_done.png (73206 bytes)
+focus for gate_done:   mCurrentFocus=Window{3a94ae1 u0 com.xlox/com.xlox.LogAct}
+captured gate_done.png (73704 bytes)
 Starting: Intent { cmp=com.xlox/.LogAct (has extras) }
 Status: ok
 LaunchState: COLD
 Activity: com.xlox/.LogAct
-TotalTime: 1507
-WaitTime: 1519
+TotalTime: 1250
+WaitTime: 1258
 Complete
-focus for gate_check_failed:   mCurrentFocus=Window{5545ada u0 com.xlox/com.xlox.LogAct}
-captured gate_check_failed.png (97799 bytes)
+focus for gate_check_failed:   mCurrentFocus=Window{b651099 u0 com.xlox/com.xlox.LogAct}
+captured gate_check_failed.png (98189 bytes)
 Starting: Intent { cmp=com.xlox/.LogAct (has extras) }
 Status: ok
 LaunchState: COLD
 Activity: com.xlox/.LogAct
-TotalTime: 1545
-WaitTime: 1553
+TotalTime: 1170
+WaitTime: 1185
 Complete
-focus for gate_download_failed:   mCurrentFocus=Window{4986170 u0 com.xlox/com.xlox.LogAct}
-captured gate_download_failed.png (90253 bytes)
-Starting: Intent { cmp=com.xlox/.MAct (has extras) }
-Status: ok
-LaunchState: COLD
-Activity: com.xlox/.MAct
-TotalTime: 1515
-WaitTime: 1528
-Complete
-focus for home:   mCurrentFocus=Window{55a1338 u0 com.xlox/com.xlox.MAct}
-captured home.png (174905 bytes)
-focus for home_scrolled:   mCurrentFocus=Window{55a1338 u0 com.xlox/com.xlox.MAct}
-captured home_scrolled.png (161814 bytes)
-Starting: Intent { cmp=com.xlox/.MAct (has extras) }
-Status: ok
-LaunchState: COLD
-Activity: com.xlox/.MAct
-TotalTime: 1521
-WaitTime: 1541
-Complete
-focus for home_note_empty:   mCurrentFocus=Window{f599382 u0 com.xlox/com.xlox.MAct}
-captured home_note_empty.png (168732 bytes)
-Starting: Intent { cmp=com.xlox/.MAct (has extras) }
-Status: ok
-LaunchState: COLD
-Activity: com.xlox/.MAct
-TotalTime: 1518
-WaitTime: 1519
-Complete
-focus for home_note_custom:   mCurrentFocus=Window{d4d4047 u0 com.xlox/com.xlox.MAct}
-captured home_note_custom.png (178994 bytes)
-Starting: Intent { cmp=com.xlox/.MAct (has extras) }
-Status: ok
-LaunchState: COLD
-Activity: com.xlox/.MAct
-TotalTime: 1288
-WaitTime: 1290
-Complete
-focus for home_expired:   mCurrentFocus=Window{93a7665 u0 com.xlox/com.xlox.MAct}
-captured home_expired.png (178931 bytes)
-Starting: Intent { cmp=com.xlox/.MAct (has extras) }
-Status: ok
-LaunchState: COLD
-Activity: com.xlox/.MAct
-TotalTime: 1547
-WaitTime: 1550
-Complete
-focus for home_under_day:   mCurrentFocus=Window{af4b398 u0 com.xlox/com.xlox.MAct}
-captured home_under_day.png (173007 bytes)
-Starting: Intent { cmp=com.xlox/.MAct (has extras) }
-Status: ok
-LaunchState: COLD
-Activity: com.xlox/.MAct
-TotalTime: 1277
-WaitTime: 1308
-Complete
-focus for home_loading:   mCurrentFocus=Window{1c376a6 u0 com.xlox/com.xlox.MAct}
-captured home_loading.png (153931 bytes)
-Starting: Intent { cmp=com.xlox/.MAct (has extras) }
-Status: ok
-LaunchState: COLD
-Activity: com.xlox/.MAct
-TotalTime: 1348
-WaitTime: 1407
-Complete
-focus for home_server_warning:   mCurrentFocus=Window{e42d14e u0 com.xlox/com.xlox.MAct}
-captured home_server_warning.png (178293 bytes)
-Starting: Intent { cmp=com.xlox/.MAct (has extras) }
-Status: ok
-LaunchState: COLD
-Activity: com.xlox/.MAct
-TotalTime: 1445
-WaitTime: 1447
-Complete
-focus for home_preparing:   mCurrentFocus=Window{ee5c3cd u0 com.xlox/com.xlox.MAct}
-captured home_preparing.png (177400 bytes)
-Starting: Intent { cmp=com.xlox/.MAct (has extras) }
-Status: ok
-LaunchState: COLD
-Activity: com.xlox/.MAct
-TotalTime: 1329
-WaitTime: 1331
-Complete
-focus for home_launching:   mCurrentFocus=Window{f9e5f38 u0 com.xlox/com.xlox.MAct}
-captured home_launching.png (175652 bytes)
-Starting: Intent { cmp=com.xlox/.MAct (has extras) }
-Status: ok
-LaunchState: COLD
-Activity: com.xlox/.MAct
-TotalTime: 1367
-WaitTime: 1379
-Complete
-focus for home_error:   mCurrentFocus=Window{e4b5bcc u0 com.xlox/com.xlox.MAct}
-captured home_error.png (186412 bytes)
+focus for gate_download_failed:   mCurrentFocus=Window{fd4b6bf u0 com.xlox/com.xlox.LogAct}
+captured gate_download_failed.png (90638 bytes)
 Starting: Intent { cmp=com.xlox/.MAct (has extras) }
 Status: ok
 LaunchState: COLD
@@ -348,267 +256,359 @@ Activity: com.xlox/.MAct
 TotalTime: 1421
 WaitTime: 1423
 Complete
-focus for home_snackbar:   mCurrentFocus=Window{948f0d9 u0 com.xlox/com.xlox.MAct}
-captured home_snackbar.png (168419 bytes)
+focus for home:   mCurrentFocus=Window{5798bb1 u0 com.xlox/com.xlox.MAct}
+captured home.png (176322 bytes)
+focus for home_scrolled:   mCurrentFocus=Window{5798bb1 u0 com.xlox/com.xlox.MAct}
+captured home_scrolled.png (163139 bytes)
 Starting: Intent { cmp=com.xlox/.MAct (has extras) }
 Status: ok
 LaunchState: COLD
 Activity: com.xlox/.MAct
-TotalTime: 1242
-WaitTime: 1245
+TotalTime: 1279
+WaitTime: 1281
 Complete
-focus for home_signout_sheet:   mCurrentFocus=Window{e8cb030 u0 com.xlox/com.xlox.MAct}
-captured home_signout_sheet.png (148536 bytes)
-focus for signout_done:   mCurrentFocus=Window{5f1ab47 u0 com.xlox/com.xlox.LogAct}
-captured signout_done.png (80840 bytes)
-signout focus:   mCurrentFocus=Window{5f1ab47 u0 com.xlox/com.xlox.LogAct}
+focus for home_note_empty:   mCurrentFocus=Window{536e0b3 u0 com.xlox/com.xlox.MAct}
+captured home_note_empty.png (170151 bytes)
 Starting: Intent { cmp=com.xlox/.MAct (has extras) }
 Status: ok
 LaunchState: COLD
 Activity: com.xlox/.MAct
-TotalTime: 1455
-WaitTime: 1477
+TotalTime: 1280
+WaitTime: 1290
 Complete
-launch started target focus:   mCurrentFocus=Window{71efbd3 u0 com.android.settings/com.android.settings.homepage.SettingsHomepageActivity}
-focus for home_launch_started_return:   mCurrentFocus=Window{9e7043 u0 com.xlox/com.xlox.MAct}
-captured home_launch_started_return.png (170650 bytes)
-launch started texts: text="Welcome back" text="Anoy" text="Play fairly. Unsafe play can lead to a ban." text="Time left" text="Active" text="29d 21h 04m" text="Expires 8 Dec 2026, 11:18 AM" text="GAME" text="Game" text="BGMI" text="State" text="Running" text="Library" text="1.13" text="Server" text="Safe" text="DEVICE" text="Model" text="Google sdk_gphone64_x86_64" text="Android" text="13 (API 33)" text="Help on Telegram" text="Stop" 
+focus for home_note_custom:   mCurrentFocus=Window{4868a14 u0 com.xlox/com.xlox.MAct}
+captured home_note_custom.png (180457 bytes)
 Starting: Intent { cmp=com.xlox/.MAct (has extras) }
 Status: ok
 LaunchState: COLD
 Activity: com.xlox/.MAct
-TotalTime: 1637
-WaitTime: 1641
+TotalTime: 1654
+WaitTime: 1655
 Complete
-focus for home_launch_polish_throws_return:   mCurrentFocus=Window{a2a60c7 u0 com.xlox/com.xlox.MAct}
-captured home_launch_polish_throws_return.png (170650 bytes)
-launch started_polish_throws texts: text="Welcome back" text="Anoy" text="Play fairly. Unsafe play can lead to a ban." text="Time left" text="Active" text="29d 21h 04m" text="Expires 8 Dec 2026, 11:18 AM" text="GAME" text="Game" text="BGMI" text="State" text="Running" text="Library" text="1.13" text="Server" text="Safe" text="DEVICE" text="Model" text="Google sdk_gphone64_x86_64" text="Android" text="13 (API 33)" text="Help on Telegram" text="Stop" 
+focus for home_expired:   mCurrentFocus=Window{a514d00 u0 com.xlox/com.xlox.MAct}
+captured home_expired.png (180125 bytes)
 Starting: Intent { cmp=com.xlox/.MAct (has extras) }
 Status: ok
 LaunchState: COLD
 Activity: com.xlox/.MAct
-TotalTime: 1544
-WaitTime: 1546
+TotalTime: 1315
+WaitTime: 1327
 Complete
-focus for home_launch_null_running:   mCurrentFocus=Window{2dbda9a u0 com.xlox/com.xlox.MAct}
-captured home_launch_null_running.png (170454 bytes)
-launch null_running texts: text="Welcome back" text="Anoy" text="Play fairly. Unsafe play can lead to a ban." text="Time left" text="Active" text="29d 21h 04m" text="Expires 8 Dec 2026, 11:18 AM" text="GAME" text="Game" text="BGMI" text="State" text="Running" text="Library" text="1.13" text="Server" text="Safe" text="DEVICE" text="Model" text="Google sdk_gphone64_x86_64" text="Android" text="13 (API 33)" text="Help on Telegram" text="Stop" 
+focus for home_under_day:   mCurrentFocus=Window{1d659bd u0 com.xlox/com.xlox.MAct}
+captured home_under_day.png (174378 bytes)
 Starting: Intent { cmp=com.xlox/.MAct (has extras) }
 Status: ok
 LaunchState: COLD
 Activity: com.xlox/.MAct
-TotalTime: 1424
-WaitTime: 1428
+TotalTime: 1204
+WaitTime: 1205
 Complete
-focus for home_launch_failed:   mCurrentFocus=Window{5b8c420 u0 com.xlox/com.xlox.MAct}
-captured home_launch_failed.png (173030 bytes)
-launch null_dead texts: text="Welcome back" text="Anoy" text="Play fairly. Unsafe play can lead to a ban." text="Time left" text="Active" text="29d 21h 04m" text="Expires 8 Dec 2026, 11:18 AM" text="GAME" text="Game" text="BGMI" text="State" text="Ready" text="Library" text="1.13" text="Server" text="Safe" text="DEVICE" text="Model" text="Google sdk_gphone64_x86_64" text="Android" text="13 (API 33)" text="Help on Telegram" text="Couldn't launch the game. Try again." text="Launch" 
+focus for home_loading:   mCurrentFocus=Window{c13cb82 u0 com.xlox/com.xlox.MAct}
+captured home_loading.png (155125 bytes)
 Starting: Intent { cmp=com.xlox/.MAct (has extras) }
 Status: ok
 LaunchState: COLD
 Activity: com.xlox/.MAct
-TotalTime: 1680
-WaitTime: 1691
+TotalTime: 1547
+WaitTime: 1554
 Complete
-launch throws texts: text="Welcome back" text="Anoy" text="Play fairly. Unsafe play can lead to a ban." text="Time left" text="Active" text="29d 21h 04m" text="Expires 8 Dec 2026, 11:18 AM" text="GAME" text="Game" text="BGMI" text="State" text="Ready" text="Library" text="1.13" text="Server" text="Safe" text="DEVICE" text="Model" text="Google sdk_gphone64_x86_64" text="Android" text="13 (API 33)" text="Help on Telegram" text="Couldn't launch the game. Try again." text="Launch" 
+focus for home_server_warning:   mCurrentFocus=Window{51ce69e u0 com.xlox/com.xlox.MAct}
+captured home_server_warning.png (179619 bytes)
+Starting: Intent { cmp=com.xlox/.MAct (has extras) }
+Status: ok
+LaunchState: COLD
+Activity: com.xlox/.MAct
+TotalTime: 1578
+WaitTime: 1580
+Complete
+focus for home_preparing:   mCurrentFocus=Window{bfce934 u0 com.xlox/com.xlox.MAct}
+captured home_preparing.png (177795 bytes)
+Starting: Intent { cmp=com.xlox/.MAct (has extras) }
+Status: ok
+LaunchState: COLD
+Activity: com.xlox/.MAct
+TotalTime: 1649
+WaitTime: 1654
+Complete
+focus for home_launching:   mCurrentFocus=Window{5cf4fab u0 com.xlox/com.xlox.MAct}
+captured home_launching.png (176069 bytes)
+Starting: Intent { cmp=com.xlox/.MAct (has extras) }
+Status: ok
+LaunchState: COLD
+Activity: com.xlox/.MAct
+TotalTime: 1352
+WaitTime: 1364
+Complete
+focus for home_error:   mCurrentFocus=Window{81a5cb3 u0 com.xlox/com.xlox.MAct}
+captured home_error.png (186849 bytes)
+Starting: Intent { cmp=com.xlox/.MAct (has extras) }
+Status: ok
+LaunchState: COLD
+Activity: com.xlox/.MAct
+TotalTime: 1197
+WaitTime: 1199
+Complete
+focus for home_snackbar:   mCurrentFocus=Window{d6ddf6d u0 com.xlox/com.xlox.MAct}
+captured home_snackbar.png (168855 bytes)
+Starting: Intent { cmp=com.xlox/.MAct (has extras) }
+Status: ok
+LaunchState: COLD
+Activity: com.xlox/.MAct
+TotalTime: 1518
+WaitTime: 1524
+Complete
+focus for home_signout_sheet:   mCurrentFocus=Window{e67dbb u0 com.xlox/com.xlox.MAct}
+captured home_signout_sheet.png (149163 bytes)
+focus for signout_done:   mCurrentFocus=Window{dc00347 u0 com.xlox/com.xlox.LogAct}
+captured signout_done.png (81131 bytes)
+signout focus:   mCurrentFocus=Window{dc00347 u0 com.xlox/com.xlox.LogAct}
+Starting: Intent { cmp=com.xlox/.MAct (has extras) }
+Status: ok
+LaunchState: COLD
+Activity: com.xlox/.MAct
+TotalTime: 1590
+WaitTime: 1600
+Complete
+launch started target focus:   mCurrentFocus=Window{4fa4904 u0 com.android.settings/com.android.settings.homepage.SettingsHomepageActivity}
+focus for home_launch_started_return:   mCurrentFocus=Window{ef52423 u0 com.xlox/com.xlox.MAct}
+captured home_launch_started_return.png (171831 bytes)
+launch started texts: text="Welcome back" text="Anoy" text="Play fairly. Unsafe play can lead to a ban." text="Time left" text="Active" text="29d 21h 04m" text="Expires 8 Dec 2026, 11:38 AM" text="GAME" text="Game" text="BGMI" text="State" text="Running" text="Library" text="1.13" text="Server" text="Safe" text="DEVICE" text="Model" text="Google sdk_gphone64_x86_64" text="Android" text="13 (API 33)" text="Help on Telegram" text="Stop" 
+Starting: Intent { cmp=com.xlox/.MAct (has extras) }
+Status: ok
+LaunchState: COLD
+Activity: com.xlox/.MAct
+TotalTime: 1278
+WaitTime: 1282
+Complete
+focus for home_launch_polish_throws_return:   mCurrentFocus=Window{f2b61b7 u0 com.xlox/com.xlox.MAct}
+captured home_launch_polish_throws_return.png (171831 bytes)
+launch started_polish_throws texts: text="Welcome back" text="Anoy" text="Play fairly. Unsafe play can lead to a ban." text="Time left" text="Active" text="29d 21h 04m" text="Expires 8 Dec 2026, 11:38 AM" text="GAME" text="Game" text="BGMI" text="State" text="Running" text="Library" text="1.13" text="Server" text="Safe" text="DEVICE" text="Model" text="Google sdk_gphone64_x86_64" text="Android" text="13 (API 33)" text="Help on Telegram" text="Stop" 
+Starting: Intent { cmp=com.xlox/.MAct (has extras) }
+Status: ok
+LaunchState: COLD
+Activity: com.xlox/.MAct
+TotalTime: 1209
+WaitTime: 1212
+Complete
+focus for home_launch_null_running:   mCurrentFocus=Window{a5dd97e u0 com.xlox/com.xlox.MAct}
+captured home_launch_null_running.png (172597 bytes)
+launch null_running texts: text="Welcome back" text="Anoy" text="Play fairly. Unsafe play can lead to a ban." text="Time left" text="Active" text="29d 21h 04m" text="Expires 8 Dec 2026, 11:39 AM" text="GAME" text="Game" text="BGMI" text="State" text="Running" text="Library" text="1.13" text="Server" text="Safe" text="DEVICE" text="Model" text="Google sdk_gphone64_x86_64" text="Android" text="13 (API 33)" text="Help on Telegram" text="Stop" 
+Starting: Intent { cmp=com.xlox/.MAct (has extras) }
+Status: ok
+LaunchState: COLD
+Activity: com.xlox/.MAct
+TotalTime: 1234
+WaitTime: 1235
+Complete
+focus for home_launch_failed:   mCurrentFocus=Window{c13936f u0 com.xlox/com.xlox.MAct}
+captured home_launch_failed.png (175107 bytes)
+launch null_dead texts: text="Welcome back" text="Anoy" text="Play fairly. Unsafe play can lead to a ban." text="Time left" text="Active" text="29d 21h 04m" text="Expires 8 Dec 2026, 11:39 AM" text="GAME" text="Game" text="BGMI" text="State" text="Ready" text="Library" text="1.13" text="Server" text="Safe" text="DEVICE" text="Model" text="Google sdk_gphone64_x86_64" text="Android" text="13 (API 33)" text="Help on Telegram" text="Couldn't launch the game. Try again." text="Launch" 
+Starting: Intent { cmp=com.xlox/.MAct (has extras) }
+Status: ok
+LaunchState: COLD
+Activity: com.xlox/.MAct
+TotalTime: 1373
+WaitTime: 1374
+Complete
+launch throws texts: text="Welcome back" text="Anoy" text="Play fairly. Unsafe play can lead to a ban." text="Time left" text="Active" text="29d 21h 04m" text="Expires 8 Dec 2026, 11:39 AM" text="GAME" text="Game" text="BGMI" text="State" text="Ready" text="Library" text="1.13" text="Server" text="Safe" text="DEVICE" text="Model" text="Google sdk_gphone64_x86_64" text="Android" text="13 (API 33)" text="Help on Telegram" text="Couldn't launch the game. Try again." text="Launch" 
 Starting: Intent { cmp=com.xlox/.MAct (has extras) }
 Status: ok
 LaunchState: COLD
 Activity: com.android.settings/.Settings$AppManageExternalStorageActivity
-TotalTime: 1965
-WaitTime: 1974
+TotalTime: 1880
+WaitTime: 1885
 Complete
-storage allow prompt focus:   mCurrentFocus=Window{38e0e7d u0 com.android.settings/com.android.settings.Settings$AppManageExternalStorageActivity}
+storage allow prompt focus:   mCurrentFocus=Window{f7de64b u0 com.android.settings/com.android.settings.Settings$AppManageExternalStorageActivity}
 captured storage_prompt.png
-focus for home_storage_granted:   mCurrentFocus=Window{a4e0757 u0 com.xlox/com.xlox.MAct}
-captured home_storage_granted.png (181604 bytes)
-storage allow texts: text="Welcome back" text="Anoy" text="Play fairly. Unsafe play can lead to a ban." text="Time left" text="Active" text="29d 21h 04m" text="Expires 8 Dec 2026, 11:19 AM" text="GAME" text="Game" text="BGMI" text="State" text="Not installed" text="Library" text="1.13" text="Server" text="Safe" text="DEVICE" text="Model" text="Google sdk_gphone64_x86_64" text="Android" text="13 (API 33)" text="Help on Telegram" text="The game container isn't ready. Restart the app and try again." text="Install BGMI" 
+focus for home_storage_granted:   mCurrentFocus=Window{2fe8ad6 u0 com.xlox/com.xlox.MAct}
+captured home_storage_granted.png (183362 bytes)
+storage allow texts: text="Welcome back" text="Anoy" text="Play fairly. Unsafe play can lead to a ban." text="Time left" text="Active" text="29d 21h 04m" text="Expires 8 Dec 2026, 11:39 AM" text="GAME" text="Game" text="BGMI" text="State" text="Not installed" text="Library" text="1.13" text="Server" text="Safe" text="DEVICE" text="Model" text="Google sdk_gphone64_x86_64" text="Android" text="13 (API 33)" text="Help on Telegram" text="The game container isn't ready. Restart the app and try again." text="Install BGMI" 
 Starting: Intent { cmp=com.xlox/.MAct (has extras) }
 Status: ok
 LaunchState: COLD
 Activity: com.android.settings/.Settings$AppManageExternalStorageActivity
-TotalTime: 1861
-WaitTime: 1864
+TotalTime: 1594
+WaitTime: 1601
 Complete
-storage deny prompt focus:   mCurrentFocus=Window{790f74f u0 com.android.settings/com.android.settings.Settings$AppManageExternalStorageActivity}
-focus for home_storage_denied:   mCurrentFocus=Window{dad5ae4 u0 com.xlox/com.xlox.MAct}
-captured home_storage_denied.png (180773 bytes)
-storage deny texts: text="Welcome back" text="Anoy" text="Play fairly. Unsafe play can lead to a ban." text="Time left" text="Active" text="29d 21h 04m" text="Expires 8 Dec 2026, 11:19 AM" text="GAME" text="Game" text="BGMI" text="State" text="Not installed" text="Library" text="1.13" text="Server" text="Safe" text="DEVICE" text="Model" text="Google sdk_gphone64_x86_64" text="Android" text="13 (API 33)" text="Help on Telegram" text="Allow storage access so game files can be prepared." text="Install BGMI" 
+storage deny prompt focus:   mCurrentFocus=Window{4ca5c9d u0 com.android.settings/com.android.settings.Settings$AppManageExternalStorageActivity}
+focus for home_storage_denied:   mCurrentFocus=Window{7939881 u0 com.xlox/com.xlox.MAct}
+captured home_storage_denied.png (182430 bytes)
+storage deny texts: text="Welcome back" text="Anoy" text="Play fairly. Unsafe play can lead to a ban." text="Time left" text="Active" text="29d 21h 04m" text="Expires 8 Dec 2026, 11:39 AM" text="GAME" text="Game" text="BGMI" text="State" text="Not installed" text="Library" text="1.13" text="Server" text="Safe" text="DEVICE" text="Model" text="Google sdk_gphone64_x86_64" text="Android" text="13 (API 33)" text="Help on Telegram" text="Allow storage access so game files can be prepared." text="Install BGMI" 
 Starting: Intent { cmp=com.xlox/.MAct (has extras) }
 Status: ok
 LaunchState: COLD
 Activity: com.xlox/.MAct
-TotalTime: 1313
-WaitTime: 1317
+TotalTime: 1404
+WaitTime: 1407
 Complete
 licence card description: content-desc="Licence active, 29 days 21 hours left, expires 8 December 2026"
 Starting: Intent { cmp=com.xlox/.SplashActivity }
-focus for anim_splash_t05:   mCurrentFocus=Window{5fa1f17 u0 com.xlox/com.xlox.SplashActivity}
-captured anim_splash_t05.png (37114 bytes)
-focus for anim_splash_t10:   mCurrentFocus=Window{5fa1f17 u0 com.xlox/com.xlox.SplashActivity}
-captured anim_splash_t10.png (51337 bytes)
-focus for anim_splash_t15:   mCurrentFocus=Window{ab9797e u0 com.xlox/com.xlox.LogAct}
-captured anim_splash_t15.png (39594 bytes)
-focus for anim_splash_t20:   mCurrentFocus=Window{ab9797e u0 com.xlox/com.xlox.LogAct}
-captured anim_splash_t20.png (84779 bytes)
+focus for anim_splash_t05:   mCurrentFocus=Window{c9694cc u0 com.xlox/com.xlox.SplashActivity}
+captured anim_splash_t05.png (37587 bytes)
+focus for anim_splash_t10:   mCurrentFocus=Window{c9694cc u0 com.xlox/com.xlox.SplashActivity}
+captured anim_splash_t10.png (46069 bytes)
+focus for anim_splash_t15:   mCurrentFocus=Window{237363 u0 com.xlox/com.xlox.LogAct}
+captured anim_splash_t15.png (40109 bytes)
+focus for anim_splash_t20:   mCurrentFocus=Window{237363 u0 com.xlox/com.xlox.LogAct}
+captured anim_splash_t20.png (85251 bytes)
 screenrecord ok
-focus for anim_login:   mCurrentFocus=Window{cefaf8a u0 com.xlox/com.xlox.LogAct}
-captured anim_login.png (81115 bytes)
+focus for anim_login:   mCurrentFocus=Window{d4fe2bf u0 com.xlox/com.xlox.LogAct}
+captured anim_login.png (81612 bytes)
 Starting: Intent { cmp=com.xlox/.LogAct (has extras) }
 Status: ok
 LaunchState: COLD
 Activity: com.xlox/.LogAct
-TotalTime: 1455
-WaitTime: 1462
+TotalTime: 1424
+WaitTime: 1427
 Complete
-focus for anim_gate_checking:   mCurrentFocus=Window{f50a879 u0 com.xlox/com.xlox.LogAct}
-captured anim_gate_checking.png (84760 bytes)
+focus for anim_gate_checking:   mCurrentFocus=Window{6fff2c9 u0 com.xlox/com.xlox.LogAct}
+captured anim_gate_checking.png (85296 bytes)
 Starting: Intent { cmp=com.xlox/.LogAct (has extras) }
 Status: ok
 LaunchState: COLD
 Activity: com.xlox/.LogAct
-TotalTime: 1519
-WaitTime: 1527
+TotalTime: 1545
+WaitTime: 1566
 Complete
-focus for anim_gate_done:   mCurrentFocus=Window{4329737 u0 com.xlox/com.xlox.LogAct}
-captured anim_gate_done.png (74095 bytes)
+focus for anim_gate_done:   mCurrentFocus=Window{9ee3ef u0 com.xlox/com.xlox.LogAct}
+captured anim_gate_done.png (74484 bytes)
 Starting: Intent { cmp=com.xlox/.MAct (has extras) }
 Status: ok
 LaunchState: COLD
 Activity: com.xlox/.MAct
-TotalTime: 1323
-WaitTime: 1326
+TotalTime: 1045
+WaitTime: 1063
 Complete
-focus for anim_home_loading:   mCurrentFocus=Window{be3e6d u0 com.xlox/com.xlox.MAct}
-captured anim_home_loading.png (154395 bytes)
+focus for anim_home_loading:   mCurrentFocus=Window{4cdf4ba u0 com.xlox/com.xlox.MAct}
+captured anim_home_loading.png (155098 bytes)
 Starting: Intent { cmp=com.xlox/.LogAct }
 Status: ok
 LaunchState: COLD
 Activity: com.xlox/.LogAct
-TotalTime: 1147
-WaitTime: 1161
+TotalTime: 1319
+WaitTime: 1322
 Complete
-focus for login_font085:   mCurrentFocus=Window{fbb160f u0 com.xlox/com.xlox.LogAct}
-captured login_font085.png (72718 bytes)
+focus for login_font085:   mCurrentFocus=Window{6241ff4 u0 com.xlox/com.xlox.LogAct}
+captured login_font085.png (73189 bytes)
 Starting: Intent { cmp=com.xlox/.MAct (has extras) }
 Status: ok
 LaunchState: COLD
 Activity: com.xlox/.MAct
-TotalTime: 1367
-WaitTime: 1369
+TotalTime: 1349
+WaitTime: 1355
 Complete
-focus for home_font085:   mCurrentFocus=Window{b045bbd u0 com.xlox/com.xlox.MAct}
-captured home_font085.png (158249 bytes)
-focus for home_font085_scrolled:   mCurrentFocus=Window{b045bbd u0 com.xlox/com.xlox.MAct}
-captured home_font085_scrolled.png (151867 bytes)
+focus for home_font085:   mCurrentFocus=Window{9420ab3 u0 com.xlox/com.xlox.MAct}
+captured home_font085.png (158990 bytes)
+focus for home_font085_scrolled:   mCurrentFocus=Window{9420ab3 u0 com.xlox/com.xlox.MAct}
+captured home_font085_scrolled.png (152563 bytes)
 Starting: Intent { cmp=com.xlox/.LogAct (has extras) }
 Status: ok
 LaunchState: COLD
 Activity: com.xlox/.LogAct
-TotalTime: 1307
-WaitTime: 1318
+TotalTime: 1170
+WaitTime: 1253
 Complete
-focus for gate_font085:   mCurrentFocus=Window{d1216ef u0 com.xlox/com.xlox.LogAct}
-captured gate_font085.png (90929 bytes)
+focus for gate_font085:   mCurrentFocus=Window{a2bf79f u0 com.xlox/com.xlox.LogAct}
+captured gate_font085.png (91375 bytes)
 Starting: Intent { cmp=com.xlox/.LogAct }
 Status: ok
 LaunchState: COLD
 Activity: com.xlox/.LogAct
-TotalTime: 1789
-WaitTime: 1860
+TotalTime: 1311
+WaitTime: 1329
 Complete
-focus for login_font20:   mCurrentFocus=Window{d1b3069 u0 com.xlox/com.xlox.LogAct}
-captured login_font20.png (130512 bytes)
+focus for login_font20:   mCurrentFocus=Window{dd90b6b u0 com.xlox/com.xlox.LogAct}
+captured login_font20.png (131424 bytes)
 Starting: Intent { cmp=com.xlox/.MAct (has extras) }
 Status: ok
 LaunchState: COLD
 Activity: com.xlox/.MAct
-TotalTime: 1722
-WaitTime: 1724
+TotalTime: 1539
+WaitTime: 1545
 Complete
-focus for home_font20:   mCurrentFocus=Window{2beb7df u0 com.xlox/com.xlox.MAct}
-captured home_font20.png (175430 bytes)
-focus for home_font20_scrolled:   mCurrentFocus=Window{2beb7df u0 com.xlox/com.xlox.MAct}
-captured home_font20_scrolled.png (186334 bytes)
+focus for home_font20:   mCurrentFocus=Window{4f977f9 u0 com.xlox/com.xlox.MAct}
+captured home_font20.png (176579 bytes)
+focus for home_font20_scrolled:   mCurrentFocus=Window{4f977f9 u0 com.xlox/com.xlox.MAct}
+captured home_font20_scrolled.png (187491 bytes)
 Starting: Intent { cmp=com.xlox/.LogAct (has extras) }
 Status: ok
 LaunchState: COLD
 Activity: com.xlox/.LogAct
-TotalTime: 1297
-WaitTime: 1300
+TotalTime: 1666
+WaitTime: 1671
 Complete
-focus for gate_font20:   mCurrentFocus=Window{e8f644 u0 com.xlox/com.xlox.LogAct}
-captured gate_font20.png (132456 bytes)
+focus for gate_font20:   mCurrentFocus=Window{496c9b8 u0 com.xlox/com.xlox.LogAct}
+captured gate_font20.png (133258 bytes)
 Starting: Intent { cmp=com.xlox/.LogAct }
 Status: ok
 LaunchState: COLD
 Activity: com.xlox/.LogAct
-TotalTime: 1757
-WaitTime: 1764
+TotalTime: 1835
+WaitTime: 1850
 Complete
-focus for login_360:   mCurrentFocus=Window{9534867 u0 com.xlox/com.xlox.LogAct}
-captured login_360.png (53087 bytes)
+focus for login_360:   mCurrentFocus=Window{5e2f58a u0 com.xlox/com.xlox.LogAct}
+captured login_360.png (53130 bytes)
 Starting: Intent { cmp=com.xlox/.MAct (has extras) }
 Status: ok
 LaunchState: COLD
 Activity: com.xlox/.MAct
-TotalTime: 1598
-WaitTime: 1600
+TotalTime: 1447
+WaitTime: 1450
 Complete
-focus for home_360:   mCurrentFocus=Window{fb06ee2 u0 com.xlox/com.xlox.MAct}
-captured home_360.png (98851 bytes)
+focus for home_360:   mCurrentFocus=Window{d6bf0a4 u0 com.xlox/com.xlox.MAct}
+captured home_360.png (99129 bytes)
 Starting: Intent { cmp=com.xlox/.LogAct (has extras) }
 Status: ok
 LaunchState: COLD
 Activity: com.xlox/.LogAct
-TotalTime: 1271
-WaitTime: 1277
+TotalTime: 1288
+WaitTime: 1290
 Complete
-focus for gate_360:   mCurrentFocus=Window{cf8e4f1 u0 com.xlox/com.xlox.LogAct}
-captured gate_360.png (59674 bytes)
+focus for gate_360:   mCurrentFocus=Window{e870151 u0 com.xlox/com.xlox.LogAct}
+captured gate_360.png (59723 bytes)
 Starting: Intent { cmp=com.xlox/.LogAct }
 Status: ok
 LaunchState: COLD
 Activity: com.xlox/.LogAct
-TotalTime: 1085
-WaitTime: 1087
+TotalTime: 1046
+WaitTime: 1051
 Complete
-focus for login_tablet:   mCurrentFocus=Window{a2bbe4c u0 com.xlox/com.xlox.LogAct}
-captured login_tablet.png (100765 bytes)
+focus for login_tablet:   mCurrentFocus=Window{5e47fbf u0 com.xlox/com.xlox.LogAct}
+captured login_tablet.png (101161 bytes)
 Starting: Intent { cmp=com.xlox/.MAct (has extras) }
 Status: ok
 LaunchState: COLD
 Activity: com.xlox/.MAct
-TotalTime: 1064
-WaitTime: 1067
+TotalTime: 1213
+WaitTime: 1232
 Complete
-focus for home_tablet:   mCurrentFocus=Window{a78eafb u0 com.xlox/com.xlox.MAct}
-captured home_tablet.png (180093 bytes)
+focus for home_tablet:   mCurrentFocus=Window{2e60421 u0 com.xlox/com.xlox.MAct}
+captured home_tablet.png (180728 bytes)
 Starting: Intent { cmp=com.xlox/.LogAct (has extras) }
 Status: ok
 LaunchState: COLD
 Activity: com.xlox/.LogAct
-TotalTime: 1283
-WaitTime: 1314
+TotalTime: 1019
+WaitTime: 1024
 Complete
-focus for gate_tablet:   mCurrentFocus=Window{c1a0180 u0 com.xlox/com.xlox.LogAct}
-captured gate_tablet.png (114330 bytes)
+focus for gate_tablet:   mCurrentFocus=Window{a5c123e u0 com.xlox/com.xlox.LogAct}
+captured gate_tablet.png (114769 bytes)
 Starting: Intent { cmp=com.xlox/.MAct (has extras) }
 Status: ok
 LaunchState: COLD
 Activity: com.xlox/.MAct
-TotalTime: 1541
-WaitTime: 1557
+TotalTime: 1512
+WaitTime: 1513
 Complete
-focus for home_typical:   mCurrentFocus=Window{b94b548 u0 com.xlox/com.xlox.MAct}
-captured home_typical.png (175824 bytes)
+focus for home_typical:   mCurrentFocus=Window{3f2db3b u0 com.xlox/com.xlox.MAct}
+captured home_typical.png (176667 bytes)
 typical phone: device card bottom 1998, launch fade top 2095: clear
 Starting: Intent { cmp=com.xlox/.SplashActivity }
 Status: ok
 LaunchState: COLD
 Activity: com.xlox/.SplashActivity
-TotalTime: 996
-WaitTime: 1000
+TotalTime: 990
+WaitTime: 996
 Complete
 captured icon_recents.png
 captured icon_drawer_default.png
@@ -621,49 +621,49 @@ Error: Unable to retrieve overlay information for com.android.theme.icon.rounded
 icon shape overlay roundedrect unavailable
 Error: Unable to retrieve overlay information for com.android.theme.icon.teardrop
 icon shape overlay teardrop unavailable
-obb source listing: total 354316|-rw-rw---- 1 shell ext_obb_rw   2097152 2026-11-08 14:17 main.19.com.pubg.imobile.obb|-rw-rw---- 1 shell ext_obb_rw 335544320 2026-11-08 14:17 main.20.com.pubg.imobile.obb|-rw-rw---- 1 shell ext_obb_rw  25165824 2026-11-08 14:17 patch.20.com.pubg.imobile.obb|
+obb source listing: total 354320|-rw-rw---- 1 shell ext_obb_rw   2097152 2026-11-08 14:38 main.19.com.pubg.imobile.obb|-rw-rw---- 1 shell ext_obb_rw 335544320 2026-11-08 14:38 main.20.com.pubg.imobile.obb|-rw-rw---- 1 shell ext_obb_rw  25165824 2026-11-08 14:38 patch.20.com.pubg.imobile.obb|
 Starting: Intent { cmp=com.xlox/.MAct (has extras) }
 Status: ok
 LaunchState: COLD
 Activity: com.xlox/.MAct
-TotalTime: 1335
-WaitTime: 1340
+TotalTime: 1361
+WaitTime: 1377
 Complete
-obb0 focus:   mCurrentFocus=Window{5d73feb u0 com.xlox/com.xlox.MAct}
-obb0 texts: text="Welcome back" text="Anoy" text="Play fairly. Unsafe play can lead to a ban." text="Time left" text="Active" text="29d 21h 04m" text="Expires 8 Dec 2026, 11:22 AM" text="GAME" text="Game" text="BGMI" text="State" text="Ready" text="Library" text="Not installed" text="Server" text="Safe" text="DEVICE" text="Model" text="Google sdk_gphone64_x86_64" text="Android" text="13 (API 33)" text="Help on Telegram" text="Couldn't prepare game files: Android is blocking access to the game files folder on this phone." text="Launch" 
-obb0 log: W/AppManager: Android blocks listing /storage/emulated/0/Android/obb/com.pubg.imobile|D/AppManager: No source OBB for com.pubg.imobile: Android is blocking access to the game files folder on this phone.|
+obb0 focus:   mCurrentFocus=Window{85f297a u0 com.xlox/com.xlox.MAct}
+obb0 texts: text="Welcome back" text="Anoy" text="Play fairly. Unsafe play can lead to a ban." text="Time left" text="Active" text="29d 21h 04m" text="Expires 8 Dec 2026, 11:42 AM" text="GAME" text="Game" text="BGMI" text="State" text="Ready" text="Library" text="Not installed" text="Server" text="Safe" text="DEVICE" text="Model" text="Google sdk_gphone64_x86_64" text="Android" text="13 (API 33)" text="Help on Telegram" text="Couldn't prepare game files: Android is blocking access to the game files folder on this phone." text="Launch" 
+obb0 log: E/MAct    : 	at android.app.ActivityThread.performLaunchActivity(ActivityThread.java:3538)|E/MAct    : 	at android.app.ActivityThread.handleLaunchActivity(ActivityThread.java:3782)|E/MAct    : 	at android.app.servertransaction.LaunchActivityItem.execute(LaunchActivityItem.java:101)|W/MAct    : 	at android.app.ActivityThread.performLaunchActivity(ActivityThread.java:3626)|W/MAct    : 	at android.app.ActivityThread.handleLaunchActivity(ActivityThread.java:3782)|W/MAct    : 	at android.app.servertransaction.LaunchActivityItem.execute(LaunchActivityItem.java:101)|D/MAct    : Launch: preparing game files|W/AppManager: Android blocks listing /storage/emulated/0/Android/obb/com.pubg.imobile|D/AppManager: No source OBB for com.pubg.imobile: Android is blocking access to the game files folder on this phone.|D/MAct    : Launch stopped: game files not ready (Android is blocking access to the game files folder on this phone.)|
 Starting: Intent { cmp=com.xlox/.MAct (has extras) }
 Status: ok
 LaunchState: COLD
 Activity: com.xlox/.MAct
-TotalTime: 1541
-WaitTime: 1554
+TotalTime: 1333
+WaitTime: 1334
 Complete
-obb1 mid texts: text="Welcome back" text="Anoy" text="Play fairly. Unsafe play can lead to a ban." text="Time left" text="Active" text="29d 21h 04m" text="Expires 8 Dec 2026, 11:22 AM" text="GAME" text="Game" text="BGMI" text="State" text="Ready" text="Library" text="Not installed" text="Server" text="Safe" text="DEVICE" text="Model" text="Google sdk_gphone64_x86_64" text="Android" text="13 (API 33)" text="Help on Telegram" text="Launching…" 
-obb1 focus:   mCurrentFocus=Window{62d8f25 u0 com.android.settings/com.android.settings.homepage.SettingsHomepageActivity}
-obb1 log: D/AppManager: Source /storage/emulated/0/Android/obb/com.pubg.imobile main=/storage/emulated/0/Android/obb/com.pubg.imobile/main.20.com.pubg.imobile.obb (335544320 B) patch=/storage/emulated/0/Android/obb/com.pubg.imobile/patch.20.com.pubg.imobile.obb (25165824 B)|D/AppManager: Destination /storage/emulated/0/Android/obb/com.xlox/scopedStorage/com.pubg.imobile/Android/obb/com.pubg.imobile|D/AppManager: Copy /storage/emulated/0/Android/obb/com.pubg.imobile/main.20.com.pubg.imobile.obb (335544320 B) -> /storage/emulated/0/Android/obb/com.xlox/scopedStorage/com.pubg.imobile/Android/obb/com.pubg.imobile/main.20.com.pubg.imobile.obb|D/AppManager: Copy /storage/emulated/0/Android/obb/com.pubg.imobile/patch.20.com.pubg.imobile.obb (25165824 B) -> /storage/emulated/0/Android/obb/com.xlox/scopedStorage/com.pubg.imobile/Android/obb/com.pubg.imobile/patch.20.com.pubg.imobile.obb|D/AppManager: Copy progress 0%|D/AppManager: Copy progress 25%|D/AppManager: Copy progress 50%|D/AppManager: Copy progress 75%|D/AppManager: Copied and verified /storage/emulated/0/Android/obb/com.xlox/scopedStorage/com.pubg.imobile/Android/obb/com.pubg.imobile/main.20.com.pubg.imobile.obb (335544320 B)|D/AppManager: Copy progress 100%|D/AppManager: Copied and verified /storage/emulated/0/Android/obb/com.xlox/scopedStorage/com.pubg.imobile/Android/obb/com.pubg.imobile/patch.20.com.pubg.imobile.obb (25165824 B)|
+obb1 mid texts: text="Welcome back" text="Anoy" text="Play fairly. Unsafe play can lead to a ban." text="Time left" text="Active" text="29d 21h 04m" text="Expires 8 Dec 2026, 11:42 AM" text="GAME" text="Game" text="BGMI" text="State" text="Ready" text="Library" text="Not installed" text="Server" text="Safe" text="DEVICE" text="Model" text="Google sdk_gphone64_x86_64" text="Android" text="13 (API 33)" text="Help on Telegram" text="Launching…" 
+obb1 focus:   mCurrentFocus=Window{fec8d01 u0 com.android.settings/com.android.settings.homepage.SettingsHomepageActivity}
+obb1 log: E/MAct    : 	at android.app.ActivityThread.performLaunchActivity(ActivityThread.java:3538)|E/MAct    : 	at android.app.ActivityThread.handleLaunchActivity(ActivityThread.java:3782)|E/MAct    : 	at android.app.servertransaction.LaunchActivityItem.execute(LaunchActivityItem.java:101)|W/MAct    : 	at android.app.ActivityThread.performLaunchActivity(ActivityThread.java:3626)|W/MAct    : 	at android.app.ActivityThread.handleLaunchActivity(ActivityThread.java:3782)|W/MAct    : 	at android.app.servertransaction.LaunchActivityItem.execute(LaunchActivityItem.java:101)|D/MAct    : Launch: preparing game files|D/AppManager: Source /storage/emulated/0/Android/obb/com.pubg.imobile main=/storage/emulated/0/Android/obb/com.pubg.imobile/main.20.com.pubg.imobile.obb (335544320 B) patch=/storage/emulated/0/Android/obb/com.pubg.imobile/patch.20.com.pubg.imobile.obb (25165824 B)|D/AppManager: Destination /storage/emulated/0/Android/obb/com.xlox/scopedStorage/com.pubg.imobile/Android/obb/com.pubg.imobile|D/AppManager: Copy /storage/emulated/0/Android/obb/com.pubg.imobile/main.20.com.pubg.imobile.obb (335544320 B) -> /storage/emulated/0/Android/obb/com.xlox/scopedStorage/com.pubg.imobile/Android/obb/com.pubg.imobile/main.20.com.pubg.imobile.obb|D/AppManager: Copy /storage/emulated/0/Android/obb/com.pubg.imobile/patch.20.com.pubg.imobile.obb (25165824 B) -> /storage/emulated/0/Android/obb/com.xlox/scopedStorage/com.pubg.imobile/Android/obb/com.pubg.imobile/patch.20.com.pubg.imobile.obb|D/AppManager: Copy progress 0%|D/AppManager: Copy progress 25%|D/AppManager: Copy progress 50%|D/AppManager: Copy progress 75%|D/AppManager: Copied and verified /storage/emulated/0/Android/obb/com.xlox/scopedStorage/com.pubg.imobile/Android/obb/com.pubg.imobile/main.20.com.pubg.imobile.obb (335544320 B)|D/AppManager: Copy progress 100%|D/AppManager: Copied and verified /storage/emulated/0/Android/obb/com.xlox/scopedStorage/com.pubg.imobile/Android/obb/com.pubg.imobile/patch.20.com.pubg.imobile.obb (25165824 B)|D/MAct    : Launch: game files ready, launching|
 Starting: Intent { cmp=com.xlox/.MAct (has extras) }
 Status: ok
 LaunchState: COLD
 Activity: com.xlox/.MAct
-TotalTime: 1426
-WaitTime: 1428
+TotalTime: 1477
+WaitTime: 1480
 Complete
-obb2 mid texts: text="Settings" text="Search settings" text="Network &amp; internet" text="Mobile, Wi‑Fi, hotspot" text="Connected devices" text="Bluetooth, pairing" text="Apps" text="Assistant, recent apps, default apps" text="Notifications" text="Notification history, conversations" text="Battery" text="100%" text="Storage" text="44% used - 4.46 GB free" text="Sound &amp; vibration" 
-obb2 focus:   mCurrentFocus=Window{62d8f25 u0 com.android.settings/com.android.settings.homepage.SettingsHomepageActivity}
-obb2 log: D/AppManager: Source /storage/emulated/0/Android/obb/com.pubg.imobile main=/storage/emulated/0/Android/obb/com.pubg.imobile/main.20.com.pubg.imobile.obb (335544320 B) patch=/storage/emulated/0/Android/obb/com.pubg.imobile/patch.20.com.pubg.imobile.obb (25165824 B)|D/AppManager: Destination /storage/emulated/0/Android/obb/com.xlox/scopedStorage/com.pubg.imobile/Android/obb/com.pubg.imobile|D/AppManager: Skip (current) main.20.com.pubg.imobile.obb 335544320 B -> /storage/emulated/0/Android/obb/com.xlox/scopedStorage/com.pubg.imobile/Android/obb/com.pubg.imobile/main.20.com.pubg.imobile.obb|D/AppManager: Skip (current) patch.20.com.pubg.imobile.obb 25165824 B -> /storage/emulated/0/Android/obb/com.xlox/scopedStorage/com.pubg.imobile/Android/obb/com.pubg.imobile/patch.20.com.pubg.imobile.obb|D/AppManager: OBB already current in the container; no copy needed|
+obb2 mid texts: text="Settings" text="Search settings" text="Network &amp; internet" text="Mobile, Wi‑Fi, hotspot" text="Connected devices" text="Bluetooth, pairing" text="Apps" text="Assistant, recent apps, default apps" text="Notifications" text="Notification history, conversations" text="Battery" text="100%" text="Storage" text="43% used - 4.55 GB free" text="Sound &amp; vibration" 
+obb2 focus:   mCurrentFocus=Window{fec8d01 u0 com.android.settings/com.android.settings.homepage.SettingsHomepageActivity}
+obb2 log: E/MAct    : 	at android.app.ActivityThread.performLaunchActivity(ActivityThread.java:3538)|E/MAct    : 	at android.app.ActivityThread.handleLaunchActivity(ActivityThread.java:3782)|E/MAct    : 	at android.app.servertransaction.LaunchActivityItem.execute(LaunchActivityItem.java:101)|W/MAct    : 	at android.app.ActivityThread.performLaunchActivity(ActivityThread.java:3626)|W/MAct    : 	at android.app.ActivityThread.handleLaunchActivity(ActivityThread.java:3782)|W/MAct    : 	at android.app.servertransaction.LaunchActivityItem.execute(LaunchActivityItem.java:101)|D/MAct    : Launch: preparing game files|D/AppManager: Source /storage/emulated/0/Android/obb/com.pubg.imobile main=/storage/emulated/0/Android/obb/com.pubg.imobile/main.20.com.pubg.imobile.obb (335544320 B) patch=/storage/emulated/0/Android/obb/com.pubg.imobile/patch.20.com.pubg.imobile.obb (25165824 B)|D/AppManager: Destination /storage/emulated/0/Android/obb/com.xlox/scopedStorage/com.pubg.imobile/Android/obb/com.pubg.imobile|D/AppManager: Skip (current) main.20.com.pubg.imobile.obb 335544320 B -> /storage/emulated/0/Android/obb/com.xlox/scopedStorage/com.pubg.imobile/Android/obb/com.pubg.imobile/main.20.com.pubg.imobile.obb|D/AppManager: Skip (current) patch.20.com.pubg.imobile.obb 25165824 B -> /storage/emulated/0/Android/obb/com.xlox/scopedStorage/com.pubg.imobile/Android/obb/com.pubg.imobile/patch.20.com.pubg.imobile.obb|D/AppManager: OBB already current in the container; no copy needed|D/MAct    : Launch: game files ready, launching|
 Starting: Intent { cmp=com.xlox/.MAct (has extras) }
 Status: ok
 LaunchState: COLD
 Activity: com.xlox/.MAct
-TotalTime: 1223
-WaitTime: 1226
+TotalTime: 1392
+WaitTime: 1392
 Complete
-obb3 focus:   mCurrentFocus=Window{a8e9855 u0 com.xlox/com.xlox.MAct}
-focus for home_obb3_missing:   mCurrentFocus=Window{a8e9855 u0 com.xlox/com.xlox.MAct}
-captured home_obb3_missing.png (186763 bytes)
-obb3 texts: text="Welcome back" text="Anoy" text="Play fairly. Unsafe play can lead to a ban." text="Time left" text="Active" text="29d 21h 04m" text="Expires 8 Dec 2026, 11:22 AM" text="GAME" text="Game" text="BGMI" text="State" text="Ready" text="Library" text="Not installed" text="Server" text="Safe" text="DEVICE" text="Model" text="Google sdk_gphone64_x86_64" text="Android" text="13 (API 33)" text="Help on Telegram" text="Game files not found. Open BGMI once from the Play Store to download them." text="Launch" 
-obb3 log: D/AppManager: No source OBB for com.pubg.imobile: Game files folder not found.|
+obb3 focus:   mCurrentFocus=Window{9778c9f u0 com.xlox/com.xlox.MAct}
+focus for home_obb3_missing:   mCurrentFocus=Window{9778c9f u0 com.xlox/com.xlox.MAct}
+captured home_obb3_missing.png (188057 bytes)
+obb3 texts: text="Welcome back" text="Anoy" text="Play fairly. Unsafe play can lead to a ban." text="Time left" text="Active" text="29d 21h 04m" text="Expires 8 Dec 2026, 11:43 AM" text="GAME" text="Game" text="BGMI" text="State" text="Ready" text="Library" text="Not installed" text="Server" text="Safe" text="DEVICE" text="Model" text="Google sdk_gphone64_x86_64" text="Android" text="13 (API 33)" text="Help on Telegram" text="Game files not found. Open BGMI once from the Play Store to download them." text="Launch" 
+obb3 log: E/MAct    : 	at android.app.ActivityThread.performLaunchActivity(ActivityThread.java:3538)|E/MAct    : 	at android.app.ActivityThread.handleLaunchActivity(ActivityThread.java:3782)|E/MAct    : 	at android.app.servertransaction.LaunchActivityItem.execute(LaunchActivityItem.java:101)|W/MAct    : 	at android.app.ActivityThread.performLaunchActivity(ActivityThread.java:3626)|W/MAct    : 	at android.app.ActivityThread.handleLaunchActivity(ActivityThread.java:3782)|W/MAct    : 	at android.app.servertransaction.LaunchActivityItem.execute(LaunchActivityItem.java:101)|D/MAct    : Launch: preparing game files|D/AppManager: No source OBB for com.pubg.imobile: Game files folder not found.|D/MAct    : Launch stopped: game files not ready (Game files folder not found.)|
 direct install failed (Performing Streamed Install
 adb: failed to install app/build/outputs/apk/release/app-release.apk: Failure [INSTALL_FAILED_NO_MATCHING_ABIS: INSTALL_FAILED_NO_MATCHING_ABIS: Failed to extract native libraries, res=-113]); stripping native libs
 ABI-neutral install ok: app/build/outputs/apk/release/app-release.apk
@@ -671,10 +671,10 @@ Starting: Intent { cmp=com.xlox/.SplashActivity }
 Status: ok
 LaunchState: COLD
 Activity: com.xlox/.SplashActivity
-TotalTime: 992
-WaitTime: 1034
+TotalTime: 1017
+WaitTime: 1027
 Complete
-release focus:   mCurrentFocus=Window{3cf9c7 u0 com.xlox/com.xlox.LogAct}
-focus for release_login:   mCurrentFocus=Window{3cf9c7 u0 com.xlox/com.xlox.LogAct}
-captured release_login.png (80961 bytes)
-=== emulator QA finished Sun Nov  8 14:18:50 UTC 2026 ===
+release focus:   mCurrentFocus=Window{10e137 u0 com.xlox/com.xlox.LogAct}
+focus for release_login:   mCurrentFocus=Window{10e137 u0 com.xlox/com.xlox.LogAct}
+captured release_login.png (81456 bytes)
+=== emulator QA finished Sun Nov  8 14:39:20 UTC 2026 ===
