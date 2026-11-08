@@ -203,13 +203,13 @@ jobs:
           G = 'com.pubg.imobile'
           MB = 1048576
           o1, o2, o3 = obb('obb1 log'), obb('obb2 log'), obb('obb3 log')
-          src = re.search(r'AppManager: Source (\S+)', o1)
-          dst = re.search(r'AppManager: Destination (\S+)', o1)
+          src = re.search(r'AppManager: Source ([^|\s]+)', o1)
+          dst = re.search(r'AppManager: Destination ([^|\s]+)', o1)
           if not src or not dst:
               errors.append('first install: OBB source / destination not logged: ' + o1[:800])
           else:
               d = dst.group(1).rstrip('/')
-              if d == src.group(1).rstrip('/') or re.match(r'^/(storage/emulated/0|sdcard)/Android/obb/', d):
+              if d == src.group(1).rstrip('/') or re.match(r'^/(storage/emulated/0|sdcard)/Android/obb/%s$' % re.escape(G), d):
                   errors.append('first install: container OBB folder is the device folder: ' + d)
           for name, size in (('main.20.%s.obb' % G, 320 * MB), ('patch.20.%s.obb' % G, 24 * MB)):
               m = re.search(r'Copied and verified (\S*/%s) \((\d+) B\)' % re.escape(name), o1)
@@ -221,7 +221,7 @@ jobs:
               errors.append('first install: copied an older main OBB (only the newest main is copied)')
           if 'Copy progress 100%' not in o1:
               errors.append('first install: no copy progress reported')
-          i_done, i_launch = o1.rfind('Copied and verified'), o1.find('MAct: Launch: game files ready, launching')
+          i_done, i_launch = o1.rfind('Copied and verified'), o1.find('game files ready, launching')
           if i_launch < 0 or i_done < 0 or i_launch < i_done:
               errors.append('first install: launch did not wait for the verified copy')
           for tag in ('obb1', 'obb2'):

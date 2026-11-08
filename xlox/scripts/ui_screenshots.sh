@@ -512,7 +512,7 @@ adb logcat -d > ../qa-logs/logcat-sizes.txt 2>/dev/null || true
 #   obb3: no game OBB  - missing-files message, no launch.
 GAME=com.pubg.imobile
 GOBB=/sdcard/Android/obb/$GAME
-obb_log() { adb logcat -d -v tag -s AppManager:V MAct:V 2>/dev/null | grep -E '^./AppManager|MAct: Launch' | tr -d '\r' | tr '\n' '|'; }
+obb_log() { adb logcat -d -v tag -s AppManager:V MAct:V 2>/dev/null | grep -E '^./AppManager|^./MAct.*Launch' | tr -d '\r' | tr '\n' '|'; }
 obb_start() {
     adb shell am start -W -n $PKG/.MAct --ez qa_preview true --es qa_action obb_copy --es qa_launch started >> "$LOG" 2>&1 || log "WARN: am start MAct failed"
 }
@@ -520,8 +520,10 @@ obb_case() { # $1 = tag
     stop_app
     adb logcat -c || true
     obb_start
-    sleep 1.2
+    sleep 0.7
     adb exec-out screencap -p > "$OUT/home_$1_mid.png" || true
+    sleep 0.3
+    adb exec-out screencap -p > "$OUT/home_$1_mid2.png" || true
     log "$1 mid texts: $(texts)"
     sleep 7
     log "$1 focus: $(focus)"
