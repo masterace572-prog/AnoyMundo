@@ -662,6 +662,12 @@ public class MAct extends AppCompatActivity {
     /** Debug: freeze the action bar in a launch state for screenshots. */
     private void applyQaAction() {
         if (!preview) return;
+        if ("obb_copy".equals(getIntent().getStringExtra(EXTRA_QA_ACTION))) {
+            // The real copy-then-launch that follows the pre-checks (the emulator
+            // has no activated container). qa_launch picks the stand-in game.
+            main.postDelayed(this::prepareObbThenLaunch, 400L);
+            return;
+        }
         if (qaLaunch != null) {
             // The real flow after the pre-checks and OBB copy: "Launching…", then launch.
             main.postDelayed(() -> {
@@ -824,6 +830,16 @@ public class MAct extends AppCompatActivity {
             requestStorage(true);
             return;
         }
+        prepareObbThenLaunch();
+    }
+
+    /**
+     * Copies the game's OBB into the container with live percent on the Launch
+     * button, and launches only once AppManager reports a verified copy (or a
+     * truly current one). Any failure stops here: no launch.
+     */
+    private void prepareObbThenLaunch() {
+        Log.d(TAG, "Launch: preparing game files");
         setBusy(true, getString(R.string.action_preparing));
         showProgress(0, true);
         showMessage(getString(R.string.preparing), false);
@@ -840,6 +856,7 @@ public class MAct extends AppCompatActivity {
                 if (!Ui.alive(MAct.this)) return;
                 hideProgress();
                 if (!success) {
+                    Log.d(TAG, "Launch stopped: game files not ready (" + error + ")");
                     setBusy(false, null);
                     String reason = error == null || error.isEmpty() ? getString(R.string.net_generic) : error;
                     showMessage(getString(R.string.main_obb_not_found).equals(reason)
@@ -848,6 +865,7 @@ public class MAct extends AppCompatActivity {
                             : getString(R.string.error_obb_copy, reason), true);
                     return;
                 }
+                Log.d(TAG, "Launch: game files ready, launching");
                 hideMessage(); // The pill itself reads "Launching…".
                 primaryAction.setText(R.string.launching);
                 main.postDelayed(MAct.this::launchGame, LAUNCH_DELAY_MS);

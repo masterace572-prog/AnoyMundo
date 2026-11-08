@@ -365,6 +365,7 @@ shot home_storage_denied
 log "storage deny texts: $(texts)"
 grant
 
+
 # TalkBack text of the licence card (one sentence).
 open_home
 log "licence card description: $(dump_ui | grep -o 'resource-id="com.xlox:id/licenceCard"[^>]*' | grep -o 'content-desc="[^"]*"')"
@@ -496,6 +497,53 @@ for shape in circle squircle roundedrect teardrop; do
 done
 
 adb logcat -d > ../qa-logs/logcat-sizes.txt 2>/dev/null || true
+
+# ------------------------------------------ Game OBB copy before launch
+# The real AppManager + container storage. qa_action obb_copy runs the
+# copy-then-launch that follows the pre-checks (no activated container here);
+# qa_launch=started makes "the game" a stand-in screen (Settings).
+#   obb1: first install - must copy main + patch with progress, then launch.
+#   obb2: second tap   - truly current: skip the copy, then launch.
+#   obb3: no game OBB  - missing-files message, no launch.
+GAME=com.pubg.imobile
+GOBB=/sdcard/Android/obb/$GAME
+obb_log() { adb logcat -d -v tag -s AppManager:V MAct:V 2>/dev/null | grep -E '^./AppManager|MAct: Launch' | tr -d '\r' | tr '\n' '|'; }
+obb_start() {
+    adb shell am start -W -n $PKG/.MAct --ez qa_preview true --es qa_action obb_copy --es qa_launch started >> "$LOG" 2>&1 || log "WARN: am start MAct failed"
+}
+obb_case() { # $1 = tag
+    stop_app
+    adb logcat -c || true
+    obb_start
+    sleep 1.2
+    adb exec-out screencap -p > "$OUT/home_$1_mid.png" || true
+    log "$1 mid texts: $(texts)"
+    sleep 7
+    log "$1 focus: $(focus)"
+    log "$1 log: $(obb_log)"
+}
+stop_app
+adb shell pm clear $PKG >/dev/null 2>&1 || true   # fresh install: empty container
+grant
+adb shell rm -rf $GOBB >/dev/null 2>&1 || true
+adb shell mkdir -p $GOBB
+adb shell dd if=/dev/zero of=$GOBB/main.20.$GAME.obb bs=1048576 count=320 >/dev/null 2>&1 || log "WARN: could not create main OBB"
+adb shell dd if=/dev/zero of=$GOBB/main.19.$GAME.obb bs=1048576 count=2 >/dev/null 2>&1 || true   # older main: ignored
+adb shell dd if=/dev/zero of=$GOBB/patch.20.$GAME.obb bs=1048576 count=24 >/dev/null 2>&1 || log "WARN: could not create patch OBB"
+log "obb source listing: $(adb shell ls -l $GOBB 2>&1 | tr -d '\r' | tr '\n' '|')"
+log "obb app view: $(adb shell run-as $PKG ls -l $GOBB 2>&1 | tr -d '\r' | tr '\n' '|')"
+obb_case obb1
+obb_case obb2
+stop_app
+adb shell rm -rf $GOBB >/dev/null 2>&1 || true
+adb logcat -c || true
+obb_start
+sleep 4
+log "obb3 focus: $(focus)"
+shot home_obb3_missing
+log "obb3 texts: $(texts)"
+log "obb3 log: $(obb_log)"
+stop_app
 
 # ------------------------------------- 11. minified release build (real flow)
 if [ -f "$RELEASE_APK" ]; then

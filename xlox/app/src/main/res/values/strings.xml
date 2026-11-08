@@ -124,6 +124,12 @@
     <string name="package_not_found">BGMI is not installed.</string>
     <string name="obb_folder_not_found">Game files folder not found.</string>
     <string name="main_obb_not_found">Main game file not found.</string>
+    <!-- Reasons shown inside error_obb_copy ("Couldn't prepare game files: …"). -->
+    <string name="obb_container_not_ready">game storage isn\'t ready yet. Wait a moment and tap Launch again.</string>
+    <string name="obb_copy_write_failed">couldn\'t write to the game storage. Free some storage and try again.</string>
+    <string name="obb_copy_incomplete">the copy didn\'t finish. Try again.</string>
+    <string name="obb_copy_verify_failed">the copied file didn\'t match. Try again.</string>
+    <string name="obb_copy_failed">something went wrong. Try again.</string>
     <string name="storage_permission_needed">Allow storage access so game files can be prepared.</string>
     <string name="home_kicker">Welcome back</string>
     <!-- UI redesign (2.1) -->

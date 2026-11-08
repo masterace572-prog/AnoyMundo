@@ -143,6 +143,7 @@ jobs:
               'home_launch_null_running', 'home_launch_failed', 'home_typical',
               # files access requested from Launch
               'storage_prompt', 'home_storage_granted', 'home_storage_denied',
+              'home_obb1_mid', 'home_obb3_missing',
               # live walkthrough
               'login', 'login_keyboard', 'login_error_empty', 'login_error_malformed', 'login_key_visible',
               'gate_check_failed_live', 'login_offline', 'login_ok_home', 'home_signout_sheet', 'signout_done',
@@ -169,7 +170,7 @@ jobs:
           seen = {}
           for n, p in files.items():
               h = hashlib.md5(p.read_bytes()).hexdigest()
-              if h in seen and not any(k in n + seen[h] for k in ('live', 'anim_', 'icon_', 'splash_reduced', 'splash_t220', 'home_launch_')):
+              if h in seen and not any(k in n + seen[h] for k in ('live', 'anim_', 'icon_', 'splash_reduced', 'splash_t220', 'home_launch_', 'home_obb')):
                   errors.append(f'identical frames: {seen[h]} / {n}')
               seen[h] = n
           trace = Path('qa-logs/emulator-trace.txt')
@@ -195,6 +196,47 @@ jobs:
                   errors.append(f'launch case {case}: error shown = {failed}, expected {should_fail}')
               if not should_fail and 'text="Stop"' not in m.group(1):
                   errors.append(f'launch case {case}: game not shown as running')
+          # Game OBB copy before launch (real AppManager + container storage).
+          def obb(tag):
+              m = re.search(r'^%s: (.*)$' % re.escape(tag), t, re.M)
+              return m.group(1) if m else ''
+          G = 'com.pubg.imobile'
+          MB = 1048576
+          o1, o2, o3 = obb('obb1 log'), obb('obb2 log'), obb('obb3 log')
+          src = re.search(r'AppManager: Source (\S+)', o1)
+          dst = re.search(r'AppManager: Destination (\S+)', o1)
+          if not src or not dst:
+              errors.append('first install: OBB source / destination not logged: ' + o1[:800])
+          else:
+              d = dst.group(1).rstrip('/')
+              if d == src.group(1).rstrip('/') or re.match(r'^/(storage/emulated/0|sdcard)/Android/obb/', d):
+                  errors.append('first install: container OBB folder is the device folder: ' + d)
+          for name, size in (('main.20.%s.obb' % G, 320 * MB), ('patch.20.%s.obb' % G, 24 * MB)):
+              m = re.search(r'Copied and verified (\S*/%s) \((\d+) B\)' % re.escape(name), o1)
+              if not m or int(m.group(2)) != size:
+                  errors.append('first install: %s not copied into the container with the right size' % name)
+              if 'Skip (current) ' + name not in o2:
+                  errors.append('second launch: %s not recognised as current' % name)
+          if re.search(r'AppManager: Copy \S*main\.19\.', o1):
+              errors.append('first install: copied an older main OBB (only the newest main is copied)')
+          if 'Copy progress 100%' not in o1:
+              errors.append('first install: no copy progress reported')
+          i_done, i_launch = o1.rfind('Copied and verified'), o1.find('MAct: Launch: game files ready, launching')
+          if i_launch < 0 or i_done < 0 or i_launch < i_done:
+              errors.append('first install: launch did not wait for the verified copy')
+          for tag in ('obb1', 'obb2'):
+              if 'Settings' not in obb(tag + ' focus'):
+                  errors.append(tag + ': the game was not launched after the OBB step: ' + obb(tag + ' focus'))
+          if re.search(r'AppManager: Copy /', o2):
+              errors.append('second launch: copied again although the container copy is current')
+          if 'launching' not in o2:
+              errors.append('second launch: did not launch')
+          if 'Game files not found' not in obb('obb3 texts'):
+              errors.append('no game OBB: missing-files message not shown')
+          if 'launching' in o3 or 'com.xlox' not in obb('obb3 focus'):
+              errors.append('no game OBB: the game was launched anyway')
+          if 'Preparing' not in obb('obb1 mid texts'):
+              print('note: Preparing percent not caught mid-copy on screen (copy finished fast); progress checked from the log')
           # Files access: Launch opens the system prompt; allowed -> the launch
           # continues by itself; denied -> the message, no copy, no launch.
           m = re.search(r'^storage allow prompt focus: (.*)$', t, re.M)
