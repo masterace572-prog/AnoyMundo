@@ -224,6 +224,8 @@ removed ones absent, and no Java code asking for a declared-only permission.
   the passwords this keystore has always used. The agent's GitHub access cannot
   create secrets (HTTP 403). Until they exist, CI builds are checked but no new
   APK is published.
+  **Done (7 Nov 2026):** the owner added both secrets; signed builds and
+  publishing are back on.
 - **History:** `app/xlox.jks` is still tracked and the old password remains in
   earlier commits of `build.gradle`, the workflow and the README. History was
   not rewritten (as asked). Anyone with the repository history can sign as this
