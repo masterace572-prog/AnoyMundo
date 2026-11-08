@@ -167,7 +167,9 @@ public class MAct extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         panelNote = findViewById(R.id.panelNote);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            // Even line lengths instead of a short last line.
+            // Even line lengths instead of a short last line. Layout's constant is
+            // the API 23-28 name of LineBreaker.BREAK_STRATEGY_BALANCED (same value).
+            //noinspection WrongConstant
             panelNote.setBreakStrategy(android.text.Layout.BREAK_STRATEGY_BALANCED);
         }
         panelNoteCard = findViewById(R.id.panelNoteCard);
