@@ -1,4 +1,4 @@
-/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/java/com/xlox/MAct.java:226: Warning: Avoid passing null as the view root (needed to resolve layout parameters on the inflated layout's root element) [InflateParams]
+/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/java/com/xlox/MAct.java:227: Warning: Avoid passing null as the view root (needed to resolve layout parameters on the inflated layout's root element) [InflateParams]
         View sheetView = LayoutInflater.from(this).inflate(R.layout.sheet_sign_out, null, false);
                                                                                     ~~~~
 /home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/java/com/xlox/ui/UpdateGate.java:179: Warning: Avoid passing null as the view root (needed to resolve layout parameters on the inflated layout's root element) [InflateParams]
@@ -218,10 +218,10 @@
    If your view is labeled but by a label in a different layout which includes
    this one, just suppress this warning from lint.
 
-/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/java/com/xlox/LogAct.java:206: Warning: String literal in setText can not be translated. Use Android resources instead. [SetTextI18n]
+/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/java/com/xlox/LogAct.java:208: Warning: String literal in setText can not be translated. Use Android resources instead. [SetTextI18n]
         if (keyInput.getText().length() == 0) keyInput.setText("ANOY-7D-QA7K2");
                                                                ~~~~~~~~~~~~~~~
-/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/java/com/xlox/LogAct.java:213: Warning: String literal in setText can not be translated. Use Android resources instead. [SetTextI18n]
+/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/java/com/xlox/LogAct.java:215: Warning: String literal in setText can not be translated. Use Android resources instead. [SetTextI18n]
             keyInput.setText("AB");
                              ~~~~
 
