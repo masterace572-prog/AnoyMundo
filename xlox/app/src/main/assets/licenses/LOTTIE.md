@@ -4,7 +4,7 @@ The app ships three Lottie animations in `res/raw/`:
 
 | File | Use | Length | Size |
 |---|---|---|---|
-| `anoy_mark.json` | Splash mark: ring draws, key notch, collapse to a dot, breathing loop | 1.8 s (108 frames) | ~5 KB |
+| `anoy_mark.json` | Splash: the Anoy monogram. A plain white A; the blue crossbar draws through it and past the right leg, the mark settles and lifts; opacity-only breathing loop | 2.0 s (120 frames) | ~2 KB |
 | `anoy_sync.json` | Update gate "Checking for updates" loop | 1.2 s (72 frames) | ~2 KB |
 | `anoy_success.json` | Update gate "You're up to date" one-shot | 0.7 s (42 frames) | ~3 KB |
 
@@ -12,11 +12,13 @@ All three are **original work authored in this repository** for Anoy Loader.
 They are not derived from LottieFiles or any third-party animation. They are
 generated as plain JSON by `xlox/scripts/lottie_art.py` (Python, no After
 Effects), which is the source of truth: edit the script and re-run it rather
-than editing the JSON by hand.
+than editing the JSON by hand. The monogram's geometry lives in
+`xlox/scripts/brand_mark.py`, which also writes the launcher icon and the
+system-splash icon, so the splash and the app icon are the same artwork.
 
-Art direction: monochrome white strokes on black, blue `#0A84FF` used once per
-animation as an accent (the glint in `anoy_mark`, the outward pulse in
-`anoy_success`), 60 fps, simple shapes and trim paths only. No images, no
+Art direction: monochrome white on black, blue `#0A84FF` used once per
+animation as an accent (the crossbar in `anoy_mark`, the outward pulse in
+`anoy_success`), 60 fps, simple shapes, trim paths and path keyframes only. No images, no
 masks, no expressions, so they render identically in hardware mode on
 API 21–37.
 

@@ -1,9 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Splash: the Lottie mark sits exactly where the system splash icon sits
-  (centred in the full window, 288 dp), so the hand-off is invisible. The
-  wordmark is real text that fades up under the dot; the version footer sits
-  24 dp above the navigation bar (inset added in SplashActivity).
+  Splash: the Lottie monogram sits exactly where the system splash icon sits
+  (centred in the full window, 288 dp canvas), so the hand-off is invisible.
+  The mark lifts 36 dp inside its canvas; the wordmark is real text (Inter)
+  that fades in 24 dp under the lifted mark. The version footer sits 24 dp
+  above the navigation bar (inset added in SplashActivity).
 -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -25,7 +26,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="center"
-        android:layout_marginTop="88dp"
+        android:layout_marginTop="132dp"
         android:alpha="0"
         android:gravity="center_horizontal"
         android:orientation="vertical">

@@ -164,7 +164,7 @@ grant
 
 # ---------------------------------------------------------------- 1. splash
 # Still frames of the 1.8 s mark (qa_frame freezes the Lottie progress).
-for f in 0.00 0.15 0.30 0.42 0.60 0.72 0.88; do
+for f in 0.00 0.10 0.20 0.35 0.45 0.60 0.85; do
     stop_app
     adb shell am start -W -n $PKG/.SplashActivity --ef qa_frame "$f" >> "$LOG" 2>&1 || fatal "cannot start SplashActivity"
     sleep 1.2
@@ -302,6 +302,34 @@ hide_keyboard
 shot signout_done
 log "signout focus: $(focus)"
 
+# Launch result handling (debug qa_launch simulates the container's answer;
+# the emulator has no BGMI). The text dump after each must not contain the
+# launch error unless the game truly did not start.
+launch_case() {
+    stop_app
+    adb shell am start -W -n $PKG/.MAct --ez qa_preview true --es qa_launch "$1" >> "$LOG" 2>&1 || log "WARN: am start MAct failed"
+    sleep "$2"
+}
+launch_case started 4
+log "launch started target focus: $(focus)"
+adb shell input keyevent 4 || true            # back from the stand-in "game"
+sleep 2
+shot home_launch_started_return
+log "launch started texts: $(texts)"
+launch_case started_polish_throws 4
+adb shell input keyevent 4 || true
+sleep 2
+shot home_launch_polish_throws_return
+log "launch started_polish_throws texts: $(texts)"
+launch_case null_running 4
+shot home_launch_null_running
+log "launch null_running texts: $(texts)"
+launch_case null_dead 7
+shot home_launch_failed
+log "launch null_dead texts: $(texts)"
+launch_case throws 7
+log "launch throws texts: $(texts)"
+
 # TalkBack text of the licence card (one sentence).
 open_home
 log "licence card description: $(dump_ui | grep -o 'resource-id="com.xlox:id/licenceCard"[^>]*' | grep -o 'content-desc="[^"]*"')"
@@ -375,6 +403,60 @@ size_pass tablet 1600x2560 320
 adb shell wm size reset || true
 adb shell wm density reset || true
 sleep 2
+
+# Typical 20:9 phone (411 x 914 dp): DEVICE must clear the pinned Launch bar
+# without scrolling. Measured from the view bounds, not eyeballed.
+adb shell wm size 1080x2400 || true
+adb shell wm density 420 || true
+sleep 3
+open_home
+shot home_typical
+dump_ui | python3 -c '
+import re, sys
+xml = sys.stdin.read()
+def box(i):
+    m = re.search(r"resource-id=\"com\.xlox:id/%s\"[^>]*?bounds=\"\[(\d+),(\d+)\]\[(\d+),(\d+)\]\"" % i, xml)
+    return tuple(map(int, m.groups())) if m else None
+card, button = box("deviceCard"), box("primaryAction")
+fade = round(24 * 420 / 160)
+if card and button:
+    clear = card[3] <= button[1] - fade
+    print("device card bottom %d, launch fade top %d: %s" % (card[3], button[1] - fade, "clear" if clear else "covered"))
+else:
+    print("device card bounds missing")
+' | while read -r line; do log "typical phone: $line"; done
+adb shell wm size reset || true
+adb shell wm density reset || true
+sleep 2
+
+# Launcher icon: app drawer, recents and every icon-shape overlay available.
+stop_app
+adb shell am start -W -n $PKG/.SplashActivity >> "$LOG" 2>&1 || true
+sleep 1.5
+adb shell input keyevent 187 || true          # recents
+sleep 2
+adb exec-out screencap -p > "$OUT/icon_recents.png" || true
+log "captured icon_recents.png"
+adb shell input keyevent 3 || true            # home
+sleep 1
+for shape in default circle squircle roundedrect teardrop; do
+    if [ "$shape" != default ]; then
+        adb shell cmd overlay enable-exclusive --category "com.android.theme.icon.$shape" >> "$LOG" 2>&1 \
+            || { log "icon shape overlay $shape unavailable"; continue; }
+        sleep 3
+    fi
+    adb shell input keyevent 3 || true
+    sleep 1
+    adb shell input swipe 540 1900 540 300 300 || true   # open the app drawer
+    sleep 2
+    adb exec-out screencap -p > "$OUT/icon_drawer_$shape.png" || true
+    log "captured icon_drawer_$shape.png"
+    log "drawer icon $shape: $(dump_ui | grep -o 'content-desc="Anoy[^"]*"[^>]*bounds="[^"]*"' | head -1)"
+    adb shell input keyevent 3 || true
+done
+for shape in circle squircle roundedrect teardrop; do
+    adb shell cmd overlay disable "com.android.theme.icon.$shape" >/dev/null 2>&1 || true
+done
 
 adb logcat -d > ../qa-logs/logcat-sizes.txt 2>/dev/null || true
 

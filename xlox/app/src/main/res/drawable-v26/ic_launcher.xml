@@ -1,5 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Anoy launcher icon (API 26+): white "A" monogram with the blue crossbar on
+     near-black. Glyph geometry lives in xlox/scripts/brand_mark.py and stays
+     inside the 66 dp safe zone, so circle / squircle / rounded-square masks
+     never clip it. -->
 <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
-    <background android:drawable="@color/blue" />
+    <background android:drawable="@color/launcher_background" />
     <foreground android:drawable="@drawable/ic_launcher_glyph" />
 </adaptive-icon>

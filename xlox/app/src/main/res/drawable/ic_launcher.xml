@@ -1,12 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Legacy (API 21-25) launcher icon: blue rounded square with the key glyph. -->
+<!-- Legacy (API 21-25) launcher icon: the Anoy monogram on a near-black rounded
+     square - the same artwork and proportions as the adaptive icon. -->
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
     <item>
         <shape android:shape="rectangle">
-            <solid android:color="@color/blue" />
-            <corners android:radius="12dp" />
+            <solid android:color="@color/launcher_background" />
+            <corners android:radius="11dp" />
             <size android:width="48dp" android:height="48dp" />
         </shape>
     </item>
-    <item android:drawable="@drawable/ic_launcher_glyph" />
+    <item android:drawable="@drawable/ic_launcher_mark" />
 </layer-list>

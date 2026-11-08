@@ -38,7 +38,8 @@
     <!-- Effects -->
     <color name="ripple_light">#29FFFFFF</color>
     <color name="ripple_blue">#330A84FF</color>
-    <color name="splash_track">#24FFFFFF</color>
+    <!-- Launcher icon background (near-black, reads on black wallpapers). -->
+    <color name="launcher_background">#0A0A0A</color>
     <color name="fade_end">#00000000</color>
     <color name="transparent">#00000000</color>
 </resources>

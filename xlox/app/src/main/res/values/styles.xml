@@ -211,6 +211,17 @@
         <item name="android:gravity">end|center_vertical</item>
     </style>
 
+    <!-- Device values (long model names): one right-aligned line that shrinks
+         to 12 sp before it ellipsizes, instead of splitting mid-name. -->
+    <style name="Text.RowValue.SingleLine">
+        <item name="android:maxLines">1</item>
+        <item name="android:ellipsize">end</item>
+        <item name="autoSizeTextType">uniform</item>
+        <item name="autoSizeMinTextSize">12sp</item>
+        <item name="autoSizeMaxTextSize">@dimen/text_body</item>
+        <item name="autoSizeStepGranularity">1sp</item>
+    </style>
+
     <!-- Countdown: 40 sp semibold tabular; autosizes down at large font scales -->
     <style name="Text.Hero">
         <item name="android:fontFamily">@font/inter_semibold</item>

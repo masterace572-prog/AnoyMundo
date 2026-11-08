@@ -69,6 +69,13 @@ public class MAct extends AppCompatActivity {
     public static final String EXTRA_PREVIEW = "qa_preview";
     private static final long RECHECK_INTERVAL_MS = 60_000L;
     private static final long LAUNCH_DELAY_MS = 1200L;
+    /**
+     * When the container gives no launch intent (or starting it throws), it may
+     * still have started the game itself: watch this long before reporting a
+     * failure.
+     */
+    private static final long LAUNCH_CONFIRM_MS = 4000L;
+    private static final long LAUNCH_POLL_MS = 400L;
     /** Skeletons pulse for at most this long, then stay static. */
     private static final long SKELETON_PULSE_MS = 3000L;
     /** Duration segment of a licence key: ANOY-7D-XXXXX, ANOY-2H-XXXXX. */
@@ -82,6 +89,12 @@ public class MAct extends AppCompatActivity {
     public static final String EXTRA_QA_NOTE = "qa_note";
     public static final String EXTRA_QA_LOADING = "qa_loading";
     public static final String EXTRA_QA_ACTION = "qa_action";
+    /**
+     * Debug builds only: simulates the container's answer to a launch so CI can
+     * check the result handling without BGMI - started | started_polish_throws
+     * | null_running | null_dead | throws.
+     */
+    public static final String EXTRA_QA_LAUNCH = "qa_launch";
 
     private final Handler main = new Handler(Looper.getMainLooper());
 
@@ -112,6 +125,14 @@ public class MAct extends AppCompatActivity {
     private boolean expired;
     private boolean gameInstalled;
     private boolean gameRunning;
+    /** A launch is waiting for the container to confirm the game started. */
+    private boolean launchPending;
+    /** Anoy went to the background while a launch was pending (the game came up). */
+    private boolean leftDuringLaunch;
+    /** The "Couldn't launch" message is on screen. */
+    private boolean launchErrorShown;
+    private String qaLaunch;
+    private long qaLaunchAt;
     private boolean busy;
     private UpdateGate gate;
     private long lastRecheck;
@@ -134,6 +155,7 @@ public class MAct extends AppCompatActivity {
         String expiry = readNative(NativeField.EXPIRY);
         preview = BuildConfig.DEBUG && getIntent() != null
                 && getIntent().getBooleanExtra(EXTRA_PREVIEW, false);
+        qaLaunch = preview ? getIntent().getStringExtra(EXTRA_QA_LAUNCH) : null;
         if (!preview && (expiry == null || expiry.isEmpty() || "NULL".equalsIgnoreCase(expiry))) {
             // Process was restarted and the native session is gone: sign in again.
             Log.i(TAG, "No active session, returning to sign in");
@@ -144,6 +166,10 @@ public class MAct extends AppCompatActivity {
         Ui.edgeToEdge(this);
         setContentView(R.layout.activity_main);
         panelNote = findViewById(R.id.panelNote);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            // Even line lengths instead of a short last line.
+            panelNote.setBreakStrategy(android.text.Layout.BREAK_STRATEGY_BALANCED);
+        }
         panelNoteCard = findViewById(R.id.panelNoteCard);
         licenceCard = findViewById(R.id.licenceCard);
         statusValue = findViewById(R.id.statusValue);
@@ -245,6 +271,7 @@ public class MAct extends AppCompatActivity {
     @Override
     protected void onStop() {
         main.removeCallbacks(ticker);
+        if (launchPending) leftDuringLaunch = true;
         super.onStop();
     }
 
@@ -253,6 +280,8 @@ public class MAct extends AppCompatActivity {
         super.onResume();
         if (primaryAction == null) return;
         refreshGameState();
+        // A launch reported as failed, but the game is up after all: drop the stale error.
+        if (launchErrorShown && containerRunning()) onGameLaunched(false);
         refreshLibrary();
         if (!preview) applyPanelStatus();
         reportLoaderError();
@@ -320,7 +349,7 @@ public class MAct extends AppCompatActivity {
         if (note.isEmpty()) {
             panelNoteCard.setVisibility(View.GONE);
         } else {
-            panelNote.setText(note);
+            panelNote.setText(keepLastWordsTogether(note));
             panelNoteCard.setContentDescription(getString(R.string.notice_description, note));
             panelNoteCard.setVisibility(View.VISIBLE);
         }
@@ -330,6 +359,15 @@ public class MAct extends AppCompatActivity {
      * Panel note copy: emoji removed, ALL-CAPS sentences (3+ words) set in
      * sentence case, the panel's default line replaced by plain copy.
      */
+    /** Joins the last two words with a no-break space so a short word ("ban.") never sits alone. */
+    static String keepLastWordsTogether(String text) {
+        if (text == null) return null;
+        String t = text.trim();
+        int last = t.lastIndexOf(' ');
+        if (last <= 0 || t.indexOf(' ') == last) return t; // fewer than three words
+        return t.substring(0, last) + '\u00A0' + t.substring(last + 1);
+    }
+
     private String tidyNote(String raw) {
         String text = tidyPanelText(raw);
         if (text == null || text.isEmpty()) return "";
@@ -531,6 +569,14 @@ public class MAct extends AppCompatActivity {
     /** Debug: freeze the action bar in a launch state for screenshots. */
     private void applyQaAction() {
         if (!preview) return;
+        if (qaLaunch != null) {
+            // The real flow after the pre-checks and OBB copy: "Launching…", then launch.
+            main.postDelayed(() -> {
+                setBusy(true, getString(R.string.launching));
+                main.postDelayed(this::launchGame, 600L);
+            }, 400L);
+            return;
+        }
         String a = getIntent().getStringExtra(EXTRA_QA_ACTION);
         if (a == null) return;
         switch (a) {
@@ -593,7 +639,7 @@ public class MAct extends AppCompatActivity {
     // ----------------------------------------------------------- game state
 
     private void refreshGameState() {
-        gameInstalled = isInstalled(PKG_BGMI);
+        gameInstalled = isInstalled(PKG_BGMI) || qaLaunch != null;
         if (!gameInstalled) gameRunning = false;
         if (!gameInstalled) {
             setChip(gameStateValue, getString(R.string.state_not_installed), R.drawable.ic_circle_alert, CHIP_WARNING);
@@ -713,17 +759,107 @@ public class MAct extends AppCompatActivity {
 
     private void launchGame() {
         if (!Ui.alive(this)) return;
+        qaLaunchAt = SystemClock.elapsedRealtime();
+        // 1. Launch. Only this block decides whether the game started; the
+        //    container call itself is unchanged.
+        boolean started = false;
+        Throwable failure = null;
         try {
-            Intent intent = MetaActivityManager.obtainSplashLaunchIntent(PKG_BGMI, this);
-            if (intent == null) throw new IllegalStateException("No launch intent");
-            startActivity(intent);
-            gameRunning = true;
-            Ui.confirm(primaryAction);
-            hideMessage();
+            Intent intent = obtainLaunchIntent();
+            if (intent != null) {
+                startActivity(intent);
+                started = true; // startActivity returned normally: the game is launching.
+            }
         } catch (Throwable t) {
-            Log.e(TAG, "Launch failed", t);
-            showMessage(getString(R.string.error_launch), true);
+            failure = t;
         }
+        if (started || containerRunning()) {
+            onGameLaunched(true);
+        } else {
+            // No intent, or starting it threw: the container may still have
+            // started the game itself. Confirm before calling it a failure.
+            awaitContainerLaunch(failure);
+        }
+    }
+
+    private Intent obtainLaunchIntent() {
+        if (qaLaunch != null) {
+            switch (qaLaunch) {
+                case "started":
+                case "started_polish_throws":
+                    // Stand-in for the game: any activity that takes the screen.
+                    return new Intent(android.provider.Settings.ACTION_SETTINGS);
+                case "throws":
+                    throw new IllegalStateException("QA: container refused the launch");
+                default:
+                    return null;
+            }
+        }
+        return MetaActivityManager.obtainSplashLaunchIntent(PKG_BGMI, this);
+    }
+
+    /** True when the virtual container reports the game process running. */
+    private boolean containerRunning() {
+        if (qaLaunch != null) {
+            return "null_running".equals(qaLaunch) && SystemClock.elapsedRealtime() - qaLaunchAt > 1200L;
+        }
+        try {
+            return MetaActivityManager.isAppRunning(PKG_BGMI);
+        } catch (Throwable t) {
+            Log.w(TAG, "Container state unavailable", t);
+            return false;
+        }
+    }
+
+    private void awaitContainerLaunch(final Throwable cause) {
+        launchPending = true;
+        leftDuringLaunch = false;
+        final long deadline = SystemClock.elapsedRealtime() + LAUNCH_CONFIRM_MS;
+        main.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                if (!launchPending) return;
+                if (leftDuringLaunch || containerRunning()) {
+                    launchPending = false;
+                    onGameLaunched(true);
+                } else if (SystemClock.elapsedRealtime() < deadline) {
+                    main.postDelayed(this, LAUNCH_POLL_MS);
+                } else {
+                    launchPending = false;
+                    onLaunchFailed(cause);
+                }
+            }
+        }, LAUNCH_POLL_MS);
+    }
+
+    /** 2. The game started. Nothing here can turn that into a launch error. */
+    private void onGameLaunched(boolean haptic) {
+        gameRunning = true;
+        launchErrorShown = false;
+        try {
+            hideMessage();
+            if (haptic) Ui.confirm(primaryAction);
+            if ("started_polish_throws".equals(qaLaunch)) {
+                throw new IllegalStateException("QA: post-launch UI failure");
+            }
+        } catch (Throwable t) {
+            Log.w(TAG, "Post-launch UI update failed (the game is running)", t);
+        }
+        try {
+            setBusy(false, null);
+            refreshGameState();
+        } catch (Throwable t) {
+            busy = false;
+            Log.w(TAG, "Post-launch state refresh failed (the game is running)", t);
+        }
+    }
+
+    /** The game truly did not start: log the real cause and say so. */
+    private void onLaunchFailed(Throwable cause) {
+        Log.e(TAG, "Launch failed: the game did not start", cause != null ? cause
+                : new IllegalStateException("No launch intent and the container reports the game is not running"));
+        showMessage(getString(R.string.error_launch), true);
+        launchErrorShown = true;
         setBusy(false, null);
         refreshGameState();
     }
@@ -798,6 +934,7 @@ public class MAct extends AppCompatActivity {
 
     /** Caption above the pill; errors get a danger glyph and REJECT haptic. */
     private void showMessage(String text, boolean error) {
+        launchErrorShown = false;
         statusMessage.setText(text);
         statusMessage.setTextColor(ContextCompat.getColor(this, error ? R.color.danger : R.color.text_secondary));
         android.graphics.drawable.Drawable icon = null;
@@ -817,6 +954,7 @@ public class MAct extends AppCompatActivity {
     }
 
     private void hideMessage() {
+        launchErrorShown = false;
         Ui.fade(statusMessage, false);
     }
 

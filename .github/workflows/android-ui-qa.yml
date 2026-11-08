@@ -133,7 +133,13 @@ jobs:
           shots = Path('xlox/docs/ui-redesign/after')
           need = [
               # splash (frames, reduced motion, animations on)
-              'splash', 'splash_f000', 'splash_f030', 'splash_f060', 'splash_f088', 'anim_splash_t10',
+              'splash', 'splash_f000', 'splash_f020', 'splash_f045', 'splash_f085', 'anim_splash_t10',
+              'splash_live_cold',
+              # launcher icon
+              'icon_recents', 'icon_drawer_default',
+              # launch result handling
+              'home_launch_started_return', 'home_launch_polish_throws_return',
+              'home_launch_null_running', 'home_launch_failed', 'home_typical',
               # live walkthrough
               'login', 'login_keyboard', 'login_error_empty', 'login_error_malformed', 'login_key_visible',
               'gate_check_failed_live', 'login_offline', 'login_ok_home', 'home_signout_sheet', 'signout_done',
@@ -160,7 +166,7 @@ jobs:
           seen = {}
           for n, p in files.items():
               h = hashlib.md5(p.read_bytes()).hexdigest()
-              if h in seen and not any(k in n + seen[h] for k in ('live', 'anim_')):
+              if h in seen and not any(k in n + seen[h] for k in ('live', 'anim_', 'icon_')):
                   errors.append(f'identical frames: {seen[h]} / {n}')
               seen[h] = n
           trace = Path('qa-logs/emulator-trace.txt')
@@ -174,6 +180,20 @@ jobs:
                   errors.append('app not in front: ' + line)
           if 'update gate passed' not in t:
               errors.append('the live update gate never let the user through')
+          # Launch handling: a started game never shows the launch error.
+          for case, should_fail in (('started', False), ('started_polish_throws', False),
+                                    ('null_running', False), ('null_dead', True), ('throws', True)):
+              m = re.search(r'^launch %s texts: (.*)$' % case, t, re.M)
+              if not m:
+                  errors.append(f'launch case {case} not captured')
+                  continue
+              failed = 'launch the game' in m.group(1)
+              if failed != should_fail:
+                  errors.append(f'launch case {case}: error shown = {failed}, expected {should_fail}')
+              if not should_fail and 'text="Stop"' not in m.group(1):
+                  errors.append(f'launch case {case}: game not shown as running')
+          if not re.search(r'typical phone: device card bottom \d+, launch fade top \d+: clear', t):
+              errors.append('DEVICE card is covered by the Launch bar on a 411 x 914 dp phone')
           m = re.search(r'licence card description: content-desc="([^"]*)"', t)
           if not m or not m.group(1).startswith('Licence active,'):
               errors.append('licence card is not read as one sentence: ' + (m.group(1) if m else 'missing'))

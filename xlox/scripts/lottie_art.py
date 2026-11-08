@@ -8,9 +8,9 @@ Art direction (UI brief): monochrome white strokes on black, blue #0A84FF used
 once as an accent, simple shapes, 60 fps, each file well under 60 KB. Original
 work authored in this repository; see app/src/main/assets/licenses/LOTTIE.md.
 
-Geometry of anoy_mark must match res/drawable/splash_mark.xml (the static
-system-splash icon): 288 x 288 canvas, ring radius 36, stroke 2.5, so the hand
-off from the system splash to SplashActivity is pixel-identical.
+anoy_mark is the Anoy monogram from scripts/brand_mark.py (the same artwork as
+the launcher icon). Its frame 0 equals res/drawable/splash_mark.xml (the static
+system-splash icon, 288 canvas), so the hand-off to SplashActivity is seamless.
 """
 from __future__ import annotations
 
@@ -20,6 +20,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 RAW = ROOT / "app/src/main/res/raw"
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 FPS = 60
 WHITE = [1, 1, 1, 1]
@@ -152,76 +153,75 @@ def comp(name, w, h, op, layers):
 
 
 # ---------------------------------------------------------------- anoy_mark
+EXPO_OUT = ((0.16, 1.0), (0.3, 1.0))   # confident deceleration, no overshoot
+
+
+def poly(points):
+    n = len(points)
+    return {"i": [[0, 0]] * n, "o": [[0, 0]] * n, "v": [list(map(lambda c: round(c, 2), p)) for p in points],
+            "c": True}
+
+
+def shape_static(points, name):
+    return {"ty": "sh", "d": 1, "nm": name, "ks": static(poly(points))}
+
+
+def shape_anim(name, *keys):
+    """keys: (frame, points, easing_to_next) - vertex animation of one path."""
+    out = []
+    for i, (t, pts, ease) in enumerate(keys):
+        k = {"t": t, "s": [poly(pts)]}
+        if i < len(keys) - 1:
+            (ox, oy), (ix, iy) = ease
+            k["o"] = {"x": [ox], "y": [oy]}
+            k["i"] = {"x": [ix], "y": [iy]}
+        out.append(k)
+    return {"ty": "sh", "d": 1, "nm": name, "ks": {"a": 1, "k": out}}
+
+
 def anoy_mark():
-    """1.8 s splash mark.
+    """2.0 s splash: the Anoy monogram (scripts/brand_mark.py = the app icon).
 
-    0.00-0.57 s  thin white ring draws itself over a faint track ring
-    0.40-1.00 s  one blue glint travels once around the ring
-    0.57-0.77 s  a key notch cuts in at three o'clock
-    0.90-1.23 s  ring collapses into a dot
-    1.20-1.80 s  breathing segment (dot opacity 1 -> 0.6 -> 1), looped by
-                 SplashActivity only if startup work outlasts the animation
+    f0           plain white A at 96 % = the static system-splash icon
+    f6  - f42    the blue crossbar draws left to right over the white one,
+                 through and past the right leg (the single accent); the mark
+                 settles 96 -> 100 %
+    f42 - f72    the mark lifts 36 dp to make room for the wordmark
+                 (SplashActivity fades "Anoy" / "LOADER" in from f54)
+    f84 - f120   breathing (opacity 100 -> 64 -> 100); SplashActivity loops
+                 this segment only if startup outlasts the animation
     """
+    from brand_mark import BAR, FRAME, INNER_BAR, SPLASH_START_SCALE, relative
+
     W = H = 288
-    C = (144, 144)
-    R = 36           # ring radius
-    D = R * 2
-    OP = 108         # 1.8 s
-    BREATH_IN = 72   # 1.2 s
+    OP = 120
+    frame_pts = relative(FRAME)
+    bar_pts = relative(BAR)
+    # Collapsed bar: right edge sits on the left edge (zero area).
+    bar_start = [bar_pts[0], bar_pts[0], bar_pts[3], bar_pts[3]]
+    s0 = SPLASH_START_SCALE * 100
 
-    collapse_scale = anim((54, [100, 100, 100], EASE_IN), (74, [0, 0, 100], LINEAR))
-    collapse_alpha = anim((62, 100, EASE_IN), (74, 0, LINEAR))
-
-    # Parent null-ish layer: the ring group collapses through it.
-    ring = layer(
-        3, "ring",
+    mark = layer(
+        1, "monogram",
         [
-            # White ring: draws from 3 o'clock clockwise, then opens a gap for the notch.
-            group("ring-stroke", [
-                ellipse(D),
-                stroke(WHITE, 2.5),
-                trim(
-                    s=anim((34, 0, FOSI), (46, 3, LINEAR)),
-                    e=anim((0, 0, FOSI), (34, 100, FOSI), (46, 97, LINEAR)),
-                ),
+            group("crossbar", [
+                shape_anim("bar", (6, bar_start, EXPO_OUT), (42, bar_pts, LINEAR)),
+                fill(BLUE),
             ]),
-            # Key notch: a short stroke cutting in towards the centre.
-            group("notch", [
-                line(R, 0, R - 13, 0),
-                stroke(WHITE, 2.5),
-                trim(e=anim((36, 0, FOSI), (48, 100, LINEAR))),
-            ]),
-            # Faint track ring = the static system-splash mark (splash_mark.xml).
-            group("track", [
-                ellipse(D),
-                stroke(WHITE, 2.5, static(14)),
-            ]),
+            group("frame", [shape_static(frame_pts, "A"), shape_static(relative(INNER_BAR), "inner-bar"),
+                            fill(WHITE)]),
         ],
-        OP, C, scale=collapse_scale, opacity=collapse_alpha,
+        OP, (144, 144),
+        scale=anim((0, [s0, s0, 100], EXPO_OUT), (42, [100, 100, 100], LINEAR)),
+        opacity=anim((84, 100, SINE), (102, 64, SINE), (OP, 100, LINEAR)),
     )
-
-    # Blue glint: a short arc that travels once around the ring (accent moment).
-    glint = layer(
-        2, "glint",
-        [group("glint-arc", [
-            ellipse(D),
-            stroke(BLUE, 2.5),
-            trim(s=static(0), e=static(12), o=anim((24, -40, SINE), (60, 320, LINEAR))),
-        ])],
-        OP, C,
-        scale=collapse_scale,
-        opacity=anim((24, 0, LINEAR), (30, 100, LINEAR), (52, 100, LINEAR), (60, 0, LINEAR)),
-    )
-
-    # The dot the ring collapses into; breathes during the final 0.6 s.
-    dot = layer(
-        1, "dot",
-        [group("dot", [ellipse(10), fill(WHITE)])],
-        OP, C,
-        scale=anim((62, [0, 0, 100], EASE_OUT), (76, [100, 100, 100], LINEAR)),
-        opacity=anim((BREATH_IN, 100, SINE), (90, 60, SINE), (OP, 100, LINEAR)),
-    )
-    return comp("anoy_mark", W, H, OP, [dot, glint, ring])
+    # Lift: animated layer position (centre -> 36 up).
+    mark["ks"]["p"] = {"a": 1, "k": [
+        {"t": 42, "s": [144, 144, 0], "o": {"x": [0.4], "y": [0]}, "i": {"x": [0.2], "y": [1]},
+         "to": [0, 0, 0], "ti": [0, 0, 0]},
+        {"t": 72, "s": [144, 108, 0]},
+    ]}
+    return comp("anoy_mark", W, H, OP, [mark])
 
 
 # ---------------------------------------------------------------- anoy_sync
@@ -292,7 +292,7 @@ def preview() -> None:
 
     out = Path("/tmp/lottie-preview")
     out.mkdir(exist_ok=True)
-    frames = {"anoy_mark": [0, 12, 24, 34, 42, 48, 60, 66, 72, 90, 107],
+    frames = {"anoy_mark": [0, 6, 12, 18, 24, 42, 54, 72, 102, 119],
               "anoy_sync": [0, 18, 36, 54],
               "anoy_success": [0, 8, 16, 22, 28, 34, 41]}
     for name, fs in frames.items():

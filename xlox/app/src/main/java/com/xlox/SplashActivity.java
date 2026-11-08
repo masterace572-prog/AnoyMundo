@@ -23,22 +23,24 @@ import com.airbnb.lottie.RenderMode;
 import com.xlox.ui.Ui;
 
 /**
- * Launcher entry. The system splash (core-splashscreen) shows a black window
- * with a faint ring - frame 0 of res/raw/anoy_mark.json - so the hand-off to
- * this activity is invisible. The mark then draws its ring, cuts a key notch,
- * collapses into a dot and the wordmark fades up (~1.8 s), then sign in.
+ * Launcher entry. The system splash (core-splashscreen) shows the Anoy
+ * monogram on black - frame 0 of res/raw/anoy_mark.json, a plain white A - so
+ * the hand-off to this activity is invisible. The blue crossbar then draws
+ * through the A and past its right leg, the mark lifts and the wordmark fades
+ * in under it (~1.9 s), then sign in / the update check. The monogram is the
+ * same artwork as the launcher icon (scripts/brand_mark.py).
  */
 public class SplashActivity extends AppCompatActivity {
 
-    /** Hand off at 1.6 s of the 1.8 s mark, plus a 200 ms hold. */
-    private static final float HANDOFF_PROGRESS = 96f / 108f;
+    /** Hand off at 1.7 s of the 2.0 s mark, plus a 200 ms hold (~1.9 s). */
+    private static final float HANDOFF_PROGRESS = 102f / 120f;
     private static final long HOLD_MS = 200L;
-    /** Wordmark fades up as the dot settles (frame 66 = 1.1 s). */
-    private static final long WORDMARK_DELAY_MS = 1100L;
-    private static final float WORDMARK_PROGRESS = 66f / 108f;
-    /** Final 0.6 s breathing segment, looped only if the hand-off is late. */
-    private static final int BREATH_START = 72;
-    private static final int BREATH_END = 108;
+    /** Wordmark fades in while the mark lifts (frame 54 = 0.9 s). */
+    private static final long WORDMARK_DELAY_MS = 900L;
+    private static final float WORDMARK_PROGRESS = 54f / 120f;
+    /** Final 0.6 s breathing segment (opacity only), looped only if the hand-off is late. */
+    private static final int BREATH_START = 84;
+    private static final int BREATH_END = 120;
     private static final long REDUCED_MOTION_MS = 700L;
 
     /** Debug builds only: hold the splash (used by the screenshot QA). */
@@ -130,7 +132,7 @@ public class SplashActivity extends AppCompatActivity {
             version.animate().alpha(1f).setStartDelay(260).setDuration(Ui.SLOW).setInterpolator(Ui.ENTER).start();
         });
         // Safety net in case the frame callback never runs.
-        if (!hold) handler.postDelayed(next, 1800L + HOLD_MS + 2500L);
+        if (!hold) handler.postDelayed(next, 2000L + HOLD_MS + 2500L);
     }
 
     /** Loads the mark synchronously so frame 0 is on screen in the very first frame. */
