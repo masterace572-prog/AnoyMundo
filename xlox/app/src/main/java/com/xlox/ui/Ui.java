@@ -330,7 +330,8 @@ public final class Ui {
         if (content == null) return;
         Snackbar bar = Snackbar.make(content, message, duration);
         View anchor = content.findViewWithTag(SNACKBAR_ANCHOR);
-        if (anchor != null && anchor.isShown()) bar.setAnchorView(anchor);
+        // Visibility, not isShown(): the view may not be attached yet (onCreate).
+        if (anchor != null && anchor.getVisibility() == View.VISIBLE) bar.setAnchorView(anchor);
         bar.show();
     }
 
