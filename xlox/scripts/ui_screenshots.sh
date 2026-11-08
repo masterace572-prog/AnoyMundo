@@ -164,7 +164,7 @@ grant
 
 # ---------------------------------------------------------------- 1. splash
 # Still frames of the 1.8 s mark (qa_frame freezes the Lottie progress).
-for f in 0.00 0.15 0.30 0.42 0.60 0.72 1.00; do
+for f in 0.00 0.15 0.30 0.42 0.60 0.72 0.88; do
     stop_app
     adb shell am start -W -n $PKG/.SplashActivity --ef qa_frame "$f" >> "$LOG" 2>&1 || fatal "cannot start SplashActivity"
     sleep 1.2
@@ -179,7 +179,7 @@ shot splash
 # ------------------------------------------- 2. cold start + live update gate
 stop_app
 adb shell am start -n $PKG/.SplashActivity >> "$LOG" 2>&1 || fatal "cannot start SplashActivity"
-sleep 0.3
+sleep 0.8
 shot splash_live_cold
 if wait_for_id gateAction 40; then
     shot live_gate_required

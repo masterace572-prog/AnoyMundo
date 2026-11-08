@@ -133,7 +133,7 @@ jobs:
           shots = Path('xlox/docs/ui-redesign/after')
           need = [
               # splash (frames, reduced motion, animations on)
-              'splash', 'splash_f000', 'splash_f030', 'splash_f060', 'splash_f100', 'anim_splash_t10',
+              'splash', 'splash_f000', 'splash_f030', 'splash_f060', 'splash_f088', 'anim_splash_t10',
               # live walkthrough
               'login', 'login_keyboard', 'login_error_empty', 'login_error_malformed', 'login_key_visible',
               'gate_check_failed_live', 'login_offline', 'login_ok_home', 'home_signout_sheet', 'signout_done',

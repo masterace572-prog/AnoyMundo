@@ -22,6 +22,7 @@ import androidx.core.widget.TextViewCompat;
 import com.google.android.material.bottomsheet.BottomSheetDialog;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.progressindicator.LinearProgressIndicator;
+import com.google.android.material.snackbar.Snackbar;
 
 import com.xlox.ui.Ui;
 import com.xlox.ui.UpdateGate;
@@ -540,13 +541,13 @@ public class MAct extends AppCompatActivity {
                 break;
             case "launching":
                 setBusy(true, getString(R.string.launching));
-                showMessage(getString(R.string.launching), false);
                 break;
             case "error":
                 showMessage(getString(R.string.error_obb_missing), true);
                 break;
             case "snackbar":
-                Ui.snackbar(this, getString(R.string.error_link));
+                // Held on screen so the capture can't miss it.
+                Ui.snackbar(this, getString(R.string.error_link), Snackbar.LENGTH_INDEFINITE);
                 break;
             case "signout":
                 confirmSignOut();
@@ -703,7 +704,7 @@ public class MAct extends AppCompatActivity {
                             : getString(R.string.error_obb_copy, reason), true);
                     return;
                 }
-                showMessage(getString(R.string.launching), false);
+                hideMessage(); // The pill itself reads "Launching…".
                 primaryAction.setText(R.string.launching);
                 main.postDelayed(MAct.this::launchGame, LAUNCH_DELAY_MS);
             }

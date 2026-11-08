@@ -107,6 +107,8 @@ public class LogAct extends AppCompatActivity {
         prefs = new Prefs(this);
 
         keyInput = findViewById(R.id.userkey);
+        // A single-line key can't wrap: cap its scale so ANOY-7D-XXXXX fits at 2.0.
+        Ui.capFontScale(keyInput, 1.5f);
         keyField = findViewById(R.id.keyField);
         keyIcon = findViewById(R.id.keyIcon);
         toggleKey = findViewById(R.id.toggleKey);
@@ -339,6 +341,15 @@ public class LogAct extends AppCompatActivity {
                     message.equals(getString(R.string.net_offline)) ? R.drawable.ic_wifi_off : R.drawable.ic_triangle_alert);
             Ui.fade(notice, true);
             Ui.rejectHaptic(notice);
+            // Connection problems aren't fixed by typing: drop the keyboard and
+            // bring the whole card (and its Try again) into view once resized.
+            hideKeyboard();
+            notice.postDelayed(() -> {
+                if (notice.getVisibility() == View.VISIBLE) {
+                    notice.requestRectangleOnScreen(
+                            new android.graphics.Rect(0, 0, notice.getWidth(), notice.getHeight()), false);
+                }
+            }, Ui.MEDIUM + 80L);
         }
     }
 

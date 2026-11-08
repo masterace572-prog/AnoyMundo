@@ -12,6 +12,7 @@ import android.os.Build;
 import android.provider.Settings;
 import android.util.Log;
 import android.util.TypedValue;
+import android.widget.TextView;
 import android.view.HapticFeedbackConstants;
 import android.view.View;
 import android.view.ViewGroup;
@@ -320,13 +321,25 @@ public final class Ui {
 
     /** Raised Snackbar (14 dp radius, blue action) anchored above the action bar. */
     public static void snackbar(Activity activity, CharSequence message) {
+        snackbar(activity, message, Snackbar.LENGTH_LONG);
+    }
+
+    public static void snackbar(Activity activity, CharSequence message, int duration) {
         if (!alive(activity) || message == null) return;
         View content = activity.findViewById(android.R.id.content);
         if (content == null) return;
-        Snackbar bar = Snackbar.make(content, message, Snackbar.LENGTH_LONG);
+        Snackbar bar = Snackbar.make(content, message, duration);
         View anchor = content.findViewWithTag(SNACKBAR_ANCHOR);
         if (anchor != null && anchor.isShown()) bar.setAnchorView(anchor);
         bar.show();
+    }
+
+    /** Caps the user's font scale for one view (single-line fields that can't wrap). */
+    public static void capFontScale(TextView view, float max) {
+        float scale = view.getResources().getConfiguration().fontScale;
+        if (scale > max) {
+            view.setTextSize(TypedValue.COMPLEX_UNIT_PX, view.getTextSize() * max / scale);
+        }
     }
 
     public static void openUrl(Activity activity, String url) {

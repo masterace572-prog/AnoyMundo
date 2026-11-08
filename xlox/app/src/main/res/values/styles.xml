@@ -233,7 +233,8 @@
     <style name="Text.Chip">
         <item name="android:textSize">@dimen/text_caption</item>
         <item name="android:lineSpacingExtra">0sp</item>
-        <item name="android:maxLines">1</item>
+        <!-- Two lines so large text wraps instead of truncating. -->
+        <item name="android:maxLines">2</item>
     </style>
 
     <style name="Text.Splash">
