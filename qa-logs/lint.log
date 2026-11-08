@@ -1,5 +1,9 @@
 To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/8.5/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
 Daemon will be stopped at the end of the build 
+
+> Configure project :app
+Release signing is not configured (XLOX_STORE_PASSWORD / xlox.storePassword): the release APK will be unsigned.
+
 > Task :app:preBuild UP-TO-DATE
 > Task :app:preDebugBuild UP-TO-DATE
 > Task :app:generateDebugBuildConfig UP-TO-DATE
@@ -30,5 +34,5 @@ Wrote HTML report to file:///home/runner/work/AnoyMundo/AnoyMundo/xlox/app/build
 
 > Task :app:lintDebug
 
-BUILD SUCCESSFUL in 23s
+BUILD SUCCESSFUL in 24s
 22 actionable tasks: 6 executed, 16 up-to-date
