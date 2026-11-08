@@ -165,8 +165,9 @@ grant
 # ---------------------------------------------------------------- 1. splash
 # Still frames of the ~3 s film (qa_frame = film time in seconds):
 #   0.00 hand-off frame (= system splash wordmark)   0.25 arriving
-#   0.80 welcome lockup   1.30 mid-cut   1.42 cut + move + Loader collapsing
-#   1.55 Hax opening, re-centring   2.20 final "Anoy Hax"
+#   0.80 welcome lockup   1.30 greeting dissolving upward
+#   1.42 Loader / Hax mid cross-dissolve   1.55 dissolve nearly done, re-centring
+#   2.20 final "Anoy Hax"
 for f in 0.00 0.25 0.80 1.30 1.42 1.55 2.20; do
     stop_app
     adb shell am start -W -n $PKG/.SplashActivity --ef qa_frame "$f" >> "$LOG" 2>&1 || fatal "cannot start SplashActivity"

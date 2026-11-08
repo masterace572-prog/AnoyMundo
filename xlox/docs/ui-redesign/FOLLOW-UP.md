@@ -36,12 +36,15 @@ Made by `scripts/brand_wordmark.py` from Inter 4.001, the version the app ships:
 
 ## 2. Splash: "Welcome To Anoy Loader" → "Anoy Hax"
 
-| System splash | Welcome | Mid-cut | Loader → Hax | Final |
+| System splash | Welcome | Greeting dissolving | Loader → Hax mid-dissolve | Final |
 |---|---|---|---|---|
-| ![](after/splash_live_cold.png) | ![](after/splash_t080.png) | ![](after/splash_t130.png) | ![](after/splash_t155.png) | ![](after/splash_t220.png) |
+| ![](after/splash_live_cold.png) | ![](after/splash_t080.png) | ![](after/splash_t130.png) | ![](after/splash_t142.png) | ![](after/splash_t220.png) |
 
 The splash is now real TextViews on true black, driven by one animator, so the
-three cut moves share one clock. Timings, all named constants in
+three cut moves share one clock. Text changes use the Material 3 emphasized
+ease `(0.2, 0, 0, 1)` (gentle start, long settle), and the moving text is
+drawn from hardware layers during the film so glyphs are not re-rasterised
+every frame. Timings, all named constants in
 `SplashActivity`:
 
 | Time | Beat | What moves |
@@ -49,9 +52,9 @@ three cut moves share one clock. Timings, all named constants in
 | 0.00 s | hand-off | first frame = the system splash wordmark, same place and size (`splash_t000` is identical to `splash_live_cold`) |
 | 0.00–0.50 s | arrive | "Welcome To / Anoy Loader" fades in (400 ms) and rises 12 dp (500 ms, emphasized decelerate); the system wordmark cross-fades out in 220 ms |
 | 0.50–1.20 s | read | hold |
-| 1.20 s | cut | "Welcome To" is clipped away from its bottom edge upwards, drifting up 6 dp (320 ms, fast-out-slow-in), in the same direction the name moves |
+| 1.20 s | leave | "Welcome To" dissolves: fades out while drifting up 10 dp and easing to 98 % (420 ms, smooth ease). No clipping; it only turns invisible once fully transparent |
 | 1.28 s | move | "Anoy Loader" eases up so its cap band sits on the true screen centre (460 ms, emphasized decelerate) |
-| 1.36 s | swap | "Loader" collapses (scale Y + fade, 170 ms); "Hax" opens in the same slot from 1.49 s (170 ms); the pair re-centres as "Anoy Hax" (440 ms) |
+| 1.36 s | swap | "Loader" cross-dissolves into "Hax" in the same slot (start edges aligned, overlapping fades that never dim the slot, a 1.0 ↔ 0.98 breath) while the pair slides to centre. Fade and slide share one 400 ms progress and one smooth ease, so "Anoy" glides sideways once |
 | ~1.80–2.85 s | settle | hold "Anoy Hax"; the version stays at the bottom |
 | 2.85 s | hand-off | the existing 320 ms cross-fade into sign-in / the update check (done ~3.17 s) |
 

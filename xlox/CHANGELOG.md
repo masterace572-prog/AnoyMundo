@@ -1,5 +1,11 @@
 # Anoy Loader — changelog
 
+## 2.1.0 follow-up — smoother splash text
+
+- "Welcome To" now dissolves upward (fade + 10 dp drift) instead of being
+  sliced; "Loader" cross-dissolves into "Hax" instead of squashing, and the
+  re-centre rides the same 400 ms motion. Same words, order and length.
+
 ## 2.1.0 follow-up — Anoy wordmark and splash film
 
 - **App icon**: just the word "Anoy", white on black, drawn as Inter outlines

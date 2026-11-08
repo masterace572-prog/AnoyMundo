@@ -4,7 +4,6 @@ import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
 import android.animation.ValueAnimator;
 import android.content.Intent;
-import android.graphics.Rect;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -32,10 +31,12 @@ import com.xlox.ui.Ui;
  *   0.00-0.50 s  arrive   "Welcome To / Anoy Loader" fades in and rises 12 dp
  *                         while the system wordmark cross-fades out
  *   0.50-1.20 s  read     hold
- *   1.20 s       cut      "Welcome To" is clipped away from its bottom edge up
+ *   1.20 s       leave    "Welcome To" dissolves: fades out while drifting up
+ *                         10 dp (420 ms, no clipping, no squash)
  *   1.28 s       move     "Anoy Loader" eases up onto the true screen centre
- *   1.36 s       swap     "Loader" collapses, "Hax" opens in the same slot and
- *                         the pair re-centres as "Anoy Hax"
+ *   1.36 s       swap     "Loader" cross-dissolves into "Hax" in the same slot
+ *                         while the pair slides to centre - one 400 ms motion,
+ *                         one easing, so "Anoy" glides sideways exactly once
  *   ~1.80 s      settle   hold "Anoy Hax"
  *   2.85 s       handoff  existing 320 ms cross-fade into LogAct (~3.17 s)
  * </pre>
@@ -53,20 +54,28 @@ public class SplashActivity extends AppCompatActivity {
     private static final long ARRIVE_MS = 500L;
     private static final long ARRIVE_FADE_MS = 400L;
     private static final float ARRIVE_RISE_DP = 12f;
-    /** Cut: the greeting is clipped off, drifting up a little as it goes. */
+    /** Leave: the greeting fades out, drifts up and eases to 98 %. Never clipped. */
     private static final long CUT_AT_MS = 1200L;
-    private static final long CUT_MS = 320L;
-    private static final float CUT_DRIFT_DP = 6f;
+    private static final long CUT_MS = 420L;
+    private static final float CUT_DRIFT_DP = 10f;
+    private static final float CUT_END_SCALE = 0.98f;
     /** Move: "Anoy Loader" eases into the space the greeting left. */
     private static final long MOVE_AT_MS = CUT_AT_MS + 80L;
     private static final long MOVE_MS = 460L;
-    /** Swap: "Loader" collapses (scale Y + alpha), "Hax" opens in the same slot. */
+    /**
+     * Swap: "Loader" and "Hax" cross-dissolve in the same slot (start edges
+     * aligned) and the pair re-centres - one progress value, one easing, so the
+     * fade and the slide are a single motion. Both words stay at full size apart
+     * from a 1.0 <-> 0.98 breath.
+     */
     private static final long SWAP_AT_MS = MOVE_AT_MS + 80L;
-    private static final long SWAP_OUT_MS = 170L;
-    private static final long SWAP_IN_AT_MS = SWAP_AT_MS + 130L;
-    private static final long SWAP_IN_MS = 170L;
-    /** Re-centre the shorter "Anoy Hax" line while the swap happens. */
-    private static final long RECENTRE_MS = 440L;
+    private static final long SWAP_MS = 400L;
+    private static final float SWAP_SCALE = 0.98f;
+    /**
+     * Below 1 so the two fades sum to more than 100 % mid-way (0.57 + 0.57 at
+     * the midpoint): the slot never dims or looks empty.
+     */
+    private static final float SWAP_ALPHA_POWER = 0.8f;
     /** Version footer fades in early, as before. */
     private static final long VERSION_AT_MS = 260L;
     private static final long VERSION_MS = 320L;
@@ -85,8 +94,13 @@ public class SplashActivity extends AppCompatActivity {
     private static final float CAP_HEIGHT_EM = 1490f / 2048f;
 
     private static final Interpolator EMPHASIZED_DECELERATE = new PathInterpolator(0.05f, 0.7f, 0.1f, 1f);
-    private static final Interpolator EMPHASIZED_ACCELERATE = new PathInterpolator(0.3f, 0f, 0.8f, 0.15f);
     private static final Interpolator FAST_OUT_SLOW_IN = new PathInterpolator(0.4f, 0f, 0.2f, 1f);
+    /**
+     * Material 3 "emphasized" ease (single-curve form): starts gently - 16 % at a
+     * tenth of the time, half-way at a fifth - then a long soft settle. Used for
+     * every text change so nothing snaps.
+     */
+    private static final Interpolator SMOOTH = new PathInterpolator(0.2f, 0f, 0f, 1f);
 
     /** Debug builds only: hold the splash (used by the screenshot QA). */
     public static final String EXTRA_HOLD = "qa_hold";
@@ -95,7 +109,6 @@ public class SplashActivity extends AppCompatActivity {
 
     private final Handler handler = new Handler(Looper.getMainLooper());
     private final Runnable next = this::openLogin;
-    private final Rect clip = new Rect();
     private View root;
     private View mark;
     private View lockup;
@@ -150,9 +163,13 @@ public class SplashActivity extends AppCompatActivity {
             slotView.setLayoutParams(slot);
             final int footerMargin = getResources().getDimensionPixelSize(R.dimen.space_24);
             Ui.onInsets(root, (bars, bottom, ime) -> {
+                // Only re-lays out when the inset really changes - never per frame.
                 ViewGroup.MarginLayoutParams lp = (ViewGroup.MarginLayoutParams) version.getLayoutParams();
-                lp.bottomMargin = footerMargin + bars.bottom;
-                version.setLayoutParams(lp);
+                int margin = footerMargin + bars.bottom;
+                if (lp.bottomMargin != margin) {
+                    lp.bottomMargin = margin;
+                    version.setLayoutParams(lp);
+                }
             });
         } catch (RuntimeException e) {
             // Never let a cosmetic screen block the app.
@@ -193,10 +210,15 @@ public class SplashActivity extends AppCompatActivity {
                     if (done) return;
                     done = true;
                     applyTime(FILM_MS);
-                    if (hold) breathe();
-                    else openLogin();
+                    if (hold) {
+                        breathe();
+                    } else {
+                        setTextLayers(false);
+                        openLogin();
+                    }
                 }
             });
+            setTextLayers(true);
             film.start();
         });
         if (!hold) handler.postDelayed(next, SAFETY_MS);
@@ -213,9 +235,15 @@ public class SplashActivity extends AppCompatActivity {
         moveDy = root.getHeight() / 2f - capCentre;
         // "Hax" sits where "Loader" starts; shift the pair so "Anoy Hax" is centred.
         recentreDx = (loader.getWidth() - hax.getWidth()) / 2f;
+        // The 0.98 breath scales about the shared start edge and cap centre, so
+        // "Hax" grows out of exactly where "Loader" began.
         float pivot = loader.getBaseline() - CAP_HEIGHT_EM * loader.getTextSize() / 2f;
+        loader.setPivotX(0f);
         loader.setPivotY(pivot);
+        hax.setPivotX(0f);
         hax.setPivotY(pivot);
+        greeting.setPivotX(greeting.getWidth() / 2f);
+        greeting.setPivotY(greeting.getHeight());
         measured = true;
         return true;
     }
@@ -227,32 +255,44 @@ public class SplashActivity extends AppCompatActivity {
         lockup.setAlpha(progress(t, 0, ARRIVE_FADE_MS, FAST_OUT_SLOW_IN));
         lockup.setTranslationY((1f - progress(t, 0, ARRIVE_MS, EMPHASIZED_DECELERATE)) * risePx);
 
-        float cut = progress(t, CUT_AT_MS, CUT_MS, FAST_OUT_SLOW_IN);
-        if (cut <= 0f) {
-            greeting.setVisibility(View.VISIBLE);
-            greeting.setClipBounds(null);
-        } else if (cut >= 1f) {
-            greeting.setVisibility(View.INVISIBLE);
-        } else {
-            greeting.setVisibility(View.VISIBLE);
-            clip.set(0, 0, greeting.getWidth(), Math.round(greeting.getHeight() * (1f - cut)));
-            greeting.setClipBounds(clip);
-        }
-        greeting.setTranslationY(-cut * driftPx);
+        // Greeting leaves: fade + drift + slight scale, all sub-pixel. It stays
+        // VISIBLE until its alpha is exactly 0.
+        float leave = progress(t, CUT_AT_MS, CUT_MS, SMOOTH);
+        greeting.setAlpha(1f - leave);
+        greeting.setTranslationY(-leave * driftPx);
+        float greetScale = 1f - leave * (1f - CUT_END_SCALE);
+        greeting.setScaleX(greetScale);
+        greeting.setScaleY(greetScale);
+        greeting.setVisibility(leave >= 1f ? View.INVISIBLE : View.VISIBLE);
 
+        // The name rises into the space the greeting left (unchanged ease).
         name.setTranslationY(progress(t, MOVE_AT_MS, MOVE_MS, EMPHASIZED_DECELERATE) * moveDy);
-        // Fast-out-slow-in, not emphasized: the shift should happen while "Hax"
-        // opens, not while the full-width "Loader" is still on screen.
-        name.setTranslationX(progress(t, SWAP_AT_MS, RECENTRE_MS, FAST_OUT_SLOW_IN) * recentreDx);
 
-        float out = progress(t, SWAP_AT_MS, SWAP_OUT_MS, EMPHASIZED_ACCELERATE);
-        loader.setScaleY(1f - out);
-        loader.setAlpha(1f - out);
-        float in = progress(t, SWAP_IN_AT_MS, SWAP_IN_MS, EMPHASIZED_DECELERATE);
-        hax.setScaleY(in);
-        hax.setAlpha(in);
+        // Loader -> Hax: one progress drives the cross-dissolve and the slide.
+        float swap = progress(t, SWAP_AT_MS, SWAP_MS, SMOOTH);
+        name.setTranslationX(swap * recentreDx);
+        loader.setAlpha((float) Math.pow(1f - swap, SWAP_ALPHA_POWER));
+        hax.setAlpha((float) Math.pow(swap, SWAP_ALPHA_POWER));
+        float loaderScale = 1f - swap * (1f - SWAP_SCALE);
+        float haxScale = SWAP_SCALE + swap * (1f - SWAP_SCALE);
+        loader.setScaleX(loaderScale);
+        loader.setScaleY(loaderScale);
+        hax.setScaleX(haxScale);
+        hax.setScaleY(haxScale);
 
         version.setAlpha(progress(t, VERSION_AT_MS, VERSION_MS, FAST_OUT_SLOW_IN));
+    }
+
+    /**
+     * Hardware layers for the moving text while the film runs, so alpha,
+     * translation and scale are composited instead of re-rasterising the glyphs
+     * every frame. Off again at the hand-off.
+     */
+    private void setTextLayers(boolean on) {
+        int type = on ? View.LAYER_TYPE_HARDWARE : View.LAYER_TYPE_NONE;
+        for (View v : new View[] {greeting, name, loader, hax}) {
+            if (v != null && v.getLayerType() != type) v.setLayerType(type, null);
+        }
     }
 
     private static float progress(long t, long start, long duration, Interpolator easing) {
@@ -305,6 +345,7 @@ public class SplashActivity extends AppCompatActivity {
         handler.removeCallbacksAndMessages(null);
         if (film != null) film.cancel();
         if (breath != null) breath.cancel();
+        setTextLayers(false);
         super.onDestroy();
     }
 }
