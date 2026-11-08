@@ -1,10 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Legacy (API 21-25) launcher icon: the Anoy monogram on a near-black rounded
-     square - the same artwork and proportions as the adaptive icon. -->
+<!-- Legacy (API 21-25) launcher icon: the white Anoy wordmark on a black rounded
+     square - the same outlines and proportions as the adaptive icon
+     (xlox/scripts/brand_wordmark.py). -->
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
     <item>
         <shape android:shape="rectangle">
-            <solid android:color="@color/launcher_background" />
+            <solid android:color="@color/black" />
             <corners android:radius="11dp" />
             <size android:width="48dp" android:height="48dp" />
         </shape>

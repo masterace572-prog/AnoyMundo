@@ -163,17 +163,23 @@ install_apk "$APK"
 grant
 
 # ---------------------------------------------------------------- 1. splash
-# Still frames of the 1.8 s mark (qa_frame freezes the Lottie progress).
-for f in 0.00 0.10 0.20 0.35 0.45 0.60 0.85; do
+# Still frames of the ~3 s film (qa_frame = film time in seconds):
+#   0.00 hand-off frame (= system splash wordmark)   0.25 arriving
+#   0.80 welcome lockup   1.30 mid-cut   1.42 cut + move + Loader collapsing
+#   1.55 Hax opening, re-centring   2.20 final "Anoy Hax"
+for f in 0.00 0.25 0.80 1.30 1.42 1.55 2.20; do
     stop_app
     adb shell am start -W -n $PKG/.SplashActivity --ef qa_frame "$f" >> "$LOG" 2>&1 || fatal "cannot start SplashActivity"
     sleep 1.2
-    shot "splash_f$(echo "$f" | tr -d '.')"
+    shot "splash_t$(echo "$f" | tr -d '.')"
 done
-# Reduced motion (animations off): final frame + wordmark, held.
+# Reduced motion (animations are off on the QA emulator): the welcome lockup
+# holds for 1 s, then cuts straight to "Anoy Hax" (held, no hand-off).
 stop_app
 adb shell am start -W -n $PKG/.SplashActivity --ez qa_hold true >> "$LOG" 2>&1 || fatal "cannot start SplashActivity"
-sleep 1.2
+sleep 0.3
+shot splash_reduced_welcome
+sleep 1.7
 shot splash
 
 # ------------------------------------------- 2. cold start + live update gate
@@ -351,6 +357,8 @@ sleep 0.5
 shot anim_splash_t10
 sleep 0.5
 shot anim_splash_t15
+sleep 0.5
+shot anim_splash_t20
 wait $REC 2>/dev/null || true
 adb pull /sdcard/splash.mp4 "$OUT/anim_splash.mp4" >/dev/null 2>&1 && log "screenrecord ok" || log "WARN: screenrecord unavailable"
 wait_gone gateTitle 45 || true

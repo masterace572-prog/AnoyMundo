@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Authors the three in-app Lottie animations as plain JSON (no AE needed).
+"""Authors the two in-app Lottie animations as plain JSON (no AE needed).
 
     python3 xlox/scripts/lottie_art.py            # writes app/src/main/res/raw/*.json
     python3 xlox/scripts/lottie_art.py --preview  # also renders PNG frames to /tmp/lottie-preview
@@ -8,9 +8,9 @@ Art direction (UI brief): monochrome white strokes on black, blue #0A84FF used
 once as an accent, simple shapes, 60 fps, each file well under 60 KB. Original
 work authored in this repository; see app/src/main/assets/licenses/LOTTIE.md.
 
-anoy_mark is the Anoy monogram from scripts/brand_mark.py (the same artwork as
-the launcher icon). Its frame 0 equals res/drawable/splash_mark.xml (the static
-system-splash icon, 288 canvas), so the hand-off to SplashActivity is seamless.
+Both belong to the update-check sheet. The splash is no longer a Lottie: it is
+a typography film of real TextViews (SplashActivity), and the static wordmark
+for the icon and the system splash comes from scripts/brand_wordmark.py.
 """
 from __future__ import annotations
 
@@ -20,7 +20,6 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 RAW = ROOT / "app/src/main/res/raw"
-sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 FPS = 60
 WHITE = [1, 1, 1, 1]
@@ -152,78 +151,6 @@ def comp(name, w, h, op, layers):
             "ddd": 0, "assets": [], "layers": layers, "markers": []}
 
 
-# ---------------------------------------------------------------- anoy_mark
-EXPO_OUT = ((0.16, 1.0), (0.3, 1.0))   # confident deceleration, no overshoot
-
-
-def poly(points):
-    n = len(points)
-    return {"i": [[0, 0]] * n, "o": [[0, 0]] * n, "v": [list(map(lambda c: round(c, 2), p)) for p in points],
-            "c": True}
-
-
-def shape_static(points, name):
-    return {"ty": "sh", "d": 1, "nm": name, "ks": static(poly(points))}
-
-
-def shape_anim(name, *keys):
-    """keys: (frame, points, easing_to_next) - vertex animation of one path."""
-    out = []
-    for i, (t, pts, ease) in enumerate(keys):
-        k = {"t": t, "s": [poly(pts)]}
-        if i < len(keys) - 1:
-            (ox, oy), (ix, iy) = ease
-            k["o"] = {"x": [ox], "y": [oy]}
-            k["i"] = {"x": [ix], "y": [iy]}
-        out.append(k)
-    return {"ty": "sh", "d": 1, "nm": name, "ks": {"a": 1, "k": out}}
-
-
-def anoy_mark():
-    """2.0 s splash: the Anoy monogram (scripts/brand_mark.py = the app icon).
-
-    f0           plain white A at 96 % = the static system-splash icon
-    f6  - f42    the blue crossbar draws left to right over the white one,
-                 through and past the right leg (the single accent); the mark
-                 settles 96 -> 100 %
-    f42 - f72    the mark lifts 36 dp to make room for the wordmark
-                 (SplashActivity fades "Anoy" / "LOADER" in from f54)
-    f84 - f120   breathing (opacity 100 -> 64 -> 100); SplashActivity loops
-                 this segment only if startup outlasts the animation
-    """
-    from brand_mark import BAR, FRAME, INNER_BAR, SPLASH_START_SCALE, relative
-
-    W = H = 288
-    OP = 120
-    frame_pts = relative(FRAME)
-    bar_pts = relative(BAR)
-    # Collapsed bar: right edge sits on the left edge (zero area).
-    bar_start = [bar_pts[0], bar_pts[0], bar_pts[3], bar_pts[3]]
-    s0 = SPLASH_START_SCALE * 100
-
-    mark = layer(
-        1, "monogram",
-        [
-            group("crossbar", [
-                shape_anim("bar", (6, bar_start, EXPO_OUT), (42, bar_pts, LINEAR)),
-                fill(BLUE),
-            ]),
-            group("frame", [shape_static(frame_pts, "A"), shape_static(relative(INNER_BAR), "inner-bar"),
-                            fill(WHITE)]),
-        ],
-        OP, (144, 144),
-        scale=anim((0, [s0, s0, 100], EXPO_OUT), (42, [100, 100, 100], LINEAR)),
-        opacity=anim((84, 100, SINE), (102, 64, SINE), (OP, 100, LINEAR)),
-    )
-    # Lift: animated layer position (centre -> 36 up).
-    mark["ks"]["p"] = {"a": 1, "k": [
-        {"t": 42, "s": [144, 144, 0], "o": {"x": [0.4], "y": [0]}, "i": {"x": [0.2], "y": [1]},
-         "to": [0, 0, 0], "ti": [0, 0, 0]},
-        {"t": 72, "s": [144, 108, 0]},
-    ]}
-    return comp("anoy_mark", W, H, OP, [mark])
-
-
 # ---------------------------------------------------------------- anoy_sync
 def anoy_sync():
     """1.2 s seamless loop for 'Checking for updates': one white arc orbits a
@@ -270,7 +197,7 @@ def anoy_success():
     ])
 
 
-ART = {"anoy_mark": anoy_mark, "anoy_sync": anoy_sync, "anoy_success": anoy_success}
+ART = {"anoy_sync": anoy_sync, "anoy_success": anoy_success}
 
 
 def main() -> int:
@@ -292,8 +219,7 @@ def preview() -> None:
 
     out = Path("/tmp/lottie-preview")
     out.mkdir(exist_ok=True)
-    frames = {"anoy_mark": [0, 6, 12, 18, 24, 42, 54, 72, 102, 119],
-              "anoy_sync": [0, 18, 36, 54],
+    frames = {"anoy_sync": [0, 18, 36, 54],
               "anoy_success": [0, 8, 16, 22, 28, 34, 41]}
     for name, fs in frames.items():
         anim_obj = parse_tgs(str(RAW / f"{name}.json"))

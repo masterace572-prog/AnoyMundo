@@ -1,26 +1,29 @@
 # Lottie animations — provenance
 
-The app ships three Lottie animations in `res/raw/`:
+The app ships two Lottie animations in `res/raw/`, both in the update-check
+sheet:
 
 | File | Use | Length | Size |
 |---|---|---|---|
-| `anoy_mark.json` | Splash: the Anoy monogram. A plain white A; the blue crossbar draws through it and past the right leg, the mark settles and lifts; opacity-only breathing loop | 2.0 s (120 frames) | ~2 KB |
 | `anoy_sync.json` | Update gate "Checking for updates" loop | 1.2 s (72 frames) | ~2 KB |
 | `anoy_success.json` | Update gate "You're up to date" one-shot | 0.7 s (42 frames) | ~3 KB |
 
-All three are **original work authored in this repository** for Anoy Loader.
-They are not derived from LottieFiles or any third-party animation. They are
+Both are **original work authored in this repository** for Anoy Loader. They
+are not derived from LottieFiles or any third-party animation. They are
 generated as plain JSON by `xlox/scripts/lottie_art.py` (Python, no After
 Effects), which is the source of truth: edit the script and re-run it rather
-than editing the JSON by hand. The monogram's geometry lives in
-`xlox/scripts/brand_mark.py`, which also writes the launcher icon and the
-system-splash icon, so the splash and the app icon are the same artwork.
+than editing the JSON by hand.
 
-Art direction: monochrome white on black, blue `#0A84FF` used once per
-animation as an accent (the crossbar in `anoy_mark`, the outward pulse in
-`anoy_success`), 60 fps, simple shapes, trim paths and path keyframes only. No images, no
-masks, no expressions, so they render identically in hardware mode on
-API 21–37.
+The splash no longer uses Lottie. It is a typography film of real TextViews
+(`SplashActivity`), and the static Anoy wordmark used by the launcher icon and
+the system splash is drawn from Inter outlines by
+`xlox/scripts/brand_wordmark.py` (Inter is SIL OFL 1.1, see `OFL-Inter.txt`;
+the 5 KB A/n/o/y subset it reads is `xlox/scripts/fonts/InterVariable-Anoy.ttf`).
+
+Art direction: monochrome white on black, blue `#0A84FF` used once as an
+accent (the outward pulse in `anoy_success`), 60 fps, simple shapes and trim
+paths only. No images, no masks, no expressions, so they render identically in
+hardware mode on API 21–37.
 
 Licence: same terms as the rest of this repository.
 

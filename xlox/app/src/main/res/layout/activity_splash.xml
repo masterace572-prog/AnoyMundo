@@ -1,49 +1,81 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Splash: the Lottie monogram sits exactly where the system splash icon sits
-  (centred in the full window, 288 dp canvas), so the hand-off is invisible.
-  The mark lifts 36 dp inside its canvas; the wordmark is real text (Inter)
-  that fades in 24 dp under the lifted mark. The version footer sits 24 dp
-  above the navigation bar (inset added in SplashActivity).
+  Splash film (SplashActivity, ~3 s): real TextViews on true black.
+    splashMark    the static Anoy wordmark exactly where the system splash icon
+                  sits (288 dp, centred in the full window); it cross-fades out
+                  as the film starts, so the hand-off has no jump
+    splashLockup  "Welcome To" / "Anoy Loader", centred as a group
+    splashName    "Anoy" + a slot where "Loader" turns into "Hax"; ends on the
+                  true screen centre
+  The version footer sits 24 dp above the navigation bar (inset added in code).
 -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/splashRoot"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/black">
 
-    <com.airbnb.lottie.LottieAnimationView
+    <ImageView
         android:id="@+id/splashMark"
         android:layout_width="@dimen/splash_mark"
         android:layout_height="@dimen/splash_mark"
         android:layout_gravity="center"
         android:importantForAccessibility="no"
-        app:lottie_renderMode="hardware" />
+        android:src="@drawable/splash_mark" />
 
     <LinearLayout
-        android:id="@+id/splashContent"
+        android:id="@+id/splashLockup"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="center"
-        android:layout_marginTop="132dp"
         android:alpha="0"
         android:gravity="center_horizontal"
         android:orientation="vertical">
 
         <TextView
-            android:id="@+id/splashTitle"
-            style="@style/Text.Splash"
+            android:id="@+id/splashGreeting"
+            style="@style/Text.SplashGreeting"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/app_name" />
+            android:text="@string/splash_greeting" />
 
-        <TextView
-            style="@style/Text.SplashCaption"
+        <LinearLayout
+            android:id="@+id/splashName"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:text="@string/splash_caption" />
+            android:layout_marginTop="@dimen/splash_line_gap"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/splashAnoy"
+                style="@style/Text.Splash"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/app_name" />
+
+            <FrameLayout
+                android:id="@+id/splashSlot"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="@dimen/space_8">
+
+                <TextView
+                    android:id="@+id/splashLoader"
+                    style="@style/Text.Splash"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/splash_loader" />
+
+                <TextView
+                    android:id="@+id/splashHax"
+                    style="@style/Text.Splash"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:alpha="0"
+                    android:scaleY="0"
+                    android:text="@string/splash_hax" />
+            </FrameLayout>
+        </LinearLayout>
     </LinearLayout>
 
     <TextView

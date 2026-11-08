@@ -2,7 +2,9 @@
 <!-- All user-facing copy. Sentence case, plain and direct. -->
 <resources>
     <string name="app_name">Anoy</string>
-    <string name="splash_caption">Loader</string>
+    <string name="splash_greeting">Welcome To</string>
+    <string name="splash_loader">Loader</string>
+    <string name="splash_hax">Hax</string>
     <string name="telegram_url">https://t.me/libAkAudioVisiual</string>
     <string name="version_footer">App %1$s · Library %2$s</string>
     <string name="version_footer_app">Version %1$s</string>

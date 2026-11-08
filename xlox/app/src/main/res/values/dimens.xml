@@ -60,6 +60,10 @@
     <dimen name="text_caption">13sp</dimen>
     <dimen name="text_hero">40sp</dimen>
     <dimen name="text_hero_min">24sp</dimen>
-    <dimen name="text_splash">40sp</dimen>
-    <dimen name="text_splash_caption">12sp</dimen>
+    <!-- Splash film type is fixed (dp): it is a brand lockup that has to match the
+         system-splash wordmark and stay on one line at any font scale. -->
+    <dimen name="text_splash">40dp</dimen>
+    <dimen name="text_splash_greeting">20dp</dimen>
+    <!-- Greeting baseline to name cap top ~12 dp (font padding off). -->
+    <dimen name="splash_line_gap">-2dp</dimen>
 </resources>

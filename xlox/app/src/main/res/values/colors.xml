@@ -16,6 +16,8 @@
     <color name="text_secondary">#FF8E8E93</color>
     <color name="text_tertiary">#FF636366</color>
     <color name="text_disabled">#80FFFFFF</color>
+    <!-- Secondary white on pure black (splash greeting). -->
+    <color name="text_on_black_72">#B8FFFFFF</color>
 
     <!-- Accent -->
     <color name="blue">#FF0A84FF</color>
@@ -38,8 +40,6 @@
     <!-- Effects -->
     <color name="ripple_light">#29FFFFFF</color>
     <color name="ripple_blue">#330A84FF</color>
-    <!-- Launcher icon background (near-black, reads on black wallpapers). -->
-    <color name="launcher_background">#0A0A0A</color>
     <color name="fade_end">#00000000</color>
     <color name="transparent">#00000000</color>
 </resources>

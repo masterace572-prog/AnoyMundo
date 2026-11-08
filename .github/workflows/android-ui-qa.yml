@@ -133,7 +133,8 @@ jobs:
           shots = Path('xlox/docs/ui-redesign/after')
           need = [
               # splash (frames, reduced motion, animations on)
-              'splash', 'splash_f000', 'splash_f020', 'splash_f045', 'splash_f085', 'anim_splash_t10',
+              'splash', 'splash_reduced_welcome', 'splash_t000', 'splash_t025', 'splash_t080',
+              'splash_t130', 'splash_t142', 'splash_t155', 'splash_t220', 'anim_splash_t10',
               'splash_live_cold',
               # launcher icon
               'icon_recents', 'icon_drawer_default',
@@ -166,7 +167,7 @@ jobs:
           seen = {}
           for n, p in files.items():
               h = hashlib.md5(p.read_bytes()).hexdigest()
-              if h in seen and not any(k in n + seen[h] for k in ('live', 'anim_', 'icon_')):
+              if h in seen and not any(k in n + seen[h] for k in ('live', 'anim_', 'icon_', 'splash_reduced', 'splash_t220')):
                   errors.append(f'identical frames: {seen[h]} / {n}')
               seen[h] = n
           trace = Path('qa-logs/emulator-trace.txt')
