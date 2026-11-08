@@ -73,7 +73,9 @@
     <uses-permission android:name="android.permission.WRITE_CALL_LOG" tools:node="remove" />
     <uses-permission android:name="android.permission.PROCESS_OUTGOING_CALLS" tools:node="remove" />
     <!-- Camera -->
-    <uses-permission android:name="android.permission.CAMERA" tools:node="remove" />
+    <!-- Lint reads this removal line as a camera request; it removes CAMERA. -->
+    <uses-permission android:name="android.permission.CAMERA" tools:node="remove"
+        tools:ignore="PermissionImpliesUnsupportedChromeOsHardware" />
     <!-- Contacts and accounts -->
     <uses-permission android:name="android.permission.READ_CONTACTS" tools:node="remove" />
     <uses-permission android:name="android.permission.WRITE_CONTACTS" tools:node="remove" />
