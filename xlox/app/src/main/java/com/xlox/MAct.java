@@ -333,8 +333,10 @@ public class MAct extends AppCompatActivity {
             savedKey = "ANOY-30D-QA7K2";
         }
         totalMillis = keyDurationMillis(savedKey);
-        longDate = new SimpleDateFormat("d MMMM yyyy", Locale.getDefault());
-        expiryFormat = new SimpleDateFormat("d MMM yyyy, h:mm a", Locale.getDefault());
+        // Expiry is shown in Indian Standard Time, like the panel, whatever
+        // zone the phone is set to ("14 Nov 2026, 10:30 PM IST").
+        longDate = istFormat("d MMMM yyyy");
+        expiryFormat = istFormat(EXPIRY_PATTERN);
         setExpiry(expiry);
         // Sign in just checked the licence: the first refresh waits its turn.
         lastLicenceAttempt = SystemClock.elapsedRealtime();
@@ -931,8 +933,9 @@ public class MAct extends AppCompatActivity {
             licenceChecked.setVisibility(View.GONE);
             return;
         }
-        boolean today = android.text.format.DateUtils.isToday(lastLicenceCheckedAt);
-        String when = new SimpleDateFormat(today ? "h:mm a" : "d MMM, h:mm a", Locale.getDefault())
+        SimpleDateFormat day = istFormat("yyyyMMdd");
+        boolean today = day.format(new Date(lastLicenceCheckedAt)).equals(day.format(new Date()));
+        String when = istFormat(today ? "h:mm a 'IST'" : "d MMM, h:mm a 'IST'")
                 .format(new Date(lastLicenceCheckedAt));
         licenceChecked.setText(getString(R.string.licence_last_checked, when));
         licenceChecked.setVisibility(View.VISIBLE);
@@ -1182,7 +1185,24 @@ public class MAct extends AppCompatActivity {
         }
     }
 
-    /** The panel sends ISO-8601 UTC ("2026-11-14T08:35:00.000Z"). */
+    /** Indian Standard Time (UTC+5:30, no daylight saving): the zone of every shown expiry. */
+    static final TimeZone IST = TimeZone.getTimeZone("Asia/Kolkata");
+    /** Same text as the panel's humanDate(): "14 Nov 2026, 10:30 PM IST". */
+    static final String EXPIRY_PATTERN = "d MMM yyyy, h:mm a 'IST'";
+
+    /** A formatter that shows Indian Standard Time in English, like the panel. */
+    static SimpleDateFormat istFormat(String pattern) {
+        SimpleDateFormat format = new SimpleDateFormat(pattern, Locale.US);
+        format.setTimeZone(IST);
+        return format;
+    }
+
+    /**
+     * The panel sends the expiry instant as ISO-8601 UTC ("2026-11-14T17:00:00.000Z").
+     * Parsing gives the real instant - the countdown uses it as is; only the
+     * text is shown in IST. A zone-less "yyyy-MM-dd HH:mm:ss" is UTC, the
+     * panel's storage rule.
+     */
     static long parseExpiryMillis(String value) {
         if (value == null) return -1L;
         String v = value.trim();
@@ -1461,11 +1481,22 @@ public class MAct extends AppCompatActivity {
     private void refreshPrimary() {
         if (busy) return;
         int label;
-        if (expired) label = R.string.sign_in_again;
-        else if (!gameInstalled) label = R.string.install_game;
-        else if (gameRunning) label = R.string.stop;
-        else label = R.string.launch;
+        int icon = 0;
+        if (expired) {
+            label = R.string.sign_in_again;
+        } else if (!gameInstalled) {
+            label = R.string.install_game;
+            icon = R.drawable.ic_download;
+        } else if (gameRunning) {
+            label = R.string.stop;
+            icon = R.drawable.ic_square;
+        } else {
+            label = R.string.launch;
+            icon = R.drawable.ic_play;
+        }
         Ui.setLoading(primaryAction, false, getString(label));
+        // Cosmetic: a leading glyph makes the main control read at a glance.
+        if (icon != 0) primaryAction.setIconResource(icon);
     }
 
     private void setBusy(boolean value, CharSequence label) {

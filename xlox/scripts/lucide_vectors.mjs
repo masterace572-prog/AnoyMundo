@@ -44,6 +44,7 @@ const ICONS = [
   ['wifi-off', 'wifi_off'],
   ['rotate-cw', 'rotate_cw'],
   ['play', 'play'],
+  ['square', 'square'],
 ];
 
 const NUM = /-?(?:\d+\.?\d*|\.\d+)(?:e[-+]?\d+)?/iy;

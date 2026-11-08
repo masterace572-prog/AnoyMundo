@@ -168,10 +168,11 @@ grant
 # ---------------------------------------------------------------- 1. splash
 # Still frames of the ~3 s film (qa_frame = film time in seconds):
 #   0.00 hand-off frame (= system splash wordmark)   0.25 arriving
-#   0.80 welcome lockup   1.30 greeting dissolving upward
-#   1.42 Loader / Hax mid cross-dissolve   1.55 dissolve nearly done, re-centring
-#   2.20 final "Anoy Hax"
-for f in 0.00 0.25 0.80 1.30 1.42 1.55 2.20; do
+#   0.80 welcome lockup   1.40 greeting fading upward, name gliding to centre
+#   1.82 "Hax" arriving over a still-solid "Loader" (overlap starts)
+#   1.95 both words overlapping mid cross-dissolve, re-centring
+#   2.40 final "Anoy Hax"
+for f in 0.00 0.25 0.80 1.40 1.82 1.95 2.40; do
     stop_app
     adb shell am start -W -n $PKG/.SplashActivity --ef qa_frame "$f" >> "$LOG" 2>&1 || fatal "cannot start SplashActivity"
     sleep 1.2
@@ -286,6 +287,11 @@ open_home --es qa_expiry past
 shot home_expired
 open_home --es qa_expiry hours
 shot home_under_day
+# IST: the panel's expiry instant (ISO UTC, as /connect sends it) must read in
+# Indian time on this UTC emulator - the same text the website shows.
+open_home --es qa_expiry 2026-11-14T17:00:00.000Z
+log "expiry_ist texts: $(texts)"
+shot home_expiry_ist
 open_home --ez qa_loading true
 shot home_loading
 open_home --es qa_status "'Unsafe - detection active'"
@@ -499,7 +505,7 @@ def box(i):
     m = re.search(r"resource-id=\"com\.xlox:id/%s\"[^>]*?bounds=\"\[(\d+),(\d+)\]\[(\d+),(\d+)\]\"" % i, xml)
     return tuple(map(int, m.groups())) if m else None
 card, button = box("deviceCard"), box("primaryAction")
-fade = round(24 * 420 / 160)
+fade = round((24 + 8) * 420 / 160)  # 24 dp fade + 8 dp panel padding above the button
 if card and button:
     clear = card[3] <= button[1] - fade
     print("device card bottom %d, launch fade top %d: %s" % (card[3], button[1] - fade, "clear" if clear else "covered"))

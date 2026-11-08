@@ -58,10 +58,10 @@
         </div>
     </div>
     <div class="field {{#if errors.expiration}}invalid{{/if}}">
-        <label class="label" for="expiration">Account expires (UTC)</label>
+        <label class="label" for="expiration">Account expires (IST)</label>
         <div class="input-wrap">{{icon "calendar" "lead"}}
         <input type="text" class="input mono" name="expiration" id="expiration" value="{{form.expiration}}" placeholder="Never" autocomplete="off"></div>
-        {{#if errors.expiration}}<div class="error">{{icon "circle-alert"}}<span>{{errors.expiration}}</span></div>{{else}}<div class="hint">YYYY-MM-DD HH:MM:SS, or empty for never.</div>{{/if}}
+        {{#if errors.expiration}}<div class="error">{{icon "circle-alert"}}<span>{{errors.expiration}}</span></div>{{else}}<div class="hint">YYYY-MM-DD HH:MM:SS, Indian time (IST), or empty for never.</div>{{/if}}
     </div>
     <button type="submit" class="btn btn-primary btn-block" data-busy-label="Saving…">{{icon "check"}}Save changes</button>
 </form>

@@ -86,8 +86,17 @@ try {
   if (!await waitForServer()) throw new Error(`server did not start:\n${serverLog}`);
 
   {
-    const { longDate } = await import('../src/render.mjs');
-    ok(longDate('2050-01-01T00:00:00Z') === 'January 01 2050 at 00:00:00', 'longDate shows midnight as 00:00, not 24:00', longDate('2050-01-01T00:00:00Z'));
+    const { longDate, humanDate, sqlDateTime, parseIstDateTime } = await import('../src/render.mjs');
+    // Every displayed time is IST; storage stays a UTC instant.
+    const inst = '2026-11-14T17:00:00.000Z';
+    ok(humanDate(inst) === '14 Nov 2026, 10:30 PM IST', 'humanDate shows IST (UTC+5:30)', humanDate(inst));
+    ok(longDate(inst) === '14 November 2026, 10:30 PM IST', 'longDate shows IST', longDate(inst));
+    ok(humanDate('2026-11-14T18:30:00Z') === '15 Nov 2026, 12:00 AM IST', 'IST midnight is 12:00 AM on the next day', humanDate('2026-11-14T18:30:00Z'));
+    ok(sqlDateTime(inst) === '2026-11-14 22:30:00', 'date inputs show IST', sqlDateTime(inst));
+    ok(parseIstDateTime('2026-11-14 22:30:00') === inst, 'a typed IST time is stored as the same instant', parseIstDateTime('2026-11-14 22:30:00'));
+    ok(parseIstDateTime(sqlDateTime(inst)) === inst, 'edit form round trip keeps the instant (no double 5:30 shift)');
+    ok(parseIstDateTime('2026-11-14T17:00:00Z') === inst, 'explicit UTC input is honoured');
+    ok(parseIstDateTime('2026-02-30 10:00:00') === null && parseIstDateTime('nope') === null, 'invalid dates are rejected');
   }
   console.log('\n=== AnoyMundo panel smoke tests (offline memory DB) ===\n');
 

@@ -14,7 +14,7 @@
 <section class="card highlight keys-out" id="generated" style="margin-bottom:20px">
     <div class="card-head">
         <div class="tile green">{{icon "circle-check"}}</div>
-        <div><h2 class="card-title">New keys ready</h2><div class="card-sub">{{flash.game}} · {{flash.max_devices}} device(s) · the duration starts when the key is first used.</div></div>
+        <div><h2 class="card-title">New keys ready</h2><div class="card-sub">{{flash.game}} · {{flash.max_devices}} device(s) · the duration starts when the key is first used.</div>{{#if flash.created_label}}<div class="card-sub">Created {{flash.created_label}} · if first used now, expires {{flash.expires_if_now}}</div>{{/if}}</div>
         <span class="spacer"></span>
         <button type="button" class="btn btn-primary btn-sm" data-copy-target="generated-keys">{{icon "copy"}}Copy all</button>
     </div>

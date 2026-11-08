@@ -64,30 +64,72 @@ export function buildSelect(name, id, options, selected, extraClass = '') {
   return `<select name="${escapeHtml(name)}" id="${escapeHtml(id)}" class="${cls}">${opts}</select>`;
 }
 
-export function sqlDateTime(date = new Date()) {
-  const d = date instanceof Date ? date : new Date(date);
-  if (Number.isNaN(d.getTime())) return '';
-  const p = (n) => String(n).padStart(2, '0');
-  return `${d.getUTCFullYear()}-${p(d.getUTCMonth() + 1)}-${p(d.getUTCDate())} ${p(d.getUTCHours())}:${p(d.getUTCMinutes())}:${p(d.getUTCSeconds())}`;
+// ---------------------------------------------------------------- time
+// One rule for every timestamp: the database stores real instants
+// (timestamptz, sent as ISO-8601 UTC), and everything a person reads or types
+// is Indian Standard Time (Asia/Kolkata). IST is a fixed UTC+5:30 with no
+// daylight saving, so the conversion is a plain offset - applied once, at the
+// edge, and never to the stored value or to a key's length.
+export const IST_OFFSET_MS = 330 * 60_000;
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const MONTHS_LONG = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August',
+  'September', 'October', 'November', 'December'];
+
+/** Wall-clock fields of an instant in IST (read with getUTC*), or null. */
+function istClock(value) {
+  if (value === null || value === undefined || value === '') return null;
+  const d = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(d.getTime())) return null;
+  return new Date(d.getTime() + IST_OFFSET_MS);
 }
 
+function clock12(t) {
+  const h = t.getUTCHours();
+  return `${h % 12 === 0 ? 12 : h % 12}:${String(t.getUTCMinutes()).padStart(2, '0')} ${h < 12 ? 'AM' : 'PM'}`;
+}
+
+/** "2026-11-08 22:30:00" in IST - the value of the panel's date inputs. */
+export function sqlDateTime(date = new Date()) {
+  const t = istClock(date);
+  if (!t) return '';
+  const p = (n) => String(n).padStart(2, '0');
+  return `${t.getUTCFullYear()}-${p(t.getUTCMonth() + 1)}-${p(t.getUTCDate())} ${p(t.getUTCHours())}:${p(t.getUTCMinutes())}:${p(t.getUTCSeconds())}`;
+}
+
+/**
+ * A typed date/time back to an ISO instant. Without an explicit zone it is
+ * IST (what the inputs show); "Z" or "+hh:mm" are honoured. Null if invalid.
+ */
+export function parseIstDateTime(value) {
+  const s = String(value ?? '').trim().replace(' ', 'T');
+  if (!s) return null;
+  const m = /^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2})(?::(\d{2}))?)?$/.exec(s);
+  if (m) {
+    const [, y, mo, d, h = '0', mi = '0', se = '0'] = m;
+    const utc = Date.UTC(+y, +mo - 1, +d, +h, +mi, +se);
+    const back = new Date(utc);
+    if (back.getUTCMonth() !== +mo - 1 || back.getUTCDate() !== +d || +h > 23 || +mi > 59 || +se > 59) return null;
+    return new Date(utc - IST_OFFSET_MS).toISOString();
+  }
+  if (!/(Z|[+-]\d\d:\d\d)$/.test(s)) return null;
+  const d = new Date(s);
+  return Number.isNaN(d.getTime()) ? null : d.toISOString();
+}
+
+/** "8 Nov 2026, 10:30 PM IST" - the same text the loader shows for that instant. */
 export function humanDate(value) {
   if (!value) return '';
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return String(value);
-  const p = (n) => String(n).padStart(2, '0');
-  return `${p(d.getUTCDate())} ${months[d.getUTCMonth()]} ${d.getUTCFullYear()}, ${p(d.getUTCHours())}:${p(d.getUTCMinutes())} UTC`;
+  const t = istClock(value);
+  if (!t) return String(value);
+  return `${t.getUTCDate()} ${MONTHS[t.getUTCMonth()]} ${t.getUTCFullYear()}, ${clock12(t)} IST`;
 }
 
+/** "8 November 2026, 10:30 PM IST". */
 export function longDate(value) {
   if (!value) return '';
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return String(value);
-  return d.toLocaleString('en-US', {
-    timeZone: 'UTC', month: 'long', day: '2-digit', year: 'numeric',
-    hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23',
-  }).replace(',', '');
+  const t = istClock(value);
+  if (!t) return String(value);
+  return `${t.getUTCDate()} ${MONTHS_LONG[t.getUTCMonth()]} ${t.getUTCFullYear()}, ${clock12(t)} IST`;
 }
 
 export function durationLabel(hours) {
@@ -130,6 +172,8 @@ export function renderPage(req, res, name, data = {}) {
     user_key: flashRaw.user_key || '',
     game: flashRaw.game || '',
     duration: flashRaw.duration || '',
+    created_label: flashRaw.created_label || '',
+    expires_if_now: flashRaw.expires_if_now || '',
     max_devices: flashRaw.max_devices || '',
     apiKeyPlain: flashRaw.apiKeyPlain || '',
   };

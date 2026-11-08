@@ -1,5 +1,17 @@
 # Anoy Loader — changelog
 
+## 2.1.0 follow-up — home, splash and Indian time
+
+- **Clearer home.** Time left and Launch lead. Launch carries a play, download
+  or stop glyph. Device details are one quiet line, so short phones keep
+  everything above the Launch bar. Every status and message stays visible.
+- **Smoother splash.** "Loader" now cross-dissolves into "Hax": the two words
+  overlap for a moment instead of popping, over a calmer 0.7 s. No clipping or
+  squashing. Same words, same ~3 s, same hand-off.
+- **Expiry in Indian time (IST).** The loader shows the expiry as
+  "15 Nov 2026, 10:30 PM IST" whatever time zone the phone uses. That is
+  exactly what the panel shows for the same key. Licence length is unchanged.
+
 ## 2.1.0 follow-up — help and access
 
 - **Help on home.** A ? button opens three short tips (launching, files and

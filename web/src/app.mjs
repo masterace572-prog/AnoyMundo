@@ -9,7 +9,7 @@ import {
   setSession, clearSession, getClientIp, displayName, passwordIssue,
 } from './auth.mjs';
 import {
-  renderPage, sendHtml, sendJson, sendText, buildSelect, sqlDateTime,
+  renderPage, sendHtml, sendJson, sendText, buildSelect, sqlDateTime, parseIstDateTime,
   humanDate, longDate, durationLabel, escapeHtml,
   iconSvg,
 } from './render.mjs';
@@ -98,11 +98,10 @@ async function tooManyAttempts(username, ip) {
   } catch { return false; }
 }
 
+// Date inputs show and accept IST (see render.mjs); stored as a UTC instant.
 function parseDateInput(value) {
   if (!value) return null;
-  const s = str(value).replace(' ', 'T');
-  const d = new Date(s.endsWith('Z') || /[+-]\d\d:\d\d$/.test(s) ? s : `${s}Z`);
-  return Number.isNaN(d.getTime()) ? null : d.toISOString();
+  return parseIstDateTime(str(value));
 }
 
 function buildDevices(text, max) {
@@ -379,6 +378,9 @@ async function doGenerate(req, res, body, user) {
     msgSuccess: `Created ${n} key${n === 1 ? '' : 's'}. ${charged}`,
     user_key: result.licenses.join('\n'), game: result.game,
     duration: String(result.duration), max_devices: String(result.max_devices),
+    // The clock starts at the first sign-in (unchanged); this is a preview in IST.
+    created_label: humanDate(new Date()),
+    expires_if_now: humanDate(new Date(Date.now() + Number(result.duration || 0) * 3600_000)),
   });
 }
 

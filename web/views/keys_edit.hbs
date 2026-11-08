@@ -56,10 +56,10 @@
     </div>
     <div class="field-row">
         <div class="field {{#if errors.expired_date}}invalid{{/if}}">
-            <label class="label" for="expired_date">Expires (UTC)</label>
+            <label class="label" for="expired_date">Expires (IST)</label>
             <div class="input-wrap">{{icon "calendar" "lead"}}
             <input type="text" class="input mono" name="expired_date" id="expired_date" value="{{form.expired_date}}" placeholder="Not started yet" autocomplete="off"></div>
-            {{#if errors.expired_date}}<div class="error">{{icon "circle-alert"}}<span>{{errors.expired_date}}</span></div>{{else}}<div class="hint">YYYY-MM-DD HH:MM:SS. Empty = not used yet.</div>{{/if}}
+            {{#if errors.expired_date}}<div class="error">{{icon "circle-alert"}}<span>{{errors.expired_date}}</span></div>{{else}}<div class="hint">YYYY-MM-DD HH:MM:SS, Indian time (IST). Empty = not used yet.</div>{{/if}}
         </div>
         <div class="field {{#if errors.registrator}}invalid{{/if}}">
             <label class="label" for="registrator">Created by</label>

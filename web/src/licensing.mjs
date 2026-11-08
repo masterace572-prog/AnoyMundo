@@ -129,7 +129,7 @@ export async function handleHealth(res, deep = false) {
     ok = false;
     checks.database = { ok: false, detail: database.error.message };
   } else {
-    checks.database = { ok: true, detail: `connected · ${sqlDateTime()}` };
+    checks.database = { ok: true, detail: `connected · ${sqlDateTime()} IST` };
   }
   if (libChannel.error) {
     checks.lib_channel = { ok: false, detail: libChannel.error.message };

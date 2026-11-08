@@ -38,7 +38,7 @@ Made by `scripts/brand_wordmark.py` from Inter 4.001, the version the app ships:
 
 | System splash | Welcome | Greeting dissolving | Loader → Hax mid-dissolve | Final |
 |---|---|---|---|---|
-| ![](after/splash_live_cold.png) | ![](after/splash_t080.png) | ![](after/splash_t130.png) | ![](after/splash_t142.png) | ![](after/splash_t220.png) |
+| ![](after/splash_live_cold.png) | ![](after/splash_t080.png) | ![](after/splash_t140.png) | ![](after/splash_t195.png) | ![](after/splash_t240.png) |
 
 The splash is now real TextViews on true black, driven by one animator, so the
 three cut moves share one clock. Text changes use the Material 3 emphasized
@@ -406,3 +406,95 @@ debug-only `qa_preview`.
 
 `qa_first_help` lets the sample screen run the first-run Help logic (it
 respects the "shown once" flag). It requires the debug-only `qa_preview`.
+
+## 9. Home polish, smoother splash, Indian time (IST) everywhere
+
+### Home
+
+Same colours, type, chips and icon; only hierarchy and spacing changed.
+
+- **Licence card:** a little more room around the time left, which stays the
+  largest text on the screen. The expiry line now reads in IST (see below).
+- **Launch is the main control:** the pinned bar has 8 dp more room above the
+  button, and the button gets a leading glyph for its state: play (Launch),
+  download (Install BGMI), square (Stop). There is no glyph for "Sign in again".
+  The spinner during Preparing/Launching works as before.
+- **Device is quieter:** one line in a stroke-only card ("Google Pixel 7" with
+  "Android 14 (API 34)" below it in grey) instead of two full rows. This saves
+  about 50 dp, so on short phones DEVICE still clears the Launch bar. The
+  typical-phone check measures it against the real 24 + 8 dp above the button.
+- **Unchanged:** every status (Installed / Ready / Running, Access, Expires soon
+  + Renew, Last checked, server state) and every view ID. The status message
+  still sits inside the bar above the button, so errors are never hidden behind
+  it.
+- **Untouched:** login and the update sheet.
+
+### Splash: Loader → Hax
+
+Same story, words and hand-off; only the motion changed.
+
+| time (s) | what happens |
+|---|---|
+| 0.00–0.50 | "Welcome To / Anoy Loader" fades in and rises 12 dp |
+| 1.15–1.67 | "Welcome To" fades out drifting up 8 dp |
+| 1.20–1.80 | "Anoy Loader" glides to the centre |
+| 1.56–2.26 | "Loader" cross-dissolves into "Hax" while the pair re-centres |
+| 2.26–2.85 | hold "Anoy Hax", then the usual 320 ms fade into sign in (≈3.17 s) |
+
+- **The dissolve overlaps:** "Hax" fades in over the first 70 % of the swap and
+  "Loader" fades out over the last 70 %. Mid-way both words are 84 % visible,
+  so the slot is never empty and nothing pops.
+- **Why the old swap looked abrupt:** it lasted 400 ms on a front-loaded curve,
+  so half the change happened in about 80 ms. It also used a 0.98 scale "breath".
+- **Now:** a symmetric ease spread over 700 ms, and text is only faded and
+  moved. No clipping, no scaling of any kind, no restart of the title. The
+  moving words use hardware layers.
+- **Reduced motion:** the welcome holds, then cuts to "Anoy Hax", as before.
+- **QA frames:** `splash_t140` (greeting leaving), `splash_t182` ("Hax" arriving
+  over a solid "Loader"), `splash_t195` (both overlapping) and `splash_t240`
+  (final).
+
+### Indian time (IST): stored vs shown
+
+**One rule:** the database and `/connect` keep real instants (timestamptz, sent
+as ISO UTC with `Z`), exactly as before. Every time a person reads or types is
+**Asia/Kolkata (IST, UTC+5:30, no daylight saving)**, converted once at the
+edge.
+
+- **Why it changes nothing else:** the licence length, durations, prices,
+  device limits and the "time starts at first sign in" rule are untouched. The
+  countdown uses the real instant, so there is no double 5:30 shift.
+- **Before:** the panel showed UTC and the loader showed the phone's own zone,
+  so the same key could read "17:00 UTC" on the site and something else in the
+  app.
+
+**Example** (one key, first signed in 8 Nov 2026 at 10:30 PM IST on a 7-day plan):
+
+| where | shows |
+|---|---|
+| Panel keys list / Copy for customer | `15 Nov 2026, 10:30 PM IST` |
+| Stored / sent by `/connect` | `2026-11-15T17:00:00.000Z` |
+| Loader home | `Expires 15 Nov 2026, 10:30 PM IST` (any phone time zone) |
+
+**Panel:**
+- The keys list, key details and API key times show IST.
+- Copy for customer and the dashboard date also show IST.
+- Edit forms are labelled "(IST)" and read and write IST (`2026-11-15 22:30:00`).
+  A typed time without a zone is IST, and the saved instant round-trips
+  exactly.
+- After generating, the result card shows "Created … IST · if first used now,
+  expires … IST". That is a preview only: the clock still starts at the first
+  sign in.
+- **Left in UTC on purpose:** the developer API docs and the raw `/connect` and
+  API fields, which are machine-readable instants.
+
+**Loader:**
+- The expiry line and the TalkBack date use IST in English.
+- "Last checked" also shows IST, so one card never mixes zones.
+
+**Checks:**
+- Smoke tests (`npm test`) pin the format, IST midnight, and the edit-form round
+  trip with no double shift.
+- The QA run opens home with `qa_expiry=2026-11-14T17:00:00.000Z` on the UTC
+  emulator, and the validator requires "14 Nov 2026, 10:30 PM IST"
+  (`home_expiry_ist.png`).

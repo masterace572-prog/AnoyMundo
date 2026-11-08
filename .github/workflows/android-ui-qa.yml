@@ -196,7 +196,8 @@ jobs:
           need = [
               # splash (frames, reduced motion, animations on)
               'splash', 'splash_reduced_welcome', 'splash_t000', 'splash_t025', 'splash_t080',
-              'splash_t130', 'splash_t142', 'splash_t155', 'splash_t220', 'anim_splash_t10',
+              'splash_t140', 'splash_t182', 'splash_t195', 'splash_t240', 'anim_splash_t10',
+              'home_expiry_ist',
               'splash_live_cold',
               # launcher icon
               'icon_recents', 'icon_drawer_default',
@@ -239,7 +240,7 @@ jobs:
           seen = {}
           for n, p in files.items():
               h = hashlib.md5(p.read_bytes()).hexdigest()
-              if h in seen and not any(k in n + seen[h] for k in ('live', 'anim_', 'icon_', 'splash_reduced', 'splash_t220', 'home_launch_', 'home_obb', 'perm_')):
+              if h in seen and not any(k in n + seen[h] for k in ('live', 'anim_', 'icon_', 'splash_reduced', 'splash_t240', 'home_launch_', 'home_obb', 'perm_')):
                   errors.append(f'identical frames: {seen[h]} / {n}')
               seen[h] = n
           trace = Path('qa-logs/emulator-trace.txt')
@@ -432,6 +433,9 @@ jobs:
               errors.append('first-run Help: expected shown once, got %r then %r' % (line('help_first first'), line('help_first second')))
           if line('help_first log').count('Help: first-run tips|') != 1:
               errors.append('first-run Help did not run exactly once: ' + line('help_first log')[-300:])
+          xi = line('expiry_ist texts')
+          if '14 Nov 2026, 10:30 PM IST' not in xi:
+              errors.append('IST: 2026-11-14T17:00:00.000Z must read "14 Nov 2026, 10:30 PM IST" (as on the website): ' + xi[:300])
           ht = line('help sheet texts')
           for want in ('Launching the game', 'Files missing or access needed', 'Renewing your licence',
                        'Copy support info', 'Help on Telegram', 'Got it'):

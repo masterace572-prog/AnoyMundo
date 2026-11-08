@@ -89,8 +89,6 @@
     <string name="row_state">State</string>
     <string name="row_library">Library</string>
     <string name="row_server">Server</string>
-    <string name="row_model">Model</string>
-    <string name="row_android">Android</string>
     <string name="game_name">BGMI</string>
     <string name="active">Active</string>
     <string name="expired">Expired</string>
@@ -139,7 +137,7 @@
     <string name="error_obb_copy">Couldn\'t prepare game files: %1$s</string>
     <string name="error_library">Library problem: %1$s</string>
     <string name="error_link">No app can open this link.</string>
-    <string name="android_version">%1$s (API %2$d)</string>
+    <string name="android_version">Android %1$s (API %2$d)</string>
 
     <!-- AppManager -->
     <string name="sandbox_install_failed">Couldn\'t install the game into the container.</string>

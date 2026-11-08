@@ -31,18 +31,20 @@ import com.xlox.ui.Ui;
  * <pre>
  *   0.00-0.50 s  arrive   "Welcome To / Anoy Loader" fades in and rises 12 dp
  *                         while the system wordmark cross-fades out
- *   0.50-1.20 s  read     hold
- *   1.20 s       leave    "Welcome To" dissolves: fades out while drifting up
- *                         10 dp (420 ms, no clipping, no squash)
- *   1.28 s       move     "Anoy Loader" eases up onto the true screen centre
- *   1.36 s       swap     "Loader" cross-dissolves into "Hax" in the same slot
- *                         while the pair slides to centre - one 400 ms motion,
- *                         one easing, so "Anoy" glides sideways exactly once
- *   ~1.80 s      settle   hold "Anoy Hax"
+ *   0.50-1.15 s  read     hold
+ *   1.15-1.67 s  leave    "Welcome To" fades out while drifting up 8 dp
+ *   1.20-1.80 s  move     "Anoy Loader" glides up onto the true screen centre
+ *   1.56-2.26 s  swap     "Loader" cross-dissolves into "Hax" in the same slot
+ *                         while the pair re-centres. The fades overlap: "Hax"
+ *                         is in by 70 % and "Loader" only leaves from 30 %, so
+ *                         both words share the slot mid-way and it never looks
+ *                         empty - no gap, no pop
+ *   2.26-2.85 s  settle   hold "Anoy Hax"
  *   2.85 s       handoff  existing 320 ms cross-fade into LogAct (~3.17 s)
  * </pre>
  * Every property is a pure function of time ({@link #applyTime}) driven by one
- * animator, so the three cut moves stay locked together as one gesture.
+ * animator, so the moves stay locked together as one gesture. Text is only
+ * faded and translated - never clipped and never scaled - on hardware layers.
  * Reduced motion: "Welcome To Anoy Loader" holds, then cuts straight to the
  * final "Anoy Hax" and hands off - no choreography.
  */
@@ -55,28 +57,27 @@ public class SplashActivity extends AppCompatActivity {
     private static final long ARRIVE_MS = 500L;
     private static final long ARRIVE_FADE_MS = 400L;
     private static final float ARRIVE_RISE_DP = 12f;
-    /** Leave: the greeting fades out, drifts up and eases to 98 %. Never clipped. */
-    private static final long CUT_AT_MS = 1200L;
-    private static final long CUT_MS = 420L;
-    private static final float CUT_DRIFT_DP = 10f;
-    private static final float CUT_END_SCALE = 0.98f;
-    /** Move: "Anoy Loader" eases into the space the greeting left. */
-    private static final long MOVE_AT_MS = CUT_AT_MS + 80L;
-    private static final long MOVE_MS = 460L;
+    /** Leave: the greeting fades out and drifts up. Never clipped or scaled. */
+    private static final long CUT_AT_MS = 1150L;
+    private static final long CUT_MS = 520L;
+    private static final float CUT_DRIFT_DP = 8f;
+    /** Move: "Anoy Loader" glides into the space the greeting left. */
+    private static final long MOVE_AT_MS = CUT_AT_MS + 50L;
+    private static final long MOVE_MS = 600L;
     /**
      * Swap: "Loader" and "Hax" cross-dissolve in the same slot (start edges
-     * aligned) and the pair re-centres - one progress value, one easing, so the
-     * fade and the slide are a single motion. Both words stay at full size apart
-     * from a 1.0 <-> 0.98 breath.
+     * aligned) while the pair re-centres. It starts as the move settles, so the
+     * whole cut reads as one continuous gesture.
      */
-    private static final long SWAP_AT_MS = MOVE_AT_MS + 80L;
-    private static final long SWAP_MS = 400L;
-    private static final float SWAP_SCALE = 0.98f;
+    private static final long SWAP_AT_MS = MOVE_AT_MS + 360L;
+    private static final long SWAP_MS = 700L;
     /**
-     * Below 1 so the two fades sum to more than 100 % mid-way (0.57 + 0.57 at
-     * the midpoint): the slot never dims or looks empty.
+     * Overlapping fade windows within the swap: "Hax" fades in over 0-70 % and
+     * "Loader" fades out over 30-100 %. Mid-way both are 84 % visible, so the
+     * words genuinely overlap - the slot never dims, empties or pops.
      */
-    private static final float SWAP_ALPHA_POWER = 0.8f;
+    private static final float HAX_IN_END = 0.70f;
+    private static final float LOADER_OUT_START = 0.30f;
     /** Version footer fades in early, as before. */
     private static final long VERSION_AT_MS = 260L;
     private static final long VERSION_MS = 320L;
@@ -97,11 +98,10 @@ public class SplashActivity extends AppCompatActivity {
     private static final Interpolator EMPHASIZED_DECELERATE = new PathInterpolator(0.05f, 0.7f, 0.1f, 1f);
     private static final Interpolator FAST_OUT_SLOW_IN = new PathInterpolator(0.4f, 0f, 0.2f, 1f);
     /**
-     * Material 3 "emphasized" ease (single-curve form): starts gently - 16 % at a
-     * tenth of the time, half-way at a fifth - then a long soft settle. Used for
-     * every text change so nothing snaps.
+     * Symmetric ease-in-out for the cross-dissolve and its slide: no
+     * front-loaded jump, so the change is spread over the whole swap.
      */
-    private static final Interpolator SMOOTH = new PathInterpolator(0.2f, 0f, 0f, 1f);
+    private static final Interpolator DISSOLVE = new PathInterpolator(0.45f, 0f, 0.55f, 1f);
 
     /** Debug builds only: hold the splash (used by the screenshot QA). */
     public static final String EXTRA_HOLD = "qa_hold";
@@ -241,15 +241,6 @@ public class SplashActivity extends AppCompatActivity {
         moveDy = root.getHeight() / 2f - capCentre;
         // "Hax" sits where "Loader" starts; shift the pair so "Anoy Hax" is centred.
         recentreDx = (loader.getWidth() - hax.getWidth()) / 2f;
-        // The 0.98 breath scales about the shared start edge and cap centre, so
-        // "Hax" grows out of exactly where "Loader" began.
-        float pivot = loader.getBaseline() - CAP_HEIGHT_EM * loader.getTextSize() / 2f;
-        loader.setPivotX(0f);
-        loader.setPivotY(pivot);
-        hax.setPivotX(0f);
-        hax.setPivotY(pivot);
-        greeting.setPivotX(greeting.getWidth() / 2f);
-        greeting.setPivotY(greeting.getHeight());
         measured = true;
         return true;
     }
@@ -261,30 +252,21 @@ public class SplashActivity extends AppCompatActivity {
         lockup.setAlpha(progress(t, 0, ARRIVE_FADE_MS, FAST_OUT_SLOW_IN));
         lockup.setTranslationY((1f - progress(t, 0, ARRIVE_MS, EMPHASIZED_DECELERATE)) * risePx);
 
-        // Greeting leaves: fade + drift + slight scale, all sub-pixel. It stays
+        // Greeting leaves: fade + gentle upward drift, sub-pixel. It stays
         // VISIBLE until its alpha is exactly 0.
-        float leave = progress(t, CUT_AT_MS, CUT_MS, SMOOTH);
+        float leave = progress(t, CUT_AT_MS, CUT_MS, FAST_OUT_SLOW_IN);
         greeting.setAlpha(1f - leave);
         greeting.setTranslationY(-leave * driftPx);
-        float greetScale = 1f - leave * (1f - CUT_END_SCALE);
-        greeting.setScaleX(greetScale);
-        greeting.setScaleY(greetScale);
         greeting.setVisibility(leave >= 1f ? View.INVISIBLE : View.VISIBLE);
 
-        // The name rises into the space the greeting left (unchanged ease).
-        name.setTranslationY(progress(t, MOVE_AT_MS, MOVE_MS, EMPHASIZED_DECELERATE) * moveDy);
+        // The name glides into the space the greeting left.
+        name.setTranslationY(progress(t, MOVE_AT_MS, MOVE_MS, FAST_OUT_SLOW_IN) * moveDy);
 
-        // Loader -> Hax: one progress drives the cross-dissolve and the slide.
-        float swap = progress(t, SWAP_AT_MS, SWAP_MS, SMOOTH);
-        name.setTranslationX(swap * recentreDx);
-        loader.setAlpha((float) Math.pow(1f - swap, SWAP_ALPHA_POWER));
-        hax.setAlpha((float) Math.pow(swap, SWAP_ALPHA_POWER));
-        float loaderScale = 1f - swap * (1f - SWAP_SCALE);
-        float haxScale = SWAP_SCALE + swap * (1f - SWAP_SCALE);
-        loader.setScaleX(loaderScale);
-        loader.setScaleY(loaderScale);
-        hax.setScaleX(haxScale);
-        hax.setScaleY(haxScale);
+        // Loader -> Hax: overlapping fades plus one slide, all on one clock.
+        float swap = linear(t, SWAP_AT_MS, SWAP_MS);
+        name.setTranslationX(DISSOLVE.getInterpolation(swap) * recentreDx);
+        hax.setAlpha(DISSOLVE.getInterpolation(window(swap, 0f, HAX_IN_END)));
+        loader.setAlpha(1f - DISSOLVE.getInterpolation(window(swap, LOADER_OUT_START, 1f)));
 
         version.setAlpha(progress(t, VERSION_AT_MS, VERSION_MS, FAST_OUT_SLOW_IN));
     }
@@ -299,6 +281,20 @@ public class SplashActivity extends AppCompatActivity {
         for (View v : new View[] {greeting, name, loader, hax}) {
             if (v != null && v.getLayerType() != type) v.setLayerType(type, null);
         }
+    }
+
+    /** Raw 0..1 progress of t through [start, start + duration]. */
+    private static float linear(long t, long start, long duration) {
+        if (t <= start) return 0f;
+        if (t >= start + duration) return 1f;
+        return (t - start) / (float) duration;
+    }
+
+    /** Re-maps p so it runs 0..1 across [from, to] and is clamped outside. */
+    private static float window(float p, float from, float to) {
+        if (p <= from) return 0f;
+        if (p >= to) return 1f;
+        return (p - from) / (to - from);
     }
 
     private static float progress(long t, long start, long duration, Interpolator easing) {
