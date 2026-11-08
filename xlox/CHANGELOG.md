@@ -1,5 +1,25 @@
 # Anoy Loader — changelog
 
+## 2.1.0 follow-up — game files are copied before launch again
+
+- **First install copies the game's OBB, then launches.** Launch shows
+  "Preparing… N%" while the newest main OBB (and the newest patch, if any) is
+  copied from `Android/obb/com.pubg.imobile` into the container's own OBB
+  folder; every file is checked (same name and size, a different file) before
+  "Launching…". Previously the copy could report success without copying.
+- **Second launch skips the copy only when it is truly current** (the device
+  file was found and the container holds a separate copy with the same name
+  and size).
+- **No launch on any failure.** No game files: "Game files not found…".
+  Android blocking the game files folder: "Couldn't prepare game files: Android
+  is blocking access to the game files folder on this phone." Container
+  storage not ready (same folder as the device): retried, then a clear
+  message.
+- **Files access is requested by the app.** Launch (and home, once) opens the
+  system "All files access" page (storage dialog on Android 5–10); after
+  Allow, Launch continues by itself. Deny shows the storage message.
+- Sign-in, splash, icon, update check and the launch-error fix are unchanged.
+
 ## 2.1.0 follow-up — smoother splash text
 
 - "Welcome To" now dissolves upward (fade + 10 dp drift) instead of being

@@ -106,3 +106,37 @@ failure hides it.
 - On the shorter Pixel 5 screen the last DEVICE row still sits under the
   Launch bar until you scroll a little; fitting it there would need more than
   a light clean-up.
+
+## 5. Game files (OBB) copied before launch
+
+`AppManager.copyObbAsync` (called by `MAct.prepareObbThenLaunch()` after the
+activation, library and files-access checks) now:
+
+1. Finds the source in `/storage/emulated/0/Android/obb/<pkg>` or
+   `getExternalStorageDirectory()/Android/obb/<pkg>`: the newest `main.*.obb`
+   plus the newest `patch.*.obb`.
+2. Resolves the container folder
+   (`MetaStorageManager.obtainAppExternalStorageDir(pkg)/Android/obb/<pkg>`),
+   retrying 5 × 600 ms if it is missing or is the device folder.
+3. Skips a file only if the container copy is a different canonical file with
+   the same name and size; otherwise copies (temp + rename, whole-job percent)
+   and verifies.
+4. Launch runs only after success. Errors: `error_obb_missing` (folder or main
+   OBB not found), `error_obb_copy` with a reason (folder blocked by Android,
+   container not ready, write / incomplete / verify failure, no space).
+
+Debug log tag `AppManager`: source, destination, copy / skip per file, sizes,
+progress at 0/25/50/75/100 %.
+
+Emulator proof (API 33, fake 320 MB main + 24 MB patch + an older main):
+container folder `/storage/emulated/0/Android/obb/com.xlox/scopedStorage/com.pubg.imobile/Android/obb/com.pubg.imobile`
+(different from the device folder); first launch copied and verified both
+files, then launched; second launch skipped both as current, then launched;
+no OBB → "Game files not found", no launch.
+
+**Android 11+ limit:** stock Android only lets "installer" apps read another
+app's `Android/obb` folder. Anoy does not ask for "Install unknown apps", so on
+such phones the folder is unreadable and Launch says Android is blocking it
+(no launch). The emulator copy test turns that access on with a test-only
+`appops` switch; the app itself does not request it.
+
