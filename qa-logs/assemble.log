@@ -20,10 +20,10 @@ Daemon will be stopped at the end of the build
 > Task :app:mapDebugSourceSetPaths
 > Task :app:generateDebugResources
 > Task :app:packageDebugResources
+> Task :app:mergeDebugResources
 > Task :app:createDebugCompatibleScreenManifests
 > Task :app:extractDeepLinksDebug
 > Task :app:parseDebugLocalResources
-> Task :app:mergeDebugResources
 
 > Task :app:processDebugMainManifest
 /home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/debug/AndroidManifest.xml Warning:
@@ -8306,8 +8306,8 @@ com.android.tools.r8.internal.L10: Should never be called
 > Task :app:mergeReleaseJniLibFolders
 > Task :app:generateReleaseBuildConfig
 > Task :app:mergeReleaseNativeLibs
-> Task :app:javaPreCompileRelease
 > Task :app:checkReleaseDuplicateClasses
+> Task :app:javaPreCompileRelease
 > Task :app:generateReleaseResValues
 > Task :app:checkReleaseAarMetadata
 > Task :app:mapReleaseSourceSetPaths
@@ -8335,10 +8335,10 @@ com.android.tools.r8.internal.L10: Should never be called
 > Task :app:mergeReleaseShaders
 > Task :app:compileReleaseShaders NO-SOURCE
 > Task :app:generateReleaseAssets UP-TO-DATE
-> Task :app:processReleaseManifestForPackage
 > Task :app:mergeReleaseAssets
-> Task :app:compressReleaseAssets
+> Task :app:processReleaseManifestForPackage
 > Task :app:processApplicationManifestReleaseForBundle
+> Task :app:compressReleaseAssets
 > Task :app:collectReleaseDependencies
 > Task :app:mergeReleaseJavaResource
 > Task :app:sdkReleaseDependencyData
@@ -8364,5 +8364,5 @@ WARNING: /home/runner/.gradle/caches/transforms-3/b91f9dab850d9a00e31f249c213227
 > Task :app:createReleaseApkListingFileRedirect
 > Task :app:assembleRelease
 
-BUILD SUCCESSFUL in 1m 53s
+BUILD SUCCESSFUL in 1m 51s
 79 actionable tasks: 79 executed
