@@ -226,6 +226,9 @@ jobs:
               'perm_explain_all_files', 'perm_explain_install', 'home_perm_not_now', 'forget_key_done',
               'home_game_closed', 'home_licence_extended', 'home_licence_soon', 'home_licence_offline',
               'home_licence_expired_by_panel',
+              # help sheet, support info preview, Access chip
+              'help_first_run', 'help_sheet', 'help_support_info', 'help_support_copied',
+              'home_access_ready', 'home_access_needed', 'access_explain',
           ]
           errors = []
           files = {p.stem: p for p in shots.glob('*.png')}
@@ -424,6 +427,45 @@ jobs:
           ea = line('licence_expired after texts')
           if 'Expired' not in ea or 'Sign in again' not in ea:
               errors.append('panel says expired: not shown on return to home: ' + ea[:400])
+          # Help: three tips, support info previewed without the key, first run once.
+          if line('help_first first') != 'shown' or line('help_first second') != 'none':
+              errors.append('first-run Help: expected shown once, got %r then %r' % (line('help_first first'), line('help_first second')))
+          if line('help_first log').count('Help: first-run tips|') != 1:
+              errors.append('first-run Help did not run exactly once: ' + line('help_first log')[-300:])
+          ht = line('help sheet texts')
+          for want in ('Launching the game', 'Files missing or access needed', 'Renewing your licence',
+                       'Copy support info', 'Help on Telegram', 'Got it'):
+              if want not in ht:
+                  errors.append('Help sheet: %r missing: %s' % (want, ht[:400]))
+          si = line('help support info')
+          for want in ('Anoy 2.', 'Library:', 'Android:', 'Device:', 'Game:', 'Access: allowed', 'Licence:', 'Status:'):
+              if want not in si:
+                  errors.append('support info: %r missing: %s' % (want, si[:400]))
+          sv = si + ' ' + line('help support texts')
+          for bad in ('QA7K2', 'ANOY-', '/storage', '/data/', '/sdcard'):
+              if bad in sv:
+                  errors.append('support info leaks %r: %s' % (bad, sv[:400]))
+          if 'Support info copied' not in line('help copied texts') or 'Help: support info copied' not in line('help log'):
+              errors.append('Copy support info: no confirmation: ' + line('help copied texts')[:300])
+          # Access chip: ready -> confirmation only; off -> explanation, Settings, no launch.
+          if line('access_ok chip') != 'Access ready':
+              errors.append('Access chip with everything allowed: %r' % line('access_ok chip'))
+          if 'are on' not in line('access_ok texts') or 'com.xlox' not in line('access_ok focus'):
+              errors.append('Access ready tap: no confirmation, or Anoy left the screen: ' + line('access_ok focus'))
+          if line('access_missing chip') != 'Access needs attention':
+              errors.append('Access chip with All files access off: %r' % line('access_missing chip'))
+          if 'Allow All files access' not in line('access_missing sheet texts'):
+              errors.append('Access tap: the explanation sheet did not open: ' + line('access_missing sheet texts')[:300])
+          af = line('access_missing settings focus')
+          if 'com.xlox' in af or 'ettings' not in af:
+              errors.append('Access tap: Continue did not open Settings: ' + af)
+          if 'com.xlox' not in line('access_missing back focus') or line('access_missing after chip') != 'Access ready':
+              errors.append('Access: not back on home as ready after the grant: %s / %r' % (line('access_missing back focus'), line('access_missing after chip')))
+          al = line('access_missing log')
+          if 'Access: asking for ALL_FILES' not in al or 'Permission explained: ALL_FILES' not in al or 'Permissions granted' not in al:
+              errors.append('Access flow log incomplete: ' + al[-400:])
+          if 'continuing the launch' in al or 'Launch: preparing' in al:
+              errors.append('Access flow started a launch: ' + al[-400:])
           if not re.search(r'typical phone: device card bottom \d+, launch fade top \d+: clear', t):
               errors.append('DEVICE card is covered by the Launch bar on a 411 x 914 dp phone')
           m = re.search(r'licence card description: content-desc="([^"]*)"', t)

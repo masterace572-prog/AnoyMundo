@@ -747,6 +747,81 @@ stop_app
 adb shell rm -rf $GOBB >/dev/null 2>&1 || true
 grant
 
+# ---------------------------------------------- Help and the Access chip
+# Help: "?" in the header opens three tips; Copy support info previews what
+# it copies (never the licence key), the first-run tips show once only.
+# Access chip: ready -> a short confirmation; something off -> the existing
+# explanation sheet, then Settings, and no launch afterwards.
+node_text() { # $1 = view id: its text
+    dump_ui | python3 -c '
+import re, sys
+xml = sys.stdin.read()
+m = re.search(r"<node[^>]*resource-id=\"com\.xlox:id/%s\"[^>]*>" % sys.argv[1], xml)
+t = re.search(r" text=\"([^\"]*)\"", m.group(0)) if m else None
+print(t.group(1).replace("&#10;", " | ").replace("\n", " | ") if t else "missing")
+' "$1"
+}
+help_log() { adb logcat -d -v tag -s MAct:V 2>/dev/null | grep -E 'Help:|Access:|Permission|Launch' | grep -v '	at ' | tr -d '\r' | tr '\n' '|'; }
+stop_app
+adb shell pm clear $PKG >/dev/null 2>&1 || true
+grant
+adb logcat -c || true
+open_home --ez qa_first_help true
+sleep 1
+log "help_first first: $(has_id helpRoot && echo shown || echo none)"
+shot help_first_run
+tap_id helpGotIt || true
+sleep 1
+open_home --ez qa_first_help true
+sleep 1
+log "help_first second: $(has_id helpRoot && echo shown || echo none)"
+log "help_first log: $(help_log)"
+open_home --es qa_action error
+tap_id helpButton || true
+sleep 1.2
+shot help_sheet
+log "help sheet texts: $(texts)"
+tap_id helpCopySupport || true
+sleep 1.2
+shot help_support_info
+log "help support info: $(node_text supportInfoText)"
+log "help support texts: $(texts)"
+tap_id supportInfoCopy || true
+sleep 0.6
+shot help_support_copied
+log "help copied texts: $(texts)"
+log "help log: $(help_log)"
+# Access chip with everything allowed.
+adb logcat -c || true
+open_home
+log "access_ok chip: $(node_text accessValue)"
+tap_id accessRow || true
+sleep 0.6
+shot home_access_ready
+log "access_ok texts: $(texts)"
+log "access_ok focus: $(focus)"
+# All files access off: explanation sheet, Settings, back -> ready, no launch.
+adb shell appops set $PKG MANAGE_EXTERNAL_STORAGE deny >/dev/null 2>&1 || true
+adb logcat -c || true
+open_home
+log "access_missing chip: $(node_text accessValue)"
+shot home_access_needed
+tap_id accessRow || true
+sleep 1.2
+shot access_explain
+log "access_missing sheet texts: $(texts)"
+tap_id permExplainContinue || true
+sleep 2.5
+log "access_missing settings focus: $(focus)"
+adb shell appops set $PKG MANAGE_EXTERNAL_STORAGE allow >/dev/null 2>&1 || true
+adb shell input keyevent 4 || true
+sleep 3
+log "access_missing back focus: $(focus)"
+log "access_missing after chip: $(node_text accessValue)"
+log "access_missing log: $(help_log)"
+stop_app
+grant
+
 # ------------------------------------- 11. minified release build (real flow)
 if [ -f "$RELEASE_APK" ]; then
     adb logcat -c || true

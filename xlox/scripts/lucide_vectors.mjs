@@ -38,6 +38,8 @@ const ICONS = [
   ['circle-x', 'circle_x'],
   ['triangle-alert', 'triangle_alert'],
   ['check', 'check'],
+  ['copy', 'copy'],
+  ['folder-lock', 'folder_lock'],
   ['download', 'download'],
   ['wifi-off', 'wifi_off'],
   ['rotate-cw', 'rotate_cw'],

@@ -61,6 +61,14 @@
                 </LinearLayout>
 
                 <ImageButton
+                    android:id="@+id/helpButton"
+                    style="@style/IconButton"
+                    android:layout_marginEnd="@dimen/space_8"
+                    android:background="@drawable/bg_icon_button_filled"
+                    android:contentDescription="@string/help_open"
+                    app:srcCompat="@drawable/ic_help" />
+
+                <ImageButton
                     android:id="@+id/signOut"
                     style="@style/IconButton"
                     android:background="@drawable/bg_icon_button_filled"
@@ -238,14 +246,53 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- GAME -->
-            <TextView
-                style="@style/Text.SectionHeader"
+            <!-- GAME, with the Access chip (All files access, Files, Install unknown apps). -->
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="@dimen/group_gap"
-                android:accessibilityHeading="true"
-                android:text="@string/section_game" />
+                android:layout_marginBottom="@dimen/section_gap"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <TextView
+                    style="@style/Text.SectionHeader"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="0dp"
+                    android:accessibilityHeading="true"
+                    android:text="@string/section_game" />
+
+                <!-- Right-aligned chip; the label keeps its width and the chip ellipsizes. -->
+                <FrameLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="@dimen/space_8"
+                    android:layout_weight="1">
+
+                    <!-- Padding widens the touch area; the negative margins keep the header height. -->
+                    <FrameLayout
+                        android:id="@+id/accessRow"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="end|center_vertical"
+                        android:layout_marginTop="-8dp"
+                        android:layout_marginEnd="@dimen/space_8"
+                        android:layout_marginBottom="-8dp"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:padding="@dimen/space_8">
+
+                        <TextView
+                            android:id="@+id/accessValue"
+                            style="@style/Chip"
+                            android:ellipsize="end"
+                            android:importantForAccessibility="no"
+                            android:maxLines="1"
+                            android:textColor="@color/text_secondary" />
+                    </FrameLayout>
+                </FrameLayout>
+            </LinearLayout>
 
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/gameCard"

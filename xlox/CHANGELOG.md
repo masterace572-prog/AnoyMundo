@@ -1,5 +1,18 @@
 # Anoy Loader — changelog
 
+## 2.1.0 follow-up — help and access
+
+- **Help on home.** A ? button opens three short tips (launching, files and
+  access, renewing) plus Help on Telegram. It shows once by itself on the
+  first visit to home, never over a launch or a permission ask.
+- **Copy support info.** It previews first, then copies the app, library and
+  Android versions, the device model and the current home status. Never the
+  licence key, the username or file paths. Nothing is sent automatically.
+- **Access chip.** "Access ready" or "Access needs attention" next to Game.
+  Tapping it when something is off opens the usual explanation, then Settings.
+- **Panel: Copy for customer.** One tap on a key row copies the key with its
+  duration and expiry reminder, with a "Copied for customer" toast.
+
 ## 2.1.0 follow-up — polish
 
 - **Release signing passwords are out of the repository files.** They come from

@@ -99,6 +99,26 @@
     <string name="state_ready">Ready</string>
     <!-- BGMI is installed, but the library, a permission or the container is not ready yet. -->
     <string name="state_installed">Installed</string>
+    <!-- Access row: the three permissions the game-files copy needs. -->
+    <string name="access_ok">Access ready</string>
+    <string name="access_needed">Access needs attention</string>
+    <string name="access_all_set">All files access, Files and Install unknown apps are on.</string>
+    <string name="access_description">%1$s. All files access, Files and Install unknown apps.</string>
+    <!-- Help sheet -->
+    <string name="help_open">Help and tips</string>
+    <string name="help_title">Help</string>
+    <string name="help_launch_title">Launching the game</string>
+    <string name="help_launch_body">Sign in, allow the three access items if Anoy asks (All files access, Files, Install unknown apps), then tap Launch. The first time, Anoy copies the game files before the game opens.</string>
+    <string name="help_access_title">Files missing or access needed</string>
+    <string name="help_access_body">Turn on All files access, Files and Install unknown apps for Anoy, then come back and tap Launch. The Access chip next to Game on home shows whether anything is still off.</string>
+    <string name="help_renew_title">Renewing your licence</string>
+    <string name="help_renew_body">Tap Renew on the licence card, or Help on Telegram, and message support. The new time shows when you come back to Anoy.</string>
+    <string name="help_copy_support">Copy support info</string>
+    <string name="help_got_it">Got it</string>
+    <string name="support_info_title">Support info</string>
+    <string name="support_info_message">This is what will be copied. It has no licence key. Paste it into your chat with support only if you want to.</string>
+    <string name="support_info_copy">Copy</string>
+    <string name="support_info_copied">Support info copied</string>
     <string name="state_not_installed">Not installed</string>
     <string name="state_running">Running</string>
     <string name="launch">Launch</string>

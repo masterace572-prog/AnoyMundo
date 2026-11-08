@@ -126,8 +126,8 @@
   }
 
   // Brief "copied" feedback on the button itself, plus a toast.
-  function copied(btn) {
-    toast('Copied');
+  function copied(btn, message) {
+    toast(message || 'Copied');
     if (!btn || btn.dataset.copied === '1') return;
     btn.dataset.copied = '1';
     var before = btn.innerHTML;
@@ -325,6 +325,23 @@
       if (cls) td.className = cls;
       tr.appendChild(td); return td;
     }
+    // Message the seller pastes to the customer: the key plus a short expiry
+    // reminder built only from what the row already shows.
+    function customerText(r) {
+      var lines = ['Your Anoy key: ' + r.user_key];
+      if (r.state === 'expired') {
+        lines.push((r.duration ? 'Duration: ' + r.duration + '. ' : '') + 'This key expired' + (r.expires ? ' on ' + r.expires : '') + '. Ask me to renew it.');
+      } else if (r.state === 'blocked') {
+        lines.push('This key is blocked. Message me before using it.');
+      } else if (r.expires) {
+        lines.push((r.duration ? 'Duration: ' + r.duration + '. ' : '') + 'Expires ' + r.expires + '.');
+        lines.push('Renew before it runs out to keep playing.');
+      } else {
+        lines.push((r.duration ? 'Duration: ' + r.duration + ', starting' : 'Time starts') + ' when you first sign in.');
+        lines.push('Renew before it runs out to keep playing.');
+      }
+      return lines.join('\n');
+    }
     function render(rows) {
       body.textContent = '';
       body.style.opacity = '';
@@ -349,13 +366,18 @@
         if (owner) cell(tr, 'Created by', r.registrator);
         var act = el('td', { className: 'actions-cell' });
         var group = el('span', { className: 'row-actions' });
+        var share = iconButton('send', 'Copy for customer');
+        share.addEventListener('click', function () {
+          copyText(customerText(r)).then(function () { copied(share, 'Copied for customer \u2014 paste it in your chat'); },
+            function () { toast('Copy failed', true); });
+        });
         var edit = el('a', { className: 'icon-btn', href: '/keys/' + encodeURIComponent(r.id), 'aria-label': 'Edit ' + r.user_key, title: 'Edit' });
         edit.appendChild(icon('pencil'));
         var reset = iconButton('rotate-ccw', 'Reset devices');
         reset.addEventListener('click', function () { keyAction('reset', r.user_key, reset, load); });
         var del = iconButton('trash-2', 'Delete key', 'danger');
         del.addEventListener('click', function () { keyAction('delete', r.user_key, del, load); });
-        group.appendChild(edit); group.appendChild(reset); group.appendChild(del);
+        group.appendChild(share); group.appendChild(edit); group.appendChild(reset); group.appendChild(del);
         act.appendChild(group);
         tr.appendChild(act);
         body.appendChild(tr);

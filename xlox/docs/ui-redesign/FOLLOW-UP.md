@@ -320,3 +320,89 @@ removed ones absent, and no Java code asking for a declared-only permission.
 `qa_saved_key` (stores a saved key), `qa_game_ms` (the stand-in game closes
 after N ms), `qa_refresh` (extend | soon | expired | fail). All require the
 debug-only `qa_preview`.
+
+## 8. Help, Access chip and "Copy for customer"
+
+### 8.1 Help on home
+
+- A **?** button in the home header (left of Sign out) opens a dark bottom sheet
+  in the existing style with three short tips:
+  - **Launching the game:** sign in, allow the three access items if asked, then
+    Launch. The first time, Anoy copies the game files first.
+  - **Files missing or access needed:** turn on All files access, Files and
+    Install unknown apps, come back, tap Launch.
+  - **Renewing your licence:** Renew on the licence card, or Help on Telegram.
+- **Copy support info** first shows exactly what will be copied, then copies it
+  only on **Copy** ("Support info copied"):
+  - app version, library version (or "not installed"), Android version, device
+    model, the Game chip, which access items are missing, the licence status
+    word, and the status line under Launch if one is showing (keys, file paths,
+    links and e-mail addresses are replaced; at most 120 characters).
+  - Never the licence key, the username, file paths, the panel note or any
+    secret.
+  - Nothing is sent anywhere. There is no telemetry; the user pastes it
+    wherever they want.
+- **Help on Telegram** in the sheet is the existing support link, opened only
+  when tapped. The "Help on Telegram" button at the bottom of home is
+  unchanged.
+- **First run:** the sheet opens once by itself (about 1 s after the first
+  arrival on home), then never again ("Got it" or swipe to close).
+  - It waits for a later visit if a launch, a permission ask, the update sheet
+    or the launch that continues after the restart is in progress.
+  - It never blocks Launch.
+
+### 8.2 Access chip
+
+- The GAME heading now carries a chip, **Access ready** (green) or **Access
+  needs attention** (amber). It covers All files access, Files and Install
+  unknown apps, the same three that Launch needs.
+- It sits in the heading rather than as a new row, so the DEVICE card still
+  clears the Launch bar on a typical 411 × 914 dp phone (the CI check).
+- **Tap when something is off:** the existing flow, in the same order. That
+  means the explanation sheet, then Continue to Settings; Files stays the
+  system dialog. Nothing launches afterwards; tap Launch as usual. "Not now"
+  just closes.
+- **Tap when everything is on:** a short "…are on." confirmation, no trip to
+  Settings.
+- The chip refreshes on return to home and when the permission flow finishes.
+
+### 8.3 Panel: Copy for customer
+
+- Each row on **Keys** has one extra icon button (paper plane) next to Edit,
+  **Copy for customer**. It copies a ready-to-send message:
+
+  ```
+  Your Anoy key: ANOY-7D-XXXXX
+  Duration: 7 Days. Expires 14 Nov 2026, 08:35 UTC.
+  Renew before it runs out to keep playing.
+  ```
+
+  - Unused keys say the time starts at the first sign in.
+  - Expired keys say when they expired.
+  - Blocked keys say so.
+- Confirmation: the button turns into a check and a toast says "Copied for
+  customer — paste it in your chat".
+- Key generation, pricing, refunds and permissions are untouched; the existing
+  copy-key button stays.
+
+### Verify
+
+- **CI (android-ui-qa):**
+  - `help_first_run.png` (shown once; the second visit logs none)
+  - `help_sheet.png`
+  - `help_support_info.png`: the preview; the validator fails if it contains
+    the preview key, `ANOY-` or a storage path.
+  - `help_support_copied.png`
+  - `home_access_ready.png` (confirmation)
+  - `home_access_needed.png` → `access_explain.png` → Settings → back as "Access
+    ready", with no launch.
+- **On a phone:**
+  - Tap ?, then Copy support info → Copy, and paste in a chat: no key.
+  - Turn off All files access in Settings, come back: the chip is amber. Tap
+    it, Continue to Settings, allow, come back: the chip is green.
+- **Panel:** Keys → paper-plane button on a row → paste.
+
+### Debug-only QA extra added
+
+`qa_first_help` lets the sample screen run the first-run Help logic (it
+respects the "shown once" flag). It requires the debug-only `qa_preview`.

@@ -1,6 +1,8 @@
 package com.xlox;
 
 import android.content.ActivityNotFoundException;
+import android.content.ClipData;
+import android.content.ClipboardManager;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
@@ -85,6 +87,12 @@ public class MAct extends AppCompatActivity {
     private static final String STATE_ASKED_ROUND = "asked_permissions";
     /** Home asks for missing files access after the content has settled. */
     private static final long HOME_STORAGE_ASK_DELAY_MS = 700L;
+    /** First-run Help waits until home has settled (and any permission ask has started). */
+    private static final long FIRST_HELP_DELAY_MS = 900L;
+    /** Set once the first-run Help sheet has been shown; it never opens on its own again. */
+    private static final String PREF_HELP_SHOWN = "HELP_SHOWN";
+    /** Status text kept in the support info, at most this long. */
+    private static final int SUPPORT_STATUS_MAX = 120;
     private static final long LAUNCH_RESUME_DELAY_MS = 700L;
     /** Long enough to read "Restarting Anoy…" before the restart. */
     private static final long RESTART_DELAY_MS = 1500L;
@@ -129,6 +137,8 @@ public class MAct extends AppCompatActivity {
     public static final String EXTRA_QA_REFRESH = "qa_refresh";
     /** Debug builds only: stores this as the saved licence key (sign-out checks). */
     public static final String EXTRA_QA_SAVED_KEY = "qa_saved_key";
+    /** Debug: let the sample screen run the first-run Help logic (respects the shown flag). */
+    public static final String EXTRA_QA_FIRST_HELP = "qa_first_help";
     /**
      * Debug builds only: simulates the container's answer to a launch so CI can
      * check the result handling without BGMI - started | started_polish_throws
@@ -152,6 +162,9 @@ public class MAct extends AppCompatActivity {
     private TextView expiresValue;
     private TextView timeLeftValue;
     private TextView gameStateValue;
+    private View accessRow;
+    private TextView accessValue;
+    private BottomSheetDialog helpSheet;
     private TextView libraryValue;
     private TextView serverValue;
     private TextView statusMessage;
@@ -278,6 +291,8 @@ public class MAct extends AppCompatActivity {
         expiresValue = findViewById(R.id.expiresValue);
         timeLeftValue = findViewById(R.id.timeLeftValue);
         gameStateValue = findViewById(R.id.gameStateValue);
+        accessRow = findViewById(R.id.accessRow);
+        accessValue = findViewById(R.id.accessValue);
         libraryValue = findViewById(R.id.libraryValue);
         serverValue = findViewById(R.id.serverValue);
         statusMessage = findViewById(R.id.statusMessage);
@@ -297,6 +312,14 @@ public class MAct extends AppCompatActivity {
         findViewById(R.id.help).setOnClickListener(v -> {
             Ui.tap(v);
             Ui.openUrl(this, getString(R.string.telegram_url));
+        });
+        findViewById(R.id.helpButton).setOnClickListener(v -> {
+            Ui.tap(v);
+            showHelp();
+        });
+        accessRow.setOnClickListener(v -> {
+            Ui.tap(v);
+            onAccessTapped();
         });
         primaryAction.setOnClickListener(v -> onPrimaryAction());
 
@@ -336,9 +359,11 @@ public class MAct extends AppCompatActivity {
                     ? StorageAccess.Need.values()[pending] : null;
             askedThisRound = savedInstanceState.getInt(STATE_ASKED_ROUND, 0);
         }
+        boolean resumingLaunch = false;
         if (savedInstanceState == null && StorageAccess.consumeLaunchAfterRestart(this)) {
             // Anoy restarted itself for the game files: carry on with that Launch.
             Log.d(TAG, "Launch: resuming after the restart");
+            resumingLaunch = true;
             main.postDelayed(preview ? this::prepareObbThenLaunch : this::startLaunch, LAUNCH_RESUME_DELAY_MS);
         } else {
             applyQaAction();
@@ -351,6 +376,12 @@ public class MAct extends AppCompatActivity {
             main.postDelayed(() -> {
                 if (Ui.alive(this) && shouldAskOnHome()) requestStorage(false);
             }, HOME_STORAGE_ASK_DELAY_MS);
+        }
+        // First arrival on home: the Help tips once, never over a launch or a
+        // permission ask (then a later arrival shows them instead).
+        boolean qaFirstHelp = preview && getIntent().getBooleanExtra(EXTRA_QA_FIRST_HELP, false);
+        if (savedInstanceState == null && !resumingLaunch && (!preview || qaFirstHelp)) {
+            main.postDelayed(this::maybeShowFirstHelp, FIRST_HELP_DELAY_MS);
         }
         // Content reveals with a 40 ms stagger, 8 dp rise, 220 ms.
         Ui.stagger(findViewById(R.id.mainContent), 0);
@@ -533,6 +564,7 @@ public class MAct extends AppCompatActivity {
         launchAfterStorage = false;
         askedThisRound = 0;
         Log.d(TAG, "Permissions granted" + (launch ? ": continuing the launch" : ""));
+        refreshAccess();
         if (!launch) return;
         if (qaPermissionsThenCopy) {
             prepareObbThenLaunch();
@@ -1202,7 +1234,155 @@ public class MAct extends AppCompatActivity {
         } else {
             setChip(gameStateValue, getString(R.string.state_installed), R.drawable.ic_circle_check, 0);
         }
+        refreshAccess();
         refreshPrimary();
+    }
+
+    // ---------------------------------------------------------------- access
+
+    /** Access chip: Allowed when All files access, Files and Install unknown apps are all on. */
+    private void refreshAccess() {
+        if (accessValue == null) return;
+        boolean ok = StorageAccess.firstMissing(this) == null;
+        setChip(accessValue, getString(ok ? R.string.access_ok : R.string.access_needed),
+                ok ? R.drawable.ic_circle_check : R.drawable.ic_circle_alert, ok ? CHIP_SUCCESS : CHIP_WARNING);
+        accessRow.setContentDescription(getString(R.string.access_description, accessValue.getText()));
+    }
+
+    /**
+     * Access row tapped. Something off: the existing flow (explanation sheet,
+     * then the settings page / Files dialog), without launching afterwards.
+     * All on: a short confirmation, never a needless trip to Settings.
+     */
+    private void onAccessTapped() {
+        StorageAccess.Need missing = StorageAccess.firstMissing(this);
+        if (missing == null) {
+            Log.d(TAG, "Access: all three items are on");
+            Ui.snackbar(this, getString(R.string.access_all_set));
+            return;
+        }
+        if (busy || launchPending) return;
+        Log.d(TAG, "Access: asking for " + missing);
+        requestStorage(false);
+    }
+
+    // ------------------------------------------------------------------ help
+
+    /** Help sheet: three short tips, Copy support info (preview first) and the Telegram link. */
+    private void showHelp() {
+        if (helpSheet != null && helpSheet.isShowing()) return;
+        View sheetView = LayoutInflater.from(this).inflate(R.layout.sheet_help, null, false);
+        BottomSheetDialog sheet = Ui.sheet(this, sheetView, true);
+        helpSheet = sheet;
+        sheet.setOnDismissListener(d -> {
+            if (helpSheet == sheet) helpSheet = null;
+        });
+        sheetView.findViewById(R.id.helpCopySupport).setOnClickListener(v -> {
+            Ui.tap(v);
+            sheet.dismiss();
+            showSupportInfo();
+        });
+        sheetView.findViewById(R.id.helpTelegram).setOnClickListener(v -> {
+            Ui.tap(v);
+            sheet.dismiss();
+            Ui.openUrl(this, getString(R.string.telegram_url));
+        });
+        sheetView.findViewById(R.id.helpGotIt).setOnClickListener(v -> {
+            Ui.tap(v);
+            sheet.dismiss();
+        });
+        Log.d(TAG, "Help: sheet shown");
+        sheet.show();
+    }
+
+    /** First successful arrival on home: show the Help tips once, if nothing else is going on. */
+    private void maybeShowFirstHelp() {
+        if (!Ui.alive(this) || primaryAction == null) return;
+        Prefs prefs = new Prefs(this);
+        if ("1".equals(prefs.getSt(PREF_HELP_SHOWN, ""))) return;
+        boolean permissionAsk = storagePromptOpen || (permissionSheet != null && permissionSheet.isShowing())
+                || (!preview && shouldAskOnHome());
+        if (busy || launchPending || permissionAsk || (gate != null && gate.isShowing())) {
+            Log.d(TAG, "Help: first-run tips wait for a later visit");
+            return;
+        }
+        prefs.setSt(PREF_HELP_SHOWN, "1");
+        Log.d(TAG, "Help: first-run tips");
+        showHelp();
+    }
+
+    /** Shows exactly what "Copy support info" copies; nothing leaves the phone unless the user pastes it. */
+    private void showSupportInfo() {
+        String info = supportInfo();
+        View sheetView = LayoutInflater.from(this).inflate(R.layout.sheet_support_info, null, false);
+        ((TextView) sheetView.findViewById(R.id.supportInfoText)).setText(info);
+        BottomSheetDialog sheet = Ui.sheet(this, sheetView, true);
+        sheetView.findViewById(R.id.supportInfoCopy).setOnClickListener(v -> {
+            Ui.tap(v);
+            sheet.dismiss();
+            boolean copied = false;
+            try {
+                ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+                if (clipboard != null) {
+                    clipboard.setPrimaryClip(ClipData.newPlainText(getString(R.string.support_info_title), info));
+                    copied = true;
+                }
+            } catch (RuntimeException e) {
+                Log.w(TAG, "Help: clipboard unavailable", e);
+            }
+            if (copied) {
+                Log.d(TAG, "Help: support info copied");
+                Ui.snackbar(this, getString(R.string.support_info_copied));
+            }
+        });
+        sheetView.findViewById(R.id.supportInfoCancel).setOnClickListener(v -> sheet.dismiss());
+        sheet.show();
+    }
+
+    /**
+     * Device and app facts for support. Never the licence key, the username,
+     * file paths or anything from the panel - only versions, the home chips
+     * and a shortened status line.
+     */
+    private String supportInfo() {
+        StringBuilder b = new StringBuilder();
+        b.append("Anoy ").append(BuildConfig.VERSION_NAME).append(" (").append(BuildConfig.VERSION_CODE).append(")\n");
+        String library = null;
+        try {
+            library = LibManager.installedVersion(this);
+        } catch (RuntimeException ignored) {
+            // Unknown is fine.
+        }
+        b.append("Library: ").append(library != null && !library.isEmpty() ? library : "not installed").append('\n');
+        b.append("Android: ").append(Build.VERSION.RELEASE).append(" (API ").append(Build.VERSION.SDK_INT).append(")\n");
+        b.append("Device: ").append(deviceName()).append('\n');
+        b.append("Game: ").append(gameStateValue.getText()).append('\n');
+        StringBuilder missing = new StringBuilder();
+        for (StorageAccess.Need need : StorageAccess.Need.values()) {
+            if (StorageAccess.has(this, need)) continue;
+            if (missing.length() > 0) missing.append(", ");
+            missing.append(need == StorageAccess.Need.ALL_FILES ? "All files access"
+                    : need == StorageAccess.Need.FILES ? "Files" : "Install unknown apps");
+        }
+        b.append("Access: ").append(missing.length() == 0 ? "allowed" : "missing " + missing).append('\n');
+        b.append("Licence: ").append(statusValue.getText());
+        if (statusMessage.getVisibility() == View.VISIBLE && statusMessage.getText().length() > 0) {
+            b.append("\nStatus: ").append(redactStatus(statusMessage.getText().toString()));
+        }
+        return b.toString();
+    }
+
+    /** Drops keys, file paths, links and e-mail addresses from a status line and shortens it. */
+    static String redactStatus(String text) {
+        if (text == null) return "";
+        String s = text.replaceAll("(?i)\\bANOY-[A-Z0-9]+-[A-Z0-9]+\\b", "[key]")
+                .replaceAll("(?i)\\b[a-z][a-z0-9+.-]*://\\S+", "[link]")
+                .replaceAll("\\S+@\\S+\\.\\S+", "[email]")
+                .replaceAll("(?:/[^\\s/]+){2,}/?", "[path]")
+                .replaceAll("\\s+", " ")
+                .trim();
+        if (s.length() > SUPPORT_STATUS_MAX) s = s.substring(0, SUPPORT_STATUS_MAX - 1).trim() + "\u2026";
+        return s;
     }
 
     /** Library installed, the three permissions granted and the container activated. */
