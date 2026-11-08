@@ -25,7 +25,7 @@ INFO         |      Ok: Hardware GPU compatibility checks are not required
 INFO         |   Checking: hasSufficientSystem
 INFO         |      Ok: System requirements to run avd: `qa` are met
 WARNING      | Feature QuickbootFileBacked is disabled due to stability issues, if you really want that, the environment variable ANDROID_EMU_FORCE_QUICKBOOT_FILE_BACKED need to set to 1
-INFO         | Storing crashdata in: /tmp/android-runner/emu-crash-37.2.13.db, detection is enabled for process: 2856
+INFO         | Storing crashdata in: /tmp/android-runner/emu-crash-37.2.13.db, detection is enabled for process: 3139
 INFO         | Initializing gfxstream backend
 INFO         | startOpenglesRendererImpl: gpu info
 INFO         | 
@@ -64,7 +64,7 @@ INFO         | Graphics API Version OpenGL ES 3.0 (OpenGL ES 3.0 SwiftShader 4.0
 INFO         | Graphics API Extensions GL_OES_EGL_sync GL_OES_EGL_image GL_OES_EGL_image_external GL_OES_depth24 GL_OES_depth32 GL_OES_element_index_uint GL_OES_texture_float GL_OES_texture_float_linear GL_OES_compressed_paletted_texture GL_OES_compressed_ETC1_RGB8_texture GL_OES_depth_texture GL_OES_texture_half_float GL_OES_texture_half_float_linear GL_OES_packed_depth_stencil GL_OES_vertex_half_float GL_OES_standard_derivatives GL_OES_texture_npot GL_OES_rgb8_rgba8 GL_EXT_color_buffer_float GL_EXT_color_buffer_half_float GL_EXT_texture_format_BGRA8888 GL_APPLE_texture_format_BGRA8888 
 INFO         | Graphics Device Extensions N/A
 INFO         | Disabling sparse binding feature support
-INFO         | Sending adb public key [QAAAAC0UuPRbpLQ+M08Lz6age2SPen9rHdKv1zV6fcVVBGTGQ1OZAC/Cv/lp8l43bZAreqxVbnviNGTraaXWOvBS+0AHafNw6Lx/sqjEmRlq91J5/CwqvFNUoI5xLtJSHxQKrYgWITmEw4kz3fRUXJzEptEieb7TjdDKLzWUFc0pjVijfqhjOtBoHdEiNw2ewgj3Pvvmh+0AmdLzJBxLgV2U+iF8J1BgDukAyTNPykm3RFr05MaVSwWvDfwC6iMNR3xRquleLMayF5XMao2pzbgRYWZNaRyIc/NlvlnCV6KdLqpteLS/roiIsvIDeIXh0q1nWL+DoWUgWIgR2WIMziax23IB8+XH5Pdck1DJKtbRmI1WL5Ve79lNru0dj75uQZfk/DYxHlxb8VB29BSgRe3he5QbxcC30oXhZj4kpWaCc0qBLH5oiEPDrFdPGvr51nRw4bgsQGnnAgYYpyOM9EE6PPGg3IhW8PAVcFvDCu/2E59yYIwcTQ+IqCE+jhzHAbuQR/HsrQgnB0pUREETE+ZEcrqQDC+1mj3Riq0OXS02Kld0wtEXbB+SwuFSjGG51ikyVX4f+taFjDJpiVDZEQVh2VpWFfeOBRZYtcpN3dh6zcOg6U8eI9G8alEzcmw9vCi1STynpztqu4Z1yWcTf4IvRO4SIIun49BwW65MF3QqXUan5sFDLgEAAQA= runner@unknown]
+INFO         | Sending adb public key [QAAAAN+x0sPhtdHrjGukn8EZsk+H2R8m84uZvK0Vnm72s/ML23cPHaxdNQ743WXCDFBHr2h+am5wanOpbv9SGkg4HrLqrVZq5EFbe9d2x80RiMgx28nX19VJCn6RVAK5VXrSF/DhgyWi4XwMqZqfdqyJxHJk8GoO5snD29b+ZsjtSnFQmBuZP6nZvZ6msCFvIYVlUsb/Gu5yRZ/Xn1KC+F+NVO6zxqJEE/6MjP2c00wHtUqaMpghJdP/5OgCpXCS7fWYX2gtnh5NCS8khgG6/rajHmyGDm9LhlGzx9rK0my6x4ZbTi1fHCifcDCl5tDXo3GMfGTEGgVl0fAe+WkQ1XNjmk6H5pS4ic284LPJJyhEt85XiT/L2M0WSwkd/HFiMmyBlgS+1Up4WjacXVaAn45oAvfNeqAGhAMGbEvR0yOL4Rw8KKVZvJa+Sown9ezbJ5BTFfym6Lxh63PN4JkzqJQeQ3yfEXixW6C8U08zAc4QPaGtBPrv5TY9ILaOdzK1ui56yew3kGHqA32zTX4HGaQdMpIZdAw9s1dObC+ULbO1L2c5qw3vD33xjACfjbuPZVqb6LOZuBytZlu5Rv0MWWGI8LrI+RdeTKxLT8YB6pgJeu52SI7WoJoiQ1nvq8HtaAnOAKzvb0c6b557JPjBnHDKeA5ALuwi0Gv6nz92lJp1TroIePZ1DgEAAQA= runner@unknown]
 INFO         | Userspace boot properties:
 INFO         |   androidboot.boot_devices=pci0000:00/0000:00:03.0 pci0000:00/0000:00:06.0
 INFO         |   androidboot.dalvik.vm.heapsize=512m
@@ -76,7 +76,7 @@ INFO         |   androidboot.hardware.vulkan=ranchu
 INFO         |   androidboot.logcat=*:V
 INFO         |   androidboot.opengles.version=196608
 INFO         |   androidboot.qemu=1
-INFO         |   androidboot.qemu.adb.pubkey=QAAAAC0UuPRbpLQ+M08Lz6age2SPen9rHdKv1zV6fcVVBGTGQ1OZAC/Cv/lp8l43bZAreqxVbnviNGTraaXWOvBS+0AHafNw6Lx/sqjEmRlq91J5/CwqvFNUoI5xLtJSHxQKrYgWITmEw4kz3fRUXJzEptEieb7TjdDKLzWUFc0pjVijfqhjOtBoHdEiNw2ewgj3Pvvmh+0AmdLzJBxLgV2U+iF8J1BgDukAyTNPykm3RFr05MaVSwWvDfwC6iMNR3xRquleLMayF5XMao2pzbgRYWZNaRyIc/NlvlnCV6KdLqpteLS/roiIsvIDeIXh0q1nWL+DoWUgWIgR2WIMziax23IB8+XH5Pdck1DJKtbRmI1WL5Ve79lNru0dj75uQZfk/DYxHlxb8VB29BSgRe3he5QbxcC30oXhZj4kpWaCc0qBLH5oiEPDrFdPGvr51nRw4bgsQGnnAgYYpyOM9EE6PPGg3IhW8PAVcFvDCu/2E59yYIwcTQ+IqCE+jhzHAbuQR/HsrQgnB0pUREETE+ZEcrqQDC+1mj3Riq0OXS02Kld0wtEXbB+SwuFSjGG51ikyVX4f+taFjDJpiVDZEQVh2VpWFfeOBRZYtcpN3dh6zcOg6U8eI9G8alEzcmw9vCi1STynpztqu4Z1yWcTf4IvRO4SIIun49BwW65MF3QqXUan5sFDLgEAAQA= runner@unknown
+INFO         |   androidboot.qemu.adb.pubkey=QAAAAN+x0sPhtdHrjGukn8EZsk+H2R8m84uZvK0Vnm72s/ML23cPHaxdNQ743WXCDFBHr2h+am5wanOpbv9SGkg4HrLqrVZq5EFbe9d2x80RiMgx28nX19VJCn6RVAK5VXrSF/DhgyWi4XwMqZqfdqyJxHJk8GoO5snD29b+ZsjtSnFQmBuZP6nZvZ6msCFvIYVlUsb/Gu5yRZ/Xn1KC+F+NVO6zxqJEE/6MjP2c00wHtUqaMpghJdP/5OgCpXCS7fWYX2gtnh5NCS8khgG6/rajHmyGDm9LhlGzx9rK0my6x4ZbTi1fHCifcDCl5tDXo3GMfGTEGgVl0fAe+WkQ1XNjmk6H5pS4ic284LPJJyhEt85XiT/L2M0WSwkd/HFiMmyBlgS+1Up4WjacXVaAn45oAvfNeqAGhAMGbEvR0yOL4Rw8KKVZvJa+Sown9ezbJ5BTFfym6Lxh63PN4JkzqJQeQ3yfEXixW6C8U08zAc4QPaGtBPrv5TY9ILaOdzK1ui56yew3kGHqA32zTX4HGaQdMpIZdAw9s1dObC+ULbO1L2c5qw3vD33xjACfjbuPZVqb6LOZuBytZlu5Rv0MWWGI8LrI+RdeTKxLT8YB6pgJeu52SI7WoJoiQ1nvq8HtaAnOAKzvb0c6b557JPjBnHDKeA5ALuwi0Gv6nz92lJp1TroIePZ1DgEAAQA= runner@unknown
 INFO         |   androidboot.qemu.avd_name=qa
 INFO         |   androidboot.qemu.camera_hq_edge_processing=0
 INFO         |   androidboot.qemu.camera_protocol_ver=1
@@ -95,26 +95,27 @@ INFO         |   androidboot.vbmeta.digest=cc2acf6c582b63336b71fe51ed136e1a7a577
 INFO         |   androidboot.vbmeta.hash_alg=sha256
 INFO         |   androidboot.vbmeta.size=6592
 INFO         |   androidboot.veritymode=enforcing
-WARNING: cannnot unmap ptr 0x7f49ffa01000 as it is in the protected range from 0x7f497fa00000 to 0x7f49ffc00000
+WARNING: cannnot unmap ptr 0x7f8684e01000 as it is in the protected range from 0x7f8604e00000 to 0x7f8685000000
 INFO         | Monitoring duration of emulator setup.
-INFO         | Successfully initialized netsim WiFi
 INFO         | Activated packet streamer for bluetooth emulation
+INFO         | Successfully initialized netsim WiFi
 INFO         | Setting display: 0 configuration to: 1080x2340, dpi: 440x440 
 INFO         | setDisplayActiveConfig: id:0, 1080x2340
 INFO         | emulatorSetupEnvironment: Environment scene is not required
 USER_INFO    | Emulator is performing a full startup. This may take upto two minutes, or more.
 WARNING      | Failed to process .ini file /home/runner/.android/emu-update-last-check.ini for reading.
 WARNING      | Failed to process .ini file /home/runner/.android/emu-update-last-check.ini for reading.
-INFO         | Boot completed in 31355 ms
+INFO         | Boot completed in 47155 ms
 INFO         | Increasing screen off timeout, logcat buffer size to 2M.
-ERROR        | Failed to find ColorBuffer: 1948
+ERROR        | bad color buffer handle 1685
+ERROR        | Failed to find ColorBuffer: 1901
 ERROR        | Failed to bind to texture: invalid color buffer.
-INFO         | Wait for emulator (pid 2856) 20 seconds to shutdown gracefully before kill;you can set environment variable ANDROID_EMULATOR_WAIT_TIME_BEFORE_KILL(in seconds) to change the default value (20 seconds)
+ERROR        | bad color buffer handle 1988
+INFO         | Wait for emulator (pid 3139) 20 seconds to shutdown gracefully before kill;you can set environment variable ANDROID_EMULATOR_WAIT_TIME_BEFORE_KILL(in seconds) to change the default value (20 seconds)
 
 USER_INFO    | Snapshots have been disabled by the user, save request is ignored.
 INFO         | Saving snapshot 'default_boot' took 0 ms
 ERROR        | stop: Not implemented
 WARNING      | Emulator client has not yet been configured.. Call configure me first!
 INFO         | removeAll
-WARNING      | Netsim Wifi dns:///localhost:45025 is gone due to Stream removed (CANCELLED)
-INFO         | ipv6:%5B::1%5D:45025: Got goaway [2] err=UNAVAILABLE:GOAWAY received; Error code: 2; Debug Text: Cancelling all calls {http2_error:2}
+WARNING      | Netsim Wifi dns:///localhost:35201 is gone due to Stream removed (CANCELLED)
