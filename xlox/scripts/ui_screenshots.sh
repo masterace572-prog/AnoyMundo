@@ -502,6 +502,11 @@ adb logcat -d > ../qa-logs/logcat-sizes.txt 2>/dev/null || true
 # The real AppManager + container storage. qa_action obb_copy runs the
 # copy-then-launch that follows the pre-checks (no activated container here);
 # qa_launch=started makes "the game" a stand-in screen (Settings).
+# Stock Android 11+ only lets "installer" apps read another app's
+# Android/obb folder; Anoy does not ask for that. obb0 checks the honest
+# message on such a phone; obb1/obb2 simulate a phone where Android allows the
+# read (test-only appops switch, the app itself is unchanged).
+#   obb0: folder blocked - clear message, no launch.
 #   obb1: first install - must copy main + patch with progress, then launch.
 #   obb2: second tap   - truly current: skip the copy, then launch.
 #   obb3: no game OBB  - missing-files message, no launch.
@@ -531,7 +536,14 @@ adb shell dd if=/dev/zero of=$GOBB/main.20.$GAME.obb bs=1048576 count=320 >/dev/
 adb shell dd if=/dev/zero of=$GOBB/main.19.$GAME.obb bs=1048576 count=2 >/dev/null 2>&1 || true   # older main: ignored
 adb shell dd if=/dev/zero of=$GOBB/patch.20.$GAME.obb bs=1048576 count=24 >/dev/null 2>&1 || log "WARN: could not create patch OBB"
 log "obb source listing: $(adb shell ls -l $GOBB 2>&1 | tr -d '\r' | tr '\n' '|')"
-log "obb app view: $(adb shell run-as $PKG ls -l $GOBB 2>&1 | tr -d '\r' | tr '\n' '|')"
+stop_app
+adb logcat -c || true
+obb_start
+sleep 4
+log "obb0 focus: $(focus)"
+log "obb0 texts: $(texts)"
+log "obb0 log: $(obb_log)"
+adb shell appops set $PKG REQUEST_INSTALL_PACKAGES allow >> "$LOG" 2>&1 || log "WARN: appops REQUEST_INSTALL_PACKAGES failed"
 obb_case obb1
 obb_case obb2
 stop_app
@@ -544,6 +556,7 @@ shot home_obb3_missing
 log "obb3 texts: $(texts)"
 log "obb3 log: $(obb_log)"
 stop_app
+adb shell appops set $PKG REQUEST_INSTALL_PACKAGES default >/dev/null 2>&1 || true
 
 # ------------------------------------- 11. minified release build (real flow)
 if [ -f "$RELEASE_APK" ]; then

@@ -231,6 +231,10 @@ jobs:
               errors.append('second launch: copied again although the container copy is current')
           if 'launching' not in o2:
               errors.append('second launch: did not launch')
+          if 'blocking access to the game files folder' not in obb('obb0 texts'):
+              errors.append('blocked OBB folder: no clear message: ' + obb('obb0 log')[:400])
+          if 'launching' in obb('obb0 log') or 'com.xlox' not in obb('obb0 focus'):
+              errors.append('blocked OBB folder: the game was launched anyway')
           if 'Game files not found' not in obb('obb3 texts'):
               errors.append('no game OBB: missing-files message not shown')
           if 'launching' in o3 or 'com.xlox' not in obb('obb3 focus'):

@@ -245,18 +245,26 @@ public final class AppManager {
 
     /**
      * Finds the device folder with the newest main OBB (and its newest patch).
-     * On failure sets {@code error[0]} to obb_folder_not_found or
-     * main_obb_not_found and returns null.
+     * On failure sets {@code error[0]} to obb_folder_not_found,
+     * main_obb_not_found, or obb_folder_blocked (the folder exists but Android
+     * does not let this app list it) and returns null.
      */
     private Source findSource(String pkg, String[] error) {
         boolean anyFolder = false;
+        boolean blocked = false;
         for (File dir : sourceDirs(pkg)) {
             if (!dir.isDirectory()) continue;
             anyFolder = true;
+            if (dir.listFiles() == null) {
+                Log.w(TAG, "Android blocks listing " + dir);
+                blocked = true;
+                continue;
+            }
             File mainObb = newest(dir, "main", pkg);
             if (mainObb != null) return new Source(dir, mainObb, newest(dir, "patch", pkg));
         }
-        error[0] = ctx.getString(anyFolder ? R.string.main_obb_not_found : R.string.obb_folder_not_found);
+        error[0] = ctx.getString(blocked ? R.string.obb_folder_blocked
+                : anyFolder ? R.string.main_obb_not_found : R.string.obb_folder_not_found);
         return null;
     }
 
