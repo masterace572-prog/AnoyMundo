@@ -14,6 +14,7 @@ import {
   iconSvg,
 } from './render.mjs';
 import { requestUrl, pathOf, parseBody, redirect, back } from './http.mjs';
+import { handleAppUpdateCheck, doAppReleasePost, appReleasePageData, validHttpsUrl } from './app-release.mjs';
 import {
   handleConnect, handleConnectInfo, handleHealth, handleLibVersion,
   handleLibDownload, handleLibInfo, handleLibManifest,
@@ -611,8 +612,12 @@ function urlFileName(url, fallback) {
 
 /**
  * Publishes a loader release. Two actions:
- *   upload -> new file (or external URL) becomes the current release
+ *   upload -> new file OR external https link becomes the current release.
+ *             One rule when both arrive: the file wins and the link is
+ *             ignored (never stored, never validated), so exactly one release
+ *             is published per click.
  *   link   -> push a new version + external URL onto the current release
+ *             (kept for older panel pages and scripts)
  *
  * Both are validated BEFORE anything is changed, and if the insert fails the
  * previous current release is restored. It can never leave zero current
@@ -622,14 +627,16 @@ async function doLibUpload(req, res, body, user) {
   if (!user.isOwner) return sendJson(res, { ok: false, error: 'Only the Owner can publish releases.' }, 403);
   const action = str(body.action) === 'link' ? 'link' : 'upload';
   const version = str(body.version).slice(0, 32);
-  const externalUrl = str(body.external_url).slice(0, 2000);
+  const base64 = action === 'upload' ? str(body.content_base64) : '';
+  // File wins: with a file the link is dropped before anything looks at it.
+  const externalUrl = base64 ? '' : str(body.external_url).slice(0, 2000);
   const notes = str(body.notes).slice(0, 500) || null;
 
   if (!validVersion(version)) {
     return sendJson(res, { ok: false, error: 'Enter a version like 1.3 (letters, numbers, . _ + -).' }, 400);
   }
-  if (externalUrl && !/^https?:\/\//i.test(externalUrl)) {
-    return sendJson(res, { ok: false, error: 'The external link must start with https:// or http://.' }, 400);
+  if (externalUrl && !validHttpsUrl(externalUrl)) {
+    return sendJson(res, { ok: false, error: 'The external link must be a full https:// address (http:// is not allowed).' }, 400);
   }
 
   const { data: current, error: readError } = await db().from('client_release')
@@ -651,7 +658,6 @@ async function doLibUpload(req, res, body, user) {
 
   const name = str(body.file_name).replace(/["\r\n/\\]/g, '_').slice(0, 255) ||
     urlFileName(externalUrl, 'release.zip');
-  const base64 = str(body.content_base64);
   if (!base64 && !externalUrl) {
     return sendJson(res, { ok: false, error: 'Choose a file or enter an external link.' }, 400);
   }
@@ -761,7 +767,7 @@ function isJsonRoute(p, method, req) {
   const accept = String(req.headers?.accept || '');
   const contentType = String(req.headers?.['content-type'] || '');
   return lp.startsWith('/api/') || lp === '/connect' || lp === '/health' ||
-    (lp === '/lib' && method === 'POST') ||
+    ((lp === '/lib' || lp === '/app-update') && method === 'POST') ||
     lp.startsWith('/keys/reset') || lp === '/keys/api' ||
     contentType.includes('application/json') || accept.includes('application/json');
 }
@@ -820,6 +826,8 @@ export async function handle(req, res) {
     }
     if (lp === '/api/lib/info') return handleLibInfo(res);
     if (lp === '/api/lib/manifest') return handleLibManifest(res);
+    // The Android app's own update (APK), checked on the splash screen.
+    if (lp === '/api/app/update') return handleAppUpdateCheck(res, q);
     if (lp === '/favicon.ico') { res.statusCode = 301; res.setHeader('Location', '/favicon.svg'); return res.end(); }
     // Personal API-key endpoints authenticate with X-API-Key, not a session.
     if (lp === '/api/v1' || lp.startsWith('/api/v1/')) {
@@ -1092,6 +1100,13 @@ export async function handle(req, res) {
       if (method === 'POST') return doLibUpload(req, res, body, user);
       const settings = await getSettings();
       return page(req, res, 'lib', { user, title: 'Library', maxUploadMb: config.maxUploadMb, ...serverData(settings) });
+    }
+
+    // ------------------------- app (APK) update ----------------------------
+    if (lp === '/app-update') {
+      if (!user.isAdmin) return redirect(res, '/dashboard', { msgWarning: 'You do not have access to that page.' });
+      if (method === 'POST') return doAppReleasePost(req, res, body, user);
+      return page(req, res, 'app_update', { user, title: 'App update', ...(await appReleasePageData()) });
     }
 
     // -------------------------------- 404 -----------------------------------

@@ -271,6 +271,10 @@ try {
   r = await request('/register');
   ok(/already been used|username is taken/.test(r.body), 'a used code / duplicate username is refused');
   r = await login('reseller1', 'secret123');
+  {
+    const denied = await request('/app-update', { method: 'POST', headers: SAME, body: { action: 'publish', version_name: '9.9', version_code: '99', apk_url: 'https://example.com/x.apk', changelog: 'x' } });
+    ok(denied.status === 403 || denied.status === 302, 'a reseller cannot publish app updates');
+  }
   ok(r.status === 302 && r.location === '/dashboard', 'the new reseller can sign in');
   r = await request('/dashboard');
   ok(/Reseller/.test(r.body) && /₹500/.test(r.body), 'reseller dashboard shows role and ₹500 balance');
@@ -360,6 +364,63 @@ try {
   ok(r.body?.version === '1.2' && r.body?.source === 'link' && r.body?.available === true, 'manifest reports a link release');
   r = await request('/lib', { method: 'POST', headers: SAME, body: { action: 'link', version: 'bad version', external_url: 'https://example.com/lib.so' } });
   ok(r.status === 400 && /version/i.test(r.body?.error || ''), 'an invalid version is rejected');
+  // One publish card: file OR https link; with both, the file wins.
+  r = await request('/lib', { method: 'POST', headers: SAME, body: { action: 'upload', version: '1.3' } });
+  ok(r.status === 400 && /file|link/i.test(r.body?.error || ''), 'publish with neither a file nor a link is rejected');
+  r = await request('/lib', { method: 'POST', headers: SAME, body: { action: 'upload', version: '1.3', external_url: 'http://example.com/lib.so' } });
+  ok(r.status === 400 && /https/i.test(r.body?.error || ''), 'an http:// link is rejected');
+  r = await request('/lib', { method: 'POST', headers: SAME, body: { action: 'upload', version: '1.3', external_url: 'not a link' } });
+  ok(r.status === 400 && /https/i.test(r.body?.error || ''), 'an invalid link is rejected');
+  r = await request('/lib', { method: 'POST', headers: SAME, body: { action: 'link', version: '1.3', external_url: 'http://example.com/lib.so' } });
+  ok(r.status === 400, 'the link action rejects http:// too');
+  r = await request('/lib', { method: 'POST', headers: SAME, body: { action: 'upload', version: '1.3', external_url: 'https://example.com/only.so' } });
+  ok(r.body?.ok === true && r.body?.mode === 'upload', 'an https link alone publishes');
+  r = await request('/api/lib/download');
+  ok(r.status === 302 && r.location === 'https://example.com/only.so', 'download follows the published link');
+  r = await request('/lib', { method: 'POST', headers: SAME, body: { action: 'upload', version: '1.4', file_name: 'both.zip', content_base64: zip, external_url: 'https://example.com/ignored.so' } });
+  ok(r.body?.ok === true && r.body?.file_name === 'both.zip', 'file + link publishes once');
+  r = await request('/api/lib/manifest');
+  ok(r.body?.version === '1.4' && r.body?.source === 'file', 'with a file and a link, the file wins');
+  r = await request('/api/lib/download');
+  ok(r.status === 200 && r.response.headers.get('x-content-sha256') === md5Sha(Buffer.from(zip, 'base64')), 'the stored file is served, the link ignored');
+  r = await request('/lib');
+  ok(r.status === 200 && (r.body.match(/<form\b/g) || []).length === 1 && !/link-form/.test(r.body), 'library page has one publish form');
+
+  // 13b. App (APK) update: separate from the library.
+  r = await request('/api/app/update');
+  ok(r.status === 200 && r.body?.ok === true && r.body?.available === false, 'app update check: nothing published yet');
+  r = await request('/app-update');
+  ok(r.status === 200 && /Publish an app update/.test(r.body), 'Owner sees the App update page');
+  const appOk = { action: 'publish', version_name: '2.2.0', version_code: '8', apk_url: 'https://github.com/o/r/releases/download/v8/Anoy.apk', changelog: 'New home\nSettings', type: 'normal' };
+  r = await request('/app-update', { method: 'POST', headers: SAME, body: { ...appOk, apk_url: 'http://example.com/a.apk' } });
+  ok(r.status === 400 && r.body?.errors?.apk_url, 'app update: http:// APK link rejected');
+  r = await request('/app-update', { method: 'POST', headers: SAME, body: { ...appOk, version_code: '8.5' } });
+  ok(r.status === 400 && r.body?.errors?.version_code, 'app update: non-integer version code rejected');
+  r = await request('/app-update', { method: 'POST', headers: SAME, body: { ...appOk, version_name: '', changelog: '' } });
+  ok(r.status === 400 && r.body?.errors?.version_name && r.body?.errors?.changelog, 'app update: missing fields reported per field');
+  r = await request('/app-update', { method: 'POST', headers: { 'sec-fetch-site': 'cross-site' }, body: appOk });
+  ok(r.status === 403, 'app update: cross-site publish blocked');
+  r = await request('/app-update', { method: 'POST', headers: SAME, body: appOk });
+  ok(r.body?.ok === true && r.body?.version_code === 8 && r.body?.mandatory === false, 'app update: publishes a normal update');
+  r = await request('/api/app/update?code=7');
+  ok(r.body?.available === true && r.body?.version_code === 8 && r.body?.version_name === '2.2.0' && r.body?.mandatory === false &&
+    r.body?.apk_url === appOk.apk_url && r.body?.changelog === 'New home\nSettings' && r.body?.update_available === true,
+    'app update check returns the release (code 7 -> update)');
+  ok(r.response.headers.get('cache-control') === 'no-store', 'app update check is never cached');
+  r = await request('/api/app/update?code=8');
+  ok(r.body?.update_available === false, 'app update check: same code -> no update');
+  r = await request('/app-update', { method: 'POST', headers: SAME, body: { ...appOk, version_code: '8', type: 'mandatory' } });
+  ok(r.status === 400 && /higher/.test(r.body?.errors?.version_code || ''), 'app update: version code must increase');
+  r = await request('/app-update', { method: 'POST', headers: SAME, body: { ...appOk, version_name: '2.2.1', version_code: '9', type: 'mandatory' } });
+  ok(r.body?.ok === true && r.body?.mandatory === true, 'app update: publishes a mandatory update');
+  r = await request('/api/app/update');
+  ok(r.body?.version_code === 9 && r.body?.mandatory === true, 'app update check: newest current release only');
+  r = await request('/api/lib/manifest');
+  ok(r.body?.version === '1.4', 'app updates do not touch the library release');
+  r = await request('/app-update', { method: 'POST', headers: SAME, body: { action: 'withdraw' } });
+  ok(r.body?.ok === true, 'app update: withdraw');
+  r = await request('/api/app/update');
+  ok(r.body?.ok === true && r.body?.available === false, 'app update check after withdraw: nothing offered');
 
   // 14. static assets
   r = await request('/assets/css/ui.css');

@@ -44,6 +44,8 @@ const pages = [
   ['users', '/admin/manage-users'],
   ['referral', '/admin/create-referral'],
   ['lib', '/lib'],
+  ['app_update', '/app-update'],
+  ['api_docs', '/api-docs'],
   ['api_keys', '/api-keys'],
   ['settings', '/settings'],
   ['docs', '/docs'],
@@ -145,6 +147,80 @@ try {
         failures += 1; report.push(`[${size.name}] Copy for customer: button did not return to its icon (${JSON.stringify(after)})`);
       }
     }
+
+    // ---- 2.2.0 layout checks: measured from the DOM, not eyeballed.
+    const problem = (msg) => { failures += 1; report.push(`[${size.name}] ${msg}`); console.error('LAYOUT', size.name, msg); };
+    const overlaps = (a, b) => a && b && a.left < b.right - 1 && b.left < a.right - 1 && a.top < b.bottom - 1 && b.top < a.bottom - 1;
+
+    // 1. Dashboard "Account expires": the label and the full IST date never overlap.
+    await page.goto(`${BASE}/dashboard`);
+    const exp = await page.evaluate(() => {
+      const row = document.getElementById('account-expires');
+      if (!row) return null;
+      const box = (el) => { const b = el.getBoundingClientRect(); return { left: b.left, right: b.right, top: b.top, bottom: b.bottom }; };
+      const label = row.querySelector('.lr-label');
+      // The label's text extent (its box can be wider than the words).
+      const range = document.createRange(); range.selectNodeContents(label);
+      const t = range.getBoundingClientRect();
+      return { label: { left: t.left, right: t.right, top: t.top, bottom: t.bottom }, value: box(row.querySelector('.lr-value')), row: box(row), text: row.querySelector('.lr-value').textContent.trim() };
+    });
+    if (!exp) problem('dashboard: Account expires row missing');
+    else {
+      if (overlaps(exp.label, exp.value)) problem(`dashboard: Account expires label overlaps "${exp.text}"`);
+      if (exp.value.right > exp.row.right + 1 || exp.value.left < exp.row.left - 1) problem('dashboard: expiry value runs outside its row');
+    }
+    report.push(`[${size.name}] expiry row: label ${JSON.stringify(exp && exp.label)} value ${JSON.stringify(exp && exp.value)}`);
+    await shot(page, `${size.name}_dashboard_expiry`, { fullPage: false });
+
+    // 2. Docs callouts: ordinary flowing text, links inline and tappable.
+    for (const [name, url] of [['docs', '/docs'], ['api_docs', '/api-docs']]) {
+      await page.goto(`${BASE}${url}`);
+      const notes = await page.evaluate(() => [...document.querySelectorAll('.doc-note')].map((n) => {
+        const parts = [...n.querySelectorAll('a, strong, .doc-inline')].map((el) => [...el.getClientRects()].map((r) => ({ left: r.left, right: r.right, top: r.top, bottom: r.bottom, h: r.height })));
+        return { display: getComputedStyle(n).display, parts, links: [...n.querySelectorAll('a')].map((a) => a.textContent.trim()) };
+      }));
+      if (!notes.length) problem(`${name}: no .doc-note callouts found`);
+      notes.forEach((note, i) => {
+        if (note.display !== 'block') problem(`${name}: callout ${i} is display:${note.display}, not flowing text`);
+        for (let a = 0; a < note.parts.length; a += 1) {
+          for (let b = a + 1; b < note.parts.length; b += 1) {
+            if (note.parts[a].some((ra) => note.parts[b].some((rb) => overlaps(ra, rb)))) problem(`${name}: callout ${i} has overlapping words/links`);
+          }
+          if (note.parts[a].some((r) => r.h < 12)) problem(`${name}: callout ${i} has a squeezed link/word`);
+        }
+      });
+    }
+
+    // 4. Referral codes + API keys: stacked on a phone, side by side on desktop, never overlapping.
+    for (const [name, url] of [['referral', '/admin/create-referral'], ['api_keys', '/api-keys']]) {
+      await page.goto(`${BASE}${url}`);
+      const cards = await page.evaluate(() => [...document.querySelectorAll('.grid-split > .card')].slice(0, 2).map((c) => {
+        const b = c.getBoundingClientRect(); return { left: b.left, right: b.right, top: b.top, bottom: b.bottom };
+      }));
+      if (cards.length < 2) { problem(`${name}: create/list cards not found`); continue; }
+      const [a, b] = cards;
+      if (overlaps(a, b)) problem(`${name}: create and list cards overlap`);
+      if (size.mobile && b.top < a.bottom) problem(`${name}: cards are not stacked on a phone`);
+      if (!size.mobile && !(b.left >= a.right && Math.abs(a.top - b.top) < 2)) problem(`${name}: cards are not two columns on desktop`);
+    }
+
+    // 3. Library: one publish card; an http:// link gets a clear error.
+    await page.goto(`${BASE}/lib`);
+    const forms = await page.$$eval('form', (f) => f.length);
+    if (forms !== 1 || await page.$('#link-form')) problem(`lib: expected exactly one publish form, found ${forms}`);
+    await page.fill('#lib-url', 'http://example.com/lib.so');
+    await page.click('#lib-submit');
+    const libError = (await page.textContent('#lib-result').catch(() => '')) || '';
+    if (!/https/i.test(libError)) problem(`lib: http:// link did not give a clear error (${libError})`);
+    await shot(page, `${size.name}_lib_error`);
+
+    // 7. App update: empty publish -> per-field errors, nothing published.
+    await page.goto(`${BASE}/app-update`);
+    await page.fill('#app-version-code', '');
+    await page.click('#app-submit');
+    const fieldErrors = await page.$$eval('#app-form .field.invalid', (f) => f.length);
+    if (fieldErrors < 3) problem(`app update: expected field errors for an empty form, got ${fieldErrors}`);
+    await shot(page, `${size.name}_app_update_errors`);
 
     if (size.mobile) {
       await page.goto(`${BASE}/dashboard`);

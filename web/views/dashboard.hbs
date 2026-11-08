@@ -20,7 +20,7 @@
         </div>
         <div class="list" style="min-width:220px;flex:0 1 300px">
             <div class="list-row"><span class="lr-label">{{#if user.isOwner}}{{icon "crown" "i-sm"}}{{else}}{{icon "badge-check" "i-sm"}}{{/if}}Role</span><span class="lr-value">{{user.levelName}}</span></div>
-            <div class="list-row"><span class="lr-label">{{icon "calendar" "i-sm"}}Account expires</span><span class="lr-value">{{#if stats.expiryFormatted}}{{stats.expiryFormatted}}{{else}}Never{{/if}}</span></div>
+            <div class="list-row wrap stack-sm" id="account-expires"><span class="lr-label">{{icon "calendar" "i-sm"}}Account expires</span><span class="lr-value">{{#if stats.expiryFormatted}}{{stats.expiryFormatted}}{{else}}Never{{/if}}</span></div>
         </div>
     </div>
 </section>

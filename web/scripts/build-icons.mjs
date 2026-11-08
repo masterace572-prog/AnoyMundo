@@ -22,6 +22,8 @@ export const ICONS = [
   'search', 'send', 'server', 'settings', 'shield', 'shield-check', 'smartphone', 'sparkles', 'tag',
   'square-terminal', 'ticket', 'trash-2', 'triangle-alert', 'upload', 'user', 'user-plus',
   'user-round', 'users', 'wallet', 'wand-sparkles', 'wrench', 'x', 'zap',
+  // 2.2.0: App update page.
+  'circle-arrow-up', 'file-text', 'history', 'smartphone-nfc',
 ];
 
 let iconDir;

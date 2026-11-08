@@ -91,7 +91,16 @@ if (!/name="count"/.test(generateView) || !/name="request_id"/.test(generateView
   errors.push('generate view must post count, custom and an idempotency id');
 }
 if (!/floating_form/.test(src('views/server.hbs'))) errors.push('server view must post the hidden floating_form marker');
-if (!/action: 'link'/.test(src('views/lib.hbs'))) errors.push('library view must support pushing an external link');
+{
+  // One publish card: a file OR an https link, one Publish button.
+  const libView = src('views/lib.hbs');
+  if (!/name="external_url"/.test(libView) || !/id="lib-file"/.test(libView)) errors.push('library view must offer a file and an external link in one form');
+  if ((libView.match(/<form\b/g) || []).length !== 1 || /link-form/.test(libView)) errors.push('library view must have exactly one publish form');
+  const appView = src('views/app_update.hbs');
+  for (const field of ['version_name', 'version_code', 'apk_url', 'changelog', 'type']) {
+    if (!new RegExp(`name="${field}"`).test(appView)) errors.push(`app update view must post ${field}`);
+  }
+}
 
 try {
   const ks = await import('../src/key-service.mjs');

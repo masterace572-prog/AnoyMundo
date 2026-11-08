@@ -25,11 +25,10 @@
     </div>
 </section>
 
-<div class="grid-2">
-<section class="card">
+<section class="card publish-card" id="publish-card">
     <div class="card-head">
         <div class="tile">{{icon "upload"}}</div>
-        <div><h2 class="card-title">Upload a release</h2><div class="card-sub">A .so library or a .zip containing it, up to {{maxUploadMb}} MB.</div></div>
+        <div><h2 class="card-title">Publish a release</h2><div class="card-sub">Upload a .so library or a .zip containing it (up to {{maxUploadMb}} MB), or give an https:// link.</div></div>
     </div>
     <form id="lib-form" class="form" novalidate>
         <div class="field">
@@ -39,7 +38,7 @@
                 <input type="text" class="input mono" name="version" id="lib-version" value="{{suggestedVersion}}" maxlength="32" autocomplete="off" spellcheck="false">
                 <div class="trail"><button type="button" class="icon-btn accent" id="lib-bump" aria-label="Bump version" title="Bump version">{{icon "plus"}}</button></div>
             </div>
-            <div class="hint">Current: {{currentVersion}}</div>
+            <div class="hint">Current: <span class="mono">{{currentVersion}}</span></div>
         </div>
         <div class="field">
             <span class="label">File</span>
@@ -49,11 +48,14 @@
                 <b>Choose a file or drop it here</b>
                 <span class="file-name" id="lib-file-name">.so or .zip</span>
             </label>
+            <button type="button" class="btn btn-plain btn-sm" id="lib-file-clear" hidden>{{icon "x"}}Remove file</button>
         </div>
+        <div class="or-divider" aria-hidden="true"><span>or</span></div>
         <div class="field">
-            <label class="label" for="lib-url">Or an external link</label>
+            <label class="label" for="lib-url">External link</label>
             <div class="input-wrap">{{icon "link" "lead"}}
-            <input type="url" class="input" name="external_url" id="lib-url" placeholder="https://…" autocomplete="off"></div>
+            <input type="url" class="input" name="external_url" id="lib-url" placeholder="https://…" autocomplete="off" spellcheck="false" inputmode="url"></div>
+            <div class="hint" id="lib-url-hint">Must start with https://. If you also choose a file, the file is published and this link is ignored.</div>
         </div>
         <div class="field">
             <label class="label" for="lib-notes">Notes (optional)</label>
@@ -68,28 +70,6 @@
         <div id="lib-result" aria-live="polite"></div>
     </form>
 </section>
-
-<section class="card">
-    <div class="card-head">
-        <div class="tile teal">{{icon "link"}}</div>
-        <div><h2 class="card-title">Push a link</h2><div class="card-sub">Change the download link and version without uploading.</div></div>
-    </div>
-    <form id="link-form" class="form" novalidate>
-        <div class="field">
-            <label class="label" for="link-version">New version</label>
-            <div class="input-wrap">{{icon "tag" "lead"}}
-            <input type="text" class="input mono" id="link-version" value="{{suggestedVersion}}" maxlength="32" autocomplete="off" spellcheck="false"></div>
-        </div>
-        <div class="field">
-            <label class="label" for="link-url">External link</label>
-            <div class="input-wrap">{{icon "link" "lead"}}
-            <input type="url" class="input" id="link-url" placeholder="https://…" autocomplete="off"></div>
-        </div>
-        <button type="submit" class="btn btn-primary btn-block" id="link-submit">{{icon "send"}}Update link</button>
-        <div id="link-result" aria-live="polite"></div>
-    </form>
-</section>
-</div>
 
 <script>
 (function () {
@@ -126,7 +106,10 @@
         else { if (btn.dataset.html) btn.innerHTML = btn.dataset.html; btn.disabled = false; }
     }
     function validVersion(v) { return /^[A-Za-z0-9][A-Za-z0-9._+-]{0,31}$/.test(v); }
-    function validUrl(u) { return /^https?:\/\/\S+$/i.test(u); }
+    function validUrl(u) {
+        if (!/^https:\/\/\S+$/i.test(u)) return false;
+        try { return new URL(u).protocol === 'https:'; } catch (e) { return false; }
+    }
 
     function readBase64(file, onProgress) {
         return new Promise(function (resolve, reject) {
@@ -161,10 +144,20 @@
     }
 
     var drop = byId('lib-drop'), fileInput = byId('lib-file');
-    fileInput.addEventListener('change', function () {
+    var urlHint = byId('lib-url-hint'), clearFile = byId('lib-file-clear');
+    var URL_HINT = urlHint.textContent;
+    function syncFile() {
         var f = fileInput.files[0];
         byId('lib-file-name').textContent = f ? f.name + ' · ' + bytes(f.size) : '.so or .zip';
-    });
+        clearFile.hidden = !f;
+        drop.classList.toggle('has-file', !!f);
+        // File wins: say so next to the link while a file is selected.
+        urlHint.textContent = f && byId('lib-url').value.trim()
+            ? 'A file is selected, so this link will be ignored.' : URL_HINT;
+    }
+    fileInput.addEventListener('change', syncFile);
+    byId('lib-url').addEventListener('input', syncFile);
+    clearFile.addEventListener('click', function () { fileInput.value = ''; syncFile(); });
     ['dragenter', 'dragover'].forEach(function (t) { drop.addEventListener(t, function () { drop.classList.add('drag'); }); });
     ['dragleave', 'drop'].forEach(function (t) { drop.addEventListener(t, function () { drop.classList.remove('drag'); }); });
 
@@ -181,9 +174,10 @@
         var url = byId('lib-url').value.trim();
         var version = byId('lib-version').value.trim();
         result.textContent = '';
+        if (file) url = ''; // File wins: the link is ignored.
         if (!validVersion(version)) return say(result, 'Enter a version like 1.3.');
-        if (url && !validUrl(url)) return say(result, 'The link must start with https://.');
-        if (!file && !url) return say(result, 'Choose a file or enter an external link.');
+        if (!file && !url) return say(result, 'Choose a file or enter an https:// link.');
+        if (url && !validUrl(url)) return say(result, 'The link must be a full https:// address (http:// is not allowed).');
         if (file && file.size > MAX) return say(result, 'The file is larger than {{maxUploadMb}} MB. Use an external link instead.');
         if (file && file.size < 4) return say(result, 'The selected file is empty.');
         busy(button, true, 'Publishing…');
@@ -206,23 +200,5 @@
         });
     });
 
-    var linkForm = byId('link-form'), linkButton = byId('link-submit'), linkResult = byId('link-result');
-    linkForm.addEventListener('submit', function (e) {
-        e.preventDefault();
-        if (linkButton.disabled) return;
-        var version = byId('link-version').value.trim();
-        var url = byId('link-url').value.trim();
-        linkResult.textContent = '';
-        if (!validVersion(version)) return say(linkResult, 'Enter a version like 1.3.');
-        if (!validUrl(url)) return say(linkResult, 'Enter a link starting with https://.');
-        busy(linkButton, true, 'Saving…');
-        send({ action: 'link', version: version, external_url: url }, function () {}).then(function (data) {
-            say(linkResult, 'Version ' + data.version + ' is live. Reloading…', true);
-            setTimeout(function () { location.reload(); }, 1200);
-        }).catch(function (err) {
-            say(linkResult, err && err.message ? err.message : 'Could not update the link.');
-            busy(linkButton, false);
-        });
-    });
 })();
 </script>

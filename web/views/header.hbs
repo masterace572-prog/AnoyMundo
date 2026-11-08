@@ -8,6 +8,7 @@
         <div class="nav-label">Manage</div>
         <a href="/server" class="{{#if navServer}}active{{/if}}">{{icon "server"}}<span>Server</span></a>
         <a href="/admin/create-referral" class="{{#if navReferral}}active{{/if}}">{{icon "ticket"}}<span>Referral codes</span></a>
+        <a href="/app-update" class="{{#if navAppUpdate}}active{{/if}}">{{icon "circle-arrow-up"}}<span>App update</span></a>
         {{/if}}
         {{#if user.isOwner}}
         <a href="/admin/manage-users" class="{{#if navUsers}}active{{/if}}">{{icon "users"}}<span>Users</span></a>

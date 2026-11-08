@@ -208,6 +208,7 @@ export function renderPage(req, res, name, data = {}) {
     navUsers: on('/admin/manage-users') || on('/admin/user'),
     navReferral: on('/admin/create-referral'),
     navLib: on('/lib'),
+    navAppUpdate: on('/app-update'),
     year: new Date().getUTCFullYear(),
     title: data.title || 'Panel',
     now: sqlDateTime(),

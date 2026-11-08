@@ -1,0 +1,192 @@
+<div class="page-head">
+    <div>
+        <h1 class="page-title">App update</h1>
+        <p class="page-sub">Publish a new Anoy app (APK). Phones check this on the splash screen, before the library update.</p>
+    </div>
+</div>
+
+{{> msgStatus}}
+
+<section class="card" style="margin-bottom:20px" id="app-current">
+    <div class="hero">
+        <div class="tile tile-lg">{{icon "smartphone"}}</div>
+        <div style="flex:1;min-width:180px">
+            <div class="hero-label">Published app version</div>
+            <div class="hero-value mono">{{#if appRelease}}{{appRelease.version_name}}{{else}}—{{/if}}</div>
+        </div>
+        <div class="list" style="min-width:240px;flex:0 1 380px">
+            <div class="list-row"><span class="lr-label">{{icon "hash" "i-sm"}}Version code</span><span class="lr-value mono">{{#if appRelease}}{{appRelease.version_code}}{{else}}—{{/if}}</span></div>
+            <div class="list-row"><span class="lr-label">{{icon "shield" "i-sm"}}Type</span><span class="lr-value">{{#if appRelease}}{{#if appRelease.mandatory}}<span class="status warn">Mandatory</span>{{else}}Normal{{/if}}{{else}}<span class="status warn">Nothing published</span>{{/if}}</span></div>
+            <div class="list-row wrap stack-sm"><span class="lr-label">{{icon "clock" "i-sm"}}Published</span><span class="lr-value">{{#if appRelease}}{{appRelease.publishedLabel}} · {{appRelease.published_by}}{{else}}—{{/if}}</span></div>
+        </div>
+    </div>
+    {{#if appRelease}}
+    <div class="card-foot">
+        <a href="{{appRelease.apk_url}}" class="btn btn-secondary btn-sm" rel="noopener noreferrer" target="_blank">{{icon "download" "i-sm"}}Test the APK link</a>
+        <button type="button" class="btn btn-danger btn-sm" id="app-withdraw">{{icon "x" "i-sm"}}Withdraw</button>
+        <span class="hint" style="margin:0">Withdraw stops phones from offering this update.</span>
+    </div>
+    {{/if}}
+</section>
+
+<section class="card publish-card" id="app-publish">
+    <div class="card-head">
+        <div class="tile">{{icon "circle-arrow-up"}}</div>
+        <div><h2 class="card-title">Publish an app update</h2><div class="card-sub">A phone updates when this version code is higher than its own.</div></div>
+    </div>
+    <form id="app-form" class="form" novalidate>
+        <div class="field-row">
+            <div class="field" data-field="version_name">
+                <label class="label" for="app-version-name">Version name</label>
+                <div class="input-wrap">{{icon "tag" "lead"}}
+                <input type="text" class="input mono" name="version_name" id="app-version-name" maxlength="32" placeholder="2.2.0" autocomplete="off" spellcheck="false"></div>
+                <div class="error" hidden></div>
+            </div>
+            <div class="field" data-field="version_code">
+                <label class="label" for="app-version-code">Version code</label>
+                <div class="input-wrap">{{icon "hash" "lead"}}
+                <input type="number" class="input mono" name="version_code" id="app-version-code" min="1" step="1" inputmode="numeric" value="{{suggestedCode}}" placeholder="8"></div>
+                <div class="hint">{{#if appRelease}}Current: {{appRelease.version_code}}. Must be higher.{{else}}Whole number, from the APK's build.{{/if}}</div>
+                <div class="error" hidden></div>
+            </div>
+        </div>
+        <div class="field" data-field="apk_url">
+            <label class="label" for="app-apk-url">APK link (https)</label>
+            <div class="input-wrap">{{icon "link" "lead"}}
+            <input type="url" class="input" name="apk_url" id="app-apk-url" placeholder="https://github.com/…/releases/download/…/Anoy.apk" autocomplete="off" spellcheck="false" inputmode="url"></div>
+            <div class="hint">The GitHub release asset link. The APK must be signed with the same key as the installed app.</div>
+            <div class="error" hidden></div>
+        </div>
+        <div class="field" data-field="changelog">
+            <label class="label" for="app-changelog">Changelog</label>
+            <textarea class="input" name="changelog" id="app-changelog" maxlength="2000" rows="5" placeholder="What changed, one point per line"></textarea>
+            <div class="error" hidden></div>
+        </div>
+        <div class="field">
+            <span class="label">Type</span>
+            <div class="segmented block" role="radiogroup" aria-label="Update type">
+                <label><input type="radio" name="type" value="normal" checked><span>{{icon "circle-check" "i-sm"}}Normal</span></label>
+                <label><input type="radio" name="type" value="mandatory"><span>{{icon "triangle-alert" "i-sm"}}Mandatory</span></label>
+            </div>
+            <div class="hint">Normal shows “Not now”. Mandatory has only “Update now”.</div>
+        </div>
+        <button type="submit" class="btn btn-primary btn-block" id="app-submit">{{icon "upload"}}Publish app update</button>
+        <div id="app-result" aria-live="polite"></div>
+    </form>
+</section>
+
+{{#if appReleases.length}}
+<section class="card card-flush publish-card" style="margin-top:20px">
+    <div class="card-head" style="padding-bottom:16px;margin-bottom:0;border-bottom:1px solid var(--border)">
+        <div class="tile teal">{{icon "history"}}</div>
+        <div><h2 class="card-title">Recent app updates</h2></div>
+    </div>
+    <div class="table-wrap">
+        <table class="responsive">
+            <thead><tr><th>Version</th><th>Code</th><th>Type</th><th>Published</th></tr></thead>
+            <tbody>
+                {{#each appReleases}}
+                <tr>
+                    <td class="primary-cell mono" data-label="Version">{{this.version_name}}{{#if this.is_current}} <span class="status ok">Current</span>{{/if}}</td>
+                    <td data-label="Code" class="num">{{this.version_code}}</td>
+                    <td data-label="Type">{{this.typeLabel}}</td>
+                    <td data-label="Published">{{this.publishedLabel}}</td>
+                </tr>
+                {{/each}}
+            </tbody>
+        </table>
+    </div>
+</section>
+{{/if}}
+
+<script>
+(function () {
+    'use strict';
+    var byId = function (id) { return document.getElementById(id); };
+    var form = byId('app-form'), button = byId('app-submit'), result = byId('app-result');
+
+    function say(text, ok) {
+        result.textContent = '';
+        var p = document.createElement('p');
+        p.className = ok ? 'hint' : 'error';
+        p.style.marginTop = '12px';
+        p.textContent = text;
+        result.appendChild(p);
+    }
+    function fieldError(name, text) {
+        var field = form.querySelector('[data-field="' + name + '"]');
+        if (!field) return;
+        var box = field.querySelector('.error');
+        field.classList.toggle('invalid', !!text);
+        box.hidden = !text;
+        box.textContent = text || '';
+    }
+    function clearErrors() {
+        ['version_name', 'version_code', 'apk_url', 'changelog'].forEach(function (n) { fieldError(n, ''); });
+        result.textContent = '';
+    }
+    function busy(btn, on, label) {
+        if (on) { btn.dataset.html = btn.innerHTML; btn.textContent = label; btn.disabled = true; }
+        else { if (btn.dataset.html) btn.innerHTML = btn.dataset.html; btn.disabled = false; }
+    }
+    function httpsUrl(u) {
+        if (!/^https:\/\/\S+$/i.test(u)) return false;
+        try { return new URL(u).protocol === 'https:'; } catch (e) { return false; }
+    }
+    function post(payload) {
+        return fetch('/app-update', {
+            method: 'POST', credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+            body: JSON.stringify(payload)
+        }).then(function (r) {
+            return r.json().catch(function () { return null; }).then(function (data) {
+                if (r.ok && data && data.ok) return data;
+                var err = new Error((data && data.error) || ('The server answered ' + r.status + '. Nothing was changed.'));
+                err.errors = data && data.errors;
+                throw err;
+            });
+        });
+    }
+
+    form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        if (button.disabled) return;
+        clearErrors();
+        var data = {
+            action: 'publish',
+            version_name: byId('app-version-name').value.trim(),
+            version_code: byId('app-version-code').value.trim(),
+            apk_url: byId('app-apk-url').value.trim(),
+            changelog: byId('app-changelog').value,
+            type: (form.querySelector('input[name=type]:checked') || {}).value || 'normal'
+        };
+        var bad = false;
+        if (!/^[0-9A-Za-z][0-9A-Za-z._+-]{0,31}$/.test(data.version_name)) { fieldError('version_name', 'Enter a version name like 2.2.0.'); bad = true; }
+        if (!/^\d{1,10}$/.test(data.version_code) || Number(data.version_code) < 1) { fieldError('version_code', 'Enter the version code as a whole number, like 8.'); bad = true; }
+        if (!data.apk_url) { fieldError('apk_url', 'Enter the https:// link to the APK.'); bad = true; }
+        else if (!httpsUrl(data.apk_url)) { fieldError('apk_url', 'The APK link must be a full https:// address (http:// is not allowed).'); bad = true; }
+        if (!data.changelog.trim()) { fieldError('changelog', 'Write a short changelog: it is shown on the update screen.'); bad = true; }
+        if (bad) return say('Fix the highlighted fields. Nothing was published.');
+        busy(button, true, 'Publishing…');
+        post(data).then(function (r) {
+            say('App ' + r.version_name + ' (' + r.version_code + ') is live. Reloading…', true);
+            setTimeout(function () { location.reload(); }, 1200);
+        }).catch(function (err) {
+            if (err.errors) Object.keys(err.errors).forEach(function (k) { fieldError(k, err.errors[k]); });
+            say(err.message || 'Publishing failed. Nothing was changed.');
+            busy(button, false);
+        });
+    });
+
+    var withdraw = byId('app-withdraw');
+    if (withdraw) withdraw.addEventListener('click', function () {
+        if (withdraw.disabled) return;
+        if (!window.confirm('Withdraw this app update? Phones will stop offering it.')) return;
+        busy(withdraw, true, 'Withdrawing…');
+        post({ action: 'withdraw' }).then(function () { location.reload(); }).catch(function (err) {
+            say(err.message || 'Could not withdraw.');
+            busy(withdraw, false);
+        });
+    });
+})();
+</script>
