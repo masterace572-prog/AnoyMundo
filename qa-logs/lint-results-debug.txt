@@ -1,4 +1,4 @@
-/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/java/com/xlox/MAct.java:282: Warning: Avoid passing null as the view root (needed to resolve layout parameters on the inflated layout's root element) [InflateParams]
+/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/java/com/xlox/MAct.java:291: Warning: Avoid passing null as the view root (needed to resolve layout parameters on the inflated layout's root element) [InflateParams]
         View sheetView = LayoutInflater.from(this).inflate(R.layout.sheet_sign_out, null, false);
                                                                                     ~~~~
 /home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/java/com/xlox/ui/UpdateGate.java:179: Warning: Avoid passing null as the view root (needed to resolve layout parameters on the inflated layout's root element) [InflateParams]
@@ -28,14 +28,14 @@
    You should manually check whether the generated output is acceptable for
    those older devices.
 
-/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/AndroidManifest.xml:55: Warning: Expecting android:screenOrientation="unspecified" or "fullSensor" for this activity so the user can use the application in any orientation and provide a great experience on Chrome OS devices [LockedOrientationActivity]
+/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/AndroidManifest.xml:129: Warning: Expecting android:screenOrientation="unspecified" or "fullSensor" for this activity so the user can use the application in any orientation and provide a great experience on Chrome OS devices [LockedOrientationActivity]
             android:screenOrientation="portrait"
             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/AndroidManifest.xml:67: Warning: Expecting android:screenOrientation="unspecified" or "fullSensor" for this activity so the user can use the application in any orientation and provide a great experience on Chrome OS devices [LockedOrientationActivity]
+/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/AndroidManifest.xml:141: Warning: Expecting android:screenOrientation="unspecified" or "fullSensor" for this activity so the user can use the application in any orientation and provide a great experience on Chrome OS devices [LockedOrientationActivity]
             android:screenOrientation="portrait"
             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/AndroidManifest.xml:74: Warning: Expecting android:screenOrientation="unspecified" or "fullSensor" for this activity so the user can use the application in any orientation and provide a great experience on Chrome OS devices [LockedOrientationActivity]
-            android:screenOrientation="portrait" />
+/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/AndroidManifest.xml:148: Warning: Expecting android:screenOrientation="unspecified" or "fullSensor" for this activity so the user can use the application in any orientation and provide a great experience on Chrome OS devices [LockedOrientationActivity]
+            android:screenOrientation="portrait"
             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
    Explanation for issues of type "LockedOrientationActivity":
@@ -156,10 +156,10 @@
 /home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/res/values/strings.xml:124: Warning: The resource R.string.package_not_found appears to be unused [UnusedResources]
     <string name="package_not_found">BGMI is not installed.</string>
             ~~~~~~~~~~~~~~~~~~~~~~~~
-/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/res/values/strings.xml:146: Warning: The resource R.string.loading appears to be unused [UnusedResources]
+/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/res/values/strings.xml:148: Warning: The resource R.string.loading appears to be unused [UnusedResources]
     <string name="loading">Loading</string>
             ~~~~~~~~~~~~~~
-/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/res/values/strings.xml:150: Warning: The resource R.string.status_chip_description appears to be unused [UnusedResources]
+/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/res/values/strings.xml:152: Warning: The resource R.string.status_chip_description appears to be unused [UnusedResources]
     <string name="status_chip_description">%1$s: %2$s</string>
             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 /home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/res/values/styles.xml:165: Warning: The resource R.style.Text_Headline appears to be unused [UnusedResources]
