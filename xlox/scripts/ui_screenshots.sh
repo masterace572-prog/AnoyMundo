@@ -90,6 +90,16 @@ has_id() { dump_ui | grep -q "com.xlox:id/$1\""; }
 
 texts() { dump_ui | grep -o 'text="[^"]*"' | grep -v 'text=""' | tr '\n' ' '; }
 
+node_text() { # $1 = view id: its text
+    dump_ui | python3 -c '
+import re, sys
+xml = sys.stdin.read()
+m = re.search(r"<node[^>]*resource-id=\"com\.xlox:id/%s\"[^>]*>" % sys.argv[1], xml)
+t = re.search(r" text=\"([^\"]*)\"", m.group(0)) if m else None
+print(t.group(1).replace("&#10;", " | ").replace("\n", " | ") if t else "missing")
+' "$1"
+}
+
 tap_id() {
     xy=$(centre_of "$1")
     if [ -z "$xy" ]; then log "WARN: $1 not on screen"; return 1; fi
@@ -148,6 +158,27 @@ open_home() {
     sleep 1.5
 }
 
+# Home preview, then the Settings icon in the header (2.2.0).
+open_settings() {
+    # shellcheck disable=SC2068
+    open_home $@
+    tap_id settingsButton || true
+    wait_for_id settingsPage 6 || log "WARN: settings page missing"
+    sleep 0.8
+}
+
+# Scrolls the Settings page to its end (Sign out sits at the bottom).
+scroll_settings() {
+    xy=$(centre_of settingsScroll)
+    if [ -z "$xy" ]; then log "WARN: settingsScroll not on screen"; return 1; fi
+    x=${xy% *}; y=${xy#* }
+    for _ in 1 2 3; do
+        adb shell input swipe "$x" $((y + 500)) "$x" $((y - 500)) 250 >/dev/null 2>&1 || true
+        sleep 0.5
+    done
+    sleep 0.6
+}
+
 airplane() {
     adb shell cmd connectivity airplane-mode "$1" >/dev/null 2>&1 \
         || adb shell settings put global airplane_mode_on "$([ "$1" = enable ] && echo 1 || echo 0)" >/dev/null 2>&1 || true
@@ -187,6 +218,63 @@ shot splash_reduced_welcome
 sleep 1.7
 shot splash
 
+# ----------------------------------- 1b. splash status line + app update (2.2.0)
+# The check's answers, simulated (qa_app_update, debug only, no network), on
+# the final film frame; the version sits top right.
+for st in up_to_date available fail; do
+    stop_app
+    adb shell am start -W -n $PKG/.SplashActivity --ef qa_frame 2.40 --es qa_app_update "$st" >> "$LOG" 2>&1 || true
+    sleep 2.2
+    shot "splash_status_$st"
+    log "splash status $st texts: $(texts)"
+done
+# Normal update: changelog, Update now + Not now; a simulated download ends in
+# a clear failure with Retry; Not now continues to sign in.
+stop_app
+adb shell am start -n $PKG/.SplashActivity --es qa_app_update available >> "$LOG" 2>&1 || true
+if wait_for_id appUpdatePrimary 20; then
+    sleep 0.8
+    shot app_update_normal
+    log "app update normal texts: $(texts)"
+    tap_id appUpdatePrimary || true
+    sleep 0.9
+    shot app_update_downloading
+    log "app update downloading texts: $(texts)"
+    i=0
+    while [ $i -lt 20 ]; do
+        case "$(texts)" in *"text=\"Retry\""*) break ;; esac
+        sleep 0.5; i=$((i + 1))
+    done
+    shot app_update_failed
+    log "app update failed texts: $(texts)"
+    tap_id appUpdateLater || true
+    sleep 2
+    log "app update not now focus: $(focus)"
+else
+    log "WARN: app update screen did not open"
+fi
+# Mandatory: no Not now, back does not leave.
+stop_app
+adb shell am start -n $PKG/.SplashActivity --es qa_app_update mandatory >> "$LOG" 2>&1 || true
+if wait_for_id appUpdatePrimary 20; then
+    sleep 0.8
+    shot app_update_mandatory
+    log "app update mandatory texts: $(texts)"
+    adb shell input keyevent 4 || true
+    sleep 1.2
+    log "app update mandatory back focus: $(focus)"
+else
+    log "WARN: mandatory update screen did not open"
+fi
+# Installing state, straight from the screen's own preview.
+stop_app
+adb shell am start -W -n $PKG/.AppUpdateActivity --es app_update_name 2.3.0 --ei app_update_code 99 \
+    --es app_update_url https://github.com/masterace572-prog/AnoyMundo/releases/download/sample/Anoy.apk \
+    --ez qa_update_preview true --es qa_update_state installing >> "$LOG" 2>&1 || true
+sleep 1.5
+shot app_update_state_installing
+log "app update installing texts: $(texts)"
+
 # ------------------------------------------- 2. cold start + live update gate
 stop_app
 adb shell am start -n $PKG/.SplashActivity >> "$LOG" 2>&1 || fatal "cannot start SplashActivity"
@@ -212,6 +300,7 @@ else
     wait_gone gateTitle 45 && log "update gate passed" || true
 fi
 log "gate result focus: $(focus)"
+log "splash live log: $(adb logcat -d -v tag -s SplashActivity:V 2>/dev/null | grep -E 'Checking for an app update|App is up to date|App update' | tail -4 | tr -d '\r' | tr '\n' '|')"
 
 # ------------------------------------------------------- 3. sign in (real)
 wait_for_id keyField 10 || log "WARN: sign-in form missing after the gate"
@@ -234,6 +323,25 @@ sleep 0.8
 shot login_key_visible
 
 # ------------------------------------------------- 4. airplane mode (real)
+# Splash: the app update check can't run -> reason + Retry, never a silent
+# continue; back online, Retry goes on to sign in.
+airplane enable
+stop_app
+adb shell am start -n $PKG/.SplashActivity >> "$LOG" 2>&1 || true
+if wait_for_id splashRetry 40; then
+    sleep 1.5
+    shot splash_check_failed_live
+    log "splash offline texts: $(texts)"
+    log "splash offline focus: $(focus)"
+else
+    log "WARN: splash Retry not shown offline"
+fi
+airplane disable
+sleep 2
+tap_id splashRetry || true
+if wait_for_id keyField 60 || wait_for_id gateTitle 5; then log "splash retry: passed"; else log "WARN: splash retry did not continue"; fi
+log "splash retry focus: $(focus)"
+stop_app
 airplane enable
 stop_app
 adb shell am start -W -n $PKG/.LogAct >> "$LOG" 2>&1 || true
@@ -318,7 +426,13 @@ print(" text=%s len=%d" % (t.group(1), len(t.group(1))) if t else " missing")
 '
 }
 saved_key() { adb shell run-as $PKG cat shared_prefs/settings.xml 2>/dev/null | grep -c 'name="USER"' || true; }
-open_home --es qa_saved_key ANOY-30D-QA7K2
+open_settings --es qa_saved_key ANOY-30D-QA7K2
+shot home_settings
+log "settings texts: $(texts)"
+log "settings rows: all=$(node_text permAllFilesValue) files=$(node_text permFilesValue) install=$(node_text permInstallValue) obb=$(node_text obbValue)"
+scroll_settings
+shot home_settings_bottom
+log "settings bottom texts: $(texts)"
 tap_id signOut || true
 sleep 1.2
 shot home_signout_sheet
@@ -331,7 +445,8 @@ shot signout_done
 log "signout focus: $(focus)"
 log "signout key field:$(key_text)"
 log "signout saved key: $(saved_key)"
-open_home --es qa_saved_key ANOY-30D-QA7K2
+open_settings --es qa_saved_key ANOY-30D-QA7K2
+scroll_settings
 tap_id signOut || true
 sleep 1.2
 tap_id signOutForget || true
@@ -491,7 +606,7 @@ adb shell wm size reset || true
 adb shell wm density reset || true
 sleep 2
 
-# Typical 20:9 phone (411 x 914 dp): DEVICE must clear the pinned Launch bar
+# Typical 20:9 phone (411 x 914 dp): the GAME card must clear the pinned Launch bar
 # without scrolling. Measured from the view bounds, not eyeballed.
 adb shell wm size 1080x2400 || true
 adb shell wm density 420 || true
@@ -504,13 +619,13 @@ xml = sys.stdin.read()
 def box(i):
     m = re.search(r"resource-id=\"com\.xlox:id/%s\"[^>]*?bounds=\"\[(\d+),(\d+)\]\[(\d+),(\d+)\]\"" % i, xml)
     return tuple(map(int, m.groups())) if m else None
-card, button = box("deviceCard"), box("primaryAction")
+card, button = box("gameCard"), box("primaryAction")
 fade = round((24 + 8) * 420 / 160)  # 24 dp fade + 8 dp panel padding above the button
 if card and button:
     clear = card[3] <= button[1] - fade
-    print("device card bottom %d, launch fade top %d: %s" % (card[3], button[1] - fade, "clear" if clear else "covered"))
+    print("game card bottom %d, launch fade top %d: %s" % (card[3], button[1] - fade, "clear" if clear else "covered"))
 else:
-    print("device card bounds missing")
+    print("game card bounds missing")
 ' | while read -r line; do log "typical phone: $line"; done
 adb shell wm size reset || true
 adb shell wm density reset || true
@@ -753,32 +868,23 @@ stop_app
 adb shell rm -rf $GOBB >/dev/null 2>&1 || true
 grant
 
-# ---------------------------------------------- Help and the Access chip
+# ---------------------------------------------- Help and Settings > Access
 # Help: "?" in the header opens three tips; Copy support info previews what
 # it copies (never the licence key), the first-run tips show once only.
 # Access chip: ready -> a short confirmation; something off -> the existing
 # explanation sheet, then Settings, and no launch afterwards.
-node_text() { # $1 = view id: its text
-    dump_ui | python3 -c '
-import re, sys
-xml = sys.stdin.read()
-m = re.search(r"<node[^>]*resource-id=\"com\.xlox:id/%s\"[^>]*>" % sys.argv[1], xml)
-t = re.search(r" text=\"([^\"]*)\"", m.group(0)) if m else None
-print(t.group(1).replace("&#10;", " | ").replace("\n", " | ") if t else "missing")
-' "$1"
-}
 help_log() { adb logcat -d -v tag -s MAct:V 2>/dev/null | grep -E 'Help:|Access:|Permission|Launch' | grep -v '	at ' | tr -d '\r' | tr '\n' '|'; }
 stop_app
 adb shell pm clear $PKG >/dev/null 2>&1 || true
 grant
 adb logcat -c || true
-open_home --ez qa_first_help true
-sleep 1
+# 2.2.0: Help never opens on its own - only from the "?" button.
+open_home
+sleep 1.5
 log "help_first first: $(has_id helpRoot && echo shown || echo none)"
-tap_id helpGotIt || true
-sleep 1
-open_home --ez qa_first_help true
-sleep 1
+log "home texts: $(texts)"
+open_home
+sleep 1.5
 log "help_first second: $(has_id helpRoot && echo shown || echo none)"
 log "help_first log: $(help_log)"
 open_home --es qa_action error
@@ -805,7 +911,7 @@ shot help_support_copied
 log "help log: $(help_log)"
 # Access chip with everything allowed.
 adb logcat -c || true
-open_home
+open_settings
 log "access_ok chip: $(node_text accessValue)"
 tap_id accessRow || true
 sleep 0.6
@@ -815,8 +921,9 @@ log "access_ok focus: $(focus)"
 # All files access off: explanation sheet, Settings, back -> ready, no launch.
 adb shell appops set $PKG MANAGE_EXTERNAL_STORAGE deny >/dev/null 2>&1 || true
 adb logcat -c || true
-open_home
+open_settings
 log "access_missing chip: $(node_text accessValue)"
+log "access_missing all files row: $(node_text permAllFilesValue)"
 shot home_access_needed
 tap_id accessRow || true
 sleep 1.2

@@ -1,5 +1,40 @@
 # Anoy Loader — changelog
 
+## 2.2.0 — app updates, splash status, new home and Settings
+
+- **In-app app updates.** At start-up Anoy asks the panel whether a newer app
+  version is published. Versions are compared by version code.
+  - **Mandatory** updates show the changelog and Update now only.
+  - **Normal** updates also offer Not now.
+  - The update downloads inside the app with progress, then Android's own
+    installer opens. No browser.
+  - Every failure shows its reason and Retry.
+  - Library updates work exactly as before and run afterwards, at sign in.
+- **Splash status line.** The version is now top right. A line at the bottom
+  shows Checking for updates… → Up to date / Update available → Proceeding….
+  Offline, it shows "Can't check for updates" and Retry, and never continues
+  silently. The film itself is unchanged.
+- **New home.** "Welcome back" header with ? and a Settings button. The panel's
+  notice is shown as written; "Play fairly…" is no longer swapped in. A game
+  card shows the icon, "BGMI v…", the library version and the honest state.
+  Time left is smaller and ticks every second ("29d 23h 59m 12s").
+- **Settings.**
+  - Device model and Android version.
+  - Whether All files access, Files and Install unknown apps are allowed. Tap
+    a missing one to fix it.
+  - Whether the game files (OBB) are copied.
+  - Report on Telegram, Copy support info.
+  - App version.
+  - Sign out.
+- **Help** no longer opens by itself; tap ? when you want it.
+- **Panel:**
+  - One Library publish card (file or https link; the file wins if both are
+    given).
+  - New App update page for the owner and admins.
+  - Phone layout fixes for the dashboard expiry, the docs callouts and the
+    Referral codes / API keys cards.
+- **Version 2.2.0 (build code 8).**
+
 ## 2.1.1 — polish
 
 - **Version 2.1.1 (build code 7)** so this release is easy to tell apart from

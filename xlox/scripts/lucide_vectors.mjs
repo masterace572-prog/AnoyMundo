@@ -45,6 +45,13 @@ const ICONS = [
   ['rotate-cw', 'rotate_cw'],
   ['play', 'play'],
   ['square', 'square'],
+  // 2.2.0: Settings screen and the app update screen.
+  ['settings', 'settings'],
+  ['chevron-left', 'chevron_left'],
+  ['bug', 'bug'],
+  ['folder-check', 'folder_check'],
+  ['info', 'info'],
+  ['arrow-down-to-line', 'arrow_down_to_line'],
 ];
 
 const NUM = /-?(?:\d+\.?\d*|\.\d+)(?:e[-+]?\d+)?/iy;

@@ -560,3 +560,167 @@ The paper-plane button on a keys row now briefly widens to a green
 - **QA:** the web screenshot run now taps the button at desktop and 390 px phone
   width. It requires the visible "Copied" and the return to the icon, and saves
   `mobile_copy_customer.png`.
+
+## 11. 2.2.0: in-app app update, splash status, new home + Settings, panel fixes
+
+### Order at start-up
+
+Splash (film + **app** update check) → app update screen if needed → sign in
+(the existing **library** UpdateGate, unchanged) → home. The APK update and the
+library (.so) update are separate systems:
+
+| | App update (new) | Library update (unchanged) |
+|---|---|---|
+| What | the Anoy APK itself | `libAkAudioVisual.so` |
+| Panel page | **App update** (Owner / Admin) | **Library** |
+| Check | `GET /api/app/update?code=<versionCode>` | `/api/lib/version` |
+| Compared by | versionCode (whole number) | library version string |
+| Code | `AppUpdater`, `AppUpdateActivity` (new) | `Downtwo`, `LibManager`, `UpdateGate` |
+
+### Publishing an app update (owner, no code)
+
+1. CI builds every push and publishes a signed APK as a GitHub release asset
+   (e.g. `…/releases/download/xlox-v2.0.0-runNN/Anoy-XLOX-loader.apk`).
+2. Panel → **App update**: version name (e.g. `2.2.1`), version code (must be
+   **higher** than the current one; the panel refuses anything else), the
+   **https** APK link from step 1, the changelog (one change per line),
+   **Normal** or **Mandatory** → Publish.
+3. Phones with a lower versionCode see the update screen on the next start.
+   **Withdraw** stops offering it.
+
+Only an APK signed with the same key installs: Android refuses anything else
+("This update isn't signed like the installed app"). The panel never sees or
+stores signing secrets.
+
+### Splash
+
+- The version moved to the **top right** (`v2.2.0`).
+- A **status line** at the bottom shows the real state of the check:
+  - Initializing… → Checking for updates…
+  - Then one of: Up to date / Update available (v2.2.1) → Proceeding…
+  - On failure: **Can't check for updates**, the reason (offline, timeout,
+    server error…) and **Retry**.
+- The film and words are unchanged. The hand-off waits for **both** the film
+  and the check; if the check takes longer, "Anoy Hax" breathes.
+- A failed check never continues on its own.
+- Downloading and Installing are shown on the update screen itself.
+
+### Update screen
+
+- **Mandatory:** changelog + **Update now** only; back stays on the screen.
+- **Normal:** also **Not now**, which goes on to sign in. It is offered again
+  on the next start.
+- **Update now:** downloads inside the app with % and MB progress, keeping the
+  screen on.
+  - The download stays on https at every redirect, is size-capped, and checks
+    free storage first.
+  - Before installing, a quick check: a real APK, package `com.xlox`, exactly
+    the announced versionCode.
+  - It then installs through a `PackageInstaller` session, so Android shows
+    its own confirmation. No browser, no `file://`, no FileProvider.
+- **Failures show the reason and Retry:**
+  - Network: offline, timeout or interrupted.
+  - Storage: not enough free space.
+  - Invalid file: not an APK, a different app, or the wrong version.
+  - Install: cancelled, blocked, or a signature mismatch.
+- A downloaded APK is reused on Retry or a later start, and leftovers are
+  deleted.
+- **Install unknown apps:** if it is not allowed yet, Android's installer asks
+  for it itself. On Android 11 the grant can restart Anoy. The next start then
+  reuses the downloaded file.
+
+### Home
+
+- **Header:** the title is "Welcome back". The /connect payload has no display
+  name (only expiry, status and the note), so the small kicker stays hidden.
+  `MAct.displayName()` is the one place to add a name if the panel ever sends
+  one. The title is never "Anoy", never the key, never an invented name.
+- **Top right:** "?" (Help) + **Settings**. The sign-out icon moved into
+  Settings.
+- **Notice:** exactly the panel's floating text. Emoji are removed and ALL-CAPS
+  is set in sentence case, but the default "play safe else flag ban" is no
+  longer replaced by "Play fairly…". Empty text hides the card.
+- **Game card:** icon, "BGMI v<installed version>" (just "BGMI" when it is not
+  installed), the library version, the honest State (Not installed / Installed
+  / Ready / Running) and the Server word.
+- **Time left:** smaller (28 sp max) and always ticking:
+  "29d 23h 59m 12s". Expiry dates stay IST.
+- **Removed from home:** the Device card, the Access chip and the bottom
+  "Help on Telegram" button. Launch still asks for missing permissions first,
+  exactly as before.
+
+**Game icon:**
+- Set `GameIcon.GAME_ICON_URL` (`xlox/app/src/main/java/com/xlox/utils/GameIcon.java`)
+  to an https link to a square PNG/JPEG/WebP, ideally 512 px and under 1 MB.
+- It is downloaded once, cached in private storage and refreshed weekly.
+  Offline, the cached copy is used.
+- The constant is **empty** in 2.2.0, so the built-in vector placeholder
+  (`res/drawable/game_icon_placeholder.xml`) shows. The placeholder is also
+  used while the icon loads and on any failure.
+
+### Settings (new, full screen, same look)
+
+- **Device:** model and Android version.
+- **Access and files:**
+  - The summary chip (Access ready / needs attention).
+  - The three items, each shown as Allowed or Not allowed: All files access,
+    Files, Install unknown apps.
+  - Whether the game files (OBB) are already copied.
+  - Tapping a missing item runs the existing explanation sheet + settings
+    flow, never a launch. Tapping an allowed item just confirms.
+- **Report a problem:** Report on Telegram (opens only on tap) and Copy support
+  info (the same preview, never the key, usernames or paths).
+- **App:** version name and code, e.g. `2.2.0 (8)`.
+- **Sign out:** the existing Sign out / Forget this key sheet.
+- No Launch or Stop here. Back, or the chevron, returns to home.
+
+### Help
+
+Help never opens on its own any more (`maybeShowFirstHelp`, the 900 ms delay
+and the `HELP_SHOWN` flag are gone); it opens only from "?". The sheet content
+is unchanged except one line that pointed at the old home Access chip now
+says "Settings shows whether anything is still off".
+
+### Panel (website) 2.2.0
+
+- **Dashboard:** on phones, "Account expires" stacks above the full IST date
+  instead of overlapping it.
+- **Integration / API docs:** the Overview callouts wrap as normal text, and
+  their links stay tappable.
+- **Library:** **one** publish card: a .so/.zip file (up to the existing limit)
+  **or** an https link, plus version, optional notes and Publish.
+  - Neither, or a non-https link, gives a clear error.
+  - If both are given, the file wins and the link is ignored, so it publishes
+    once.
+- **Referral codes / API keys:** the create and list cards stack on narrow
+  screens and sit side by side at 1001 px and wider.
+- **App update** page (Owner / Admin), described above:
+  - Table `app_release`, migration `supabase/migrations/20261107_v2_2_app_release.sql`.
+  - Public check `GET /api/app/update`, `Cache-Control: no-store`; a database
+    error answers 503.
+
+### Verify on a phone
+
+- **Normal start:** watch the bottom line go Checking → Up to date →
+  Proceeding…, then sign in. The version shows top right.
+- **Offline start:** "Can't check for updates", the reason and Retry. Go back
+  online, tap Retry, and it continues.
+- **Publish a test release** (higher versionCode, Normal), then restart:
+  - The update screen opens; Not now continues.
+  - Update now shows progress, then Android's installer.
+  - With Mandatory, only Update now is offered.
+- **Home:** "Welcome back", the panel note as written, "BGMI v…", the ticking
+  "Xd XXh XXm XXs". Gear → Settings shows the three items and the OBB state.
+  Sign out sits at the bottom.
+
+### Debug-only QA extras
+
+- **Added:**
+  - `SplashActivity`: `qa_app_update` = checking | up_to_date | available |
+    mandatory | fail. It simulates the check, with no network.
+  - `AppUpdateActivity`: `qa_update_preview` (simulated download, ending in
+    an "invalid file" failure) and `qa_update_state` = downloading |
+    installing | failed.
+  - `MAct`: `qa_settings` (opens Settings).
+- **Removed:** `qa_first_help`.
+- `qa_frame` / `qa_hold` never touch the network.

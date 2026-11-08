@@ -66,4 +66,9 @@
     <dimen name="text_splash_greeting">20dp</dimen>
     <!-- Greeting baseline to name cap top ~12 dp (font padding off). -->
     <dimen name="splash_line_gap">-2dp</dimen>
+    <!-- 2.2.0 home: game icon and the smaller live countdown. -->
+    <dimen name="game_icon">64dp</dimen>
+    <dimen name="game_icon_radius">16dp</dimen>
+    <dimen name="text_countdown">28sp</dimen>
+    <dimen name="text_countdown_min">18sp</dimen>
 </resources>

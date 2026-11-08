@@ -230,6 +230,10 @@ jobs:
               # help sheet, support info preview, Access chip
               'help_sheet', 'help_support_info', 'help_support_copied',
               'home_access_ready', 'home_access_needed', 'access_explain',
+              # 2.2.0: splash status line, app (APK) update screen, Settings
+              'splash_status_up_to_date', 'splash_status_available', 'splash_status_fail',
+              'app_update_normal', 'app_update_downloading', 'app_update_failed', 'app_update_mandatory',
+              'app_update_state_installing', 'splash_check_failed_live', 'home_settings', 'home_settings_bottom',
           ]
           errors = []
           files = {p.stem: p for p in shots.glob('*.png')}
@@ -428,11 +432,12 @@ jobs:
           ea = line('licence_expired after texts')
           if 'Expired' not in ea or 'Sign in again' not in ea:
               errors.append('panel says expired: not shown on return to home: ' + ea[:400])
-          # Help: three tips, support info previewed without the key, first run once.
-          if line('help_first first') != 'shown' or line('help_first second') != 'none':
-              errors.append('first-run Help: expected shown once, got %r then %r' % (line('help_first first'), line('help_first second')))
-          if line('help_first log').count('Help: first-run tips|') != 1:
-              errors.append('first-run Help did not run exactly once: ' + line('help_first log')[-300:])
+          # Help: three tips, support info previewed without the key. 2.2.0: it
+          # never opens on its own (only from the "?" button).
+          if line('help_first first') != 'none' or line('help_first second') != 'none':
+              errors.append('Help opened on its own: got %r then %r' % (line('help_first first'), line('help_first second')))
+          if 'first-run tips' in line('help_first log'):
+              errors.append('first-run Help logic still runs: ' + line('help_first log')[-300:])
           xi = line('expiry_ist texts')
           if '14 Nov 2026, 10:30 PM IST' not in xi:
               errors.append('IST: 2026-11-14T17:00:00.000Z must read "14 Nov 2026, 10:30 PM IST" (as on the website): ' + xi[:300])
@@ -470,8 +475,67 @@ jobs:
               errors.append('Access flow log incomplete: ' + al[-400:])
           if 'continuing the launch' in al or 'Launch: preparing' in al:
               errors.append('Access flow started a launch: ' + al[-400:])
-          if not re.search(r'typical phone: device card bottom \d+, launch fade top \d+: clear', t):
-              errors.append('DEVICE card is covered by the Launch bar on a 411 x 914 dp phone')
+          if not re.search(r'typical phone: game card bottom \d+, launch fade top \d+: clear', t):
+              errors.append('GAME card is covered by the Launch bar on a 411 x 914 dp phone')
+          # ---- 2.2.0 ----
+          # Splash: version top right, status line from the (simulated) check.
+          for st, want in (('up_to_date', 'Up to date'), ('available', 'Update available (v2.3.0)'),
+                           ('fail', 'check for updates')):
+              tx = line('splash status %s texts' % st)
+              if want not in tx or 'text="v2.2.0"' not in tx:
+                  errors.append('splash status %s: %r / version missing: %s' % (st, want, tx[:300]))
+          if 'text="Retry"' not in line('splash status fail texts'):
+              errors.append('splash: a failed check has no Retry: ' + line('splash status fail texts')[:300])
+          # App update screen: normal (Not now), download -> clear failure + Retry, Not now -> sign in.
+          un = line('app update normal texts')
+          for want in ('Update available', 'Update now', 'Not now', 'What', 'Faster start-up'):
+              if want not in un:
+                  errors.append('app update (normal): %r missing: %s' % (want, un[:400]))
+          if 'Keep Anoy open' not in line('app update downloading texts') or '%' not in line('app update downloading texts'):
+              errors.append('app update: no download progress: ' + line('app update downloading texts')[:300])
+          uf = line('app update failed texts')
+          if 'text="Retry"' not in uf or 'valid Anoy update' not in uf or 'Update failed' not in uf:
+              errors.append('app update: failure without reason / Retry: ' + uf[:400])
+          if 'LogAct' not in line('app update not now focus'):
+              errors.append('app update: Not now did not continue to sign in: ' + line('app update not now focus'))
+          um = line('app update mandatory texts')
+          if 'Update required' not in um or 'Update now' not in um or 'Not now' in um:
+              errors.append('app update (mandatory): must offer Update now only: ' + um[:400])
+          if 'AppUpdateActivity' not in line('app update mandatory back focus'):
+              errors.append('app update (mandatory): back left the screen: ' + line('app update mandatory back focus'))
+          if 'Installing' not in line('app update installing texts'):
+              errors.append('app update: installing state: ' + line('app update installing texts')[:300])
+          # Live splash: the real check ran; offline -> reason + Retry, never a silent continue.
+          sl = line('splash live log')
+          if 'Checking for an app update' not in sl or 'App is up to date' not in sl:
+              errors.append('live splash: the real app update check did not pass: ' + sl[-300:])
+          so = line('splash offline texts')
+          if 'check for updates' not in so or 'text="Retry"' not in so or 'offline' not in so:
+              errors.append('offline splash: no reason / Retry: ' + so[:400])
+          if 'SplashActivity' not in line('splash offline focus'):
+              errors.append('offline splash continued without the check: ' + line('splash offline focus'))
+          if 'splash retry: passed' not in t:
+              errors.append('splash Retry did not continue once back online: ' + line('splash retry focus'))
+          # Home: "Welcome back", the panel's own note, game version line; no Device card / sign-out on home.
+          ht2 = line('home texts')
+          if 'Welcome back' not in ht2 or 'Play safe else flag ban' not in ht2 or 'Play fairly' in ht2:
+              errors.append('home header / notice: %s' % ht2[:400])
+          if 'text="Device"' in ht2 or 'text="Sign out"' in ht2 or 'text="Anoy"' in ht2:
+              errors.append('home still shows Device / Sign out / "Anoy" title: ' + ht2[:400])
+          if not re.search(r'\d+d \d\dh \d\dm \d\ds', ht2):
+              errors.append('home countdown is not "Xd XXh XXm XXs": ' + ht2[:300])
+          # Settings: device, access + OBB, report, version, Sign out.
+          sx = line('settings texts') + ' ' + line('settings bottom texts')
+          for want in ('Settings', 'Model', 'Android', 'All files access', 'Install unknown apps', 'Game files (OBB)',
+                       'Report on Telegram', 'Copy support info', '2.2.0 (8)', 'Sign out'):
+              if want not in sx:
+                  errors.append('Settings: %r missing: %s' % (want, sx[:500]))
+          if 'text="Launch"' in sx or 'text="Stop"' in sx:
+              errors.append('Settings shows Launch / Stop: ' + sx[:300])
+          if not re.search(r'settings rows: all=Allowed files=Allowed install=Allowed obb=(Copied|Not copied)', t):
+              errors.append('Settings rows: ' + (re.search(r'settings rows: .*', t) or re.search('', '')).group(0))
+          if line('access_missing all files row') != 'Not allowed':
+              errors.append('Settings: All files access off not shown: %r' % line('access_missing all files row'))
           m = re.search(r'licence card description: content-desc="([^"]*)"', t)
           if not m or not m.group(1).startswith('Licence active,'):
               errors.append('licence card is not read as one sentence: ' + (m.group(1) if m else 'missing'))

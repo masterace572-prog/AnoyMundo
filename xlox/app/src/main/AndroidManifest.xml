@@ -141,6 +141,13 @@
             android:screenOrientation="portrait"
             android:windowSoftInputMode="adjustResize|stateHidden" />
 
+        <!-- 2.2.0: in-app app (APK) update, opened by the splash before sign in. -->
+        <activity
+            android:name=".AppUpdateActivity"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden|uiMode"
+            android:exported="false"
+            android:screenOrientation="portrait" />
+
         <activity
             android:name=".MAct"
             android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden|uiMode"

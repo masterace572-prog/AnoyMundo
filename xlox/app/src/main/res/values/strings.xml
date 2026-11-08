@@ -77,7 +77,7 @@
     <string name="update_no_space">Not enough free storage. Free at least %1$s and try again.</string>
 
     <!-- Home -->
-    <string name="home_title">Anoy</string>
+    <string name="home_title">Welcome back</string>
     <string name="sign_out">Sign out</string>
     <string name="section_licence">Licence</string>
     <string name="section_game">Game</string>
@@ -92,8 +92,7 @@
     <string name="game_name">BGMI</string>
     <string name="active">Active</string>
     <string name="expired">Expired</string>
-    <string name="time_left_value">%1$dd %2$02dh %3$02dm</string>
-    <string name="time_left_value_short">%1$dh %2$02dm %3$02ds</string>
+    <string name="time_left_value">%1$dd %2$02dh %3$02dm %4$02ds</string>
     <string name="state_ready">Ready</string>
     <!-- BGMI is installed, but the library, a permission or the container is not ready yet. -->
     <string name="state_installed">Installed</string>
@@ -108,7 +107,7 @@
     <string name="help_launch_title">Launching the game</string>
     <string name="help_launch_body">Sign in, allow the three access items if Anoy asks (All files access, Files, Install unknown apps), then tap Launch. The first time, Anoy copies the game files before the game opens.</string>
     <string name="help_access_title">Files missing or access needed</string>
-    <string name="help_access_body">Turn on All files access, Files and Install unknown apps for Anoy, then come back and tap Launch. The Access chip next to Game on home shows whether anything is still off.</string>
+    <string name="help_access_body">Turn on All files access, Files and Install unknown apps for Anoy, then come back and tap Launch. Settings shows whether anything is still off.</string>
     <string name="help_renew_title">Renewing your licence</string>
     <string name="help_renew_body">Tap Renew on the licence card, or Help on Telegram, and message support. The new time shows when you come back to Anoy.</string>
     <string name="help_copy_support">Copy support info</string>
@@ -168,8 +167,7 @@
     <string name="action_preparing_progress">Preparing… %1$d%%</string>
     <string name="expires_on">Expires %1$s</string>
     <string name="expired_on">Expired %1$s</string>
-    <string name="notice_fallback">Play fairly. Unsafe play can lead to a ban.</string>
-    <string name="notice_description">Notice from the server: %1$s</string>
+        <string name="notice_description">Notice from the server: %1$s</string>
     <string name="sign_out_title">Sign out of this device?</string>
     <string name="sign_out_message">Your licence key stays saved on this phone, so signing back in takes one tap.</string>
     <string name="forget_key">Forget this key</string>
@@ -187,6 +185,79 @@
     <!-- Quiet line when the latest licence refresh could not reach the server. -->
     <string name="licence_last_checked">Last checked %1$s</string>
     <string name="status_chip_description">%1$s: %2$s</string>
+    <!-- 2.2.0: splash status line (real state of the app update check). -->
+    <string name="splash_version">v%1$s</string>
+    <string name="splash_status_init">Initializing…</string>
+    <string name="splash_status_checking">Checking for updates…</string>
+    <string name="splash_status_current">Up to date</string>
+    <string name="splash_status_available">Update available (v%1$s)</string>
+    <string name="splash_status_proceeding">Proceeding…</string>
+    <string name="splash_status_failed">Can\'t check for updates</string>
+    <string name="splash_retry">Retry</string>
+
+    <!-- 2.2.0: in-app app update (the APK, not the library). -->
+    <string name="app_update_title">Update available</string>
+    <string name="app_update_title_required">Update required</string>
+    <string name="app_update_subtitle">Anoy %1$s is ready. You have %2$s.</string>
+    <string name="app_update_subtitle_required">Anoy %1$s is required to keep using the app. You have %2$s.</string>
+    <string name="app_update_whats_new">What\'s new</string>
+    <string name="app_update_no_changelog">Fixes and improvements.</string>
+    <string name="app_update_now">Update now</string>
+    <string name="app_update_not_now">Not now</string>
+    <string name="app_update_retry">Retry</string>
+    <string name="app_update_downloading">Downloading…</string>
+    <string name="app_update_progress">%1$d%% · %2$s of %3$s</string>
+    <string name="app_update_progress_unknown">%1$s downloaded</string>
+    <string name="app_update_verifying">Checking the download…</string>
+    <string name="app_update_installing">Installing…</string>
+    <string name="app_update_confirm">Confirm the install on the next screen.</string>
+    <string name="app_update_keep_open">Keep Anoy open until the update finishes.</string>
+    <string name="app_update_done">Installed</string>
+    <string name="app_update_installed">Installed. Open Anoy again to continue.</string>
+    <string name="app_update_failed_title">Update failed</string>
+    <string name="app_update_required_back">This update is required to continue.</string>
+    <string name="app_update_bad_release">The update information from the server is incomplete. Try again in a moment.</string>
+    <string name="app_update_storage">Not enough free storage to download the update. Free some space and try again.</string>
+    <string name="app_update_no_space">Not enough free storage. Free at least %1$s and try again.</string>
+    <string name="app_update_missing_file">The update file isn\'t available on the server right now. Try again later.</string>
+    <string name="app_update_invalid">The downloaded file isn\'t a valid Anoy update.</string>
+    <string name="app_update_wrong_app">The downloaded file is a different app, not Anoy.</string>
+    <string name="app_update_wrong_version">The downloaded file isn\'t the announced version.</string>
+    <string name="app_update_cancelled">The download was stopped.</string>
+    <string name="app_update_install_failed">Couldn\'t install the update. Try again.</string>
+    <string name="app_update_install_cancelled">Install cancelled. Tap Retry to install the update.</string>
+    <string name="app_update_signature">This update isn\'t signed like the installed app, so Android refused it.</string>
+    <string name="app_update_blocked">Android blocked the install. Allow Install unknown apps for Anoy and try again.</string>
+
+    <!-- 2.2.0: home + Settings. -->
+    <string name="settings">Settings</string>
+    <string name="settings_open">Open settings</string>
+    <string name="settings_back">Back</string>
+    <string name="settings_section_device">Device</string>
+    <string name="settings_section_state">Access and files</string>
+    <string name="settings_section_report">Report a problem</string>
+    <string name="settings_section_app">App</string>
+    <string name="settings_section_account">Account</string>
+    <string name="settings_model">Model</string>
+    <string name="settings_android">Android</string>
+    <string name="settings_all_files">All files access</string>
+    <string name="settings_files">Files</string>
+    <string name="settings_install">Install unknown apps</string>
+    <string name="settings_obb">Game files (OBB)</string>
+    <string name="settings_granted">Allowed</string>
+    <string name="settings_missing">Not allowed</string>
+    <string name="settings_obb_copied">Copied</string>
+    <string name="settings_obb_missing">Not copied</string>
+    <string name="settings_obb_checking">Checking…</string>
+    <string name="settings_obb_hint">Launch copies the game files when they are missing.</string>
+    <string name="settings_telegram">Report on Telegram</string>
+    <string name="settings_copy_support">Copy support info</string>
+    <string name="settings_version">Version</string>
+    <string name="settings_version_value">%1$s (%2$d)</string>
+    <string name="settings_row_description">%1$s: %2$s</string>
+    <string name="game_title_version">BGMI v%1$s</string>
+    <string name="game_icon_description">BGMI</string>
+
     <plurals name="a11y_days">
         <item quantity="one">%d day</item>
         <item quantity="other">%d days</item>

@@ -13,13 +13,22 @@ import android.view.ViewGroup;
 import android.view.animation.Interpolator;
 import android.view.animation.LinearInterpolator;
 import android.view.animation.PathInterpolator;
+import android.content.res.ColorStateList;
+import android.graphics.drawable.Drawable;
 import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.ContextCompat;
 import androidx.core.splashscreen.SplashScreen;
 import androidx.core.splashscreen.SplashScreenViewProvider;
 
 import com.xlox.ui.Ui;
+import com.xlox.utils.AppUpdater;
+import com.xlox.utils.UpdateException;
+
+import java.util.Locale;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  * Launcher entry: a ~3 s typography film on true black, then sign in / the
@@ -42,6 +51,12 @@ import com.xlox.ui.Ui;
  *   2.26-2.85 s  settle   hold "Anoy Hax"
  *   2.85 s       handoff  existing 320 ms cross-fade into LogAct (~3.17 s)
  * </pre>
+ * 2.2.0: meanwhile the app (APK) update check runs and the bottom status line
+ * reports it. The hand-off waits for BOTH the film and the check: up to date
+ * goes on to sign in (whose library UpdateGate is unchanged); a newer release
+ * opens {@link AppUpdateActivity}; a failed check shows the reason and Retry
+ * and never continues on its own. If the check outlasts the film, "Anoy Hax"
+ * breathes until it answers.
  * Every property is a pure function of time ({@link #applyTime}) driven by one
  * animator, so the moves stay locked together as one gesture. Text is only
  * faded and translated - never clipped and never scaled - on hardware layers.
@@ -107,9 +122,24 @@ public class SplashActivity extends AppCompatActivity {
     public static final String EXTRA_HOLD = "qa_hold";
     /** Debug builds only: freeze the film at a time in seconds for screenshots. */
     public static final String EXTRA_FRAME = "qa_frame";
+    /**
+     * Debug builds only: simulate the app update check without the network -
+     * checking | up_to_date | available | mandatory | fail.
+     */
+    public static final String EXTRA_QA_APP_UPDATE = "qa_app_update";
+    /** Status line: the check starts once the version and status have faded in. */
+    private static final long CHECK_AT_MS = VERSION_AT_MS + VERSION_MS;
+    /** "Proceeding..." / "Update available" stay readable this long before the hand-off. */
+    private static final long PROCEED_MS = 400L;
+    /** Debug simulation: how long the fake check takes. */
+    private static final long QA_CHECK_MS = 900L;
+
+    private enum Check { PENDING, CHECKING, CURRENT, AVAILABLE, FAILED }
 
     private final Handler handler = new Handler(Looper.getMainLooper());
-    private final Runnable next = this::openLogin;
+    /** Film finished (or never started): hand off as soon as the check allows. */
+    private final Runnable next = this::onFilmDone;
+    private final ExecutorService checker = Executors.newSingleThreadExecutor(r -> new Thread(r, "anoy-app-check"));
     private View root;
     private View mark;
     private View lockup;
@@ -118,6 +148,18 @@ public class SplashActivity extends AppCompatActivity {
     private TextView loader;
     private TextView hax;
     private TextView version;
+    private View statusBar;
+    private View statusSpinner;
+    private TextView statusLine;
+    private TextView statusDetail;
+    private View retry;
+    private Check check = Check.PENDING;
+    private AppUpdater.Release release;
+    /** Bumped on every (re)check so a stale answer is ignored. */
+    private int checkRun;
+    private boolean filmDone;
+    private boolean handingOff;
+    private String qaUpdate;
     private ValueAnimator film;
     private ValueAnimator breath;
     private float risePx;
@@ -145,6 +187,7 @@ public class SplashActivity extends AppCompatActivity {
             return;
         }
         hold = BuildConfig.DEBUG && getIntent() != null && getIntent().getBooleanExtra(EXTRA_HOLD, false);
+        qaUpdate = BuildConfig.DEBUG && getIntent() != null ? getIntent().getStringExtra(EXTRA_QA_APP_UPDATE) : null;
         final float qaFrame = BuildConfig.DEBUG && getIntent() != null
                 ? getIntent().getFloatExtra(EXTRA_FRAME, -1f) : -1f;
         try {
@@ -158,7 +201,16 @@ public class SplashActivity extends AppCompatActivity {
             loader = findViewById(R.id.splashLoader);
             hax = findViewById(R.id.splashHax);
             version = findViewById(R.id.splashVersion);
-            version.setText(getString(R.string.version_footer_app, BuildConfig.VERSION_NAME));
+            version.setText(getString(R.string.splash_version, BuildConfig.VERSION_NAME));
+            statusBar = findViewById(R.id.splashStatusBar);
+            statusSpinner = findViewById(R.id.splashStatusSpinner);
+            statusLine = findViewById(R.id.splashStatus);
+            statusDetail = findViewById(R.id.splashStatusDetail);
+            retry = findViewById(R.id.splashRetry);
+            retry.setOnClickListener(v -> {
+                Ui.tap(v);
+                startCheck();
+            });
             risePx = Ui.dp(this, ARRIVE_RISE_DP);
             driftPx = Ui.dp(this, CUT_DRIFT_DP);
             // One real word space between "Anoy" and the Loader/Hax slot.
@@ -168,13 +220,23 @@ public class SplashActivity extends AppCompatActivity {
             slot.setMarginStart(Math.round(anoy.getPaint().measureText(" ")));
             slotView.setLayoutParams(slot);
             final int footerMargin = getResources().getDimensionPixelSize(R.dimen.space_24);
+            final int versionTop = getResources().getDimensionPixelSize(R.dimen.space_16);
+            final int versionEnd = getResources().getDimensionPixelSize(R.dimen.screen_padding);
             Ui.onInsets(root, (bars, bottom, ime) -> {
-                // Only re-lays out when the inset really changes - never per frame.
+                // Only re-lays out when an inset really changes - never per frame.
                 ViewGroup.MarginLayoutParams lp = (ViewGroup.MarginLayoutParams) version.getLayoutParams();
-                int margin = footerMargin + bars.bottom;
-                if (lp.bottomMargin != margin) {
-                    lp.bottomMargin = margin;
+                int top = versionTop + bars.top;
+                int end = versionEnd + Math.max(bars.left, bars.right);
+                if (lp.topMargin != top || lp.getMarginEnd() != end) {
+                    lp.topMargin = top;
+                    lp.setMarginEnd(end);
                     version.setLayoutParams(lp);
+                }
+                ViewGroup.MarginLayoutParams sp = (ViewGroup.MarginLayoutParams) statusBar.getLayoutParams();
+                int margin = footerMargin + bars.bottom;
+                if (sp.bottomMargin != margin) {
+                    sp.bottomMargin = margin;
+                    statusBar.setLayoutParams(sp);
                 }
             });
         } catch (RuntimeException e) {
@@ -185,13 +247,19 @@ public class SplashActivity extends AppCompatActivity {
         }
 
         if (qaFrame >= 0f) {
-            // QA: one still frame of the film, no navigation.
+            // QA: one still frame of the film, no navigation, no network.
+            hold = true;
+            if (qaUpdate == null) qaUpdate = "checking";
             root.post(() -> {
                 if (!Ui.alive(this) || !measure()) return;
                 applyTime(Math.round(qaFrame * 1000f));
             });
+            startCheck();
             return;
         }
+        // The hold screenshots never touch the network either.
+        if (hold && qaUpdate == null) qaUpdate = "checking";
+        handler.postDelayed(this::startCheck, CHECK_AT_MS);
         if (Ui.reducedMotion(this)) {
             playReduced();
             return;
@@ -201,7 +269,7 @@ public class SplashActivity extends AppCompatActivity {
         root.post(() -> {
             if (!Ui.alive(this)) return;
             if (!measure()) {
-                openLogin();
+                onFilmDone();
                 return;
             }
             film = ValueAnimator.ofFloat(0f, FILM_MS);
@@ -216,18 +284,165 @@ public class SplashActivity extends AppCompatActivity {
                     if (done) return;
                     done = true;
                     applyTime(FILM_MS);
-                    if (hold) {
-                        breathe();
-                    } else {
-                        setTextLayers(false);
-                        openLogin();
-                    }
+                    setTextLayers(false);
+                    onFilmDone();
                 }
             });
             setTextLayers(true);
             film.start();
         });
-        if (!hold) handler.postDelayed(next, SAFETY_MS);
+        handler.postDelayed(next, SAFETY_MS);
+    }
+
+    // ------------------------------------------------------ app update check
+
+    /** The film is over (or could not run): go on once the check allows it. */
+    private void onFilmDone() {
+        if (filmDone || !Ui.alive(this)) return;
+        filmDone = true;
+        handler.removeCallbacks(next);
+        if (!maybeProceed()) breathe();
+    }
+
+    /** (Re)runs the check; the status line follows its real state. */
+    private void startCheck() {
+        if (!Ui.alive(this) || handingOff) return;
+        if (check == Check.CHECKING) return;
+        final int run = ++checkRun;
+        check = Check.CHECKING;
+        release = null;
+        setStatus(getString(R.string.splash_status_checking), 0, R.color.text_tertiary, true);
+        hideFailure();
+        if (qaUpdate != null) {
+            simulateCheck(run);
+            return;
+        }
+        Log.i("SplashActivity", "Checking for an app update");
+        checker.execute(() -> {
+            try {
+                AppUpdater.Release found = AppUpdater.check(this);
+                handler.post(() -> onChecked(run, found));
+            } catch (UpdateException e) {
+                Log.w("SplashActivity", "App update check failed: " + e.getMessage());
+                handler.post(() -> onCheckFailed(run, e.getMessage()));
+            } catch (RuntimeException e) {
+                Log.e("SplashActivity", "App update check crashed", e);
+                handler.post(() -> onCheckFailed(run, getString(R.string.update_unavailable)));
+            }
+        });
+    }
+
+    private void onChecked(int run, AppUpdater.Release found) {
+        if (run != checkRun || !Ui.alive(this)) return;
+        release = found;
+        if (found == null) {
+            check = Check.CURRENT;
+            Log.i("SplashActivity", "App is up to date (" + BuildConfig.VERSION_CODE + ")");
+            setStatus(getString(R.string.splash_status_current), R.drawable.ic_circle_check, R.color.success, false);
+        } else {
+            check = Check.AVAILABLE;
+            Log.i("SplashActivity", "App update available: " + found.versionName + " (" + found.versionCode + ")");
+            setStatus(getString(R.string.splash_status_available, found.versionName),
+                    R.drawable.ic_arrow_down_to_line, R.color.blue, false);
+        }
+        if (maybeProceed() && breath != null) {
+            breath.cancel();
+            name.setAlpha(1f);
+        }
+    }
+
+    private void onCheckFailed(int run, String reason) {
+        if (run != checkRun || !Ui.alive(this)) return;
+        check = Check.FAILED;
+        setStatus(getString(R.string.splash_status_failed), R.drawable.ic_circle_alert, R.color.danger, false);
+        statusDetail.setText(reason);
+        statusDetail.setVisibility(reason == null || reason.isEmpty() ? View.GONE : View.VISIBLE);
+        retry.setVisibility(View.VISIBLE);
+        // Never left invisible behind a still-running film.
+        statusBar.setAlpha(1f);
+    }
+
+    /**
+     * Hands off when both the film and the check are done: up to date goes to
+     * sign in, a newer release to the update screen. False while waiting (or
+     * after a failure, which waits for Retry).
+     */
+    private boolean maybeProceed() {
+        if (!filmDone || hold || handingOff) return false;
+        if (check == Check.CURRENT) {
+            handingOff = true;
+            setStatus(getString(R.string.splash_status_proceeding), 0, R.color.text_tertiary, true);
+            handler.postDelayed(this::openLogin, PROCEED_MS);
+            return true;
+        }
+        if (check == Check.AVAILABLE && release != null) {
+            handingOff = true;
+            handler.postDelayed(this::openUpdate, PROCEED_MS);
+            return true;
+        }
+        return false;
+    }
+
+    private void setStatus(String text, int iconRes, int colourRes, boolean spinner) {
+        int colour = ContextCompat.getColor(this, colourRes);
+        statusLine.setText(text);
+        statusLine.setTextColor(colour);
+        Drawable glyph = null;
+        if (iconRes != 0) {
+            glyph = ContextCompat.getDrawable(this, iconRes);
+            if (glyph != null) {
+                int size = getResources().getDimensionPixelSize(R.dimen.icon_chip);
+                glyph = glyph.mutate();
+                glyph.setBounds(0, 0, size, size);
+            }
+        }
+        statusLine.setCompoundDrawablesRelative(glyph, null, null, null);
+        androidx.core.widget.TextViewCompat.setCompoundDrawableTintList(statusLine, ColorStateList.valueOf(colour));
+        statusSpinner.setVisibility(spinner ? View.VISIBLE : View.GONE);
+    }
+
+    private void hideFailure() {
+        statusDetail.setVisibility(View.GONE);
+        retry.setVisibility(View.GONE);
+    }
+
+    /** Debug only: the check's answers without the network. */
+    private void simulateCheck(int run) {
+        final String qa = qaUpdate.toLowerCase(Locale.US);
+        if ("checking".equals(qa)) return;
+        handler.postDelayed(() -> {
+            switch (qa) {
+                case "available":
+                case "mandatory":
+                    onChecked(run, sampleRelease("mandatory".equals(qa)));
+                    break;
+                case "fail":
+                    onCheckFailed(run, getString(R.string.net_offline));
+                    // A Retry in the sample then succeeds.
+                    qaUpdate = "up_to_date";
+                    break;
+                default:
+                    onChecked(run, null);
+                    break;
+            }
+        }, QA_CHECK_MS);
+    }
+
+    private static AppUpdater.Release sampleRelease(boolean mandatory) {
+        return new AppUpdater.Release("2.3.0", BuildConfig.VERSION_CODE + 1,
+                "https://github.com/masterace572-prog/AnoyMundo/releases/download/sample/Anoy.apk",
+                "Faster start-up\nClearer update messages\nFixes for the game files copy", mandatory);
+    }
+
+    private void openUpdate() {
+        if (opened || !Ui.alive(this) || release == null) return;
+        opened = true;
+        Intent intent = new Intent(this, AppUpdateActivity.class);
+        release.writeTo(intent);
+        if (qaUpdate != null) intent.putExtra(AppUpdateActivity.EXTRA_QA_PREVIEW, true);
+        startActivity(intent);
+        overridePendingTransition(R.anim.fade_in, R.anim.fade_out);
+        finish();
     }
 
     /** Measures the moves from the laid-out views; false if layout is unusable. */
@@ -268,7 +483,10 @@ public class SplashActivity extends AppCompatActivity {
         hax.setAlpha(DISSOLVE.getInterpolation(window(swap, 0f, HAX_IN_END)));
         loader.setAlpha(1f - DISSOLVE.getInterpolation(window(swap, LOADER_OUT_START, 1f)));
 
-        version.setAlpha(progress(t, VERSION_AT_MS, VERSION_MS, FAST_OUT_SLOW_IN));
+        float footer = progress(t, VERSION_AT_MS, VERSION_MS, FAST_OUT_SLOW_IN);
+        version.setAlpha(footer);
+        // Once shown, the status line stays (it may carry an error and Retry).
+        if (statusBar.getAlpha() < footer) statusBar.setAlpha(footer);
     }
 
     /**
@@ -308,22 +526,23 @@ public class SplashActivity extends AppCompatActivity {
         root.post(() -> {
             if (!Ui.alive(this)) return;
             if (!measure()) {
-                if (!hold) openLogin();
+                statusBar.setAlpha(1f);
+                onFilmDone();
                 return;
             }
             applyTime(CUT_AT_MS); // welcome lockup, settled, system mark gone
             handler.postDelayed(() -> {
                 if (!Ui.alive(this)) return;
                 applyTime(FILM_MS);
-                if (!hold) handler.postDelayed(next, REDUCED_FINAL_MS);
+                handler.postDelayed(next, REDUCED_FINAL_MS);
             }, REDUCED_WELCOME_MS);
         });
-        if (!hold) handler.postDelayed(next, REDUCED_WELCOME_MS + REDUCED_FINAL_MS + 2500L);
+        handler.postDelayed(next, REDUCED_WELCOME_MS + REDUCED_FINAL_MS + 2500L);
     }
 
     /** Startup outlasted the film: keep "Anoy Hax" with a very slow opacity breathe. */
     private void breathe() {
-        if (!Ui.alive(this) || Ui.reducedMotion(this)) return;
+        if (!Ui.alive(this) || Ui.reducedMotion(this) || breath != null) return;
         breath = ValueAnimator.ofFloat(1f, BREATHE_MIN_ALPHA);
         breath.setDuration(BREATHE_MS / 2);
         breath.setInterpolator(FAST_OUT_SLOW_IN);
@@ -347,6 +566,7 @@ public class SplashActivity extends AppCompatActivity {
         handler.removeCallbacksAndMessages(null);
         if (film != null) film.cancel();
         if (breath != null) breath.cancel();
+        checker.shutdownNow();
         setTextLayers(false);
         super.onDestroy();
     }

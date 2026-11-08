@@ -68,8 +68,10 @@ android {
         //        + read-only System.load() for API 37 devices.
         // 2.1.1: polish pass - home "Last checked" spacing; distinguishable
         //        from 2.1.0 (home hierarchy, Loader->Hax dissolve, IST times).
-        versionCode 7
-        versionName '2.1.1'
+        // 2.2.0: in-app app (APK) update before sign in, splash status line,
+        //        new home + Settings, Help no longer opens on its own.
+        versionCode 8
+        versionName '2.2.0'
 
         vectorDrawables {
             useSupportLibrary true

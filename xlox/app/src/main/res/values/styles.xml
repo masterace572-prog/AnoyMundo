@@ -385,6 +385,12 @@
         <item name="shapeAppearance">@style/ShapeAppearance.Anoy.Field</item>
     </style>
 
+    <!-- 2.2.0 home: rounded game icon. -->
+    <style name="ShapeAppearance.Anoy.GameIcon" parent="">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">@dimen/game_icon_radius</item>
+    </style>
+
     <style name="ShapeAppearance.Anoy.Field" parent="">
         <item name="cornerFamily">rounded</item>
         <item name="cornerSize">@dimen/field_radius</item>

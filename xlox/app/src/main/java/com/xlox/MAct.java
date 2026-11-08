@@ -17,8 +17,10 @@ import android.os.SystemClock;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.widget.ImageView;
 import android.widget.TextView;
 
+import androidx.activity.OnBackPressedCallback;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 import androidx.core.widget.TextViewCompat;
@@ -32,6 +34,7 @@ import com.xlox.ui.Ui;
 import com.xlox.ui.PermissionSheet;
 import com.xlox.ui.UpdateGate;
 import com.xlox.utils.AppManager;
+import com.xlox.utils.GameIcon;
 import com.xlox.utils.LibManager;
 import com.xlox.utils.Net;
 import com.xlox.utils.Prefs;
@@ -87,10 +90,6 @@ public class MAct extends AppCompatActivity {
     private static final String STATE_ASKED_ROUND = "asked_permissions";
     /** Home asks for missing files access after the content has settled. */
     private static final long HOME_STORAGE_ASK_DELAY_MS = 700L;
-    /** First-run Help waits until home has settled (and any permission ask has started). */
-    private static final long FIRST_HELP_DELAY_MS = 900L;
-    /** Set once the first-run Help sheet has been shown; it never opens on its own again. */
-    private static final String PREF_HELP_SHOWN = "HELP_SHOWN";
     /** Status text kept in the support info, at most this long. */
     private static final int SUPPORT_STATUS_MAX = 120;
     private static final long LAUNCH_RESUME_DELAY_MS = 700L;
@@ -121,8 +120,6 @@ public class MAct extends AppCompatActivity {
     private static final String REASON_EXPIRED = "EXPIRED KEY";
     /** Duration segment of a licence key: ANOY-7D-XXXXX, ANOY-2H-XXXXX. */
     private static final Pattern KEY_DURATION = Pattern.compile("^[A-Z0-9]+-(\\d{1,4})([HD])-", Pattern.CASE_INSENSITIVE);
-    /** The panel's long-standing default note, replaced by plain copy. */
-    private static final String DEFAULT_NOTE = "play safe else flag ban";
 
     /** Debug builds only (screenshot QA) - see docs/ui-redesign/README.md. */
     public static final String EXTRA_QA_EXPIRY = "qa_expiry";
@@ -137,8 +134,8 @@ public class MAct extends AppCompatActivity {
     public static final String EXTRA_QA_REFRESH = "qa_refresh";
     /** Debug builds only: stores this as the saved licence key (sign-out checks). */
     public static final String EXTRA_QA_SAVED_KEY = "qa_saved_key";
-    /** Debug: let the sample screen run the first-run Help logic (respects the shown flag). */
-    public static final String EXTRA_QA_FIRST_HELP = "qa_first_help";
+    /** Debug builds only: open the sample screen with Settings showing. */
+    public static final String EXTRA_QA_SETTINGS = "qa_settings";
     /**
      * Debug builds only: simulates the container's answer to a launch so CI can
      * check the result handling without BGMI - started | started_polish_throws
@@ -164,6 +161,19 @@ public class MAct extends AppCompatActivity {
     private TextView gameStateValue;
     private View accessRow;
     private TextView accessValue;
+    /** Settings page (2.2.0): device, access + OBB, report, version, sign out. */
+    private View settingsPage;
+    private View actionBarView;
+    private TextView permAllFilesValue;
+    private TextView permFilesValue;
+    private TextView permInstallValue;
+    private TextView obbValue;
+    private TextView gameTitle;
+    private OnBackPressedCallback settingsBack;
+    /** OBB state and the game icon are read off the main thread. */
+    private final ExecutorService ioExecutor =
+            Executors.newSingleThreadExecutor(r -> new Thread(r, "anoy-home-io"));
+    private int obbCheckRun;
     private BottomSheetDialog helpSheet;
     private TextView libraryValue;
     private TextView serverValue;
@@ -300,7 +310,11 @@ public class MAct extends AppCompatActivity {
         primaryAction = findViewById(R.id.primaryAction);
         setupInsets();
 
-        ((TextView) findViewById(R.id.gameValue)).setText(R.string.game_name);
+        gameTitle = findViewById(R.id.gameValue);
+        gameTitle.setText(R.string.game_name);
+        setupHeader();
+        loadGameIcon();
+        setupSettings();
         ((TextView) findViewById(R.id.modelValue)).setText(deviceName());
         ((TextView) findViewById(R.id.androidValue)).setText(getString(R.string.android_version,
                 Build.VERSION.RELEASE, Build.VERSION.SDK_INT));
@@ -309,13 +323,14 @@ public class MAct extends AppCompatActivity {
             Ui.tap(v);
             confirmSignOut();
         });
-        findViewById(R.id.help).setOnClickListener(v -> {
-            Ui.tap(v);
-            Ui.openUrl(this, getString(R.string.telegram_url));
-        });
+        // Help opens only from the "?" button - never on its own.
         findViewById(R.id.helpButton).setOnClickListener(v -> {
             Ui.tap(v);
             showHelp();
+        });
+        findViewById(R.id.settingsButton).setOnClickListener(v -> {
+            Ui.tap(v);
+            openSettings();
         });
         accessRow.setOnClickListener(v -> {
             Ui.tap(v);
@@ -361,11 +376,9 @@ public class MAct extends AppCompatActivity {
                     ? StorageAccess.Need.values()[pending] : null;
             askedThisRound = savedInstanceState.getInt(STATE_ASKED_ROUND, 0);
         }
-        boolean resumingLaunch = false;
         if (savedInstanceState == null && StorageAccess.consumeLaunchAfterRestart(this)) {
             // Anoy restarted itself for the game files: carry on with that Launch.
             Log.d(TAG, "Launch: resuming after the restart");
-            resumingLaunch = true;
             main.postDelayed(preview ? this::prepareObbThenLaunch : this::startLaunch, LAUNCH_RESUME_DELAY_MS);
         } else {
             applyQaAction();
@@ -379,12 +392,7 @@ public class MAct extends AppCompatActivity {
                 if (Ui.alive(this) && shouldAskOnHome()) requestStorage(false);
             }, HOME_STORAGE_ASK_DELAY_MS);
         }
-        // First arrival on home: the Help tips once, never over a launch or a
-        // permission ask (then a later arrival shows them instead).
-        boolean qaFirstHelp = preview && getIntent().getBooleanExtra(EXTRA_QA_FIRST_HELP, false);
-        if (savedInstanceState == null && !resumingLaunch && (!preview || qaFirstHelp)) {
-            main.postDelayed(this::maybeShowFirstHelp, FIRST_HELP_DELAY_MS);
-        }
+        if (preview && getIntent().getBooleanExtra(EXTRA_QA_SETTINGS, false)) openSettings();
         // Content reveals with a 40 ms stagger, 8 dp rise, 220 ms.
         Ui.stagger(findViewById(R.id.mainContent), 0);
         Ui.reveal(findViewById(R.id.actionBar), 120);
@@ -398,9 +406,11 @@ public class MAct extends AppCompatActivity {
         View actionPanel = findViewById(R.id.actionPanel);
         Ui.maxWidth(content, 600);
         Ui.maxWidth(actionPanel, 600);
+        View settingsContent = findViewById(R.id.settingsContent);
         Ui.onInsets(root, (bars, bottom, ime) -> {
             root.setPadding(bars.left, bars.top, bars.right, 0);
             Ui.padBottom(actionPanel, bars.bottom);
+            Ui.padBottom(settingsContent, bars.bottom);
         });
         // Content can always scroll clear of the pinned action bar.
         actionBar.addOnLayoutChangeListener((v, l, t, r, b, ol, ot, or, ob) -> {
@@ -640,6 +650,7 @@ public class MAct extends AppCompatActivity {
     protected void onDestroy() {
         main.removeCallbacksAndMessages(null);
         licenceExecutor.shutdown();
+        ioExecutor.shutdownNow();
         if (permissionSheet != null) {
             permissionSheet.setOnDismissListener(null);
             permissionSheet.dismiss();
@@ -784,10 +795,6 @@ public class MAct extends AppCompatActivity {
         }
     }
 
-    /**
-     * Panel note copy: emoji removed, ALL-CAPS sentences (3+ words) set in
-     * sentence case, the panel's default line replaced by plain copy.
-     */
     /** Joins the last two words with a no-break space so a short word ("ban.") never sits alone. */
     static String keepLastWordsTogether(String text) {
         if (text == null) return null;
@@ -797,12 +804,15 @@ public class MAct extends AppCompatActivity {
         return t.substring(0, last) + '\u00A0' + t.substring(last + 1);
     }
 
+    /**
+     * Panel note copy: emoji removed and ALL-CAPS sentences (3+ words) set in
+     * sentence case - otherwise exactly the panel's floating text (2.2.0: the
+     * default "play safe else flag ban" is no longer swapped for app copy).
+     * Empty hides the card.
+     */
     private String tidyNote(String raw) {
         String text = tidyPanelText(raw);
-        if (text == null || text.isEmpty()) return "";
-        String bare = text.toLowerCase(Locale.US).replaceAll("[^a-z ]", "").replaceAll("\\s+", " ").trim();
-        if (bare.equals(DEFAULT_NOTE)) return getString(R.string.notice_fallback);
-        return text;
+        return text == null ? "" : text;
     }
 
     /** Removes emoji / pictographs and fixes shouting; null stays null. */
@@ -1016,10 +1026,8 @@ public class MAct extends AppCompatActivity {
         long hours = (total % 86400L) / 3600L;
         long minutes = (total % 3600L) / 60L;
         long seconds = total % 60L;
-        // "29d 21h 04m"; under a day the seconds tick: "21h 04m 09s".
-        timeLeftValue.setText(days > 0
-                ? getString(R.string.time_left_value, days, hours, minutes)
-                : getString(R.string.time_left_value_short, hours, minutes, seconds));
+        // Always ticking: "29d 23h 59m 12s".
+        timeLeftValue.setText(getString(R.string.time_left_value, days, hours, minutes, seconds));
         if (totalMillis > 0 && remaining <= totalMillis) {
             licenceProgress.setVisibility(View.VISIBLE);
             licenceProgress.setProgressCompat((int) (remaining * 1000L / totalMillis), false);
@@ -1245,6 +1253,9 @@ public class MAct extends AppCompatActivity {
     private void refreshGameState() {
         gameInstalled = isInstalled(PKG_BGMI) || qaLaunch != null;
         if (!gameInstalled) gameRunning = false;
+        String gameVersion = installedVersionName(PKG_BGMI);
+        gameTitle.setText(gameVersion != null ? getString(R.string.game_title_version, gameVersion)
+                : getString(R.string.game_name));
         if (!gameInstalled) {
             setChip(gameStateValue, getString(R.string.state_not_installed), R.drawable.ic_circle_alert, CHIP_WARNING);
         } else if (gameRunning) {
@@ -1267,6 +1278,62 @@ public class MAct extends AppCompatActivity {
         setChip(accessValue, getString(ok ? R.string.access_ok : R.string.access_needed),
                 ok ? R.drawable.ic_circle_check : R.drawable.ic_circle_alert, ok ? CHIP_SUCCESS : CHIP_WARNING);
         accessRow.setContentDescription(getString(R.string.access_description, accessValue.getText()));
+        setPermissionRow(R.id.permAllFilesRow, permAllFilesValue, R.string.settings_all_files, StorageAccess.Need.ALL_FILES);
+        setPermissionRow(R.id.permFilesRow, permFilesValue, R.string.settings_files, StorageAccess.Need.FILES);
+        setPermissionRow(R.id.permInstallRow, permInstallValue, R.string.settings_install, StorageAccess.Need.INSTALL);
+        if (settingsPage != null && settingsPage.getVisibility() == View.VISIBLE) refreshObb();
+    }
+
+    private void setPermissionRow(int rowId, TextView chip, int labelRes, StorageAccess.Need need) {
+        if (chip == null) return;
+        boolean granted = StorageAccess.has(this, need);
+        setChip(chip, getString(granted ? R.string.settings_granted : R.string.settings_missing),
+                granted ? R.drawable.ic_circle_check : R.drawable.ic_circle_alert, granted ? CHIP_SUCCESS : CHIP_WARNING);
+        findViewById(rowId).setContentDescription(getString(R.string.settings_row_description,
+                getString(labelRes), chip.getText()));
+    }
+
+    /** One of the three items tapped in Settings: missing - the usual explanation + settings flow. */
+    private void onPermissionRowTapped(StorageAccess.Need need, int labelRes) {
+        if (StorageAccess.has(this, need)) {
+            Ui.snackbar(this, getString(R.string.settings_row_description, getString(labelRes),
+                    getString(R.string.settings_granted)));
+            return;
+        }
+        if (busy || launchPending) return;
+        Log.d(TAG, "Settings: asking for " + need);
+        requestStorage(false);
+    }
+
+    /** Whether the game files (OBB) are already copied, checked off the main thread. */
+    private void refreshObb() {
+        if (obbValue == null) return;
+        final int run = ++obbCheckRun;
+        if (obbValue.getText().length() == 0) {
+            setChip(obbValue, getString(R.string.settings_obb_checking), 0, 0);
+        }
+        try {
+            ioExecutor.execute(() -> {
+                boolean copied;
+                try {
+                    copied = new AppManager(this).isObbCurrent(PKG_BGMI);
+                } catch (RuntimeException e) {
+                    Log.w(TAG, "OBB state unknown", e);
+                    copied = false;
+                }
+                final boolean done = copied;
+                main.post(() -> {
+                    if (!Ui.alive(this) || run != obbCheckRun) return;
+                    setChip(obbValue, getString(done ? R.string.settings_obb_copied : R.string.settings_obb_missing),
+                            done ? R.drawable.ic_circle_check : R.drawable.ic_circle_alert,
+                            done ? CHIP_SUCCESS : CHIP_WARNING);
+                    findViewById(R.id.obbRow).setContentDescription(getString(R.string.settings_row_description,
+                            getString(R.string.settings_obb), obbValue.getText()));
+                });
+            });
+        } catch (RejectedExecutionException ignored) {
+            // Closing.
+        }
     }
 
     /**
@@ -1313,22 +1380,6 @@ public class MAct extends AppCompatActivity {
         });
         Log.d(TAG, "Help: sheet shown");
         sheet.show();
-    }
-
-    /** First successful arrival on home: show the Help tips once, if nothing else is going on. */
-    private void maybeShowFirstHelp() {
-        if (!Ui.alive(this) || primaryAction == null) return;
-        Prefs prefs = new Prefs(this);
-        if ("1".equals(prefs.getSt(PREF_HELP_SHOWN, ""))) return;
-        boolean permissionAsk = storagePromptOpen || (permissionSheet != null && permissionSheet.isShowing())
-                || (!preview && shouldAskOnHome());
-        if (busy || launchPending || permissionAsk || (gate != null && gate.isShowing())) {
-            Log.d(TAG, "Help: first-run tips wait for a later visit");
-            return;
-        }
-        prefs.setSt(PREF_HELP_SHOWN, "1");
-        Log.d(TAG, "Help: first-run tips");
-        showHelp();
     }
 
     /** Shows exactly what "Copy support info" copies; nothing leaves the phone unless the user pastes it. */
@@ -1848,5 +1899,129 @@ public class MAct extends AppCompatActivity {
             return Character.toUpperCase(brand.charAt(0)) + brand.substring(1) + " " + model;
         }
         return model;
+    }
+
+    /** The installed version name of a package, or null. */
+    private String installedVersionName(String pkg) {
+        try {
+            String name = getPackageManager().getPackageInfo(pkg, 0).versionName;
+            return name == null || name.trim().isEmpty() ? null : name.trim();
+        } catch (PackageManager.NameNotFoundException e) {
+            return null;
+        } catch (RuntimeException e) {
+            Log.w(TAG, "Package lookup failed", e);
+            return null;
+        }
+    }
+
+    // --------------------------------------------------------- header + icon
+
+    /**
+     * "Welcome back" kicker over the user's display name when the panel sends
+     * one. The /connect payload has no name today (only expiry, status and the
+     * note), so the title itself reads "Welcome back" and the kicker stays
+     * hidden - never "Anoy", never the key, never an invented name.
+     */
+    private void setupHeader() {
+        String name = displayName();
+        TextView kicker = findViewById(R.id.homeKicker);
+        TextView title = findViewById(R.id.homeTitle);
+        if (name != null) {
+            kicker.setVisibility(View.VISIBLE);
+            title.setText(name);
+        } else {
+            kicker.setVisibility(View.GONE);
+            title.setText(R.string.home_title);
+        }
+    }
+
+    /** No name field in the session payload yet: see setupHeader. */
+    private String displayName() {
+        return null;
+    }
+
+    /** GameIcon.GAME_ICON_URL, cached; the vector placeholder stays on any failure. */
+    private void loadGameIcon() {
+        ImageView icon = findViewById(R.id.gameIcon);
+        try {
+            ioExecutor.execute(() -> {
+                android.graphics.Bitmap bitmap = GameIcon.load(this);
+                if (bitmap == null) return;
+                main.post(() -> {
+                    if (Ui.alive(this)) icon.setImageBitmap(bitmap);
+                });
+            });
+        } catch (RejectedExecutionException ignored) {
+            // Closing.
+        }
+    }
+
+    // ---------------------------------------------------------------- settings
+
+    private void setupSettings() {
+        settingsPage = findViewById(R.id.settingsPage);
+        actionBarView = findViewById(R.id.actionBar);
+        permAllFilesValue = findViewById(R.id.permAllFilesValue);
+        permFilesValue = findViewById(R.id.permFilesValue);
+        permInstallValue = findViewById(R.id.permInstallValue);
+        obbValue = findViewById(R.id.obbValue);
+        ((TextView) findViewById(R.id.appVersionValue)).setText(getString(R.string.settings_version_value,
+                BuildConfig.VERSION_NAME, BuildConfig.VERSION_CODE));
+        // Insets: mainRoot pads the status bar and sides; setupInsets pads the bottom.
+        Ui.maxWidth(findViewById(R.id.settingsContent), 600);
+        findViewById(R.id.settingsBack).setOnClickListener(v -> {
+            Ui.tap(v);
+            closeSettings();
+        });
+        findViewById(R.id.permAllFilesRow).setOnClickListener(v -> {
+            Ui.tap(v);
+            onPermissionRowTapped(StorageAccess.Need.ALL_FILES, R.string.settings_all_files);
+        });
+        findViewById(R.id.permFilesRow).setOnClickListener(v -> {
+            Ui.tap(v);
+            onPermissionRowTapped(StorageAccess.Need.FILES, R.string.settings_files);
+        });
+        findViewById(R.id.permInstallRow).setOnClickListener(v -> {
+            Ui.tap(v);
+            onPermissionRowTapped(StorageAccess.Need.INSTALL, R.string.settings_install);
+        });
+        findViewById(R.id.settingsTelegram).setOnClickListener(v -> {
+            Ui.tap(v);
+            Ui.openUrl(this, getString(R.string.telegram_url));
+        });
+        findViewById(R.id.settingsCopySupport).setOnClickListener(v -> {
+            Ui.tap(v);
+            showSupportInfo();
+        });
+        settingsBack = new OnBackPressedCallback(false) {
+            @Override
+            public void handleOnBackPressed() {
+                closeSettings();
+            }
+        };
+        getOnBackPressedDispatcher().addCallback(this, settingsBack);
+    }
+
+    private void openSettings() {
+        if (settingsPage == null || settingsPage.getVisibility() == View.VISIBLE) return;
+        Log.d(TAG, "Settings: open");
+        refreshAccess();
+        refreshObb();
+        ((android.widget.ScrollView) findViewById(R.id.settingsScroll)).scrollTo(0, 0);
+        settingsPage.setVisibility(View.VISIBLE);
+        settingsPage.setAlpha(0f);
+        settingsPage.animate().alpha(1f).setDuration(Ui.reducedMotion(this) ? 0 : 180).start();
+        // Launch / Stop stay on home only.
+        actionBarView.setVisibility(View.INVISIBLE);
+        settingsBack.setEnabled(true);
+    }
+
+    private void closeSettings() {
+        if (settingsPage == null || settingsPage.getVisibility() != View.VISIBLE) return;
+        Log.d(TAG, "Settings: close");
+        settingsBack.setEnabled(false);
+        settingsPage.animate().cancel();
+        settingsPage.setVisibility(View.GONE);
+        actionBarView.setVisibility(View.VISIBLE);
     }
 }

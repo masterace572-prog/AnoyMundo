@@ -11,5 +11,9 @@
             android:name=".MAct"
             android:exported="true"
             tools:replace="android:exported" />
+        <activity
+            android:name=".AppUpdateActivity"
+            android:exported="true"
+            tools:replace="android:exported" />
     </application>
 </manifest>
