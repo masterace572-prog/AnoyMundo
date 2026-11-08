@@ -72,6 +72,8 @@ public class MAct extends AppCompatActivity {
     private static final long LAUNCH_DELAY_MS = 1200L;
     private static final String STATE_STORAGE_PROMPT = "storage_prompt_open";
     private static final String STATE_LAUNCH_AFTER_STORAGE = "launch_after_storage";
+    private static final String STATE_PENDING_NEED = "pending_permission";
+    private static final String STATE_ASKED_ROUND = "asked_permissions";
     /** Home asks for missing files access after the content has settled. */
     private static final long HOME_STORAGE_ASK_DELAY_MS = 700L;
     /**
@@ -142,6 +144,11 @@ public class MAct extends AppCompatActivity {
     private boolean leftForStoragePrompt;
     /** The prompt came from Launch: continue with startLaunch() once access is granted. */
     private boolean launchAfterStorage;
+    /** The permission whose prompt is open, and every one asked in this round (bit per ordinal). */
+    private StorageAccess.Need pendingNeed;
+    private int askedThisRound;
+    /** Debug only: after the permissions, run the OBB copy directly (no container activation on the emulator). */
+    private boolean qaPermissionsThenCopy;
     private long qaLaunchAt;
     private boolean busy;
     private UpdateGate gate;
@@ -237,17 +244,19 @@ public class MAct extends AppCompatActivity {
             storagePromptOpen = true;
             leftForStoragePrompt = true;
             launchAfterStorage = savedInstanceState.getBoolean(STATE_LAUNCH_AFTER_STORAGE, false);
+            int pending = savedInstanceState.getInt(STATE_PENDING_NEED, -1);
+            pendingNeed = pending >= 0 && pending < StorageAccess.Need.values().length
+                    ? StorageAccess.Need.values()[pending] : null;
+            askedThisRound = savedInstanceState.getInt(STATE_ASKED_ROUND, 0);
         }
         applyQaAction();
-        // Files access is needed for the OBB copy. Sign in normally asks; if it
-        // did not this run (or access is gone), ask here once so Launch isn't
-        // the first surprise. Never blocks the screen.
-        if (!preview && savedInstanceState == null && !StorageAccess.has(this)
-                && !StorageAccess.askedThisSession()) {
+        // All files access, Files and Install unknown apps are needed for the
+        // OBB copy. Ask here for whichever is missing (unless sign in already
+        // asked for it this run) so Launch isn't the first surprise. Never
+        // blocks the screen.
+        if (!preview && savedInstanceState == null && shouldAskOnHome()) {
             main.postDelayed(() -> {
-                if (Ui.alive(this) && !StorageAccess.has(this) && !StorageAccess.askedThisSession()) {
-                    requestStorage(false);
-                }
+                if (Ui.alive(this) && shouldAskOnHome()) requestStorage(false);
             }, HOME_STORAGE_ASK_DELAY_MS);
         }
         // Content reveals with a 40 ms stagger, 8 dp rise, 220 ms.
@@ -323,40 +332,94 @@ public class MAct extends AppCompatActivity {
     // ------------------------------------------------------- files access
 
     /**
-     * Opens the system files-access prompt (All files access on Android 11+,
-     * the storage dialog below). With {@code thenLaunch}, the existing
-     * startLaunch() - OBB copy, then launch - continues once access is granted.
+     * Asks for whichever of All files access, Files and Install unknown apps
+     * is missing, one after another (see {@link StorageAccess}). With
+     * {@code thenLaunch}, the existing startLaunch() - OBB copy, then launch -
+     * continues once all three are granted.
      */
     private void requestStorage(boolean thenLaunch) {
         if (storagePromptOpen) return;
+        launchAfterStorage = thenLaunch;
+        askedThisRound = 0;
+        askNextPermission();
+    }
+
+    /** Home asks only for a missing permission sign in has not asked for this run. */
+    private boolean shouldAskOnHome() {
+        StorageAccess.Need next = StorageAccess.firstMissing(this);
+        return next != null && !StorageAccess.askedThisSession(next);
+    }
+
+    private void askNextPermission() {
+        StorageAccess.Need need = StorageAccess.firstMissing(this);
+        if (need == null) {
+            permissionsGranted();
+            return;
+        }
+        int bit = 1 << need.ordinal();
+        if ((askedThisRound & bit) != 0) {
+            // Asked in this round and still missing: the user said no.
+            permissionRefused(need);
+            return;
+        }
         boolean shown;
         try {
-            shown = StorageAccess.request(this);
+            shown = StorageAccess.request(this, need);
         } catch (RuntimeException e) {
-            Log.w(TAG, "Files-access prompt unavailable", e);
+            Log.w(TAG, "Permission prompt unavailable: " + need, e);
             shown = false;
         }
         if (!shown) {
-            showMessage(getString(R.string.storage_permission_needed), true);
+            permissionRefused(need);
             return;
         }
-        launchAfterStorage = thenLaunch;
+        Log.d(TAG, "Permission prompt: " + need);
+        askedThisRound |= bit;
+        pendingNeed = need;
         storagePromptOpen = true;
         leftForStoragePrompt = false;
     }
 
-    /** The user answered the prompt: continue the launch, or explain and stop. */
+    /** The user answered a prompt: ask for the next missing one, or carry on. */
     private void finishStoragePrompt() {
-        boolean launch = launchAfterStorage;
         storagePromptOpen = false;
         leftForStoragePrompt = false;
-        launchAfterStorage = false;
+        pendingNeed = null;
         if (!Ui.alive(this)) return;
-        if (StorageAccess.has(this)) {
-            if (launch) startLaunch();
+        askNextPermission();
+    }
+
+    private void permissionsGranted() {
+        boolean launch = launchAfterStorage;
+        launchAfterStorage = false;
+        askedThisRound = 0;
+        Log.d(TAG, "Permissions granted" + (launch ? ": continuing the launch" : ""));
+        if (!launch) return;
+        if (qaPermissionsThenCopy) {
+            prepareObbThenLaunch();
         } else {
-            showMessage(getString(R.string.storage_permission_needed), true);
+            startLaunch();
         }
+    }
+
+    /** Refused (or no prompt on this phone): explain, no copy, no launch. */
+    private void permissionRefused(StorageAccess.Need need) {
+        launchAfterStorage = false;
+        askedThisRound = 0;
+        Log.d(TAG, "Permission refused: " + need);
+        int message;
+        switch (need) {
+            case FILES:
+                message = R.string.permission_files_needed;
+                break;
+            case INSTALL:
+                message = R.string.permission_install_needed;
+                break;
+            default:
+                message = R.string.storage_permission_needed;
+                break;
+        }
+        showMessage(getString(message), true);
     }
 
     @Override
@@ -364,6 +427,8 @@ public class MAct extends AppCompatActivity {
         super.onSaveInstanceState(outState);
         outState.putBoolean(STATE_STORAGE_PROMPT, storagePromptOpen);
         outState.putBoolean(STATE_LAUNCH_AFTER_STORAGE, launchAfterStorage);
+        outState.putInt(STATE_PENDING_NEED, pendingNeed != null ? pendingNeed.ordinal() : -1);
+        outState.putInt(STATE_ASKED_ROUND, askedThisRound);
     }
 
     @Override
@@ -372,7 +437,9 @@ public class MAct extends AppCompatActivity {
         if (requestCode != StorageAccess.REQUEST_CODE || !storagePromptOpen) return;
         // Some phones report "cancelled" before the user has answered; only
         // decide once we have really been away or access is already there.
-        if (leftForStoragePrompt || StorageAccess.has(this)) finishStoragePrompt();
+        if (leftForStoragePrompt || (pendingNeed != null && StorageAccess.has(this, pendingNeed))) {
+            finishStoragePrompt();
+        }
     }
 
     @Override
@@ -688,7 +755,13 @@ public class MAct extends AppCompatActivity {
                 setBusy(true, getString(R.string.launching));
                 break;
             case "storage_launch":
-                // Launch tapped after the activation / library checks, files access missing.
+                // Launch tapped after the activation / library checks, permissions missing.
+                requestStorage(true);
+                break;
+            case "permissions_copy":
+                // Same, then the real OBB copy and launch (the emulator has no
+                // activated container, so startLaunch() would stop there).
+                qaPermissionsThenCopy = true;
                 requestStorage(true);
                 break;
             case "error":

@@ -529,8 +529,10 @@ public class LogAct extends AppCompatActivity {
     private void requestPermissionsIfNeeded() {
         // A missing OEM settings page must never block sign in.
         try {
-            // Storage access is needed to copy the OBB. Nothing here installs
-            // packages, so "Install unknown apps" is never requested.
+            // All files access, Files and Install unknown apps are needed to
+            // copy the OBB (see StorageAccess). Sign in asks for the first
+            // missing one; home asks for the rest and Launch for any still
+            // missing.
             if (!hasStorageAccess()) requestStorageAccess();
         } catch (RuntimeException e) {
             Log.w(TAG, "Special-access settings unavailable", e);

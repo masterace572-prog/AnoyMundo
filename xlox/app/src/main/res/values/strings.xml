@@ -131,7 +131,9 @@
     <string name="obb_copy_incomplete">the copy didn\'t finish. Try again.</string>
     <string name="obb_copy_verify_failed">the copied file didn\'t match. Try again.</string>
     <string name="obb_copy_failed">something went wrong. Try again.</string>
-    <string name="storage_permission_needed">Allow storage access so game files can be prepared.</string>
+    <string name="storage_permission_needed">Allow All files access so game files can be prepared.</string>
+    <string name="permission_files_needed">Allow Files access so game files can be prepared.</string>
+    <string name="permission_install_needed">Allow Install unknown apps for Anoy so game files can be prepared.</string>
     <string name="home_kicker">Welcome back</string>
     <!-- UI redesign (2.1) -->
     <string name="action_preparing">Preparing…</string>

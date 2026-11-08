@@ -54,6 +54,7 @@ grant() {
     adb shell appops set $PKG MANAGE_EXTERNAL_STORAGE allow >/dev/null 2>&1 || true
     adb shell pm grant $PKG android.permission.READ_EXTERNAL_STORAGE >/dev/null 2>&1 || true
     adb shell pm grant $PKG android.permission.WRITE_EXTERNAL_STORAGE >/dev/null 2>&1 || true
+    adb shell appops set $PKG REQUEST_INSTALL_PACKAGES allow >/dev/null 2>&1 || true
 }
 
 focus() { adb shell dumpsys window 2>/dev/null | grep -m1 'mCurrentFocus' | tr -d '\r' || true; }
@@ -337,33 +338,6 @@ log "launch null_dead texts: $(texts)"
 launch_case throws 7
 log "launch throws texts: $(texts)"
 
-# Files access requested from Launch (All files access page on API 30+).
-# qa_action storage_launch = Launch tapped after the activation / library
-# checks with access missing. Allowed: startLaunch() continues by itself (on
-# this emulator it stops at the container activation check - there is no real
-# container - which proves the continuation ran). Denied: the permission
-# message, no copy, no launch.
-storage_case() {
-    stop_app
-    adb shell appops set $PKG MANAGE_EXTERNAL_STORAGE deny >/dev/null 2>&1 || true
-    adb shell am start -W -n $PKG/.MAct --ez qa_preview true --es qa_action storage_launch >> "$LOG" 2>&1 || log "WARN: am start MAct failed"
-    sleep 3
-    log "storage $1 prompt focus: $(focus)"
-    if [ "$1" = allow ]; then
-        adb exec-out screencap -p > "$OUT/storage_prompt.png" || true
-        log "captured storage_prompt.png"
-        adb shell appops set $PKG MANAGE_EXTERNAL_STORAGE allow >/dev/null 2>&1 || true
-    fi
-    adb shell input keyevent 4 || true        # back to Anoy
-    sleep 3
-}
-storage_case allow
-shot home_storage_granted
-log "storage allow texts: $(texts)"
-storage_case deny
-shot home_storage_denied
-log "storage deny texts: $(texts)"
-grant
 
 
 # TalkBack text of the licence card (one sentence).
@@ -539,6 +513,7 @@ adb shell dd if=/dev/zero of=$GOBB/main.19.$GAME.obb bs=1048576 count=2 >/dev/nu
 adb shell dd if=/dev/zero of=$GOBB/patch.20.$GAME.obb bs=1048576 count=24 >/dev/null 2>&1 || log "WARN: could not create patch OBB"
 log "obb source listing: $(adb shell ls -l $GOBB 2>&1 | tr -d '\r' | tr '\n' '|')"
 stop_app
+adb shell appops set $PKG REQUEST_INSTALL_PACKAGES default >/dev/null 2>&1 || true
 adb logcat -c || true
 obb_start
 sleep 4
@@ -558,7 +533,115 @@ shot home_obb3_missing
 log "obb3 texts: $(texts)"
 log "obb3 log: $(obb_log)"
 stop_app
-adb shell appops set $PKG REQUEST_INSTALL_PACKAGES default >/dev/null 2>&1 || true
+grant
+
+# ------------------------------------------- Permissions asked by Launch
+# Launch with All files access, Files and Install unknown apps missing must
+# ask for each in turn (settings page, runtime dialog, settings page) and,
+# once all are granted, carry on into the real OBB copy and launch.
+# qa_action permissions_copy = Launch after the activation / library checks
+# (the emulator has no activated container); qa_launch=started = stand-in game.
+tap_res() { # $1 = resource-id regex (any package)
+    xy=$(dump_ui | python3 -c '
+import re, sys
+xml = sys.stdin.read()
+m = re.search(r"resource-id=\"(?:%s)\"[^>]*?bounds=\"\[(\d+),(\d+)\]\[(\d+),(\d+)\]\"" % sys.argv[1], xml)
+if m:
+    x1, y1, x2, y2 = map(int, m.groups())
+    print((x1 + x2) // 2, (y1 + y2) // 2)
+' "$1")
+    if [ -z "$xy" ]; then log "WARN: no $1 on screen"; return 1; fi
+    # shellcheck disable=SC2086
+    adb shell input tap $xy
+}
+ALLOW_RE='com\.android\.permissioncontroller:id/permission_allow(?:_all|_foreground_only)?_button'
+DENY_RE='com\.android\.permissioncontroller:id/permission_deny(?:_and_dont_ask_again)?_button'
+perm_reset() { # fresh install state: nothing granted, nothing asked
+    stop_app
+    adb shell pm clear $PKG >/dev/null 2>&1 || true
+    adb shell appops set $PKG MANAGE_EXTERNAL_STORAGE deny >/dev/null 2>&1 || true
+    adb shell appops set $PKG REQUEST_INSTALL_PACKAGES deny >/dev/null 2>&1 || true
+    adb shell pm revoke $PKG android.permission.READ_EXTERNAL_STORAGE >/dev/null 2>&1 || true
+    adb shell pm revoke $PKG android.permission.WRITE_EXTERNAL_STORAGE >/dev/null 2>&1 || true
+}
+perm_start() {
+    adb logcat -c || true
+    adb shell am start -W -n $PKG/.MAct --ez qa_preview true --es qa_action permissions_copy --es qa_launch started >> "$LOG" 2>&1 || log "WARN: am start MAct failed"
+    sleep 3
+}
+perm_log() { adb logcat -d -v tag -s AppManager:V MAct:V StorageAccess:V 2>/dev/null | grep -E '^./AppManager|^./StorageAccess|^./MAct.*(Launch|Permission)' | tr -d '\r' | tr '\n' '|'; }
+
+# Allow all three; the container copy is removed first so the copy really runs.
+adb shell mkdir -p $GOBB
+adb shell dd if=/dev/zero of=$GOBB/main.20.$GAME.obb bs=1048576 count=64 >/dev/null 2>&1 || log "WARN: could not create main OBB"
+perm_reset
+adb shell rm -rf /sdcard/Android/obb/$PKG/scopedStorage >> "$LOG" 2>&1 || log "WARN: could not clear the container OBB"
+perm_start
+log "perm_allow step1 focus: $(focus)"
+adb exec-out screencap -p > "$OUT/perm_all_files.png" || true
+adb shell appops set $PKG MANAGE_EXTERNAL_STORAGE allow >/dev/null 2>&1 || true
+adb shell input keyevent 4 || true
+sleep 3
+log "perm_allow step2 focus: $(focus)"
+adb exec-out screencap -p > "$OUT/perm_files.png" || true
+for i in 1 2 3 4; do
+    case "$(focus)" in
+        *permissioncontroller*) tap_res "$ALLOW_RE" || true; sleep 2 ;;
+        *) break ;;
+    esac
+done
+log "perm_allow step3 focus: $(focus)"
+adb exec-out screencap -p > "$OUT/perm_install.png" || true
+adb shell appops set $PKG REQUEST_INSTALL_PACKAGES allow >/dev/null 2>&1 || true
+adb shell input keyevent 4 || true
+sleep 9
+log "perm_allow final focus: $(focus)"
+log "perm_allow texts: $(texts)"
+log "perm_allow log: $(perm_log)"
+log "perm_allow granted: $(adb shell dumpsys package $PKG | grep -E 'android.permission.(READ_EXTERNAL_STORAGE|WRITE_EXTERNAL_STORAGE|RECORD_AUDIO|ACCESS_FINE_LOCATION|POST_NOTIFICATIONS|BLUETOOTH_CONNECT): granted=' | tr -d ' \r' | sort -u | tr '\n' ' ')"
+
+# Refuse Files: message, no copy, no launch.
+perm_reset
+adb shell appops set $PKG MANAGE_EXTERNAL_STORAGE allow >/dev/null 2>&1 || true
+perm_start
+log "perm_files_deny prompt focus: $(focus)"
+for i in 1 2 3 4; do
+    case "$(focus)" in
+        *permissioncontroller*) tap_res "$DENY_RE" || true; sleep 2 ;;
+        *) break ;;
+    esac
+done
+sleep 1
+log "perm_files_deny focus: $(focus)"
+log "perm_files_deny texts: $(texts)"
+log "perm_files_deny log: $(perm_log)"
+
+# Refuse Install unknown apps: message, no copy, no launch.
+perm_reset
+adb shell appops set $PKG MANAGE_EXTERNAL_STORAGE allow >/dev/null 2>&1 || true
+adb shell pm grant $PKG android.permission.READ_EXTERNAL_STORAGE >/dev/null 2>&1 || true
+adb shell pm grant $PKG android.permission.WRITE_EXTERNAL_STORAGE >/dev/null 2>&1 || true
+perm_start
+log "perm_install_deny prompt focus: $(focus)"
+adb shell input keyevent 4 || true
+sleep 3
+log "perm_install_deny focus: $(focus)"
+shot home_perm_install_denied
+log "perm_install_deny texts: $(texts)"
+log "perm_install_deny log: $(perm_log)"
+
+# Refuse All files access: message, no copy, no launch.
+perm_reset
+perm_start
+log "perm_all_files_deny prompt focus: $(focus)"
+adb shell input keyevent 4 || true
+sleep 3
+log "perm_all_files_deny focus: $(focus)"
+log "perm_all_files_deny texts: $(texts)"
+log "perm_all_files_deny log: $(perm_log)"
+stop_app
+adb shell rm -rf $GOBB >/dev/null 2>&1 || true
+grant
 
 # ------------------------------------- 11. minified release build (real flow)
 if [ -f "$RELEASE_APK" ]; then

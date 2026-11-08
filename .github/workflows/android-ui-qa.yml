@@ -85,6 +85,63 @@ jobs:
           fi
           exit $rc
 
+      - name: Permissions in the built APKs
+        run: |
+          AAPT2=$(ls "$ANDROID_SDK_ROOT"/build-tools/*/aapt2 | sort | tail -1)
+          for v in debug release; do
+            apk=$(ls app/build/outputs/apk/$v/*.apk | head -1)
+            "$AAPT2" dump permissions "$apk" > ../qa-logs/permissions-$v.txt
+            "$AAPT2" dump xmltree --file AndroidManifest.xml "$apk" > ../qa-logs/manifest-$v.txt
+          done
+          M=$(find app/build/intermediates -name AndroidManifest.xml -path '*merged_manifest*' -path '*debug*' | head -1)
+          [ -n "$M" ] && cp "$M" ../qa-logs/merged-manifest-debug.xml || true
+          python3 - <<'PY'
+          import re, sys, pathlib
+          P = 'android.permission.'
+          requested = ['MANAGE_EXTERNAL_STORAGE', 'READ_EXTERNAL_STORAGE', 'WRITE_EXTERNAL_STORAGE',
+                       'READ_MEDIA_IMAGES', 'READ_MEDIA_VIDEO', 'READ_MEDIA_AUDIO', 'REQUEST_INSTALL_PACKAGES']
+          declared = ['RECORD_AUDIO', 'BLUETOOTH', 'BLUETOOTH_CONNECT', 'BLUETOOTH_SCAN', 'NEARBY_WIFI_DEVICES',
+                      'SYSTEM_ALERT_WINDOW', 'ACCESS_COARSE_LOCATION', 'ACCESS_FINE_LOCATION', 'POST_NOTIFICATIONS',
+                      'INTERNET', 'ACCESS_NETWORK_STATE', 'WAKE_LOCK', 'FOREGROUND_SERVICE', 'QUERY_ALL_PACKAGES']
+          removed = ['READ_CALENDAR', 'WRITE_CALENDAR', 'READ_CALL_LOG', 'WRITE_CALL_LOG', 'PROCESS_OUTGOING_CALLS',
+                     'CAMERA', 'READ_CONTACTS', 'WRITE_CONTACTS', 'GET_ACCOUNTS', 'MANAGE_ACCOUNTS',
+                     'AUTHENTICATE_ACCOUNTS', 'USE_CREDENTIALS', 'READ_PROFILE', 'WRITE_PROFILE',
+                     'BODY_SENSORS', 'BODY_SENSORS_BACKGROUND', 'READ_PHONE_STATE', 'READ_PHONE_NUMBERS',
+                     'CALL_PHONE', 'ANSWER_PHONE_CALLS', 'USE_SIP', 'ACCEPT_HANDOVER', 'ADD_VOICEMAIL',
+                     'ACTIVITY_RECOGNITION', 'SEND_SMS', 'READ_SMS', 'RECEIVE_SMS', 'RECEIVE_MMS',
+                     'RECEIVE_WAP_PUSH', 'READ_CELL_BROADCASTS', 'ACCESS_SUPERUSER', 'ACTION_MANAGE_OVERLAY_PERMISSION']
+          errors = []
+          for v in ('debug', 'release'):
+              text = pathlib.Path('../qa-logs/permissions-%s.txt' % v).read_text()
+              have = set(re.findall(r"name='([^']+)'", text))
+              print(v, len(have), 'permissions')
+              for n in requested + declared:
+                  if P + n not in have:
+                      errors.append('%s: %s missing' % (v, n))
+              for n in removed:
+                  if P + n in have:
+                      errors.append('%s: %s still declared' % (v, n))
+              for n in have:
+                  if 'GOOGLE_AUTH' in n or n.endswith('.READ_STEPS') or n == 'com.google.android.gms.permission.ACTIVITY_RECOGNITION':
+                      errors.append('%s: %s still declared' % (v, n))
+              xml = pathlib.Path('../qa-logs/manifest-%s.txt' % v).read_text()
+              if 'supportsPictureInPicture' not in xml:
+                  errors.append('%s: picture-in-picture not declared' % v)
+              if 'neverForLocation' not in xml and '0x10000' not in xml:
+                  print('note: neverForLocation flag not visible in the xmltree dump')
+          # Anoy must not ask for the declared-only permissions.
+          src = '\n'.join(p.read_text() for p in pathlib.Path('app/src/main/java').rglob('*.java'))
+          for bad in ('RECORD_AUDIO', 'ACCESS_FINE_LOCATION', 'ACCESS_COARSE_LOCATION', 'POST_NOTIFICATIONS',
+                      'BLUETOOTH_CONNECT', 'BLUETOOTH_SCAN', 'NEARBY_WIFI_DEVICES',
+                      'ACTION_MANAGE_OVERLAY_PERMISSION', 'ACTION_PICTURE_IN_PICTURE_SETTINGS',
+                      'enterPictureInPictureMode'):
+              if bad in src:
+                  errors.append('Java code references %s (must not be requested now)' % bad)
+          for e in errors:
+              print('::error::' + e)
+          sys.exit(1 if errors else 0)
+          PY
+
       - name: Android Lint (errors fail the job)
         run: |
           set -o pipefail
@@ -142,7 +199,7 @@ jobs:
               'home_launch_started_return', 'home_launch_polish_throws_return',
               'home_launch_null_running', 'home_launch_failed', 'home_typical',
               # files access requested from Launch
-              'storage_prompt', 'home_storage_granted', 'home_storage_denied',
+              'perm_all_files', 'perm_files', 'perm_install', 'home_perm_install_denied',
               'home_obb1_mid', 'home_obb3_missing',
               # live walkthrough
               'login', 'login_keyboard', 'login_error_empty', 'login_error_malformed', 'login_key_visible',
@@ -170,7 +227,7 @@ jobs:
           seen = {}
           for n, p in files.items():
               h = hashlib.md5(p.read_bytes()).hexdigest()
-              if h in seen and not any(k in n + seen[h] for k in ('live', 'anim_', 'icon_', 'splash_reduced', 'splash_t220', 'home_launch_', 'home_obb')):
+              if h in seen and not any(k in n + seen[h] for k in ('live', 'anim_', 'icon_', 'splash_reduced', 'splash_t220', 'home_launch_', 'home_obb', 'perm_')):
                   errors.append(f'identical frames: {seen[h]} / {n}')
               seen[h] = n
           trace = Path('qa-logs/emulator-trace.txt')
@@ -241,21 +298,47 @@ jobs:
               errors.append('no game OBB: the game was launched anyway')
           if 'Preparing' not in obb('obb1 mid texts'):
               print('note: Preparing percent not caught mid-copy on screen (copy finished fast); progress checked from the log')
-          # Files access: Launch opens the system prompt; allowed -> the launch
-          # continues by itself; denied -> the message, no copy, no launch.
-          m = re.search(r'^storage allow prompt focus: (.*)$', t, re.M)
-          if not m or 'com.xlox' in m.group(1) or 'Settings' not in m.group(1) and 'settings' not in m.group(1):
-              errors.append('Launch did not open the files-access prompt: ' + (m.group(1) if m else 'not captured'))
-          m = re.search(r'^storage allow texts: (.*)$', t, re.M)
-          if not m or 'Allow storage access' in m.group(1):
-              errors.append('files access granted but the permission message is still shown')
-          elif not any(k in m.group(1) for k in ('container isn', 'Game files not found', 'Preparing', 'Launching')):
-              errors.append('files access granted but the launch did not continue')
-          m = re.search(r'^storage deny texts: (.*)$', t, re.M)
-          if not m or 'Allow storage access' not in m.group(1):
-              errors.append('files access denied but no permission message')
-          elif any(k in m.group(1) for k in ('Preparing', 'Launching')):
-              errors.append('files access denied but the copy / launch started')
+          # Permissions: Launch asks for All files access, Files and Install
+          # unknown apps in turn (only those three), then carries on into the
+          # OBB copy; refusing any one shows its message, no copy, no launch.
+          def line(tag):
+              m = re.search(r'^%s: (.*)$' % re.escape(tag), t, re.M)
+              return m.group(1) if m else ''
+          if 'com.xlox' in line('perm_allow step1 focus') or 'ettings' not in line('perm_allow step1 focus'):
+              errors.append('Launch did not open the All files access page: ' + line('perm_allow step1 focus'))
+          if 'permissioncontroller' not in line('perm_allow step2 focus'):
+              errors.append('Launch did not show the Files dialog after All files access: ' + line('perm_allow step2 focus'))
+          if 'com.xlox' in line('perm_allow step3 focus') or 'ettings' not in line('perm_allow step3 focus'):
+              errors.append('Launch did not open the Install unknown apps page after Files: ' + line('perm_allow step3 focus'))
+          pl = line('perm_allow log')
+          asked = re.findall(r'Permission prompt: (\w+)', pl)
+          if asked != ['ALL_FILES', 'FILES', 'INSTALL']:
+              errors.append('permission prompts were %s, expected ALL_FILES, FILES, INSTALL' % asked)
+          i_ok = pl.find('Permissions granted: continuing the launch')
+          i_prep = pl.find('Launch: preparing game files')
+          if i_ok < 0 or i_prep < i_ok:
+              errors.append('all three granted but the launch / OBB copy did not continue: ' + pl[-600:])
+          if 'Copied and verified' in pl and 'game files ready, launching' in pl:
+              print('permissions then copy: copied in the same app run, then launched')
+          elif 'blocking access' in pl:
+              print('note: copy blocked until the app restarts after Install unknown apps (same-run grant)')
+          else:
+              errors.append('permissions then copy: unexpected result: ' + pl[-600:])
+          g = line('perm_allow granted')
+          for p in ('RECORD_AUDIO', 'ACCESS_FINE_LOCATION', 'POST_NOTIFICATIONS', 'BLUETOOTH_CONNECT'):
+              if 'android.permission.%s:granted=true' % p in g:
+                  errors.append('%s was granted although Anoy must not ask for it' % p)
+          for tag, msg in (('perm_files_deny', 'Allow Files access'),
+                           ('perm_install_deny', 'Allow Install unknown apps'),
+                           ('perm_all_files_deny', 'Allow All files access')):
+              if msg not in line(tag + ' texts'):
+                  errors.append('%s: no "%s" message: %s' % (tag, msg, line(tag + ' log')[-400:]))
+              if 'preparing game files' in line(tag + ' log') or 'com.xlox' not in line(tag + ' focus'):
+                  errors.append('%s: copy / launch started after a refusal' % tag)
+          if 'permissioncontroller' not in line('perm_files_deny prompt focus'):
+              errors.append('Files dialog not shown: ' + line('perm_files_deny prompt focus'))
+          if 'ettings' not in line('perm_install_deny prompt focus'):
+              errors.append('Install unknown apps page not shown: ' + line('perm_install_deny prompt focus'))
           if not re.search(r'typical phone: device card bottom \d+, launch fade top \d+: clear', t):
               errors.append('DEVICE card is covered by the Launch bar on a 411 x 914 dp phone')
           m = re.search(r'licence card description: content-desc="([^"]*)"', t)
