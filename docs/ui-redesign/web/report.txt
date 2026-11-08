@@ -1,1 +1,2 @@
-ok
+[desktop] expiry row: label {"left":1081,"right":1226,"top":210.9375,"bottom":229.9375} value {"left":1179,"right":1381,"top":234.4375,"bottom":256.9375}
+[mobile] expiry row: label {"left":39,"right":184,"top":384.9375,"bottom":403.9375} value {"left":39,"right":269,"top":410.4375,"bottom":432.9375}
