@@ -7,13 +7,13 @@
    commit blocks and writes its data to persistent storage immediately, apply
    will handle it in the background.
 
-/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/java/com/xlox/MAct.java:431: Warning: Avoid passing null as the view root (needed to resolve layout parameters on the inflated layout's root element) [InflateParams]
+/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/java/com/xlox/MAct.java:440: Warning: Avoid passing null as the view root (needed to resolve layout parameters on the inflated layout's root element) [InflateParams]
         View sheetView = LayoutInflater.from(this).inflate(R.layout.sheet_sign_out, null, false);
                                                                                     ~~~~
-/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/java/com/xlox/MAct.java:1361: Warning: Avoid passing null as the view root (needed to resolve layout parameters on the inflated layout's root element) [InflateParams]
+/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/java/com/xlox/MAct.java:1370: Warning: Avoid passing null as the view root (needed to resolve layout parameters on the inflated layout's root element) [InflateParams]
         View sheetView = LayoutInflater.from(this).inflate(R.layout.sheet_help, null, false);
                                                                                 ~~~~
-/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/java/com/xlox/MAct.java:1388: Warning: Avoid passing null as the view root (needed to resolve layout parameters on the inflated layout's root element) [InflateParams]
+/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/java/com/xlox/MAct.java:1397: Warning: Avoid passing null as the view root (needed to resolve layout parameters on the inflated layout's root element) [InflateParams]
         View sheetView = LayoutInflater.from(this).inflate(R.layout.sheet_support_info, null, false);
                                                                                         ~~~~
 /home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/java/com/xlox/ui/PermissionSheet.java:43: Warning: Avoid passing null as the view root (needed to resolve layout parameters on the inflated layout's root element) [InflateParams]
