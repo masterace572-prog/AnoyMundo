@@ -786,16 +786,16 @@ shot help_support_info
 log "help support info: $(node_text supportInfoText)"
 log "help support texts: $(texts)"
 tap_id supportInfoCopy || true
-sleep 0.6
-shot help_support_copied
-# The snackbar slides in; dump until it is there (at most ~2.5 s).
+sleep 0.4
+# The snackbar lasts ~2.75 s: read the screen first, screenshot after.
 copied_texts=""
-for i in 1 2 3 4 5; do
+for i in 1 2 3; do
     copied_texts=$(texts)
     case "$copied_texts" in *"Support info copied"*) break ;; esac
-    sleep 0.5
+    sleep 0.3
 done
 log "help copied texts: $copied_texts"
+shot help_support_copied
 log "help log: $(help_log)"
 # Access chip with everything allowed.
 adb logcat -c || true
