@@ -20,28 +20,38 @@ Daemon will be stopped at the end of the build
 > Task :app:mapDebugSourceSetPaths
 > Task :app:generateDebugResources
 > Task :app:packageDebugResources
+> Task :app:mergeDebugResources
 > Task :app:createDebugCompatibleScreenManifests
 > Task :app:extractDeepLinksDebug
 > Task :app:parseDebugLocalResources
 > Task :app:processDebugMainManifest
-> Task :app:mergeDebugResources
 > Task :app:processDebugManifest
 > Task :app:mergeDebugShaders
 > Task :app:compileDebugShaders NO-SOURCE
 > Task :app:generateDebugAssets UP-TO-DATE
 > Task :app:mergeDebugAssets
-> Task :app:processDebugJavaRes NO-SOURCE
+> Task :app:processDebugManifestForPackage
 > Task :app:compressDebugAssets
+> Task :app:processDebugJavaRes NO-SOURCE
 > Task :app:checkDebugDuplicateClasses
 > Task :app:mergeDebugJavaResource
-> Task :app:processDebugManifestForPackage
-> Task :app:mergeLibDexDebug
-> Task :app:configureNdkBuildDebug[arm64-v8a]
 > Task :app:processDebugResources
+
+> Task :app:compileDebugJavaWithJavac
+Note: Some input files use or override a deprecated API.
+Note: Recompile with -Xlint:deprecation for details.
+
+> Task :app:mergeLibDexDebug
 
 > Task :app:desugarDebugFileDependencies
 WARNING: /home/runner/.gradle/caches/transforms-3/b91f9dab850d9a00e31f249c21322702/transformed/mundo-release-runtime.jar: D8: Expected stack map table for method with non-linear control flow.
 WARNING: /home/runner/.gradle/caches/transforms-3/b91f9dab850d9a00e31f249c21322702/transformed/mundo-release-runtime.jar: D8: Expected stack map table for method with non-linear control flow.
+
+> Task :app:dexBuilderDebug
+> Task :app:mergeProjectDexDebug
+> Task :app:configureNdkBuildDebug[arm64-v8a]
+
+> Task :app:desugarDebugFileDependencies
 WARNING: D8: Unexpected error during rewriting of Kotlin metadata for class 'top.bienvenido.mundo.manifest.MundoSplashLauncher':
 com.android.tools.r8.internal.L10: Should never be called
 	at com.android.tools.r8.internal.tA.a(R8_8.2.42_9ad08e95c347188a6c635bdc6315e258071719194689c80a2a99dea0b762189c:3)
@@ -8279,15 +8289,7 @@ com.android.tools.r8.internal.L10: Should never be called
 
 
 > Task :app:buildNdkBuildDebug[arm64-v8a]
-
-> Task :app:compileDebugJavaWithJavac
-Note: Some input files use or override a deprecated API.
-Note: Recompile with -Xlint:deprecation for details.
-
-> Task :app:mergeExtDexDebug
-> Task :app:dexBuilderDebug
 > Task :app:mergeDebugJniLibFolders
-> Task :app:mergeProjectDexDebug
 > Task :app:mergeDebugNativeLibs
 > Task :app:validateSigningDebug
 > Task :app:writeDebugAppMetadata
@@ -8295,25 +8297,26 @@ Note: Recompile with -Xlint:deprecation for details.
 > Task :app:preReleaseBuild UP-TO-DATE
 > Task :app:stripDebugDebugSymbols
 > Task :app:configureNdkBuildRelease[arm64-v8a]
+> Task :app:mergeExtDexDebug
 > Task :app:buildNdkBuildRelease[arm64-v8a]
 > Task :app:mergeReleaseJniLibFolders
-> Task :app:mergeReleaseNativeLibs
 > Task :app:generateReleaseBuildConfig
+> Task :app:mergeReleaseNativeLibs
 > Task :app:checkReleaseDuplicateClasses
 > Task :app:javaPreCompileRelease
-> Task :app:checkReleaseAarMetadata
 > Task :app:generateReleaseResValues
-> Task :app:stripReleaseDebugSymbols
+> Task :app:checkReleaseAarMetadata
 > Task :app:mapReleaseSourceSetPaths
 > Task :app:generateReleaseResources
-> Task :app:extractReleaseNativeDebugMetadata
+> Task :app:stripReleaseDebugSymbols
 > Task :app:packageDebug
 > Task :app:createDebugApkListingFileRedirect
 > Task :app:assembleDebug
+> Task :app:extractReleaseNativeDebugMetadata
 > Task :app:packageReleaseResources
+> Task :app:mergeReleaseNativeDebugMetadata
 > Task :app:createReleaseCompatibleScreenManifests
 > Task :app:extractDeepLinksRelease
-> Task :app:mergeReleaseNativeDebugMetadata
 > Task :app:parseReleaseLocalResources
 > Task :app:processReleaseMainManifest
 > Task :app:processReleaseManifest
@@ -8325,15 +8328,15 @@ Note: Recompile with -Xlint:deprecation for details.
 > Task :app:compileReleaseShaders NO-SOURCE
 > Task :app:generateReleaseAssets UP-TO-DATE
 > Task :app:mergeReleaseAssets
-> Task :app:compressReleaseAssets
+> Task :app:processReleaseManifestForPackage
 > Task :app:processApplicationManifestReleaseForBundle
-> Task :app:collectReleaseDependencies
+> Task :app:compressReleaseAssets
 > Task :app:mergeReleaseJavaResource
+> Task :app:collectReleaseDependencies
 > Task :app:sdkReleaseDependencyData
 > Task :app:validateSigningRelease
 > Task :app:writeReleaseAppMetadata
 > Task :app:writeReleaseSigningConfigVersions
-> Task :app:processReleaseManifestForPackage
 > Task :app:processReleaseResources
 
 > Task :app:compileReleaseJavaWithJavac
@@ -8353,5 +8356,5 @@ WARNING: /home/runner/.gradle/caches/transforms-3/b91f9dab850d9a00e31f249c213227
 > Task :app:createReleaseApkListingFileRedirect
 > Task :app:assembleRelease
 
-BUILD SUCCESSFUL in 1m 59s
+BUILD SUCCESSFUL in 1m 29s
 79 actionable tasks: 79 executed
