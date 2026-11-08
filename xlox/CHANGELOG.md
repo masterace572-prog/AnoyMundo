@@ -1,5 +1,22 @@
 # Anoy Loader — changelog
 
+## 2.1.0 follow-up — monogram, launch error, home tidy
+
+- **Splash**: new Anoy "A" monogram animation (white A, blue crossbar draws
+  through it, mark lifts, "Anoy / LOADER" fades in, ~1.9 s). Replaces the ring /
+  notch / dot. The system splash shows the same A, so the handoff is seamless.
+  Slow start-ups get a gentle opacity breath, never a spinner.
+- **App icon**: the blue square with a key is replaced by the monogram on near
+  black. Adaptive and legacy icons, the splash and the Lottie share one geometry
+  (`scripts/brand_mark.py`).
+- **Launch**: no more false "Couldn't launch the game" after BGMI starts. A
+  launch is a success once Android accepts it; a missing intent waits for the
+  game to start before reporting; the after-launch UI can't raise the error.
+- **Home**: DEVICE fits above the Launch bar on a typical phone; the notice no
+  longer leaves an orphan word; long model names stay on one tidy line.
+
+Details and screenshots: `docs/ui-redesign/FOLLOW-UP.md`.
+
 ## 2.1.0 (versionCode 6) — UI redesign
 
 Presentation only. Sign-in and licensing logic, the `/connect` contract, JNI,
