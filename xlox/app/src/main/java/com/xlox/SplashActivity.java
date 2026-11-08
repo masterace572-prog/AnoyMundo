@@ -17,6 +17,7 @@ import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.splashscreen.SplashScreen;
+import androidx.core.splashscreen.SplashScreenViewProvider;
 
 import com.xlox.ui.Ui;
 
@@ -130,7 +131,12 @@ public class SplashActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        SplashScreen.installSplashScreen(this);
+        SplashScreen splash = SplashScreen.installSplashScreen(this);
+        // Our first frame is the same wordmark in the same place, so drop the
+        // system splash at once. Without a listener the platform fades it out
+        // on its own and a cold start can show it dim, then an empty window,
+        // then this activity fading in.
+        splash.setOnExitAnimationListener(SplashScreenViewProvider::remove);
         super.onCreate(savedInstanceState);
         // Re-launch from the launcher while a task already exists: just finish.
         if (!isTaskRoot() && getIntent() != null && Intent.ACTION_MAIN.equals(getIntent().getAction())
