@@ -77,8 +77,9 @@ final frame with the wordmark is `splash`. The live cold start is
   (`qa-logs/emulator-trace.txt`) records it, e.g. *"Licence active, 29 days
   21 hours left, expires 7 December 2026"*.
 
-> **Follow-up:** the Anoy monogram splash and app icon, the false launch error
-> fix and the home tidy are documented in [`FOLLOW-UP.md`](FOLLOW-UP.md).
+> **Follow-ups:** the Anoy wordmark icon, the "Welcome To Anoy Loader" →
+> "Anoy Hax" splash film, the false launch error fix and the home tidy are
+> documented in [`FOLLOW-UP.md`](FOLLOW-UP.md).
 
 ## What changed
 

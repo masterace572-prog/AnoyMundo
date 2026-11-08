@@ -1,6 +1,18 @@
 # Anoy Loader — changelog
 
-## 2.1.0 follow-up — monogram, launch error, home tidy
+## 2.1.0 follow-up — Anoy wordmark and splash film
+
+- **App icon**: just the word "Anoy", white on black, drawn as Inter outlines
+  with icon-specific weight, spacing and a shortened y; inside the adaptive
+  safe zone on every mask. Replaces the A monogram (and the earlier key).
+- **Splash**: a ~3 s typography film: "Welcome To / Anoy Loader" arrives, the
+  greeting is cut away, the name moves to centre and "Loader" becomes "Hax".
+  The system splash shows the same static wordmark. Reduced motion skips the
+  choreography. Sign-in, the update check and game launch are unchanged.
+
+Details, timings and screenshots: `docs/ui-redesign/FOLLOW-UP.md`.
+
+## 2.1.0 follow-up — launch error, home tidy (splash/icon since replaced)
 
 - **Splash**: new Anoy "A" monogram animation (white A, blue crossbar draws
   through it, mark lifts, "Anoy / LOADER" fades in, ~1.9 s). Replaces the ring /

@@ -241,7 +241,9 @@ public class SplashActivity extends AppCompatActivity {
         greeting.setTranslationY(-cut * driftPx);
 
         name.setTranslationY(progress(t, MOVE_AT_MS, MOVE_MS, EMPHASIZED_DECELERATE) * moveDy);
-        name.setTranslationX(progress(t, SWAP_AT_MS, RECENTRE_MS, EMPHASIZED_DECELERATE) * recentreDx);
+        // Fast-out-slow-in, not emphasized: the shift should happen while "Hax"
+        // opens, not while the full-width "Loader" is still on screen.
+        name.setTranslationX(progress(t, SWAP_AT_MS, RECENTRE_MS, FAST_OUT_SLOW_IN) * recentreDx);
 
         float out = progress(t, SWAP_AT_MS, SWAP_OUT_MS, EMPHASIZED_ACCELERATE);
         loader.setScaleY(1f - out);
