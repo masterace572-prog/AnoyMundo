@@ -137,6 +137,11 @@ public class MAct extends AppCompatActivity {
     /** Debug builds only: open the sample screen with Settings showing. */
     public static final String EXTRA_QA_SETTINGS = "qa_settings";
     /**
+     * Debug builds only (with qa_preview): draw the countdown once and stop the
+     * per-second tick, so the UI goes idle for uiautomator dumps in QA.
+     */
+    public static final String EXTRA_QA_FREEZE_CLOCK = "qa_freeze_clock";
+    /**
      * Debug builds only: simulates the container's answer to a launch so CI can
      * check the result handling without BGMI - started | started_polish_throws
      * | null_running | null_dead | throws.
@@ -199,6 +204,7 @@ public class MAct extends AppCompatActivity {
     private long totalMillis = -1L;
     private long lastA11yMinute = -1L;
     private boolean preview;
+    private boolean qaFreezeClock;
     private SimpleDateFormat longDate;
     private boolean expired;
     private boolean gameInstalled;
@@ -259,7 +265,9 @@ public class MAct extends AppCompatActivity {
         @Override
         public void run() {
             renderCountdown();
-            if (!expired && expiryMillis > 0) {
+            // Paused while Settings covers home (closeSettings restarts it).
+            boolean hidden = settingsPage != null && settingsPage.getVisibility() == View.VISIBLE;
+            if (!expired && expiryMillis > 0 && !qaFreezeClock && !hidden) {
                 long now = System.currentTimeMillis();
                 main.postDelayed(this, 1000L - (now % 1000L));
             }
@@ -274,6 +282,7 @@ public class MAct extends AppCompatActivity {
         preview = BuildConfig.DEBUG && getIntent() != null
                 && getIntent().getBooleanExtra(EXTRA_PREVIEW, false);
         qaLaunch = preview ? getIntent().getStringExtra(EXTRA_QA_LAUNCH) : null;
+        qaFreezeClock = preview && getIntent().getBooleanExtra(EXTRA_QA_FREEZE_CLOCK, false);
         qaGameMs = preview ? getIntent().getLongExtra(EXTRA_QA_GAME_MS, 0L) : 0L;
         if (!preview && (expiry == null || expiry.isEmpty() || "NULL".equalsIgnoreCase(expiry))) {
             // Process was restarted and the native session is gone: sign in again.
@@ -2023,5 +2032,7 @@ public class MAct extends AppCompatActivity {
         settingsPage.animate().cancel();
         settingsPage.setVisibility(View.GONE);
         actionBarView.setVisibility(View.VISIBLE);
+        main.removeCallbacks(ticker);
+        main.post(ticker);
     }
 }

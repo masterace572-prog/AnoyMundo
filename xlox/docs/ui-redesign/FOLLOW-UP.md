@@ -644,7 +644,8 @@ stores signing secrets.
   installed), the library version, the honest State (Not installed / Installed
   / Ready / Running) and the Server word.
 - **Time left:** smaller (28 sp max) and always ticking:
-  "29d 23h 59m 12s". Expiry dates stay IST.
+  "29d 23h 59m 12s". Expiry dates stay IST. It pauses while Settings covers
+  home and resumes on return.
 - **Removed from home:** the Device card, the Access chip and the bottom
   "Help on Telegram" button. Launch still asks for missing permissions first,
   exactly as before.
@@ -722,5 +723,10 @@ says "Settings shows whether anything is still off".
     an "invalid file" failure) and `qa_update_state` = downloading |
     installing | failed.
   - `MAct`: `qa_settings` (opens Settings).
+  - `MAct`: `qa_freeze_clock`, which draws the countdown once and stops the
+    per-second tick. `uiautomator dump` waits for about 1 s with no screen
+    changes, so a ticking clock made dumps slow or stale. QA freezes it
+    everywhere except a dedicated test, which requires two frames 2 s apart
+    to differ.
 - **Removed:** `qa_first_help`.
 - `qa_frame` / `qa_hold` never touch the network.

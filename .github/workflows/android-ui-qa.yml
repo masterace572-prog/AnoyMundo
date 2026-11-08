@@ -234,6 +234,7 @@ jobs:
               'splash_status_up_to_date', 'splash_status_available', 'splash_status_fail',
               'app_update_normal', 'app_update_downloading', 'app_update_failed', 'app_update_mandatory',
               'app_update_state_installing', 'splash_check_failed_live', 'home_settings', 'home_settings_bottom',
+              'home_clock_a', 'home_clock_b',
           ]
           errors = []
           files = {p.stem: p for p in shots.glob('*.png')}
@@ -488,8 +489,8 @@ jobs:
               errors.append('splash: a failed check has no Retry: ' + line('splash status fail texts')[:300])
           # App update screen: normal (Not now), download -> clear failure + Retry, Not now -> sign in.
           un = line('app update normal texts')
-          for want in ('Update available', 'Update now', 'Not now', 'What', 'Faster start-up'):
-              if want not in un:
+          for want in ('Update available', 'Update now', 'Not now', "WHAT'S NEW", 'Faster start-up'):
+              if want.upper() not in un.upper():
                   errors.append('app update (normal): %r missing: %s' % (want, un[:400]))
           if 'Keep Anoy open' not in line('app update downloading texts') or '%' not in line('app update downloading texts'):
               errors.append('app update: no download progress: ' + line('app update downloading texts')[:300])
@@ -517,13 +518,17 @@ jobs:
           if 'splash retry: passed' not in t:
               errors.append('splash Retry did not continue once back online: ' + line('splash retry focus'))
           # Home: "Welcome back", the panel's own note, game version line; no Device card / sign-out on home.
-          ht2 = line('home texts')
+          ht2 = line('home texts').replace('\xa0', ' ')  # tidy keeps the last two words together
           if 'Welcome back' not in ht2 or 'Play safe else flag ban' not in ht2 or 'Play fairly' in ht2:
               errors.append('home header / notice: %s' % ht2[:400])
           if 'text="Device"' in ht2 or 'text="Sign out"' in ht2 or 'text="Anoy"' in ht2:
               errors.append('home still shows Device / Sign out / "Anoy" title: ' + ht2[:400])
           if not re.search(r'\d+d \d\dh \d\dm \d\ds', ht2):
               errors.append('home countdown is not "Xd XXh XXm XXs": ' + ht2[:300])
+          # The countdown really ticks (frozen elsewhere in QA): two frames 2 s apart differ.
+          ca, cb = files.get('home_clock_a'), files.get('home_clock_b')
+          if ca and cb and ca.read_bytes() == cb.read_bytes():
+              errors.append('home countdown did not tick: home_clock_a and home_clock_b are identical')
           # Settings: device, access + OBB, report, version, Sign out.
           sx = line('settings texts') + ' ' + line('settings bottom texts')
           for want in ('Settings', 'Model', 'Android', 'All files access', 'Install unknown apps', 'Game files (OBB)',

@@ -70,6 +70,8 @@ shot() {
 }
 
 dump_ui() {
+    # No stale screen: a dump that can't reach an idle UI leaves nothing behind.
+    adb shell rm -f /sdcard/ui.xml >/dev/null 2>&1 || true
     adb shell uiautomator dump /sdcard/ui.xml >/dev/null 2>&1 || true
     adb shell cat /sdcard/ui.xml 2>/dev/null || true
 }
@@ -153,7 +155,7 @@ open_gate() {
 open_home() {
     stop_app
     # shellcheck disable=SC2068
-    adb shell am start -W -n $PKG/.MAct --ez qa_preview true $@ >> "$LOG" 2>&1 || log "WARN: am start MAct failed"
+    adb shell am start -W -n $PKG/.MAct --ez qa_preview true --ez qa_freeze_clock true $@ >> "$LOG" 2>&1 || log "WARN: am start MAct failed"
     wait_for_id primaryAction 10 || log "WARN: home missing"
     sleep 1.5
 }
@@ -237,9 +239,8 @@ if wait_for_id appUpdatePrimary 20; then
     shot app_update_normal
     log "app update normal texts: $(texts)"
     tap_id appUpdatePrimary || true
-    sleep 0.9
+    sleep 1.5
     shot app_update_downloading
-    log "app update downloading texts: $(texts)"
     i=0
     while [ $i -lt 20 ]; do
         case "$(texts)" in *"text=\"Retry\""*) break ;; esac
@@ -274,6 +275,12 @@ adb shell am start -W -n $PKG/.AppUpdateActivity --es app_update_name 2.3.0 --ei
 sleep 1.5
 shot app_update_state_installing
 log "app update installing texts: $(texts)"
+stop_app
+adb shell am start -W -n $PKG/.AppUpdateActivity --es app_update_name 2.3.0 --ei app_update_code 99 \
+    --es app_update_url https://github.com/masterace572-prog/AnoyMundo/releases/download/sample/Anoy.apk \
+    --ez qa_update_preview true --es qa_update_state downloading >> "$LOG" 2>&1 || true
+sleep 1.5
+log "app update downloading texts: $(texts)"
 
 # ------------------------------------------- 2. cold start + live update gate
 stop_app
@@ -463,7 +470,7 @@ log "forget saved key: $(saved_key)"
 # launch error unless the game truly did not start.
 launch_case() {
     stop_app
-    adb shell am start -W -n $PKG/.MAct --ez qa_preview true --es qa_launch "$1" >> "$LOG" 2>&1 || log "WARN: am start MAct failed"
+    adb shell am start -W -n $PKG/.MAct --ez qa_preview true --ez qa_freeze_clock true --es qa_launch "$1" >> "$LOG" 2>&1 || log "WARN: am start MAct failed"
     sleep "$2"
 }
 launch_case started 4
@@ -490,7 +497,7 @@ log "launch throws texts: $(texts)"
 # the launch): home shows Stop while it runs, then Launch again - no error.
 stop_app
 adb logcat -c || true
-adb shell am start -W -n $PKG/.MAct --ez qa_preview true --es qa_launch started --el qa_game_ms 12000 >> "$LOG" 2>&1 || log "WARN: am start MAct failed"
+adb shell am start -W -n $PKG/.MAct --ez qa_preview true --ez qa_freeze_clock true --es qa_launch started --el qa_game_ms 12000 >> "$LOG" 2>&1 || log "WARN: am start MAct failed"
 sleep 4
 log "game_closed target focus: $(focus)"
 adb shell input keyevent 4 || true            # back to home while the game still runs
@@ -506,7 +513,7 @@ log "game_closed log: $(adb logcat -d -v tag -s MAct:V 2>/dev/null | grep -E 'Ga
 licence_return() { # $1 = qa_refresh, $2 = screenshot
     stop_app
     adb logcat -c || true
-    adb shell am start -W -n $PKG/.MAct --ez qa_preview true --es qa_refresh "$1" >> "$LOG" 2>&1 || log "WARN: am start MAct failed"
+    adb shell am start -W -n $PKG/.MAct --ez qa_preview true --ez qa_freeze_clock true --es qa_refresh "$1" >> "$LOG" 2>&1 || log "WARN: am start MAct failed"
     sleep 3
     log "licence_$1 before texts: $(texts)"
     adb shell am start -W -a android.settings.SETTINGS >> "$LOG" 2>&1 || true
@@ -678,7 +685,7 @@ GAME=com.pubg.imobile
 GOBB=/sdcard/Android/obb/$GAME
 obb_log() { adb logcat -d -v tag -s AppManager:V MAct:V 2>/dev/null | grep -E '^./AppManager|^./MAct.*Launch' | grep -v '	at ' | tr -d '\r' | tr '\n' '|'; }
 obb_start() {
-    adb shell am start -W -n $PKG/.MAct --ez qa_preview true --es qa_action obb_copy --es qa_launch started >> "$LOG" 2>&1 || log "WARN: am start MAct failed"
+    adb shell am start -W -n $PKG/.MAct --ez qa_preview true --ez qa_freeze_clock true --es qa_action obb_copy --es qa_launch started >> "$LOG" 2>&1 || log "WARN: am start MAct failed"
 }
 obb_case() { # $1 = tag
     stop_app
@@ -756,7 +763,7 @@ perm_reset() { # fresh install state: nothing granted, nothing asked
 }
 perm_start() {
     adb logcat -c || true
-    adb shell am start -W -n $PKG/.MAct --ez qa_preview true --es qa_action permissions_copy --es qa_launch started >> "$LOG" 2>&1 || log "WARN: am start MAct failed"
+    adb shell am start -W -n $PKG/.MAct --ez qa_preview true --ez qa_freeze_clock true --es qa_action permissions_copy --es qa_launch started >> "$LOG" 2>&1 || log "WARN: am start MAct failed"
     sleep 3
 }
 perm_explain() { # $1 = name: screenshot + texts of the explanation sheet, then Continue
@@ -805,7 +812,7 @@ log "perm_allow log: $(perm_log)"
 # the remembered Launch runs the copy in the fresh process, then launches.
 stop_app
 adb logcat -c || true
-adb shell am start -W -n $PKG/.MAct --ez qa_preview true --es qa_launch started >> "$LOG" 2>&1 || log "WARN: am start MAct failed"
+adb shell am start -W -n $PKG/.MAct --ez qa_preview true --ez qa_freeze_clock true --es qa_launch started >> "$LOG" 2>&1 || log "WARN: am start MAct failed"
 sleep 8
 log "perm_resume focus: $(focus)"
 log "perm_resume log: $(perm_log)"
@@ -878,6 +885,14 @@ stop_app
 adb shell pm clear $PKG >/dev/null 2>&1 || true
 grant
 adb logcat -c || true
+# 2.2.0: the countdown really ticks (the clock is frozen everywhere else in
+# QA so uiautomator can reach an idle screen): two frames 2 s apart differ.
+stop_app
+adb shell am start -W -n $PKG/.MAct --ez qa_preview true >> "$LOG" 2>&1 || true
+sleep 2.5
+shot home_clock_a
+sleep 2
+shot home_clock_b
 # 2.2.0: Help never opens on its own - only from the "?" button.
 open_home
 sleep 1.5
@@ -914,9 +929,10 @@ adb logcat -c || true
 open_settings
 log "access_ok chip: $(node_text accessValue)"
 tap_id accessRow || true
-sleep 0.6
-shot home_access_ready
+sleep 0.4
+# The snackbar lasts ~2.75 s: read the screen first, screenshot after.
 log "access_ok texts: $(texts)"
+shot home_access_ready
 log "access_ok focus: $(focus)"
 # All files access off: explanation sheet, Settings, back -> ready, no launch.
 adb shell appops set $PKG MANAGE_EXTERNAL_STORAGE deny >/dev/null 2>&1 || true

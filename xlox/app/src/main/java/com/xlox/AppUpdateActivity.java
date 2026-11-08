@@ -412,7 +412,7 @@ public class AppUpdateActivity extends AppCompatActivity {
             return;
         }
         onProgress(done, total);
-        main.postDelayed(() -> simulateDownload(done + total / 12), 160L);
+        main.postDelayed(() -> simulateDownload(done + total / 24), 300L);
     }
 
     private void applyQaState() {
