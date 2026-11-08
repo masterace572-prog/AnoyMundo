@@ -20,7 +20,6 @@ Daemon will be stopped at the end of the build
 > Task :app:mapDebugSourceSetPaths
 > Task :app:generateDebugResources
 > Task :app:packageDebugResources
-> Task :app:mergeDebugResources
 > Task :app:createDebugCompatibleScreenManifests
 > Task :app:extractDeepLinksDebug
 > Task :app:parseDebugLocalResources
@@ -29,6 +28,7 @@ Daemon will be stopped at the end of the build
 /home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/debug/AndroidManifest.xml Warning:
 	uses-permission#android.permission.PROCESS_OUTGOING_CALLS was tagged at AndroidManifest.xml:0 to remove other declarations but no other declaration present
 
+> Task :app:mergeDebugResources
 > Task :app:processDebugManifest
 > Task :app:mergeDebugShaders
 > Task :app:compileDebugShaders NO-SOURCE
@@ -8305,46 +8305,46 @@ com.android.tools.r8.internal.L10: Should never be called
 > Task :app:buildNdkBuildRelease[arm64-v8a]
 > Task :app:mergeReleaseJniLibFolders
 > Task :app:generateReleaseBuildConfig
-> Task :app:checkReleaseDuplicateClasses
 > Task :app:mergeReleaseNativeLibs
 > Task :app:javaPreCompileRelease
-> Task :app:generateReleaseResValues
+> Task :app:checkReleaseDuplicateClasses
 > Task :app:checkReleaseAarMetadata
+> Task :app:generateReleaseResValues
+> Task :app:stripReleaseDebugSymbols
 > Task :app:mapReleaseSourceSetPaths
 > Task :app:generateReleaseResources
-> Task :app:stripReleaseDebugSymbols
-> Task :app:packageReleaseResources
-> Task :app:packageDebug
 > Task :app:extractReleaseNativeDebugMetadata
+> Task :app:packageDebug
 > Task :app:createDebugApkListingFileRedirect
 > Task :app:assembleDebug
+> Task :app:packageReleaseResources
 > Task :app:createReleaseCompatibleScreenManifests
-> Task :app:mergeReleaseNativeDebugMetadata
 > Task :app:extractDeepLinksRelease
-> Task :app:parseReleaseLocalResources
 
 > Task :app:processReleaseMainManifest
 /home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/AndroidManifest.xml:74:5-101 Warning:
 	uses-permission#android.permission.PROCESS_OUTGOING_CALLS was tagged at AndroidManifest.xml:74 to remove other declarations but no other declaration present
 
 > Task :app:processReleaseManifest
-> Task :app:mergeReleaseResources
+> Task :app:mergeReleaseNativeDebugMetadata
+> Task :app:parseReleaseLocalResources
 > Task :app:mergeReleaseArtProfile
 > Task :app:extractProguardFiles
 > Task :app:processReleaseJavaRes NO-SOURCE
 > Task :app:mergeReleaseShaders
 > Task :app:compileReleaseShaders NO-SOURCE
+> Task :app:processReleaseManifestForPackage
 > Task :app:generateReleaseAssets UP-TO-DATE
 > Task :app:mergeReleaseAssets
 > Task :app:compressReleaseAssets
 > Task :app:processApplicationManifestReleaseForBundle
 > Task :app:collectReleaseDependencies
 > Task :app:sdkReleaseDependencyData
-> Task :app:processReleaseManifestForPackage
 > Task :app:validateSigningRelease
 > Task :app:writeReleaseAppMetadata
 > Task :app:writeReleaseSigningConfigVersions
 > Task :app:mergeReleaseJavaResource
+> Task :app:mergeReleaseResources
 > Task :app:processReleaseResources
 
 > Task :app:compileReleaseJavaWithJavac
@@ -8364,5 +8364,5 @@ WARNING: /home/runner/.gradle/caches/transforms-3/b91f9dab850d9a00e31f249c213227
 > Task :app:createReleaseApkListingFileRedirect
 > Task :app:assembleRelease
 
-BUILD SUCCESSFUL in 1m 34s
+BUILD SUCCESSFUL in 1m 51s
 79 actionable tasks: 79 executed
