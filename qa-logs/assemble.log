@@ -20,19 +20,19 @@ Daemon will be stopped at the end of the build
 > Task :app:mapDebugSourceSetPaths
 > Task :app:generateDebugResources
 > Task :app:packageDebugResources
+> Task :app:mergeDebugResources
 > Task :app:createDebugCompatibleScreenManifests
 > Task :app:extractDeepLinksDebug
 > Task :app:parseDebugLocalResources
-> Task :app:mergeDebugResources
 > Task :app:processDebugMainManifest
 > Task :app:processDebugManifest
 > Task :app:mergeDebugShaders
 > Task :app:compileDebugShaders NO-SOURCE
 > Task :app:generateDebugAssets UP-TO-DATE
 > Task :app:mergeDebugAssets
-> Task :app:processDebugJavaRes NO-SOURCE
-> Task :app:compressDebugAssets
 > Task :app:processDebugManifestForPackage
+> Task :app:compressDebugAssets
+> Task :app:processDebugJavaRes NO-SOURCE
 > Task :app:checkDebugDuplicateClasses
 > Task :app:mergeDebugJavaResource
 > Task :app:processDebugResources
@@ -8300,24 +8300,24 @@ com.android.tools.r8.internal.L10: Should never be called
 > Task :app:mergeExtDexDebug
 > Task :app:buildNdkBuildRelease[arm64-v8a]
 > Task :app:mergeReleaseJniLibFolders
-> Task :app:generateReleaseBuildConfig
 > Task :app:checkReleaseDuplicateClasses
 > Task :app:mergeReleaseNativeLibs
+> Task :app:generateReleaseBuildConfig
 > Task :app:javaPreCompileRelease
-> Task :app:checkReleaseAarMetadata
 > Task :app:generateReleaseResValues
 > Task :app:mapReleaseSourceSetPaths
 > Task :app:generateReleaseResources
+> Task :app:checkReleaseAarMetadata
 > Task :app:stripReleaseDebugSymbols
+> Task :app:packageReleaseResources
+> Task :app:extractReleaseNativeDebugMetadata
+> Task :app:parseReleaseLocalResources
 > Task :app:packageDebug
 > Task :app:createDebugApkListingFileRedirect
 > Task :app:assembleDebug
-> Task :app:extractReleaseNativeDebugMetadata
-> Task :app:packageReleaseResources
 > Task :app:mergeReleaseNativeDebugMetadata
 > Task :app:createReleaseCompatibleScreenManifests
 > Task :app:extractDeepLinksRelease
-> Task :app:parseReleaseLocalResources
 > Task :app:processReleaseMainManifest
 > Task :app:processReleaseManifest
 > Task :app:mergeReleaseResources
@@ -8329,14 +8329,14 @@ com.android.tools.r8.internal.L10: Should never be called
 > Task :app:generateReleaseAssets UP-TO-DATE
 > Task :app:mergeReleaseAssets
 > Task :app:processReleaseManifestForPackage
-> Task :app:processApplicationManifestReleaseForBundle
 > Task :app:compressReleaseAssets
+> Task :app:processApplicationManifestReleaseForBundle
 > Task :app:collectReleaseDependencies
-> Task :app:mergeReleaseJavaResource
 > Task :app:sdkReleaseDependencyData
 > Task :app:validateSigningRelease
 > Task :app:writeReleaseAppMetadata
 > Task :app:writeReleaseSigningConfigVersions
+> Task :app:mergeReleaseJavaResource
 > Task :app:processReleaseResources
 
 > Task :app:compileReleaseJavaWithJavac
