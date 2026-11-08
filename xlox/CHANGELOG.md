@@ -1,5 +1,18 @@
 # Anoy Loader — changelog
 
+## 2.1.0 follow-up — permissions
+
+- **Anoy asks for the three permissions the game-files copy needs**: All
+  files access, Files, and Install unknown apps - one after another, opening
+  the system page or dialog each time. With all three granted, Launch
+  continues into the copy; refusing one shows a clear message and nothing
+  launches. After Install unknown apps, Anoy restarts once (Android only
+  opens the game folder to a fresh start) and Launch carries on after sign in.
+- **Declared but never asked**: microphone, nearby devices, appear on top,
+  picture-in-picture, location, notifications.
+- **Removed**: calendar, call logs, camera, contacts and accounts, health,
+  phone, physical activity and SMS no longer appear in App permissions.
+
 ## 2.1.0 follow-up — game files are copied before launch again
 
 - **First install copies the game's OBB, then launches.** Launch shows

@@ -140,3 +140,61 @@ such phones the folder is unreadable and Launch says Android is blocking it
 (no launch). The emulator copy test turns that access on with a test-only
 `appops` switch; the app itself does not request it.
 
+## 6. Permissions
+
+### Requested by Anoy (only these three)
+
+`utils/StorageAccess` (shared by sign in and home), asked in this order for
+whichever is missing - sign in asks for the first, home for the rest, Launch
+for anything still missing:
+
+| # | Settings name | Permission | How it is asked |
+|---|---|---|---|
+| 1 | All files access | `MANAGE_EXTERNAL_STORAGE` (Android 11+) | system page `ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION` (fallback `ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION`) |
+| 2 | Files / Files and media | `READ_EXTERNAL_STORAGE`, `WRITE_EXTERNAL_STORAGE`; on 13+ also `READ_MEDIA_IMAGES/VIDEO/AUDIO` in the same dialog | runtime dialog; once refused for good, Anoy's App info page opens instead |
+| 3 | Install unknown apps | `REQUEST_INSTALL_PACKAGES` (Android 8+) | system page `ACTION_MANAGE_UNKNOWN_APP_SOURCES` |
+
+After each answer Anoy checks again and asks for the next missing one; when
+all three are granted the existing `startLaunch()` continues (OBB copy, then
+launch). Refusing one shows its message ("Allow All files access / Files
+access / Install unknown apps for Anoy so game files can be prepared."), no
+copy, no launch. "Files" is granted when READ and WRITE are granted (the
+media permissions are asked with them but do not block Launch).
+
+**One restart after Install unknown apps (Android 11+).** Android opens the
+game's `Android/obb` folder only to an app process started after that switch
+is turned on. If the copy finds the folder blocked right after the grant,
+Anoy shows "Restarting Anoy to finish setting up game files…", restarts
+itself (splash, update check, sign in with the saved key), and when home
+opens the interrupted Launch continues by itself (within 10 minutes). No
+restart loop: after the restart, a still-blocked folder shows the message.
+
+### Declared only - never requested in this version
+
+Microphone `RECORD_AUDIO`; nearby devices `BLUETOOTH`, `BLUETOOTH_CONNECT`,
+`BLUETOOTH_SCAN` and `NEARBY_WIFI_DEVICES` (both `neverForLocation`); appear on
+top `SYSTEM_ALERT_WINDOW`; location `ACCESS_COARSE_LOCATION`,
+`ACCESS_FINE_LOCATION`; notifications `POST_NOTIFICATIONS`; picture-in-picture
+`android:supportsPictureInPicture` on home. Android itself grants
+`BLUETOOTH_CONNECT` to apps targeting below Android 12; Anoy never asks.
+Normal technical permissions stay (internet, network state, wake lock,
+foreground service, installed-apps query, ...).
+
+### Removed
+
+From this manifest: `ACCESS_SUPERUSER`, `ACTION_MANAGE_OVERLAY_PERMISSION`
+(not a real permission), `PROCESS_OUTGOING_CALLS` (mundo leftover),
+`GOOGLE_AUTH*`. Stripped with `tools:node="remove"` from
+`libs/recommendpermission-release.aar` (a manifest-only library that merges
+121 permissions): calendar, call logs, camera, contacts and accounts (incl.
+`GET_ACCOUNTS`, `MANAGE_ACCOUNTS`, `AUTHENTICATE_ACCOUNTS`, `USE_CREDENTIALS`,
+profile / social stream), health (`BODY_SENSORS*`,
+`FOREGROUND_SERVICE_HEALTH`), phone (`READ_PHONE_STATE`, `READ_PHONE_NUMBERS`,
+`CALL_PHONE`, `ANSWER_PHONE_CALLS`, `USE_SIP`, `ACCEPT_HANDOVER`), physical
+activity (`ACTIVITY_RECOGNITION`, the Play services and MIUI step variants),
+SMS (`SEND_SMS`, `READ_SMS`, `RECEIVE_SMS`, `RECEIVE_MMS`, `RECEIVE_WAP_PUSH`).
+
+CI checks the built debug and release APKs (`aapt2 dump permissions`, saved
+in `qa-logs/permissions-*.txt`): the requested and declared ones present, the
+removed ones absent, and no Java code asking for a declared-only permission.
+

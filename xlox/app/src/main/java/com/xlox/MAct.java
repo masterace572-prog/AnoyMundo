@@ -1,6 +1,7 @@
 package com.xlox;
 
 import android.content.ActivityNotFoundException;
+import android.content.ComponentName;
 import android.content.Intent;
 import android.content.res.ColorStateList;
 import android.content.pm.PackageManager;
@@ -76,6 +77,9 @@ public class MAct extends AppCompatActivity {
     private static final String STATE_ASKED_ROUND = "asked_permissions";
     /** Home asks for missing files access after the content has settled. */
     private static final long HOME_STORAGE_ASK_DELAY_MS = 700L;
+    private static final long LAUNCH_RESUME_DELAY_MS = 700L;
+    /** Long enough to read "Restarting Anoy…" before the restart. */
+    private static final long RESTART_DELAY_MS = 1500L;
     /**
      * When the container gives no launch intent (or starting it throws), it may
      * still have started the game itself: watch this long before reporting a
@@ -249,7 +253,13 @@ public class MAct extends AppCompatActivity {
                     ? StorageAccess.Need.values()[pending] : null;
             askedThisRound = savedInstanceState.getInt(STATE_ASKED_ROUND, 0);
         }
-        applyQaAction();
+        if (savedInstanceState == null && StorageAccess.consumeLaunchAfterRestart(this)) {
+            // Anoy restarted itself for the game files: carry on with that Launch.
+            Log.d(TAG, "Launch: resuming after the restart");
+            main.postDelayed(preview ? this::prepareObbThenLaunch : this::startLaunch, LAUNCH_RESUME_DELAY_MS);
+        } else {
+            applyQaAction();
+        }
         // All files access, Files and Install unknown apps are needed for the
         // OBB copy. Ask here for whichever is missing (unless sign in already
         // asked for it this run) so Launch isn't the first surprise. Never
@@ -930,6 +940,13 @@ public class MAct extends AppCompatActivity {
             public void onCopyCompleted(boolean success, String error) {
                 if (!Ui.alive(MAct.this)) return;
                 hideProgress();
+                if (!success && getString(R.string.obb_folder_blocked).equals(error)
+                        && StorageAccess.installGrantedThisRun(MAct.this)) {
+                    // Install unknown apps was just granted: Android opens the
+                    // game-files folder only to a freshly started app.
+                    restartForGameFiles();
+                    return;
+                }
                 if (!success) {
                     Log.d(TAG, "Launch stopped: game files not ready (" + error + ")");
                     setBusy(false, null);
@@ -946,6 +963,22 @@ public class MAct extends AppCompatActivity {
                 main.postDelayed(MAct.this::launchGame, LAUNCH_DELAY_MS);
             }
         });
+    }
+
+    /**
+     * Restarts Anoy once so the new process can read the game-files folder,
+     * then Launch continues by itself when home opens again (after sign in).
+     */
+    private void restartForGameFiles() {
+        Log.d(TAG, "Launch: restarting to finish setting up game files");
+        StorageAccess.markLaunchAfterRestart(this);
+        setBusy(true, getString(R.string.action_preparing));
+        showMessage(getString(R.string.restarting_for_game_files), false);
+        main.postDelayed(() -> {
+            Intent restart = Intent.makeRestartActivityTask(new ComponentName(this, SplashActivity.class));
+            startActivity(restart);
+            Runtime.getRuntime().exit(0);
+        }, RESTART_DELAY_MS);
     }
 
     private void launchGame() {

@@ -51,6 +51,12 @@ public final class StorageAccess {
 
     private static final String PREFS = "anoy_permissions";
     private static final String KEY_FILES_ASKED = "files_asked";
+    private static final String KEY_LAUNCH_AFTER_RESTART = "launch_after_restart_at";
+    /** A Launch interrupted by the restart is continued only if home opens within this time. */
+    private static final long LAUNCH_AFTER_RESTART_MS = 10L * 60L * 1000L;
+
+    /** Install unknown apps was seen missing in this process (so a grant came during it). */
+    private static volatile boolean installMissingThisRun;
 
     /** Needs whose prompt has been shown in this process (bit per ordinal). */
     private static volatile int askedThisSession;
@@ -77,8 +83,10 @@ public final class StorageAccess {
             case INSTALL:
                 // Per-app "Install unknown apps" exists from Android 8; before
                 // that it is a single device-wide switch, not an app permission.
-                return Build.VERSION.SDK_INT < Build.VERSION_CODES.O
+                boolean install = Build.VERSION.SDK_INT < Build.VERSION_CODES.O
                         || context.getPackageManager().canRequestPackageInstalls();
+                if (!install) installMissingThisRun = true;
+                return install;
             default:
                 return true;
         }
@@ -101,6 +109,31 @@ public final class StorageAccess {
     /** True once any prompt has been shown since the app started. */
     public static boolean askedThisSession() {
         return askedThisSession != 0;
+    }
+
+    /**
+     * True when Install unknown apps was granted while this process was
+     * running. On Android 11+ the game-files folder only becomes readable for
+     * a process started after that grant, so the app has to restart once.
+     */
+    public static boolean installGrantedThisRun(Context context) {
+        return Build.VERSION.SDK_INT >= Build.VERSION_CODES.R
+                && installMissingThisRun && has(context, Need.INSTALL);
+    }
+
+    /** Remember that Launch should continue once home opens after the restart. */
+    public static void markLaunchAfterRestart(Context context) {
+        prefs(context).edit().putLong(KEY_LAUNCH_AFTER_RESTART, System.currentTimeMillis()).commit();
+    }
+
+    /** True (once) when a Launch interrupted by the restart should continue now. */
+    public static boolean consumeLaunchAfterRestart(Context context) {
+        SharedPreferences prefs = prefs(context);
+        long at = prefs.getLong(KEY_LAUNCH_AFTER_RESTART, 0L);
+        if (at == 0L) return false;
+        prefs.edit().remove(KEY_LAUNCH_AFTER_RESTART).apply();
+        long age = System.currentTimeMillis() - at;
+        return age >= 0 && age < LAUNCH_AFTER_RESTART_MS;
     }
 
     // -------------------------------------------------------------- requests
@@ -147,7 +180,7 @@ public final class StorageAccess {
      */
     private static boolean requestFiles(Activity activity) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) return false; // Granted at install.
-        SharedPreferences prefs = activity.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
+        SharedPreferences prefs = prefs(activity);
         boolean askedBefore = prefs.getBoolean(KEY_FILES_ASKED, false);
         boolean canShowDialog = !askedBefore
                 || ActivityCompat.shouldShowRequestPermissionRationale(activity, Manifest.permission.READ_EXTERNAL_STORAGE)
@@ -177,6 +210,10 @@ public final class StorageAccess {
     }
 
     // --------------------------------------------------------------- helpers
+
+    private static SharedPreferences prefs(Context context) {
+        return context.getApplicationContext().getSharedPreferences(PREFS, Context.MODE_PRIVATE);
+    }
 
     private static boolean granted(Context context, String permission) {
         return ActivityCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED;

@@ -199,7 +199,7 @@ jobs:
               'home_launch_started_return', 'home_launch_polish_throws_return',
               'home_launch_null_running', 'home_launch_failed', 'home_typical',
               # files access requested from Launch
-              'perm_all_files', 'perm_files', 'perm_install', 'home_perm_install_denied',
+              'perm_all_files', 'perm_files', 'perm_install', 'home_perm_install_denied', 'home_perm_restarting',
               'home_obb1_mid', 'home_obb3_missing',
               # live walkthrough
               'login', 'login_keyboard', 'login_error_empty', 'login_error_malformed', 'login_key_visible',
@@ -318,10 +318,24 @@ jobs:
           i_prep = pl.find('Launch: preparing game files')
           if i_ok < 0 or i_prep < i_ok:
               errors.append('all three granted but the launch / OBB copy did not continue: ' + pl[-600:])
+          rl = line('perm_resume log')
           if 'Copied and verified' in pl and 'game files ready, launching' in pl:
               print('permissions then copy: copied in the same app run, then launched')
-          elif 'blocking access' in pl:
-              print('note: copy blocked until the app restarts after Install unknown apps (same-run grant)')
+          elif 'restarting to finish setting up game files' in pl:
+              # Android opens the game folder only to a process started after
+              # Install unknown apps: Anoy restarts once, then Launch resumes.
+              if line('perm_allow pid before') == line('perm_allow pid after') or not line('perm_allow pid after'):
+                  errors.append('restart for game files: the app did not restart (pid %s -> %s)'
+                                % (line('perm_allow pid before'), line('perm_allow pid after')))
+              if 'com.xlox' not in line('perm_allow final focus'):
+                  errors.append('restart for game files: Anoy did not come back: ' + line('perm_allow final focus'))
+              if 'resuming after the restart' not in rl:
+                  errors.append('after the restart the Launch did not resume: ' + rl[-400:])
+              if not re.search(r'Copied and verified \S*/main\.20\.%s\.obb \(%d B\)' % (re.escape(G), 64 * MB), rl):
+                  errors.append('after the restart the OBB was not copied: ' + rl[-600:])
+              i_c, i_l = rl.rfind('Copied and verified'), rl.find('game files ready, launching')
+              if i_l < 0 or i_l < i_c or 'ettings' not in line('perm_resume focus'):
+                  errors.append('after the restart the game was not launched after the copy: ' + line('perm_resume focus'))
           else:
               errors.append('permissions then copy: unexpected result: ' + pl[-600:])
           g = line('perm_allow granted')

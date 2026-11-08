@@ -577,6 +577,7 @@ adb shell dd if=/dev/zero of=$GOBB/main.20.$GAME.obb bs=1048576 count=64 >/dev/n
 perm_reset
 adb shell rm -rf /sdcard/Android/obb/$PKG/scopedStorage >> "$LOG" 2>&1 || log "WARN: could not clear the container OBB"
 perm_start
+log "perm_allow pid before: $(adb shell pidof $PKG | tr -d '\r')"
 log "perm_allow step1 focus: $(focus)"
 adb exec-out screencap -p > "$OUT/perm_all_files.png" || true
 adb shell appops set $PKG MANAGE_EXTERNAL_STORAGE allow >/dev/null 2>&1 || true
@@ -594,10 +595,20 @@ log "perm_allow step3 focus: $(focus)"
 adb exec-out screencap -p > "$OUT/perm_install.png" || true
 adb shell appops set $PKG REQUEST_INSTALL_PACKAGES allow >/dev/null 2>&1 || true
 adb shell input keyevent 4 || true
-sleep 9
+sleep 1.2
+adb exec-out screencap -p > "$OUT/home_perm_restarting.png" || true
+sleep 8
 log "perm_allow final focus: $(focus)"
-log "perm_allow texts: $(texts)"
+log "perm_allow pid after: $(adb shell pidof $PKG | tr -d '\r')"
 log "perm_allow log: $(perm_log)"
+# After the restart (sign in is not possible here) home continues the Launch:
+# the remembered Launch runs the copy in the fresh process, then launches.
+stop_app
+adb logcat -c || true
+adb shell am start -W -n $PKG/.MAct --ez qa_preview true --es qa_launch started >> "$LOG" 2>&1 || log "WARN: am start MAct failed"
+sleep 8
+log "perm_resume focus: $(focus)"
+log "perm_resume log: $(perm_log)"
 log "perm_allow granted: $(adb shell dumpsys package $PKG | grep -E 'android.permission.(READ_EXTERNAL_STORAGE|WRITE_EXTERNAL_STORAGE|RECORD_AUDIO|ACCESS_FINE_LOCATION|POST_NOTIFICATIONS|BLUETOOTH_CONNECT): granted=' | tr -d ' \r' | sort -u | tr '\n' ' ')"
 
 # Refuse Files: message, no copy, no launch.
