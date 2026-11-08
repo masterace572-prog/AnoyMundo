@@ -498,3 +498,65 @@ edge.
 - The QA run opens home with `qa_expiry=2026-11-14T17:00:00.000Z` on the UTC
   emulator, and the validator requires "14 Nov 2026, 10:30 PM IST"
   (`home_expiry_ist.png`).
+
+## 10. 2.1.1 polish: version, cleartext check, Last checked, Copy for customer
+
+### Version
+
+`xlox/app/build.gradle` now has **versionCode 7 / versionName 2.1.1**, with a
+comment marking 2.1.1 as this polish pass. The app already reads the version
+from the build, so these places show 2.1.1 automatically:
+- the splash footer
+- the sign-in footer
+- Copy support info, e.g. "Anoy 2.1.1 (7)"
+- the download user agent
+
+Signing, applicationId, minSdk 21 and targetSdk 28 are unchanged.
+
+### Cleartext traffic: checked, left ON on purpose
+
+`android:usesCleartextTraffic="true"` stays.
+
+**What the check found:**
+- **The loader's own traffic is all HTTPS:**
+  - sign-in / `/connect`, the library version check and the library download
+    use `https://anoymundo-panel.vercel.app` (`jni/panel_config.h`)
+  - the Java fallback is the same HTTPS address (`utils/Downtwo.java`)
+  - the update gate uses `Downtwo`
+  - the only other link opens Google Play over HTTPS
+  - no `http://`, `localhost` or `127.0.0.1` endpoint exists in the app's
+    Java, XML or native code
+  - native sign-in uses libcurl, which this Android flag does not control anyway
+- **The game container needs it:** the virtual-container SDK
+  (`libs/mundo-release.aar`) itself sets `usesCleartextTraffic="true"` on its
+  `<application>`.
+- **The game runs under the loader's rules:** BGMI runs inside the loader's own
+  processes (`:stub1`…, 96 container components), so Android applies the
+  loader's network rules to the game and its SDKs. Whether they ever use plain
+  HTTP can't be verified here.
+
+**Why it stays on:** turning it off would override the SDK's setting and could
+silently break networking inside the game after launch. That is exactly what
+this pass must not risk.
+
+**Possible later step:** test a tightened setting on a real device with BGMI
+installed: a network-security config that allows plain HTTP only for the
+container processes.
+
+### Last checked
+
+On the home licence card, "Last checked … IST" now sits 8 dp (`@dimen/space_8`)
+below the expiry line instead of 2 dp. Its grey colour, IST text and
+show/hide rules are unchanged.
+
+### Copy for customer (panel)
+
+The paper-plane button on a keys row now briefly widens to a green
+"✓ Copied" pill for 1.8 s, then returns to its icon.
+- **Unchanged:** the toast "Copied for customer — paste it in your chat" and the
+  copied text (`customerText()`).
+- **How:** `copied()` takes an opt-in `{ label: true }`, so other icon buttons
+  behave as before.
+- **QA:** the web screenshot run now taps the button at desktop and 390 px phone
+  width. It requires the visible "Copied" and the return to the icon, and saves
+  `mobile_copy_customer.png`.

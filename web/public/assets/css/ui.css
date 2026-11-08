@@ -233,6 +233,12 @@ button { font: inherit; }
 .icon-btn.accent { color: var(--blue); }
 .icon-btn.accent:hover { background: var(--blue-tint); }
 .icon-btn.ok, .icon-btn.ok:hover { color: var(--green); }
+/* Brief "Copied" confirmation on an icon button (Copy for customer). */
+.icon-btn.labelled, .icon-btn.labelled:hover {
+  width: auto; flex: 0 0 auto; display: inline-flex; align-items: center; gap: 6px;
+  padding: 0 10px; background: var(--green-tint); white-space: nowrap;
+}
+.icon-btn .copied-label { font-size: 13px; font-weight: 600; line-height: 1; }
 .icon-btn .when-on { display: none; }
 .icon-btn.on .when-on { display: block; }
 .icon-btn.on .when-off { display: none; }

@@ -1,5 +1,16 @@
 # Anoy Loader — changelog
 
+## 2.1.1 — polish
+
+- **Version 2.1.1 (build code 7)** so this release is easy to tell apart from
+  2.1.0.
+- **"Last checked" has more room** under the expiry line on the home card.
+- **Panel: Copy for customer** now shows a clear "✓ Copied" on the button
+  itself, as well as the usual message.
+- **Plain-HTTP setting left on, on purpose.** All of Anoy's own connections use
+  HTTPS, but the game container requires this setting and the game runs under
+  Anoy's network rules. Turning it off could break the game after launch.
+
 ## 2.1.0 follow-up — home, splash and Indian time
 
 - **Clearer home.** Time left and Launch lead. Launch carries a play, download

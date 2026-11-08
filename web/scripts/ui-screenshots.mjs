@@ -68,6 +68,7 @@ try {
       viewport: size.viewport, deviceScaleFactor: size.scale, isMobile: !!size.mobile, hasTouch: !!size.mobile,
       colorScheme: 'dark', reducedMotion: 'reduce',
     });
+    await ctx.grantPermissions(['clipboard-read', 'clipboard-write'], { origin: BASE }).catch(() => {});
     const page = await ctx.newPage();
     const errors = [];
     page.on('pageerror', (e) => errors.push(e.message));
@@ -122,6 +123,28 @@ try {
     await page.waitForSelector('#keys-body .icon-btn.danger', { timeout: 5000 }).catch(() => {});
     const del = await page.$('#keys-body .icon-btn.danger');
     if (del) { await del.click(); await page.waitForSelector('.modal-backdrop.show').catch(() => {}); await shot(page, `${size.name}_confirm`, { fullPage: false }); }
+
+    // Copy for customer: the button itself must briefly say "Copied", then
+    // return to its icon (the toast alone is easy to miss on a phone).
+    await page.goto(`${BASE}/keys`);
+    await page.waitForSelector('#keys-body tr:not(.skeleton)', { timeout: 5000 }).catch(() => {});
+    const share = await page.$('#keys-body button[aria-label="Copy for customer"]');
+    if (!share) {
+      failures += 1; report.push(`[${size.name}] Copy for customer button not found`);
+    } else {
+      await share.click();
+      await page.waitForSelector('#keys-body button.labelled .copied-label', { timeout: 3000 }).catch(() => {});
+      const during = await share.evaluate((b) => ({ text: b.textContent.trim(), cls: b.className }));
+      if (during.text !== 'Copied' || !/\blabelled\b/.test(during.cls)) {
+        failures += 1; report.push(`[${size.name}] Copy for customer: no visible "Copied" on the button (${JSON.stringify(during)})`);
+      }
+      await shot(page, `${size.name}_copy_customer`, { fullPage: false });
+      await page.waitForTimeout(2300);
+      const after = await share.evaluate((b) => ({ text: b.textContent.trim(), cls: b.className, svg: !!b.querySelector('svg') }));
+      if (after.text !== '' || /\blabelled\b/.test(after.cls) || !after.svg) {
+        failures += 1; report.push(`[${size.name}] Copy for customer: button did not return to its icon (${JSON.stringify(after)})`);
+      }
+    }
 
     if (size.mobile) {
       await page.goto(`${BASE}/dashboard`);

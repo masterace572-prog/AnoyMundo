@@ -126,17 +126,23 @@
   }
 
   // Brief "copied" feedback on the button itself, plus a toast.
-  function copied(btn, message) {
+  // opts.label: an icon button briefly widens to show check + "Copied", so the
+  // confirmation is obvious on a phone (not only the toast).
+  function copied(btn, message, opts) {
     toast(message || 'Copied');
     if (!btn || btn.dataset.copied === '1') return;
     btn.dataset.copied = '1';
     var before = btn.innerHTML;
     var isIcon = btn.classList.contains('icon-btn');
+    var label = !isIcon || (opts && opts.label);
     btn.textContent = '';
     btn.appendChild(icon('check'));
-    if (!isIcon) btn.appendChild(document.createTextNode('Copied'));
+    if (label) btn.appendChild(isIcon ? el('span', { className: 'copied-label' }, 'Copied') : document.createTextNode('Copied'));
     btn.classList.add('ok');
-    setTimeout(function () { btn.innerHTML = before; btn.classList.remove('ok'); btn.dataset.copied = ''; }, 1400);
+    if (isIcon && label) btn.classList.add('labelled');
+    setTimeout(function () {
+      btn.innerHTML = before; btn.classList.remove('ok', 'labelled'); btn.dataset.copied = '';
+    }, (opts && opts.ms) || 1400);
   }
 
   function randomId() {
@@ -368,7 +374,7 @@
         var group = el('span', { className: 'row-actions' });
         var share = iconButton('send', 'Copy for customer');
         share.addEventListener('click', function () {
-          copyText(customerText(r)).then(function () { copied(share, 'Copied for customer \u2014 paste it in your chat'); },
+          copyText(customerText(r)).then(function () { copied(share, 'Copied for customer \u2014 paste it in your chat', { label: true, ms: 1800 }); },
             function () { toast('Copy failed', true); });
         });
         var edit = el('a', { className: 'icon-btn', href: '/keys/' + encodeURIComponent(r.id), 'aria-label': 'Edit ' + r.user_key, title: 'Edit' });

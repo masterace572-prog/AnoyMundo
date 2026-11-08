@@ -66,8 +66,10 @@ android {
         //        gate before sign in, licence-key login, verified downloads.
         // 1.1.0: light/dark UI. 1.0.1: 16 KB page-size support (Android 15+/17)
         //        + read-only System.load() for API 37 devices.
-        versionCode 6
-        versionName '2.1.0'
+        // 2.1.1: polish pass - home "Last checked" spacing; distinguishable
+        //        from 2.1.0 (home hierarchy, Loader->Hax dissolve, IST times).
+        versionCode 7
+        versionName '2.1.1'
 
         vectorDrawables {
             useSupportLibrary true
