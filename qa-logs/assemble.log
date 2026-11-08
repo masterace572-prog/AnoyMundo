@@ -24,7 +24,11 @@ Daemon will be stopped at the end of the build
 > Task :app:extractDeepLinksDebug
 > Task :app:parseDebugLocalResources
 > Task :app:mergeDebugResources
+
 > Task :app:processDebugMainManifest
+/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/debug/AndroidManifest.xml Warning:
+	uses-permission#android.permission.PROCESS_OUTGOING_CALLS was tagged at AndroidManifest.xml:0 to remove other declarations but no other declaration present
+
 > Task :app:processDebugManifest
 > Task :app:mergeDebugShaders
 > Task :app:compileDebugShaders NO-SOURCE
@@ -8286,36 +8290,40 @@ Note: Recompile with -Xlint:deprecation for details.
 
 > Task :app:dexBuilderDebug
 > Task :app:mergeDebugJniLibFolders
-> Task :app:mergeProjectDexDebug
 > Task :app:mergeDebugNativeLibs
+> Task :app:mergeProjectDexDebug
+> Task :app:mergeExtDexDebug
 > Task :app:validateSigningDebug
 > Task :app:writeDebugAppMetadata
 > Task :app:writeDebugSigningConfigVersions
 > Task :app:preReleaseBuild UP-TO-DATE
 > Task :app:stripDebugDebugSymbols
 > Task :app:configureNdkBuildRelease[arm64-v8a]
-> Task :app:mergeExtDexDebug
 > Task :app:buildNdkBuildRelease[arm64-v8a]
 > Task :app:mergeReleaseJniLibFolders
-> Task :app:generateReleaseBuildConfig
-> Task :app:checkReleaseDuplicateClasses
 > Task :app:mergeReleaseNativeLibs
-> Task :app:javaPreCompileRelease
-> Task :app:checkReleaseAarMetadata
-> Task :app:generateReleaseResValues
-> Task :app:mapReleaseSourceSetPaths
-> Task :app:generateReleaseResources
-> Task :app:stripReleaseDebugSymbols
 > Task :app:packageDebug
 > Task :app:createDebugApkListingFileRedirect
 > Task :app:assembleDebug
-> Task :app:packageReleaseResources
+> Task :app:generateReleaseBuildConfig
+> Task :app:javaPreCompileRelease
+> Task :app:checkReleaseAarMetadata
+> Task :app:generateReleaseResValues
+> Task :app:stripReleaseDebugSymbols
+> Task :app:checkReleaseDuplicateClasses
+> Task :app:mapReleaseSourceSetPaths
+> Task :app:generateReleaseResources
 > Task :app:extractReleaseNativeDebugMetadata
-> Task :app:parseReleaseLocalResources
-> Task :app:createReleaseCompatibleScreenManifests
 > Task :app:mergeReleaseNativeDebugMetadata
+> Task :app:packageReleaseResources
+> Task :app:createReleaseCompatibleScreenManifests
 > Task :app:extractDeepLinksRelease
+> Task :app:parseReleaseLocalResources
+
 > Task :app:processReleaseMainManifest
+/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/AndroidManifest.xml:74:5-101 Warning:
+	uses-permission#android.permission.PROCESS_OUTGOING_CALLS was tagged at AndroidManifest.xml:74 to remove other declarations but no other declaration present
+
 > Task :app:processReleaseManifest
 > Task :app:mergeReleaseResources
 > Task :app:mergeReleaseArtProfile
@@ -8328,12 +8336,12 @@ Note: Recompile with -Xlint:deprecation for details.
 > Task :app:compressReleaseAssets
 > Task :app:processApplicationManifestReleaseForBundle
 > Task :app:collectReleaseDependencies
+> Task :app:mergeReleaseJavaResource
 > Task :app:sdkReleaseDependencyData
 > Task :app:validateSigningRelease
-> Task :app:processReleaseManifestForPackage
 > Task :app:writeReleaseAppMetadata
 > Task :app:writeReleaseSigningConfigVersions
-> Task :app:mergeReleaseJavaResource
+> Task :app:processReleaseManifestForPackage
 > Task :app:processReleaseResources
 
 > Task :app:compileReleaseJavaWithJavac
@@ -8353,5 +8361,5 @@ WARNING: /home/runner/.gradle/caches/transforms-3/b91f9dab850d9a00e31f249c213227
 > Task :app:createReleaseApkListingFileRedirect
 > Task :app:assembleRelease
 
-BUILD SUCCESSFUL in 1m 25s
+BUILD SUCCESSFUL in 1m 49s
 79 actionable tasks: 79 executed
