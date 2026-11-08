@@ -198,3 +198,123 @@ CI checks the built debug and release APKs (`aapt2 dump permissions`, saved
 in `qa-logs/permissions-*.txt`): the requested and declared ones present, the
 removed ones absent, and no Java code asking for a declared-only permission.
 
+
+## 7. Polish pass: signing, permission explanations, sign out, game state, licence time
+
+### 7.1 Release signing credentials are no longer in tracked files
+
+- `app/build.gradle` reads the keystore passwords from environment variables
+  (`XLOX_STORE_PASSWORD`, `XLOX_KEY_PASSWORD`, optional `XLOX_KEY_ALIAS`,
+  `XLOX_STORE_FILE`), falling back to the gitignored `xlox/local.properties`
+  (`xlox.storePassword`, `xlox.keyPassword`, ...). Without them the release
+  APK is built unsigned instead of failing. The key itself is unchanged.
+- `.github/workflows/build-xlox.yml` passes the values in from the repository
+  secrets `XLOX_STORE_PASSWORD` and `XLOX_KEY_PASSWORD`. It opens the bundled
+  keystore with the secret (`keytool -storepass:env`, nothing printed), checks
+  the APK with `apksigner verify`, and **never generates a new key** (the old
+  "regenerate if unusable" path is gone - a different key would break
+  updates). Without the secrets it still compiles and lints, but skips the
+  GitHub release and the `dist/` commit, with a warning on the run.
+- `android-ui-qa.yml` passes the same secrets; without them its release APK is
+  unsigned and the emulator install re-signs it with a throwaway test key.
+- The password was removed from `xlox/README.md`, which now documents the
+  variables.
+- **Action needed (owner, once):** add the two repository secrets on GitHub
+  (Settings → Secrets and variables → Actions → New repository secret), with
+  the passwords this keystore has always used. The agent's GitHub access cannot
+  create secrets (HTTP 403). Until they exist, CI builds are checked but no new
+  APK is published.
+- **History:** `app/xlox.jks` is still tracked and the old password remains in
+  earlier commits of `build.gradle`, the workflow and the README. History was
+  not rewritten (as asked). Anyone with the repository history can sign as this
+  key; rotating it would mean a new key and a reinstall for every user, so that
+  is left as a decision for later.
+- **Verify:** `git grep -n storePassword` shows only the `releaseSigning`
+  lookup. A push with the secrets set shows "Release keystore opens with the
+  repository secret" and "Release APK is signed with the release key" in
+  `build-xlox.yml`.
+
+### 7.2 An explanation before the All files access / Install unknown apps pages
+
+- Right before Anoy opens either settings page (from sign in, home or
+  Launch), a dark bottom sheet explains it in plain words: "Anoy needs this to
+  prepare game files" / "to install the library update and prepare game files.
+  You'll be taken to Settings. Turn it on for Anoy, then come back." Buttons:
+  **Continue to Settings** and **Not now**.
+- Continue opens the page exactly as before; the order (All files → Files →
+  Install unknown apps), the refusal / permanent-denial messages and the
+  one-time restart after Install unknown apps are unchanged. The Files runtime
+  dialog explains itself and gets no sheet.
+- Not now: after Launch it shows the existing refusal message (no copy, no
+  launch); when home or sign in asked on their own, the sheet just closes and
+  is not shown again in this run.
+- Code: `ui/PermissionSheet.java`, `layout/sheet_permission.xml`,
+  `MAct.askNextPermission` / `openPermissionPrompt` / `permissionNotNow`,
+  `LogAct.requestStorageAccess`.
+- **Verify (CI):** `perm_explain_all_files.png` and `perm_explain_install.png`
+  show the sheets. The trace has `Permission explained: X` before
+  `Permission prompt: X` for ALL_FILES and INSTALL, and the full
+  allow → restart → copy → launch path still passes. `home_perm_not_now.png` +
+  `perm_not_now` lines show Not now: no settings page, the refusal message.
+
+### 7.3 Sign out vs Forget this key
+
+- The sign-out sheet now says "Your licence key stays saved on this phone, so
+  signing back in takes one tap." **Sign out** keeps the saved key (sign in
+  opens with it filled in, as before). **Forget this key** (quiet red text
+  button) also removes the saved key from this phone, so sign in opens with an
+  empty field. Nothing is deleted on the server; the login screen is unchanged.
+- **Verify (CI):** `signout_done.png` (field filled) and `forget_key_done.png`
+  (field empty). In the trace, `signout saved key: 1` and `forget saved key: 0`
+  come from the app's own preferences file.
+
+### 7.4 Game state chip: no misleading "Ready", closed games noticed
+
+- The chip says **Ready** only when Launch has everything it needs: library
+  installed, the three permissions granted and the container activated.
+  Otherwise it says **Installed** (neutral grey). Not installed / Running are
+  unchanged.
+- While home is visible, the existing container check (`isAppRunning`) runs
+  every 3 s and on return to home. If the game was closed outside Anoy,
+  Stop → Launch and the chip leaves Running. Two misses in a row are needed (a
+  blip changes nothing). A launch still waiting for confirmation is left alone,
+  and the first 30 s after a launch wait for the container to report the game.
+  It never shows an error, so the false "Couldn't launch the game" fix is
+  untouched. A game started outside Anoy is shown as Running with Stop.
+- **Verify (CI):** `game_closed` lines: Stop while the stand-in game runs,
+  then (debug `qa_game_ms` closes it after 12 s) Launch with no error and
+  `Game: closed outside Anoy, back to Launch`. `home_game_closed.png`.
+
+### 7.5 Licence time refreshes on return to home, with a low-time nudge
+
+- On return to home (at most once a minute) and quietly every 5 minutes while
+  home stays open, Anoy re-runs the same licence check sign in uses, so an
+  expiry changed on the panel shows up without signing in again. Status and
+  notice update too.
+- **Expires soon:** from a day before the end (a quarter of the length for
+  keys shorter than 4 days) the status chip turns amber "Expires soon" and the
+  card shows "Renew now to keep playing without a break." with a **Renew**
+  link to the existing Telegram support link. No notifications.
+- **Offline / failure:** no network or a VPN → no check at all. A failed check
+  keeps the last known time and status and shows a quiet grey "Last checked
+  3:04 PM". It never signs out and never stops the game. Behind the scenes, the
+  native check resets its values before asking the server, so home keeps the
+  last good session in memory for this app run (a restart still signs in, as
+  before). Sign in and the refresh never run the check at the same time
+  (`LogAct.CHECK_LOCK`). Only the panel's explicit "EXPIRED KEY" answer changes
+  the state, to Expired with "Sign in again".
+- Splash, sign in and the update gate are unchanged.
+- **Verify (CI):** debug `qa_refresh` simulates the panel's answer on return
+  to home: `home_licence_extended.png` (29d → 59d),
+  `home_licence_soon.png` (Expires soon + Renew), `home_licence_offline.png`
+  (29d kept, "Last checked"), `home_licence_expired_by_panel.png`. The
+  existing `home_under_day.png` (21 h left of 30 days) also shows the nudge.
+- **On a phone:** sign in, change the key's expiry on the panel, switch to
+  another app and back - the new time shows. Turn on airplane mode and come
+  back - the time stays, with "Last checked".
+
+### Debug-only QA extras added
+
+`qa_saved_key` (stores a saved key), `qa_game_ms` (the stand-in game closes
+after N ms), `qa_refresh` (extend | soon | expired | fail). All require the
+debug-only `qa_preview`.

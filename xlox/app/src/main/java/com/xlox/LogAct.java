@@ -23,8 +23,10 @@ import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.google.android.material.bottomsheet.BottomSheetDialog;
 import com.google.android.material.button.MaterialButton;
 
+import com.xlox.ui.PermissionSheet;
 import com.xlox.ui.Ui;
 import com.xlox.ui.UpdateGate;
 import com.xlox.utils.LibManager;
@@ -37,6 +39,7 @@ import java.util.Locale;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.regex.Pattern;
 
 /**
@@ -57,6 +60,29 @@ public class LogAct extends AppCompatActivity {
     }
 
     private static native String Check(Context mContext, String userKey);
+
+    /**
+     * Serialises licence checks: sign in here and home's quiet refresh
+     * (MAct) never run Check at the same time, and home never reads the
+     * native session while Check is rewriting it.
+     */
+    static final ReentrantLock CHECK_LOCK = new ReentrantLock();
+
+    /**
+     * Runs the unchanged native Check under {@link #CHECK_LOCK}.
+     * {@code quietRefresh} = home re-checking an active session: if that check
+     * fails, home keeps showing the last good session instead of signing out.
+     */
+    static String checkLicence(Context context, String key, boolean quietRefresh) {
+        CHECK_LOCK.lock();
+        try {
+            String result = Check(context, key);
+            MAct.onLicenceChecked("OK".equals(result), quietRefresh);
+            return result;
+        } finally {
+            CHECK_LOCK.unlock();
+        }
+    }
 
     private static final String TAG = "LogAct";
     private static final String PREF_USER = "USER";
@@ -90,6 +116,8 @@ public class LogAct extends AppCompatActivity {
     private UpdateGate gate;
     private boolean gatePassed;
     private boolean signingIn;
+    /** Explanation shown before the All files access / Install unknown apps page. */
+    private BottomSheetDialog permissionSheet;
     private boolean keyVisible;
 
     @Override
@@ -256,6 +284,11 @@ public class LogAct extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         if (gate != null) gate.dispose();
+        if (permissionSheet != null) {
+            permissionSheet.setOnDismissListener(null);
+            permissionSheet.dismiss();
+            permissionSheet = null;
+        }
         main.removeCallbacksAndMessages(null);
         executor.shutdownNow();
         super.onDestroy();
@@ -405,7 +438,7 @@ public class LogAct extends AppCompatActivity {
             executor.execute(() -> {
                 String result;
                 try {
-                    result = Check(app, key);
+                    result = checkLicence(app, key, false);
                 } catch (Throwable t) {
                     Log.e(TAG, "Native licence check unavailable", t);
                     result = null;
@@ -549,6 +582,32 @@ public class LogAct extends AppCompatActivity {
     }
 
     private void requestStorageAccess() {
-        StorageAccess.request(this);
+        StorageAccess.Need need = StorageAccess.firstMissing(this);
+        if (need == null) return;
+        if (!PermissionSheet.explains(need)) {
+            StorageAccess.request(this, need);
+            return;
+        }
+        // A short explanation first; the settings page opens only after
+        // "Continue to Settings". "Not now" leaves sign in exactly as it is.
+        if (permissionSheet != null && permissionSheet.isShowing()) return;
+        permissionSheet = PermissionSheet.show(this, need, new PermissionSheet.Callback() {
+            @Override
+            public void onContinue() {
+                permissionSheet = null;
+                if (!Ui.alive(LogAct.this)) return;
+                try {
+                    StorageAccess.request(LogAct.this, need);
+                } catch (RuntimeException e) {
+                    Log.w(TAG, "Special-access settings unavailable", e);
+                }
+            }
+
+            @Override
+            public void onNotNow() {
+                permissionSheet = null;
+                StorageAccess.markAsked(need);
+            }
+        });
     }
 }

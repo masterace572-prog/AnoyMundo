@@ -17,6 +17,8 @@ LOG=../qa-logs/emulator-trace.txt
 OUT=${SHOT_DIR:-docs/ui-redesign/after}
 APK=app/build/outputs/apk/debug/app-debug.apk
 RELEASE_APK=app/build/outputs/apk/release/app-release.apk
+# Without the signing secrets Gradle names the release build *-unsigned.apk.
+[ -f "$RELEASE_APK" ] || RELEASE_APK=app/build/outputs/apk/release/app-release-unsigned.apk
 PKG=com.xlox
 
 mkdir -p ../qa-logs "$OUT"
@@ -298,17 +300,42 @@ open_home --es qa_action snackbar
 sleep 0.5
 shot home_snackbar
 
-# Sign out (real): confirm sheet, then back to sign in.
-open_home
+# Sign out (real): confirm sheet, then back to sign in. "Sign out" keeps the
+# saved key (field filled); "Forget this key" removes it (field empty).
+key_text() { # " text=<field text> len=<n>" of the licence key field
+    dump_ui | python3 -c '
+import re, sys
+xml = sys.stdin.read()
+m = re.search(r"<node[^>]*resource-id=\"com\.xlox:id/userkey\"[^>]*>", xml)
+t = re.search(r" text=\"([^\"]*)\"", m.group(0)) if m else None
+print(" text=%s len=%d" % (t.group(1), len(t.group(1))) if t else " missing")
+'
+}
+saved_key() { adb shell run-as $PKG cat shared_prefs/settings.xml 2>/dev/null | grep -c 'name="USER"' || true; }
+open_home --es qa_saved_key ANOY-30D-QA7K2
 tap_id signOut || true
 sleep 1.2
 shot home_signout_sheet
+log "signout sheet texts: $(texts)"
 tap_id signOutConfirm || true
 wait_for_id keyField 45 || log "WARN: sign out did not reach sign in"
 wait_gone gateTitle 45 || true
 hide_keyboard
 shot signout_done
 log "signout focus: $(focus)"
+log "signout key field:$(key_text)"
+log "signout saved key: $(saved_key)"
+open_home --es qa_saved_key ANOY-30D-QA7K2
+tap_id signOut || true
+sleep 1.2
+tap_id signOutForget || true
+wait_for_id keyField 45 || log "WARN: forget this key did not reach sign in"
+wait_gone gateTitle 45 || true
+hide_keyboard
+shot forget_key_done
+log "forget focus: $(focus)"
+log "forget key field:$(key_text)"
+log "forget saved key: $(saved_key)"
 
 # Launch result handling (debug qa_launch simulates the container's answer;
 # the emulator has no BGMI). The text dump after each must not contain the
@@ -337,6 +364,48 @@ shot home_launch_failed
 log "launch null_dead texts: $(texts)"
 launch_case throws 7
 log "launch throws texts: $(texts)"
+
+# Game closed outside Anoy (qa_game_ms: the stand-in game "closes" 12 s after
+# the launch): home shows Stop while it runs, then Launch again - no error.
+stop_app
+adb logcat -c || true
+adb shell am start -W -n $PKG/.MAct --ez qa_preview true --es qa_launch started --el qa_game_ms 12000 >> "$LOG" 2>&1 || log "WARN: am start MAct failed"
+sleep 4
+log "game_closed target focus: $(focus)"
+adb shell input keyevent 4 || true            # back to home while the game still runs
+sleep 2
+log "game_closed running texts: $(texts)"
+sleep 14
+shot home_game_closed
+log "game_closed after texts: $(texts)"
+log "game_closed log: $(adb logcat -d -v tag -s MAct:V 2>/dev/null | grep -E 'Game:|Launch failed' | tr -d '\r' | tr '\n' '|')"
+
+# Licence refresh on return to home (qa_refresh simulates the panel's answer;
+# the refresh itself, the countdown and the card are the real code).
+licence_return() { # $1 = qa_refresh, $2 = screenshot
+    stop_app
+    adb logcat -c || true
+    adb shell am start -W -n $PKG/.MAct --ez qa_preview true --es qa_refresh "$1" >> "$LOG" 2>&1 || log "WARN: am start MAct failed"
+    sleep 3
+    log "licence_$1 before texts: $(texts)"
+    adb shell am start -W -a android.settings.SETTINGS >> "$LOG" 2>&1 || true
+    sleep 1.5
+    adb shell input keyevent 4 || true
+    sleep 1
+    case "$(focus)" in
+        *com.xlox*) ;;
+        *) log "licence_$1: back did not return to Anoy, bringing its task forward"
+           adb shell am start -n $PKG/.MAct >> "$LOG" 2>&1 || true ;;
+    esac
+    sleep 2
+    shot "$2"
+    log "licence_$1 after texts: $(texts)"
+    log "licence_$1 log: $(adb logcat -d -v tag -s MAct:V 2>/dev/null | grep -E 'Licence|No active session' | tr -d '\r' | tr '\n' '|')"
+}
+licence_return extend home_licence_extended
+licence_return soon home_licence_soon
+licence_return fail home_licence_offline
+licence_return expired home_licence_expired_by_panel
 
 
 
@@ -569,6 +638,14 @@ perm_start() {
     adb shell am start -W -n $PKG/.MAct --ez qa_preview true --es qa_action permissions_copy --es qa_launch started >> "$LOG" 2>&1 || log "WARN: am start MAct failed"
     sleep 3
 }
+perm_explain() { # $1 = name: screenshot + texts of the explanation sheet, then Continue
+    sleep 1
+    adb exec-out screencap -p > "$OUT/$1.png" || true
+    log "$1 focus: $(focus)"
+    log "$1 texts: $(texts)"
+    tap_id permExplainContinue || true
+    sleep 2.5
+}
 perm_log() { adb logcat -d -v tag -s AppManager:V MAct:V StorageAccess:V 2>/dev/null | grep -E '^./AppManager|^./StorageAccess|^./MAct.*(Launch|Permission)' | grep -v '	at ' | tr -d '\r' | tr '\n' '|'; }
 
 # Allow all three; the container copy is removed first so the copy really runs.
@@ -578,6 +655,7 @@ perm_reset
 adb shell rm -rf /sdcard/Android/obb/$PKG/scopedStorage >> "$LOG" 2>&1 || log "WARN: could not clear the container OBB"
 perm_start
 log "perm_allow pid before: $(adb shell pidof $PKG | tr -d '\r')"
+perm_explain perm_explain_all_files
 log "perm_allow step1 focus: $(focus)"
 adb exec-out screencap -p > "$OUT/perm_all_files.png" || true
 adb shell appops set $PKG MANAGE_EXTERNAL_STORAGE allow >/dev/null 2>&1 || true
@@ -591,6 +669,7 @@ for i in 1 2 3 4; do
         *) break ;;
     esac
 done
+perm_explain perm_explain_install
 log "perm_allow step3 focus: $(focus)"
 adb exec-out screencap -p > "$OUT/perm_install.png" || true
 adb shell appops set $PKG REQUEST_INSTALL_PACKAGES allow >/dev/null 2>&1 || true
@@ -633,6 +712,7 @@ adb shell appops set $PKG MANAGE_EXTERNAL_STORAGE allow >/dev/null 2>&1 || true
 adb shell pm grant $PKG android.permission.READ_EXTERNAL_STORAGE >/dev/null 2>&1 || true
 adb shell pm grant $PKG android.permission.WRITE_EXTERNAL_STORAGE >/dev/null 2>&1 || true
 perm_start
+perm_explain perm_install_deny_explain
 log "perm_install_deny prompt focus: $(focus)"
 adb shell input keyevent 4 || true
 sleep 3
@@ -644,12 +724,25 @@ log "perm_install_deny log: $(perm_log)"
 # Refuse All files access: message, no copy, no launch.
 perm_reset
 perm_start
+perm_explain perm_all_files_deny_explain
 log "perm_all_files_deny prompt focus: $(focus)"
 adb shell input keyevent 4 || true
 sleep 3
 log "perm_all_files_deny focus: $(focus)"
 log "perm_all_files_deny texts: $(texts)"
 log "perm_all_files_deny log: $(perm_log)"
+
+# "Not now" on the explanation: no settings page, the existing message, no copy.
+perm_reset
+perm_start
+sleep 1
+log "perm_not_now sheet focus: $(focus)"
+tap_id permExplainNotNow || true
+sleep 2
+log "perm_not_now focus: $(focus)"
+shot home_perm_not_now
+log "perm_not_now texts: $(texts)"
+log "perm_not_now log: $(perm_log)"
 stop_app
 adb shell rm -rf $GOBB >/dev/null 2>&1 || true
 grant

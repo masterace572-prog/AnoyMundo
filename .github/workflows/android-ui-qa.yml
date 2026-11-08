@@ -71,6 +71,11 @@ jobs:
             "system-images;android-33;google_apis;x86_64" "emulator"
 
       - name: Build debug + release APKs
+        # Signed with the release key when the repository secrets exist;
+        # otherwise the release APK is unsigned (the QA install re-signs it).
+        env:
+          XLOX_STORE_PASSWORD: ${{ secrets.XLOX_STORE_PASSWORD }}
+          XLOX_KEY_PASSWORD: ${{ secrets.XLOX_KEY_PASSWORD }}
         run: |
           chmod +x gradlew
           set -o pipefail
@@ -217,6 +222,10 @@ jobs:
               'login_font085', 'home_font085', 'login_font20', 'home_font20', 'gate_font20',
               'login_360', 'home_360', 'gate_360', 'login_tablet', 'home_tablet', 'gate_tablet',
               'release_login',
+              # polish pass: explanation sheets, Forget this key, game closed, licence refresh
+              'perm_explain_all_files', 'perm_explain_install', 'home_perm_not_now', 'forget_key_done',
+              'home_game_closed', 'home_licence_extended', 'home_licence_soon', 'home_licence_offline',
+              'home_licence_expired_by_panel',
           ]
           errors = []
           files = {p.stem: p for p in shots.glob('*.png')}
@@ -354,6 +363,67 @@ jobs:
               errors.append('Files dialog not shown: ' + line('perm_files_deny prompt focus'))
           if 'ettings' not in line('perm_install_deny prompt focus'):
               errors.append('Install unknown apps page not shown: ' + line('perm_install_deny prompt focus'))
+          # Explanation sheet right before the All files access / Install unknown apps
+          # pages (not before the Files dialog); "Not now" opens no page.
+          for tag, title in (('perm_explain_all_files', 'Allow All files access'),
+                             ('perm_explain_install', 'Allow Install unknown apps')):
+              tx = line(tag + ' texts')
+              if title not in tx or 'Continue to Settings' not in tx or 'Not now' not in tx:
+                  errors.append('%s: no explanation sheet before the settings page: %s' % (tag, tx[:300]))
+              if 'com.xlox' not in line(tag + ' focus'):
+                  errors.append('%s: the settings page opened before the explanation: %s' % (tag, line(tag + ' focus')))
+          for n in ('ALL_FILES', 'INSTALL'):
+              i_e, i_p = pl.find('Permission explained: ' + n), pl.find('Permission prompt: ' + n)
+              if i_e < 0 or i_p < 0 or i_e > i_p:
+                  errors.append('%s: settings page opened without the explanation first: %s' % (n, pl[-500:]))
+          if 'Permission explained: FILES' in pl:
+              errors.append('the Files runtime dialog got an explanation sheet (only settings pages get one)')
+          nl = line('perm_not_now log')
+          if 'Permission not now: ALL_FILES' not in nl or 'Permission prompt: ALL_FILES' in nl:
+              errors.append('Not now: a settings page opened or Not now was not handled: ' + nl[-400:])
+          if 'com.xlox' not in line('perm_not_now focus') or 'preparing game files' in nl:
+              errors.append('Not now: Anoy left the screen or started the copy: ' + line('perm_not_now focus'))
+          if 'Allow All files access so game files' not in line('perm_not_now texts'):
+              errors.append('Not now after Launch: the existing refusal message is missing: ' + line('perm_not_now texts')[:300])
+          # Sign out keeps the saved key; Forget this key removes it (field empty).
+          st = line('signout sheet texts')
+          if 'Forget this key' not in st or 'stays saved' not in st:
+              errors.append('sign-out sheet: no Forget this key / keeps-the-key wording: ' + st[:300])
+          if line('signout saved key').strip() != '1':
+              errors.append('Sign out removed the saved key (count %r)' % line('signout saved key'))
+          if line('forget saved key').strip() != '0':
+              errors.append('Forget this key kept the saved key (count %r)' % line('forget saved key'))
+          ks, kf = line('signout key field'), line('forget key field')
+          print('key field after Sign out:%s / after Forget this key:%s' % (ks, kf))
+          if 'missing' in ks or 'missing' in kf:
+              errors.append('key field not found after sign out: %s / %s' % (ks, kf))
+          elif 'len=0' not in ks and (ks == kf or 'QA7K2' in kf):
+              errors.append('after Forget this key the key field still shows the key:' + kf)
+          # Game closed outside Anoy: Stop while it runs, then Launch - no error.
+          if 'text="Stop"' not in line('game_closed running texts'):
+              errors.append('game running outside Anoy: Stop not shown: ' + line('game_closed running texts')[:300])
+          ga = line('game_closed after texts')
+          if 'text="Launch"' not in ga or 'text="Running"' in ga or 'launch the game' in ga:
+              errors.append('game closed outside Anoy: not back to Launch, or an error: ' + ga[:400])
+          if 'closed outside Anoy' not in line('game_closed log') or 'Launch failed' in line('game_closed log'):
+              errors.append('game closed outside Anoy: not reconciled: ' + line('game_closed log')[-300:])
+          # Licence refresh on return to home.
+          lb, la = line('licence_extend before texts'), line('licence_extend after texts')
+          if '29d 21h' not in lb or '59d 23h' not in la or 'expiry changed' not in line('licence_extend log'):
+              errors.append('panel extension not reflected on return to home: %s -> %s' % (lb[:200], la[:200]))
+          if 'Expires soon' in lb:
+              errors.append('29 days left shown as Expires soon')
+          sa = line('licence_soon after texts')
+          if 'Expires soon' not in sa or 'Renew' not in sa or not re.search(r'3h 0\dm', sa):
+              errors.append('low time: no Expires soon / Renew nudge: ' + sa[:400])
+          fa, fl = line('licence_fail after texts'), line('licence_fail log')
+          if 'Last checked' not in fa or '29d 21h' not in fa or 'Sign in again' in fa or 'Expired' in fa:
+              errors.append('refresh failure: last known time not kept quietly: ' + fa[:400])
+          if 'keeping the last known time' not in fl or 'No active session' in fl:
+              errors.append('refresh failure: signed out or not handled: ' + fl[-300:])
+          ea = line('licence_expired after texts')
+          if 'Expired' not in ea or 'Sign in again' not in ea:
+              errors.append('panel says expired: not shown on return to home: ' + ea[:400])
           if not re.search(r'typical phone: device card bottom \d+, launch fade top \d+: clear', t):
               errors.append('DEVICE card is covered by the Launch bar on a 411 x 914 dp phone')
           m = re.search(r'licence card description: content-desc="([^"]*)"', t)

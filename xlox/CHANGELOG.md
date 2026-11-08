@@ -1,5 +1,23 @@
 # Anoy Loader — changelog
 
+## 2.1.0 follow-up — polish
+
+- **Release signing passwords are out of the repository files.** They come from
+  GitHub secrets or a private local file; the signing key is unchanged and CI
+  never makes a new one.
+- **A short explanation before Settings.** Before opening All files access or
+  Install unknown apps, Anoy explains why and what to do, with Continue to
+  Settings and Not now.
+- **Sign out or Forget this key.** Sign out keeps your key saved for a one-tap
+  sign in; Forget this key removes it from the phone.
+- **Honest game state.** "Ready" only when everything Launch needs is in place,
+  otherwise "Installed". Closing the game outside Anoy brings Launch back, with
+  no error.
+- **Licence time stays current.** Coming back to home refreshes the time left
+  (changes made on the panel show up). An "Expires soon" nudge with Renew
+  appears near the end. Offline, the last known time stays with a quiet "Last
+  checked".
+
 ## 2.1.0 follow-up — permissions
 
 - **Anoy asks for the three permissions the game-files copy needs**: All

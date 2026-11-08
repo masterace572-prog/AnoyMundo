@@ -117,76 +117,124 @@
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:importantForAccessibility="noHideDescendants"
-                    android:orientation="vertical"
-                    android:padding="@dimen/card_padding">
+                    android:orientation="vertical">
 
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:gravity="center_vertical"
-                        android:orientation="horizontal">
+                        android:importantForAccessibility="noHideDescendants"
+                        android:orientation="vertical"
+                        android:padding="@dimen/card_padding">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal">
+
+                            <TextView
+                                android:id="@+id/licenceLabel"
+                                style="@style/Text.Caption"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_marginEnd="@dimen/space_8"
+                                android:layout_weight="1"
+                                android:text="@string/row_time_left" />
+
+                            <TextView
+                                android:id="@+id/statusValue"
+                                style="@style/Chip"
+                                android:textColor="@color/text_secondary"
+                                tools:text="@string/active" />
+                        </LinearLayout>
 
                         <TextView
-                            android:id="@+id/licenceLabel"
+                            android:id="@+id/timeLeftValue"
+                            style="@style/Text.Hero"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="@dimen/space_8"
+                            android:maxLines="1"
+                            android:text="@string/dash"
+                            app:autoSizeMaxTextSize="@dimen/text_hero"
+                            app:autoSizeMinTextSize="@dimen/text_hero_min"
+                            app:autoSizeStepGranularity="1sp"
+                            app:autoSizeTextType="uniform" />
+
+                        <View
+                            android:id="@+id/heroSkeleton"
+                            style="@style/Skeleton"
+                            android:layout_width="200dp"
+                            android:layout_height="36dp"
+                            android:layout_marginTop="@dimen/space_8" />
+
+                        <TextView
+                            android:id="@+id/licenceExpiredText"
+                            style="@style/Text.Body"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="@dimen/space_12"
+                            android:text="@string/licence_expired_message"
+                            android:visibility="gone" />
+
+                        <TextView
+                            android:id="@+id/expiresValue"
                             style="@style/Text.Caption"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="6dp" />
+
+                        <!-- Quiet line after a refresh could not reach the panel. -->
+                        <TextView
+                            android:id="@+id/licenceChecked"
+                            style="@style/Text.Caption"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="2dp"
+                            android:textColor="@color/text_tertiary"
+                            android:visibility="gone" />
+
+                        <com.google.android.material.progressindicator.LinearProgressIndicator
+                            android:id="@+id/licenceProgress"
+                            style="@style/Widget.Anoy.Progress.Thin"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="@dimen/space_12"
+                            android:max="1000"
+                            android:visibility="gone" />
+                    </LinearLayout>
+
+                    <!-- Low time: nudge + Renew (Telegram), outside the card's one-sentence description. -->
+                    <LinearLayout
+                        android:id="@+id/licenceSoonRow"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="-8dp"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal"
+                        android:paddingStart="@dimen/card_padding"
+                        android:paddingEnd="4dp"
+                        android:paddingBottom="8dp"
+                        android:visibility="gone">
+
+                        <TextView
+                            android:id="@+id/licenceSoonText"
+                            style="@style/Text.Secondary"
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_marginEnd="@dimen/space_8"
                             android:layout_weight="1"
-                            android:text="@string/row_time_left" />
+                            android:text="@string/licence_soon_message"
+                            android:textColor="@color/warning" />
 
-                        <TextView
-                            android:id="@+id/statusValue"
-                            style="@style/Chip"
-                            android:textColor="@color/text_secondary"
-                            tools:text="@string/active" />
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/licenceRenew"
+                            style="@style/Widget.Anoy.Button.Text"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:contentDescription="@string/renew_description"
+                            android:text="@string/renew" />
                     </LinearLayout>
-
-                    <TextView
-                        android:id="@+id/timeLeftValue"
-                        style="@style/Text.Hero"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="@dimen/space_8"
-                        android:maxLines="1"
-                        android:text="@string/dash"
-                        app:autoSizeMaxTextSize="@dimen/text_hero"
-                        app:autoSizeMinTextSize="@dimen/text_hero_min"
-                        app:autoSizeStepGranularity="1sp"
-                        app:autoSizeTextType="uniform" />
-
-                    <View
-                        android:id="@+id/heroSkeleton"
-                        style="@style/Skeleton"
-                        android:layout_width="200dp"
-                        android:layout_height="36dp"
-                        android:layout_marginTop="@dimen/space_8" />
-
-                    <TextView
-                        android:id="@+id/licenceExpiredText"
-                        style="@style/Text.Body"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="@dimen/space_12"
-                        android:text="@string/licence_expired_message"
-                        android:visibility="gone" />
-
-                    <TextView
-                        android:id="@+id/expiresValue"
-                        style="@style/Text.Caption"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="6dp" />
-
-                    <com.google.android.material.progressindicator.LinearProgressIndicator
-                        android:id="@+id/licenceProgress"
-                        style="@style/Widget.Anoy.Progress.Thin"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="@dimen/space_12"
-                        android:max="1000"
-                        android:visibility="gone" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 

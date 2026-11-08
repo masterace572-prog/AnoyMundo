@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Sign-out confirmation sheet. -->
+<!-- Sign-out confirmation sheet: Sign out keeps the saved key, Forget this key removes it. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/signOutRoot"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
@@ -33,11 +34,24 @@
         android:layout_marginTop="@dimen/space_24"
         android:text="@string/sign_out" />
 
+    <!-- Sign out and also remove the saved key (the login field opens empty). -->
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/signOutForget"
+        style="@style/Widget.Anoy.Button.Text"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/space_8"
+        android:contentDescription="@string/forget_key_description"
+        android:minHeight="@dimen/button_height"
+        android:text="@string/forget_key"
+        android:textColor="@color/destructive_text"
+        app:rippleColor="@color/ripple_light" />
+
     <com.google.android.material.button.MaterialButton
         android:id="@+id/signOutCancel"
         style="@style/Widget.Anoy.Button.Secondary"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="@dimen/space_12"
+        android:layout_marginTop="@dimen/space_8"
         android:text="@string/cancel" />
 </LinearLayout>

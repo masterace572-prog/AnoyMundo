@@ -210,6 +210,22 @@ starter ZIP to `/lib` when `publish_loader_zip` is ticked (needs the
 `PANEL_OWNER_PASSWORD` repository secret). `android-ui-qa.yml` captures
 emulator screenshots of every screen into `docs/ui-redesign/screenshots`.
 
-Signing uses `app/xlox.jks` (`key0` / `11111111`). CI regenerates a local
-keystore if the bundled one is unusable, so replace it with your own keystore
-for a real release — APKs signed with different keys cannot be updated in place.
+### Release signing
+
+The release key is `app/xlox.jks`. Its passwords are **not** in any tracked
+file. Gradle reads them from environment variables, falling back to the
+gitignored `xlox/local.properties`:
+
+| Environment variable  | `local.properties` key | Notes                              |
+|-----------------------|------------------------|------------------------------------|
+| `XLOX_STORE_PASSWORD` | `xlox.storePassword`   | required for a signed release      |
+| `XLOX_KEY_PASSWORD`   | `xlox.keyPassword`     | defaults to the store password     |
+| `XLOX_KEY_ALIAS`      | `xlox.keyAlias`        | optional, defaults to the existing alias |
+| `XLOX_STORE_FILE`     | `xlox.storeFile`       | optional, defaults to `xlox.jks`   |
+
+In GitHub Actions, add `XLOX_STORE_PASSWORD` and `XLOX_KEY_PASSWORD` as
+repository secrets (Settings → Secrets and variables → Actions). Without them
+`build-xlox.yml` still compiles and lints, but builds an unsigned APK and
+skips the GitHub release and the `dist/` commit. The UI QA workflow re-signs
+its test install with a throwaway key either way. CI never generates a new
+key: APKs signed with a different key cannot update an installed copy.

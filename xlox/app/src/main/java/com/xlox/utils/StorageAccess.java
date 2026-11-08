@@ -106,6 +106,11 @@ public final class StorageAccess {
         return (askedThisSession & (1 << need.ordinal())) != 0;
     }
 
+    /** "Not now" on the explanation sheet counts as asked: home won't ask again this run. */
+    public static void markAsked(Need need) {
+        askedThisSession |= 1 << need.ordinal();
+    }
+
     /** True once any prompt has been shown since the app started. */
     public static boolean askedThisSession() {
         return askedThisSession != 0;

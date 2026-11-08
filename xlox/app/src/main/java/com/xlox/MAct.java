@@ -2,6 +2,7 @@ package com.xlox;
 
 import android.content.ActivityNotFoundException;
 import android.content.ComponentName;
+import android.content.Context;
 import android.content.Intent;
 import android.content.res.ColorStateList;
 import android.content.pm.PackageManager;
@@ -26,9 +27,11 @@ import com.google.android.material.progressindicator.LinearProgressIndicator;
 import com.google.android.material.snackbar.Snackbar;
 
 import com.xlox.ui.Ui;
+import com.xlox.ui.PermissionSheet;
 import com.xlox.ui.UpdateGate;
 import com.xlox.utils.AppManager;
 import com.xlox.utils.LibManager;
+import com.xlox.utils.Net;
 import com.xlox.utils.Prefs;
 import com.xlox.utils.StorageAccess;
 
@@ -38,6 +41,9 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
 import java.util.TimeZone;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -67,6 +73,8 @@ public class MAct extends AppCompatActivity {
 
     private static final String TAG = "MAct";
     private static final String PKG_BGMI = "com.pubg.imobile";
+    /** The saved licence key (written by sign in, LogAct.PREF_USER). */
+    private static final String PREF_USER = "USER";
     /** Debug-only: lets CI screenshot this screen without a live session. */
     public static final String EXTRA_PREVIEW = "qa_preview";
     private static final long RECHECK_INTERVAL_MS = 60_000L;
@@ -87,8 +95,22 @@ public class MAct extends AppCompatActivity {
      */
     private static final long LAUNCH_CONFIRM_MS = 4000L;
     private static final long LAUNCH_POLL_MS = 400L;
+    /** While home is visible, the container is asked this often whether the game runs. */
+    private static final long RUNNING_CHECK_MS = 3000L;
+    /** After Launch / Stop, the running check waits this long before acting. */
+    private static final long RUNNING_SETTLE_MS = 2000L;
+    /** A launched game that the container never reports is dropped after this. */
+    private static final long RUNNING_FIRST_SEEN_MS = 30_000L;
     /** Skeletons pulse for at most this long, then stay static. */
     private static final long SKELETON_PULSE_MS = 3000L;
+    /** Licence refresh: on return to home at most this often... */
+    private static final long LICENCE_REFRESH_MIN_MS = 60_000L;
+    /** ...and quietly this often while home stays open. */
+    private static final long LICENCE_REFRESH_EVERY_MS = 5 * 60_000L;
+    /** Debug runs refresh on every return after this short pause. */
+    private static final long QA_LICENCE_REFRESH_MIN_MS = 2000L;
+    /** The panel's answer for a key that has run out. */
+    private static final String REASON_EXPIRED = "EXPIRED KEY";
     /** Duration segment of a licence key: ANOY-7D-XXXXX, ANOY-2H-XXXXX. */
     private static final Pattern KEY_DURATION = Pattern.compile("^[A-Z0-9]+-(\\d{1,4})([HD])-", Pattern.CASE_INSENSITIVE);
     /** The panel's long-standing default note, replaced by plain copy. */
@@ -101,11 +123,20 @@ public class MAct extends AppCompatActivity {
     public static final String EXTRA_QA_LOADING = "qa_loading";
     public static final String EXTRA_QA_ACTION = "qa_action";
     /**
+     * Debug builds only: simulates the panel's answer to the licence refresh
+     * on return to home - extend | soon | expired | fail.
+     */
+    public static final String EXTRA_QA_REFRESH = "qa_refresh";
+    /** Debug builds only: stores this as the saved licence key (sign-out checks). */
+    public static final String EXTRA_QA_SAVED_KEY = "qa_saved_key";
+    /**
      * Debug builds only: simulates the container's answer to a launch so CI can
      * check the result handling without BGMI - started | started_polish_throws
      * | null_running | null_dead | throws.
      */
     public static final String EXTRA_QA_LAUNCH = "qa_launch";
+    /** Debug builds only: the stand-in game closes this many ms after the launch. */
+    public static final String EXTRA_QA_GAME_MS = "qa_game_ms";
 
     private final Handler main = new Handler(Looper.getMainLooper());
 
@@ -128,6 +159,19 @@ public class MAct extends AppCompatActivity {
     private MaterialButton primaryAction;
 
     private long expiryMillis = -1L;
+    private SimpleDateFormat expiryFormat;
+    private View licenceSoonRow;
+    private TextView licenceChecked;
+    /** Licence refresh (see maybeRefreshLicence). */
+    private final ExecutorService licenceExecutor =
+            Executors.newSingleThreadExecutor(r -> new Thread(r, "anoy-licence"));
+    private boolean licenceRefreshing;
+    private long lastLicenceAttempt;
+    /** Wall-clock time of the last answer from the server. */
+    private long lastLicenceCheckedAt;
+    /** The latest refresh could not reach the server: show "Last checked". */
+    private boolean licenceStale;
+    private String qaRefreshExpiry;
     /** Full licence length from the key's duration segment, or -1 if unknown. */
     private long totalMillis = -1L;
     private long lastA11yMinute = -1L;
@@ -140,6 +184,14 @@ public class MAct extends AppCompatActivity {
     private boolean launchPending;
     /** Anoy went to the background while a launch was pending (the game came up). */
     private boolean leftDuringLaunch;
+    /** Running reconcile (see reconcileRunning). */
+    private int runningMisses;
+    private int runningHits;
+    private long runningSettleUntil;
+    private long gameLaunchedAt;
+    private boolean seenRunningSinceLaunch;
+    /** Debug: the stand-in game "closes" this long after the launch (0 = stays open). */
+    private long qaGameMs;
     /** The "Couldn't launch" message is on screen. */
     private boolean launchErrorShown;
     private String qaLaunch;
@@ -151,12 +203,34 @@ public class MAct extends AppCompatActivity {
     /** The permission whose prompt is open, and every one asked in this round (bit per ordinal). */
     private StorageAccess.Need pendingNeed;
     private int askedThisRound;
+    /** The explanation sheet shown before a settings page, while it is open. */
+    private BottomSheetDialog permissionSheet;
     /** Debug only: after the permissions, run the OBB copy directly (no container activation on the emulator). */
     private boolean qaPermissionsThenCopy;
     private long qaLaunchAt;
     private boolean busy;
     private UpdateGate gate;
     private long lastRecheck;
+
+    private final Runnable runningCheck = new Runnable() {
+        @Override
+        public void run() {
+            try {
+                reconcileRunning();
+            } catch (Throwable t) {
+                Log.w(TAG, "Running check failed", t);
+            }
+            main.postDelayed(this, RUNNING_CHECK_MS);
+        }
+    };
+
+    private final Runnable licenceTimer = new Runnable() {
+        @Override
+        public void run() {
+            maybeRefreshLicence(true);
+            main.postDelayed(this, LICENCE_REFRESH_EVERY_MS);
+        }
+    };
 
     private final Runnable ticker = new Runnable() {
         @Override
@@ -177,6 +251,7 @@ public class MAct extends AppCompatActivity {
         preview = BuildConfig.DEBUG && getIntent() != null
                 && getIntent().getBooleanExtra(EXTRA_PREVIEW, false);
         qaLaunch = preview ? getIntent().getStringExtra(EXTRA_QA_LAUNCH) : null;
+        qaGameMs = preview ? getIntent().getLongExtra(EXTRA_QA_GAME_MS, 0L) : 0L;
         if (!preview && (expiry == null || expiry.isEmpty() || "NULL".equalsIgnoreCase(expiry))) {
             // Process was restarted and the native session is gone: sign in again.
             Log.i(TAG, "No active session, returning to sign in");
@@ -225,20 +300,28 @@ public class MAct extends AppCompatActivity {
         });
         primaryAction.setOnClickListener(v -> onPrimaryAction());
 
-        String savedKey = new Prefs(this).getSt("USER", "");
+        if (preview && getIntent().hasExtra(EXTRA_QA_SAVED_KEY)) {
+            // Debug: a saved key for the Sign out / Forget this key checks.
+            new Prefs(this).setSt(PREF_USER, getIntent().getStringExtra(EXTRA_QA_SAVED_KEY));
+        }
+        String savedKey = new Prefs(this).getSt(PREF_USER, "");
         if (preview) {
             expiry = qaExpiry();
             savedKey = "ANOY-30D-QA7K2";
         }
-        expiryMillis = parseExpiryMillis(expiry);
         totalMillis = keyDurationMillis(savedKey);
         longDate = new SimpleDateFormat("d MMMM yyyy", Locale.getDefault());
-        if (expiryMillis > 0) {
-            expiresValue.setTag(new SimpleDateFormat("d MMM yyyy, h:mm a", Locale.getDefault())
-                    .format(new Date(expiryMillis)));
-        } else if (expiry != null && !expiry.isEmpty() && !"NULL".equalsIgnoreCase(expiry)) {
-            expiresValue.setTag(expiry);
-        }
+        expiryFormat = new SimpleDateFormat("d MMM yyyy, h:mm a", Locale.getDefault());
+        setExpiry(expiry);
+        // Sign in just checked the licence: the first refresh waits its turn.
+        lastLicenceAttempt = SystemClock.elapsedRealtime();
+        lastLicenceCheckedAt = System.currentTimeMillis();
+        licenceSoonRow = findViewById(R.id.licenceSoonRow);
+        licenceChecked = findViewById(R.id.licenceChecked);
+        findViewById(R.id.licenceRenew).setOnClickListener(v -> {
+            Ui.tap(v);
+            Ui.openUrl(this, getString(R.string.telegram_url));
+        });
         applyPanelStatus();
         refreshLibrary();
         refreshGameState();
@@ -296,13 +379,25 @@ public class MAct extends AppCompatActivity {
         });
     }
 
-    /** Sign out asks first, in a bottom sheet. */
+    /**
+     * Sign out asks first, in a bottom sheet. "Sign out" keeps the saved key
+     * (sign in opens with it filled in); "Forget this key" also removes it from
+     * this phone, so sign in opens empty. Nothing is deleted on the server.
+     */
     private void confirmSignOut() {
         View sheetView = LayoutInflater.from(this).inflate(R.layout.sheet_sign_out, null, false);
         BottomSheetDialog sheet = Ui.sheet(this, sheetView, true);
         sheetView.findViewById(R.id.signOutConfirm).setOnClickListener(v -> {
             Ui.tap(v);
             sheet.dismiss();
+            Log.d(TAG, "Sign out: keeping the saved key");
+            openLogin();
+        });
+        sheetView.findViewById(R.id.signOutForget).setOnClickListener(v -> {
+            Ui.tap(v);
+            sheet.dismiss();
+            new Prefs(this).remove(PREF_USER);
+            Log.d(TAG, "Sign out: saved key forgotten");
             openLogin();
         });
         sheetView.findViewById(R.id.signOutCancel).setOnClickListener(v -> sheet.dismiss());
@@ -313,12 +408,20 @@ public class MAct extends AppCompatActivity {
     protected void onStart() {
         super.onStart();
         main.removeCallbacks(ticker);
-        if (primaryAction != null) main.post(ticker);
+        main.removeCallbacks(runningCheck);
+        main.removeCallbacks(licenceTimer);
+        if (primaryAction != null) {
+            main.post(ticker);
+            main.postDelayed(runningCheck, 1000L);
+            main.postDelayed(licenceTimer, LICENCE_REFRESH_EVERY_MS);
+        }
     }
 
     @Override
     protected void onStop() {
         main.removeCallbacks(ticker);
+        main.removeCallbacks(runningCheck);
+        main.removeCallbacks(licenceTimer);
         if (launchPending) leftDuringLaunch = true;
         if (storagePromptOpen) leftForStoragePrompt = true;
         super.onStop();
@@ -335,6 +438,7 @@ public class MAct extends AppCompatActivity {
         if (!preview) applyPanelStatus();
         reportLoaderError();
         maybeRecheckLibrary();
+        maybeRefreshLicence(false);
         // Back from the All-files-access page (some phones never send a result).
         if (storagePromptOpen && leftForStoragePrompt) finishStoragePrompt();
     }
@@ -348,7 +452,7 @@ public class MAct extends AppCompatActivity {
      * continues once all three are granted.
      */
     private void requestStorage(boolean thenLaunch) {
-        if (storagePromptOpen) return;
+        if (storagePromptOpen || (permissionSheet != null && permissionSheet.isShowing())) return;
         launchAfterStorage = thenLaunch;
         askedThisRound = 0;
         askNextPermission();
@@ -372,6 +476,31 @@ public class MAct extends AppCompatActivity {
             permissionRefused(need);
             return;
         }
+        if (PermissionSheet.explains(need)) {
+            // Settings pages get a short explanation first; the page opens
+            // only after "Continue to Settings".
+            Log.d(TAG, "Permission explained: " + need);
+            permissionSheet = PermissionSheet.show(this, need, new PermissionSheet.Callback() {
+                @Override
+                public void onContinue() {
+                    permissionSheet = null;
+                    if (Ui.alive(MAct.this)) openPermissionPrompt(need);
+                }
+
+                @Override
+                public void onNotNow() {
+                    permissionSheet = null;
+                    if (Ui.alive(MAct.this)) permissionNotNow(need);
+                }
+            });
+            return;
+        }
+        openPermissionPrompt(need);
+    }
+
+    /** Opens the settings page / runtime dialog for {@code need} (unchanged prompt logic). */
+    private void openPermissionPrompt(StorageAccess.Need need) {
+        int bit = 1 << need.ordinal();
         boolean shown;
         try {
             shown = StorageAccess.request(this, need);
@@ -409,6 +538,21 @@ public class MAct extends AppCompatActivity {
             prepareObbThenLaunch();
         } else {
             startLaunch();
+        }
+    }
+
+    /**
+     * "Not now" on the explanation sheet. From Launch it is a refusal (the
+     * existing message, no copy, no launch); when home asked on its own it
+     * just closes and is not asked again this run.
+     */
+    private void permissionNotNow(StorageAccess.Need need) {
+        Log.d(TAG, "Permission not now: " + need);
+        StorageAccess.markAsked(need);
+        if (launchAfterStorage) {
+            permissionRefused(need);
+        } else {
+            askedThisRound = 0;
         }
     }
 
@@ -461,6 +605,12 @@ public class MAct extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         main.removeCallbacksAndMessages(null);
+        licenceExecutor.shutdown();
+        if (permissionSheet != null) {
+            permissionSheet.setOnDismissListener(null);
+            permissionSheet.dismiss();
+            permissionSheet = null;
+        }
         if (gate != null) gate.dispose();
         super.onDestroy();
     }
@@ -469,7 +619,82 @@ public class MAct extends AppCompatActivity {
 
     private enum NativeField { EXPIRY, STATUS, CREDIT }
 
+    // The last good session, so a failed quiet refresh never signs anyone out.
+    // Check (LogAct) resets the native values before it asks the server; when
+    // home's refresh fails those stay reset, and these stand in until the next
+    // successful check. A process restart clears both, as before.
+    private static final Object SESSION = new Object();
+    private static String sessionExpiry;
+    private static String sessionStatus;
+    private static String sessionCredit;
+    private static boolean sessionKept;
+
+    /** Called by LogAct.checkLicence right after Check, with CHECK_LOCK held. */
+    static void onLicenceChecked(boolean ok, boolean quietRefresh) {
+        String expiry = ok ? rawNative(NativeField.EXPIRY) : null;
+        synchronized (SESSION) {
+            if (ok && hasExpiry(expiry)) {
+                sessionExpiry = expiry;
+                sessionStatus = rawNative(NativeField.STATUS);
+                sessionCredit = rawNative(NativeField.CREDIT);
+                sessionKept = false;
+            } else if (quietRefresh && hasExpiry(sessionExpiry)) {
+                sessionKept = true;
+            } else {
+                // Sign in failed: exactly as before, no session at all.
+                sessionExpiry = null;
+                sessionStatus = null;
+                sessionCredit = null;
+                sessionKept = false;
+            }
+        }
+    }
+
+    private static boolean hasExpiry(String expiry) {
+        return expiry != null && !expiry.trim().isEmpty() && !"NULL".equalsIgnoreCase(expiry.trim());
+    }
+
+    private static String sessionValue(NativeField field) {
+        switch (field) {
+            case EXPIRY:
+                return sessionExpiry;
+            case STATUS:
+                return sessionStatus;
+            default:
+                return sessionCredit;
+        }
+    }
+
+    /**
+     * The native session value - or the last good one while a refresh is
+     * running (never read while Check rewrites it) or after one failed.
+     */
     private static String readNative(NativeField field) {
+        synchronized (SESSION) {
+            if (sessionKept) return sessionValue(field);
+        }
+        if (!LogAct.CHECK_LOCK.tryLock()) {
+            synchronized (SESSION) {
+                return sessionValue(field);
+            }
+        }
+        try {
+            String value = rawNative(field);
+            synchronized (SESSION) {
+                if (field == NativeField.EXPIRY) {
+                    if (hasExpiry(value)) sessionExpiry = value;
+                } else if (value != null) {
+                    if (field == NativeField.STATUS) sessionStatus = value;
+                    else sessionCredit = value;
+                }
+            }
+            return value;
+        } finally {
+            LogAct.CHECK_LOCK.unlock();
+        }
+    }
+
+    private static String rawNative(NativeField field) {
         try {
             String value;
             switch (field) {
@@ -580,6 +805,132 @@ public class MAct extends AppCompatActivity {
         return text;
     }
 
+    // ------------------------------------------------------- licence refresh
+
+    /**
+     * Re-checks the licence with the panel (the same check sign in runs) so a
+     * changed expiry shows up. On return to home and every few minutes while
+     * it stays open. Offline, a failure or an odd answer keeps the last known
+     * time with a quiet "Last checked" line: never signs out, never stops the
+     * game. Only the panel's "expired" answer changes the state.
+     */
+    private void maybeRefreshLicence(boolean fromTimer) {
+        if (primaryAction == null || licenceRefreshing) return;
+        final String qa = preview ? getIntent().getStringExtra(EXTRA_QA_REFRESH) : null;
+        if (preview && qa == null) return;
+        long now = SystemClock.elapsedRealtime();
+        long wait = preview ? QA_LICENCE_REFRESH_MIN_MS
+                : fromTimer ? LICENCE_REFRESH_EVERY_MS - 5000L : LICENCE_REFRESH_MIN_MS;
+        if (now - lastLicenceAttempt < wait) return;
+        final String key = preview ? "ANOY-30D-QA7K2" : new Prefs(this).getSt(PREF_USER, "");
+        if (key == null || key.trim().isEmpty()) return;
+        lastLicenceAttempt = now;
+        if (!preview && (!Net.isOnline(this) || Net.isVpn(this))) {
+            // No network (or a VPN, which sign in refuses too): don't even try,
+            // so the session is never touched.
+            onLicenceRefreshed("offline");
+            return;
+        }
+        licenceRefreshing = true;
+        final Context app = getApplicationContext();
+        try {
+            licenceExecutor.execute(() -> {
+                String result;
+                try {
+                    result = preview ? qaRefreshResult(qa) : LogAct.checkLicence(app, key.trim(), true);
+                } catch (Throwable t) {
+                    Log.w(TAG, "Licence refresh unavailable", t);
+                    result = null;
+                }
+                final String answer = result;
+                main.post(() -> onLicenceRefreshed(answer));
+            });
+        } catch (RejectedExecutionException e) {
+            licenceRefreshing = false;
+        }
+    }
+
+    private void onLicenceRefreshed(String result) {
+        licenceRefreshing = false;
+        if (!Ui.alive(this) || primaryAction == null) return;
+        long now = System.currentTimeMillis();
+        String expiry = "OK".equals(result) ? (preview ? qaRefreshExpiry : readNative(NativeField.EXPIRY)) : null;
+        if ("OK".equals(result) && hasExpiry(expiry)) {
+            long before = expiryMillis;
+            setExpiry(expiry);
+            lastLicenceCheckedAt = now;
+            licenceStale = false;
+            Log.d(TAG, "Licence refreshed" + (expiryMillis != before ? ": expiry changed" : ": no change"));
+            if (!preview) applyPanelStatus();
+        } else if (result != null && result.toUpperCase(Locale.US).contains(REASON_EXPIRED)) {
+            Log.d(TAG, "Licence refreshed: the panel reports the key expired");
+            lastLicenceCheckedAt = now;
+            licenceStale = false;
+            if (expiryMillis <= 0 || expiryMillis > now) setExpiry(String.valueOf(now));
+        } else {
+            Log.d(TAG, "Licence refresh failed, keeping the last known time: " + result);
+            licenceStale = true;
+        }
+        renderLicenceChecked();
+        main.removeCallbacks(ticker);
+        main.post(ticker);
+    }
+
+    /** New expiry from the panel: the card, the countdown and Launch follow it. */
+    private void setExpiry(String expiry) {
+        expiryMillis = parseExpiryMillis(expiry);
+        if (expiryMillis > 0) {
+            expiresValue.setTag(expiryFormat.format(new Date(expiryMillis)));
+        } else if (hasExpiry(expiry)) {
+            expiresValue.setTag(expiry);
+        }
+        lastA11yMinute = Long.MIN_VALUE;
+        if (expired && expiryMillis > System.currentTimeMillis()) {
+            // Renewed on the panel: active again.
+            expired = false;
+            refreshPrimary();
+        }
+    }
+
+    /** "Last checked 3:04 PM" - only after a refresh could not reach the panel. */
+    private void renderLicenceChecked() {
+        if (licenceChecked == null) return;
+        if (!licenceStale || lastLicenceCheckedAt <= 0) {
+            licenceChecked.setVisibility(View.GONE);
+            return;
+        }
+        boolean today = android.text.format.DateUtils.isToday(lastLicenceCheckedAt);
+        String when = new SimpleDateFormat(today ? "h:mm a" : "d MMM, h:mm a", Locale.getDefault())
+                .format(new Date(lastLicenceCheckedAt));
+        licenceChecked.setText(getString(R.string.licence_last_checked, when));
+        licenceChecked.setVisibility(View.VISIBLE);
+    }
+
+    /** Debug: the panel's simulated answer (the refresh itself runs for real). */
+    private String qaRefreshResult(String qa) {
+        SystemClock.sleep(300L);
+        long now = System.currentTimeMillis();
+        switch (qa) {
+            case "extend":
+                qaRefreshExpiry = String.valueOf(now + 60L * 86_400_000L);
+                return "OK";
+            case "soon":
+                qaRefreshExpiry = String.valueOf(now + 3L * 3_600_000L + 30_000L);
+                return "OK";
+            case "expired":
+                return REASON_EXPIRED;
+            default:
+                return "Couldn't resolve host name";
+        }
+    }
+
+    /** "Expires soon" from a day before the end (a quarter of short keys). */
+    private long lowTimeMillis() {
+        long day = 86_400_000L;
+        if (totalMillis > 0 && totalMillis < 4 * day) return Math.max(totalMillis / 4, 10 * 60_000L);
+        return day;
+    }
+
     // ------------------------------------------------------------- countdown
 
     private void renderCountdown() {
@@ -597,6 +948,7 @@ public class MAct extends AppCompatActivity {
             expiresValue.setText(raw != null ? getString(R.string.expires_on, raw) : "");
             expiresValue.setVisibility(raw != null ? View.VISIBLE : View.GONE);
             setStatusLook(LOOK_UNKNOWN);
+            licenceSoonRow.setVisibility(View.GONE);
             announce(getString(R.string.licence_a11y_unknown), -2L);
             return;
         }
@@ -610,6 +962,7 @@ public class MAct extends AppCompatActivity {
                 refreshPrimary();
             }
             setStatusLook(LOOK_EXPIRED);
+            licenceSoonRow.setVisibility(View.GONE);
             timeLeftValue.setVisibility(View.GONE);
             licenceProgress.setVisibility(View.GONE);
             licenceExpiredText.setVisibility(View.VISIBLE);
@@ -617,7 +970,9 @@ public class MAct extends AppCompatActivity {
             announce(getString(R.string.licence_a11y_expired, longDate.format(new Date(expiryMillis))), -1L);
             return;
         }
-        setStatusLook(LOOK_ACTIVE);
+        boolean soon = remaining <= lowTimeMillis();
+        setStatusLook(soon ? LOOK_SOON : LOOK_ACTIVE);
+        licenceSoonRow.setVisibility(soon ? View.VISIBLE : View.GONE);
         timeLeftValue.setVisibility(View.VISIBLE);
         licenceExpiredText.setVisibility(View.GONE);
         expiresValue.setText(getString(R.string.expires_on, expiresText));
@@ -648,7 +1003,8 @@ public class MAct extends AppCompatActivity {
                 if (left.length() > 0) left.append(' ');
                 left.append(getResources().getQuantityString(R.plurals.a11y_minutes, (int) minutes, (int) minutes));
             }
-            announce(getString(R.string.licence_a11y_active, left, longDate.format(new Date(expiryMillis))), minute);
+            announce(getString(soon ? R.string.licence_a11y_soon : R.string.licence_a11y_active,
+                    left, longDate.format(new Date(expiryMillis))), minute);
         }
     }
 
@@ -662,6 +1018,7 @@ public class MAct extends AppCompatActivity {
     private static final int LOOK_UNKNOWN = 0;
     private static final int LOOK_ACTIVE = 1;
     private static final int LOOK_EXPIRED = 2;
+    private static final int LOOK_SOON = 3;
 
     /** Licence status chip: icon + word, outline only. */
     private void setStatusLook(int look) {
@@ -669,6 +1026,8 @@ public class MAct extends AppCompatActivity {
         statusLook = look;
         if (look == LOOK_ACTIVE) {
             setChip(statusValue, getString(R.string.active), R.drawable.ic_shield_check, CHIP_SUCCESS);
+        } else if (look == LOOK_SOON) {
+            setChip(statusValue, getString(R.string.expires_soon), R.drawable.ic_timer, CHIP_WARNING);
         } else if (look == LOOK_EXPIRED) {
             setChip(statusValue, getString(R.string.expired), R.drawable.ic_shield_x, CHIP_DANGER);
         } else {
@@ -826,6 +1185,11 @@ public class MAct extends AppCompatActivity {
 
     // ----------------------------------------------------------- game state
 
+    /**
+     * Game chip: Not installed, Running, Ready (everything Launch needs is in
+     * place) or Installed (BGMI is there, but the library, a permission or the
+     * container is still missing - Launch sorts those out or explains).
+     */
     private void refreshGameState() {
         gameInstalled = isInstalled(PKG_BGMI) || qaLaunch != null;
         if (!gameInstalled) gameRunning = false;
@@ -833,10 +1197,66 @@ public class MAct extends AppCompatActivity {
             setChip(gameStateValue, getString(R.string.state_not_installed), R.drawable.ic_circle_alert, CHIP_WARNING);
         } else if (gameRunning) {
             setChip(gameStateValue, getString(R.string.state_running), R.drawable.ic_play, CHIP_SUCCESS);
-        } else {
+        } else if (readyToLaunch()) {
             setChip(gameStateValue, getString(R.string.state_ready), R.drawable.ic_circle_check, CHIP_SUCCESS);
+        } else {
+            setChip(gameStateValue, getString(R.string.state_installed), R.drawable.ic_circle_check, 0);
         }
         refreshPrimary();
+    }
+
+    /** Library installed, the three permissions granted and the container activated. */
+    private boolean readyToLaunch() {
+        if (LibManager.installedVersion(this) == null) return false;
+        if (StorageAccess.firstMissing(this) != null) return false;
+        if (preview) return true; // Sample screen: the emulator has no activated container.
+        try {
+            return MetaActivationManager.getActivationStatus();
+        } catch (Throwable t) {
+            return false;
+        }
+    }
+
+    /**
+     * Keeps Launch / Stop honest while home is visible: the game can be closed
+     * (or started) outside Anoy. Two misses in a row are needed before
+     * "Running" is dropped, so a brief blip from the container changes nothing,
+     * and a pending launch is left to its own confirmation. Never shows an error.
+     */
+    private void reconcileRunning() {
+        if (primaryAction == null || busy || launchPending || !gameInstalled || expired) {
+            runningMisses = 0;
+            runningHits = 0;
+            return;
+        }
+        long now = SystemClock.elapsedRealtime();
+        if (now < runningSettleUntil) return; // Just launched / stopped: let the container catch up.
+        boolean running = containerRunning();
+        if (running) {
+            runningMisses = 0;
+            seenRunningSinceLaunch = true;
+            if (!gameRunning && ++runningHits >= 2) {
+                runningHits = 0;
+                Log.d(TAG, "Game: running outside Anoy, showing Stop");
+                gameRunning = true;
+                if (launchErrorShown) hideMessage();
+                refreshGameState();
+            }
+            return;
+        }
+        runningHits = 0;
+        if (!gameRunning) {
+            runningMisses = 0;
+            return;
+        }
+        // Until the container has reported the game once, give it time to start.
+        if (!seenRunningSinceLaunch && now - gameLaunchedAt < RUNNING_FIRST_SEEN_MS) return;
+        if (++runningMisses >= 2) {
+            runningMisses = 0;
+            Log.d(TAG, "Game: closed outside Anoy, back to Launch");
+            gameRunning = false;
+            refreshGameState();
+        }
     }
 
     private void refreshLibrary() {
@@ -1025,7 +1445,13 @@ public class MAct extends AppCompatActivity {
     /** True when the virtual container reports the game process running. */
     private boolean containerRunning() {
         if (qaLaunch != null) {
-            return "null_running".equals(qaLaunch) && SystemClock.elapsedRealtime() - qaLaunchAt > 1200L;
+            // Debug stand-in: nothing runs before Launch; a started game runs
+            // until qa_game_ms (if given) has passed.
+            if (qaLaunchAt <= 0) return false;
+            long since = SystemClock.elapsedRealtime() - qaLaunchAt;
+            if (qaGameMs > 0 && since >= qaGameMs) return false;
+            if ("null_running".equals(qaLaunch)) return since > 1200L;
+            return "started".equals(qaLaunch) || "started_polish_throws".equals(qaLaunch);
         }
         try {
             return MetaActivityManager.isAppRunning(PKG_BGMI);
@@ -1060,6 +1486,11 @@ public class MAct extends AppCompatActivity {
     private void onGameLaunched(boolean haptic) {
         gameRunning = true;
         launchErrorShown = false;
+        gameLaunchedAt = SystemClock.elapsedRealtime();
+        runningSettleUntil = gameLaunchedAt + RUNNING_SETTLE_MS;
+        seenRunningSinceLaunch = false;
+        runningMisses = 0;
+        runningHits = 0;
         try {
             hideMessage();
             if (haptic) Ui.confirm(primaryAction);
@@ -1092,6 +1523,9 @@ public class MAct extends AppCompatActivity {
         try {
             MetaActivityManager.killAppByPkg(PKG_BGMI);
             gameRunning = false;
+            runningSettleUntil = SystemClock.elapsedRealtime() + RUNNING_SETTLE_MS;
+            runningMisses = 0;
+            runningHits = 0;
             showMessage(getString(R.string.game_stopped), false);
         } catch (Throwable t) {
             Log.e(TAG, "Stop failed", t);

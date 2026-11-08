@@ -2,17 +2,47 @@ plugins {
     id 'com.android.application'
 }
 
+def signingProps = new Properties()
+def signingPropsFile = rootProject.file('local.properties')
+if (signingPropsFile.isFile()) {
+    signingPropsFile.withInputStream { signingProps.load(it) }
+}
+def signingValue = { String env, String prop ->
+    def v = System.getenv(env)
+    if (v == null || v.trim().isEmpty()) v = signingProps.getProperty(prop)
+    return (v == null || v.trim().isEmpty()) ? null : v
+}
+ext.releaseSigning = [
+        storeFile    : signingValue('XLOX_STORE_FILE', 'xlox.storeFile') ?: 'xlox.jks',
+        storePassword: signingValue('XLOX_STORE_PASSWORD', 'xlox.storePassword'),
+        keyAlias     : signingValue('XLOX_KEY_ALIAS', 'xlox.keyAlias') ?: 'key0',
+        keyPassword  : signingValue('XLOX_KEY_PASSWORD', 'xlox.keyPassword')
+                ?: signingValue('XLOX_STORE_PASSWORD', 'xlox.storePassword'),
+]
+releaseSigning.ready = releaseSigning.storePassword != null
+if (!releaseSigning.ready) {
+    logger.warn('Release signing is not configured (XLOX_STORE_PASSWORD / xlox.storePassword): ' +
+            'the release APK will be unsigned.')
+}
+
 android {
     namespace 'com.xlox'
     // API 36 is needed for android:pageSizeCompat (added in API 36).
     compileSdk 36
 
+    // Release signing. No password lives in a tracked file: the values come
+    // from environment variables (GitHub Actions secrets) or from the
+    // gitignored xlox/local.properties - see README "Release signing".
+    // Without them the release APK is built unsigned (CI then refuses to
+    // publish it); the key itself (xlox.jks) is unchanged.
     signingConfigs {
         release {
-            storeFile file('xlox.jks')
-            storePassword '11111111'
-            keyPassword '11111111'
-            keyAlias 'key0'
+            if (releaseSigning.ready) {
+                storeFile file(releaseSigning.storeFile)
+                storePassword releaseSigning.storePassword
+                keyPassword releaseSigning.keyPassword
+                keyAlias releaseSigning.keyAlias
+            }
         }
     }
 
@@ -52,7 +82,7 @@ android {
 
     buildTypes {
         release {
-            signingConfig signingConfigs.release
+            signingConfig releaseSigning.ready ? signingConfigs.release : null
             minifyEnabled true
             shrinkResources true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'

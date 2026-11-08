@@ -2,6 +2,8 @@ name: Build XLOX loader APK
 
 # Builds the Anoy-integrated XLOX loader on GitHub-hosted runners (the sandbox
 # has no Android SDK). Produces a signed release APK + a starter loader ZIP.
+# Signing needs the XLOX_STORE_PASSWORD / XLOX_KEY_PASSWORD repository
+# secrets; without them the APK is built and checked but not published.
 on:
   workflow_dispatch:
     inputs:
@@ -78,18 +80,31 @@ jobs:
           test -x "$SDK/ndk/24.0.8215888/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android21-clang"
           "$SM" --sdk_root="$SDK" --list_installed | grep -E 'android-36|34\.0\.0|24\.0\.8215888'
 
-      - name: Verify / regenerate the release keystore
+      # Release signing: the passwords come only from the repository secrets
+      # XLOX_STORE_PASSWORD and XLOX_KEY_PASSWORD (never from a tracked file).
+      # The key in app/xlox.jks is never regenerated - a different key would
+      # stop installed copies from updating. Without the secrets the build is
+      # still compiled and linted, but nothing is published.
+      - name: Check the release signing secrets
+        env:
+          XLOX_STORE_PASSWORD: ${{ secrets.XLOX_STORE_PASSWORD }}
         run: |
-          if ! keytool -list -keystore app/xlox.jks -storepass 11111111 -alias key0 >/dev/null 2>&1; then
-            echo "Bundled keystore unusable; generating a local release keystore"
-            keytool -genkeypair -v -keystore app/xlox.jks \
-              -storepass 11111111 -keypass 11111111 -alias key0 \
-              -keyalg RSA -keysize 2048 -validity 10000 -storetype PKCS12 \
-              -dname "CN=Anoy XLOX, OU=Anoy, O=Anoy, L=Amritsar, ST=Punjab, C=IN"
+          if [ -z "$XLOX_STORE_PASSWORD" ]; then
+            echo "::warning title=Release APK not signed::Add the XLOX_STORE_PASSWORD and XLOX_KEY_PASSWORD repository secrets (Settings > Secrets and variables > Actions). This build is checked but not published."
+            echo "XLOX_SIGNED=false" >> "$GITHUB_ENV"
+            exit 0
           fi
-          keytool -list -keystore app/xlox.jks -storepass 11111111 -alias key0 | head -4
+          keytool -list -keystore app/xlox.jks -storepass:env XLOX_STORE_PASSWORD -alias key0 >/dev/null 2>&1 || {
+            echo "::error::app/xlox.jks does not open with the XLOX_STORE_PASSWORD secret. Check the secret; the key is never regenerated."
+            exit 1
+          }
+          echo "Release keystore opens with the repository secret"
+          echo "XLOX_SIGNED=true" >> "$GITHUB_ENV"
 
-      - name: Assemble signed release APK
+      - name: Assemble release APK
+        env:
+          XLOX_STORE_PASSWORD: ${{ secrets.XLOX_STORE_PASSWORD }}
+          XLOX_KEY_PASSWORD: ${{ secrets.XLOX_KEY_PASSWORD }}
         run: |
           chmod +x gradlew
           set +e
@@ -161,6 +176,14 @@ jobs:
           test -f ../dist/xlox-loader.zip
           echo "APK sha256 = $APK_SHA256"
 
+      - name: Verify the release signature
+        if: env.XLOX_SIGNED == 'true'
+        run: |
+          SDK="${ANDROID_HOME:-$ANDROID_SDK_ROOT}"
+          APKSIGNER=$(ls "$SDK"/build-tools/*/apksigner | sort | tail -1)
+          "$APKSIGNER" verify ../dist/Anoy-XLOX-loader.apk
+          echo "Release APK is signed with the release key"
+
       - name: Verify 16 KB ELF alignment (Android 15 / 17 devices)
         run: |
           # Report every native library. The two prebuilt libs inside
@@ -176,7 +199,7 @@ jobs:
       - name: Upload APK and loader ZIP
         uses: actions/upload-artifact@v4
         with:
-          name: xlox-apk
+          name: ${{ env.XLOX_SIGNED == 'true' && 'xlox-apk' || 'xlox-apk-unsigned' }}
           path: |
             dist/Anoy-XLOX-loader.apk
             dist/xlox-loader.zip
@@ -186,6 +209,7 @@ jobs:
       # The sandbox cannot reach actions artifact storage, so also publish a
       # durable download link and place the deliverables on this branch.
       - name: Publish APK as a GitHub release
+        if: env.XLOX_SIGNED == 'true'
         working-directory: ${{ github.workspace }}
         env:
           GH_TOKEN: ${{ github.token }}
@@ -198,6 +222,7 @@ jobs:
             || echo "Release $TAG already exists, artifacts remain attached to the workflow run"
 
       - name: Commit deliverables to the working branch
+        if: env.XLOX_SIGNED == 'true'
         working-directory: ${{ github.workspace }}
         run: |
           git config user.name "github-actions[bot]"

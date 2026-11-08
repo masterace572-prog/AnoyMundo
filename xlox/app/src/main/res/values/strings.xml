@@ -97,6 +97,8 @@
     <string name="time_left_value">%1$dd %2$02dh %3$02dm</string>
     <string name="time_left_value_short">%1$dh %2$02dm %3$02ds</string>
     <string name="state_ready">Ready</string>
+    <!-- BGMI is installed, but the library, a permission or the container is not ready yet. -->
+    <string name="state_installed">Installed</string>
     <string name="state_not_installed">Not installed</string>
     <string name="state_running">Running</string>
     <string name="launch">Launch</string>
@@ -135,6 +137,13 @@
     <string name="permission_files_needed">Allow Files access so game files can be prepared.</string>
     <string name="restarting_for_game_files">Restarting Anoy to finish setting up game files…</string>
     <string name="permission_install_needed">Allow Install unknown apps for Anoy so game files can be prepared.</string>
+    <!-- Shown before Anoy opens the All files access / Install unknown apps settings page. -->
+    <string name="perm_explain_all_files_title">Allow All files access</string>
+    <string name="perm_explain_all_files_message">Anoy needs this to prepare game files. You\'ll be taken to Settings. Turn it on for Anoy, then come back.</string>
+    <string name="perm_explain_install_title">Allow Install unknown apps</string>
+    <string name="perm_explain_install_message">Anoy needs this to install the library update and prepare game files. You\'ll be taken to Settings. Turn it on for Anoy, then come back.</string>
+    <string name="perm_explain_continue">Continue to Settings</string>
+    <string name="not_now">Not now</string>
     <string name="home_kicker">Welcome back</string>
     <!-- UI redesign (2.1) -->
     <string name="action_preparing">Preparing…</string>
@@ -144,12 +153,21 @@
     <string name="notice_fallback">Play fairly. Unsafe play can lead to a ban.</string>
     <string name="notice_description">Notice from the server: %1$s</string>
     <string name="sign_out_title">Sign out of this device?</string>
-    <string name="sign_out_message">You\'ll need your licence key to sign in again.</string>
+    <string name="sign_out_message">Your licence key stays saved on this phone, so signing back in takes one tap.</string>
+    <string name="forget_key">Forget this key</string>
+    <string name="forget_key_description">Sign out and remove the saved licence key from this phone</string>
     <string name="cancel">Cancel</string>
     <string name="loading">Loading</string>
     <string name="licence_a11y_active">Licence active, %1$s left, expires %2$s</string>
     <string name="licence_a11y_expired">Licence expired on %1$s</string>
     <string name="licence_a11y_unknown">Licence status unknown</string>
+    <string name="licence_a11y_soon">Licence expires soon, %1$s left, expires %2$s</string>
+    <string name="expires_soon">Expires soon</string>
+    <string name="licence_soon_message">Renew now to keep playing without a break.</string>
+    <string name="renew">Renew</string>
+    <string name="renew_description">Renew your licence on Telegram</string>
+    <!-- Quiet line when the latest licence refresh could not reach the server. -->
+    <string name="licence_last_checked">Last checked %1$s</string>
     <string name="status_chip_description">%1$s: %2$s</string>
     <plurals name="a11y_days">
         <item quantity="one">%d day</item>
