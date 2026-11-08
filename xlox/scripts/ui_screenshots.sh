@@ -486,7 +486,7 @@ adb logcat -d > ../qa-logs/logcat-sizes.txt 2>/dev/null || true
 #   obb3: no game OBB  - missing-files message, no launch.
 GAME=com.pubg.imobile
 GOBB=/sdcard/Android/obb/$GAME
-obb_log() { adb logcat -d -v tag -s AppManager:V MAct:V 2>/dev/null | grep -E '^./AppManager|^./MAct.*Launch' | tr -d '\r' | tr '\n' '|'; }
+obb_log() { adb logcat -d -v tag -s AppManager:V MAct:V 2>/dev/null | grep -E '^./AppManager|^./MAct.*Launch' | grep -v '	at ' | tr -d '\r' | tr '\n' '|'; }
 obb_start() {
     adb shell am start -W -n $PKG/.MAct --ez qa_preview true --es qa_action obb_copy --es qa_launch started >> "$LOG" 2>&1 || log "WARN: am start MAct failed"
 }
@@ -569,7 +569,7 @@ perm_start() {
     adb shell am start -W -n $PKG/.MAct --ez qa_preview true --es qa_action permissions_copy --es qa_launch started >> "$LOG" 2>&1 || log "WARN: am start MAct failed"
     sleep 3
 }
-perm_log() { adb logcat -d -v tag -s AppManager:V MAct:V StorageAccess:V 2>/dev/null | grep -E '^./AppManager|^./StorageAccess|^./MAct.*(Launch|Permission)' | tr -d '\r' | tr '\n' '|'; }
+perm_log() { adb logcat -d -v tag -s AppManager:V MAct:V StorageAccess:V 2>/dev/null | grep -E '^./AppManager|^./StorageAccess|^./MAct.*(Launch|Permission)' | grep -v '	at ' | tr -d '\r' | tr '\n' '|'; }
 
 # Allow all three; the container copy is removed first so the copy really runs.
 adb shell mkdir -p $GOBB

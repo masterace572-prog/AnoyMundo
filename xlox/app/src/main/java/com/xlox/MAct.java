@@ -729,10 +729,18 @@ public class MAct extends AppCompatActivity {
     /** Debug: freeze the action bar in a launch state for screenshots. */
     private void applyQaAction() {
         if (!preview) return;
-        if ("obb_copy".equals(getIntent().getStringExtra(EXTRA_QA_ACTION))) {
+        String qaAction = getIntent().getStringExtra(EXTRA_QA_ACTION);
+        if ("obb_copy".equals(qaAction)) {
             // The real copy-then-launch that follows the pre-checks (the emulator
             // has no activated container). qa_launch picks the stand-in game.
             main.postDelayed(this::prepareObbThenLaunch, 400L);
+            return;
+        }
+        if ("permissions_copy".equals(qaAction)) {
+            // Launch with permissions missing: ask for them, then the real copy
+            // and launch (qa_launch picks the stand-in game).
+            qaPermissionsThenCopy = true;
+            main.postDelayed(() -> requestStorage(true), 400L);
             return;
         }
         if (qaLaunch != null) {
@@ -756,12 +764,6 @@ public class MAct extends AppCompatActivity {
                 break;
             case "storage_launch":
                 // Launch tapped after the activation / library checks, permissions missing.
-                requestStorage(true);
-                break;
-            case "permissions_copy":
-                // Same, then the real OBB copy and launch (the emulator has no
-                // activated container, so startLaunch() would stop there).
-                qaPermissionsThenCopy = true;
                 requestStorage(true);
                 break;
             case "error":

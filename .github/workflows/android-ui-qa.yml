@@ -325,7 +325,8 @@ jobs:
           else:
               errors.append('permissions then copy: unexpected result: ' + pl[-600:])
           g = line('perm_allow granted')
-          for p in ('RECORD_AUDIO', 'ACCESS_FINE_LOCATION', 'POST_NOTIFICATIONS', 'BLUETOOTH_CONNECT'):
+          # (BLUETOOTH_CONNECT is granted by Android itself to apps targeting < 31.)
+          for p in ('RECORD_AUDIO', 'ACCESS_FINE_LOCATION', 'POST_NOTIFICATIONS'):
               if 'android.permission.%s:granted=true' % p in g:
                   errors.append('%s was granted although Anoy must not ask for it' % p)
           for tag, msg in (('perm_files_deny', 'Allow Files access'),
