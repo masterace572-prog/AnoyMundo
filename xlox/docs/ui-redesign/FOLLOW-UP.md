@@ -388,7 +388,7 @@ debug-only `qa_preview`.
 ### Verify
 
 - **CI (android-ui-qa):**
-  - `help_first_run.png` (shown once; the second visit logs none)
+  - first run: the trace logs the sheet shown on the first visit, none on the second
   - `help_sheet.png`
   - `help_support_info.png`: the preview; the validator fails if it contains
     the preview key, `ANOY-` or a storage path.

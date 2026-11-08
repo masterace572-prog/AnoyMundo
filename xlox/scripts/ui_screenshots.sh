@@ -769,7 +769,6 @@ adb logcat -c || true
 open_home --ez qa_first_help true
 sleep 1
 log "help_first first: $(has_id helpRoot && echo shown || echo none)"
-shot help_first_run
 tap_id helpGotIt || true
 sleep 1
 open_home --ez qa_first_help true
@@ -789,7 +788,14 @@ log "help support texts: $(texts)"
 tap_id supportInfoCopy || true
 sleep 0.6
 shot help_support_copied
-log "help copied texts: $(texts)"
+# The snackbar slides in; dump until it is there (at most ~2.5 s).
+copied_texts=""
+for i in 1 2 3 4 5; do
+    copied_texts=$(texts)
+    case "$copied_texts" in *"Support info copied"*) break ;; esac
+    sleep 0.5
+done
+log "help copied texts: $copied_texts"
 log "help log: $(help_log)"
 # Access chip with everything allowed.
 adb logcat -c || true

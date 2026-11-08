@@ -227,7 +227,7 @@ jobs:
               'home_game_closed', 'home_licence_extended', 'home_licence_soon', 'home_licence_offline',
               'home_licence_expired_by_panel',
               # help sheet, support info preview, Access chip
-              'help_first_run', 'help_sheet', 'help_support_info', 'help_support_copied',
+              'help_sheet', 'help_support_info', 'help_support_copied',
               'home_access_ready', 'home_access_needed', 'access_explain',
           ]
           errors = []
