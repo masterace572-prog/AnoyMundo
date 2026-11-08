@@ -245,7 +245,9 @@ jobs:
           seen = {}
           for n, p in files.items():
               h = hashlib.md5(p.read_bytes()).hexdigest()
-              if h in seen and not any(k in n + seen[h] for k in ('live', 'anim_', 'icon_', 'splash_reduced', 'splash_t240', 'home_launch_', 'home_obb', 'perm_')):
+              # '_scrolled': since 2.2.0 (no Device card) home fits on one screen at
+              # normal sizes, so the scrolled frame can equal the top one.
+              if h in seen and not any(k in n + seen[h] for k in ('live', 'anim_', 'icon_', 'splash_reduced', 'splash_t240', 'home_launch_', 'home_obb', 'perm_', '_scrolled')):
                   errors.append(f'identical frames: {seen[h]} / {n}')
               seen[h] = n
           trace = Path('qa-logs/emulator-trace.txt')
