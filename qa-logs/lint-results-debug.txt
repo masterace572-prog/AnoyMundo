@@ -90,7 +90,7 @@
     android:background="@color/black">
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 /home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/res/layout/activity_splash.xml:16: Warning: Possible overdraw: Root element paints background @color/black with a theme that also paints a background (inferred theme is @style/AppTheme_Starting) [Overdraw]
-    android:background="@color/black">
+    android:background="@color/black"
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
    Explanation for issues of type "Overdraw":
