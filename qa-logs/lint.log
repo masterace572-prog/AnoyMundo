@@ -28,7 +28,49 @@ Daemon will be stopped at the end of the build
 > Task :app:lintReportDebug
 Wrote HTML report to file:///home/runner/work/AnoyMundo/AnoyMundo/xlox/app/build/reports/lint-results-debug.html
 
-> Task :app:lintDebug
+> Task :app:lintDebug FAILED
+Lint found 1 errors, 41 warnings. First failure:
 
-BUILD SUCCESSFUL in 15s
+/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/java/com/xlox/MAct.java:171: Error: Must be one of: LineBreaker.BREAK_STRATEGY_SIMPLE, LineBreaker.BREAK_STRATEGY_HIGH_QUALITY, LineBreaker.BREAK_STRATEGY_BALANCED [WrongConstant]
+            panelNote.setBreakStrategy(android.text.Layout.BREAK_STRATEGY_BALANCED);
+                                       ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+   Explanation for issues of type "WrongConstant":
+   Ensures that when parameter in a method only allows a specific set of
+   constants, calls obey those rules.
+
+
+The full lint text report is located at:
+  /home/runner/work/AnoyMundo/AnoyMundo/xlox/app/build/intermediates/lint_intermediate_text_report/debug/lint-results-debug.txt
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':app:lintDebug'.
+> Lint found errors in the project; aborting build.
+  
+  Fix the issues identified by lint, or add the issues to the lint baseline via `gradlew updateLintBaseline`.
+  For more details, see https://developer.android.com/studio/write/lint#snapshot
+  
+  Lint found 1 errors, 41 warnings. First failure:
+  
+  /home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/java/com/xlox/MAct.java:171: Error: Must be one of: LineBreaker.BREAK_STRATEGY_SIMPLE, LineBreaker.BREAK_STRATEGY_HIGH_QUALITY, LineBreaker.BREAK_STRATEGY_BALANCED [WrongConstant]
+              panelNote.setBreakStrategy(android.text.Layout.BREAK_STRATEGY_BALANCED);
+                                         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  
+     Explanation for issues of type "WrongConstant":
+     Ensures that when parameter in a method only allows a specific set of
+     constants, calls obey those rules.
+  
+  
+  The full lint text report is located at:
+    /home/runner/work/AnoyMundo/AnoyMundo/xlox/app/build/intermediates/lint_intermediate_text_report/debug/lint-results-debug.txt
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights.
+> Get more help at https://help.gradle.org.
+
+BUILD FAILED in 14s
 22 actionable tasks: 6 executed, 16 up-to-date
