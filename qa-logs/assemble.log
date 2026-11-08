@@ -36,26 +36,16 @@ Daemon will be stopped at the end of the build
 > Task :app:mergeDebugAssets
 > Task :app:processDebugJavaRes NO-SOURCE
 > Task :app:compressDebugAssets
-> Task :app:processDebugManifestForPackage
 > Task :app:checkDebugDuplicateClasses
 > Task :app:mergeDebugJavaResource
+> Task :app:processDebugManifestForPackage
+> Task :app:mergeLibDexDebug
+> Task :app:configureNdkBuildDebug[arm64-v8a]
 > Task :app:processDebugResources
 
-> Task :app:compileDebugJavaWithJavac
-Note: Some input files use or override a deprecated API.
-Note: Recompile with -Xlint:deprecation for details.
-
-> Task :app:mergeLibDexDebug
-
 > Task :app:desugarDebugFileDependencies
 WARNING: /home/runner/.gradle/caches/transforms-3/b91f9dab850d9a00e31f249c21322702/transformed/mundo-release-runtime.jar: D8: Expected stack map table for method with non-linear control flow.
 WARNING: /home/runner/.gradle/caches/transforms-3/b91f9dab850d9a00e31f249c21322702/transformed/mundo-release-runtime.jar: D8: Expected stack map table for method with non-linear control flow.
-
-> Task :app:dexBuilderDebug
-> Task :app:mergeProjectDexDebug
-> Task :app:configureNdkBuildDebug[arm64-v8a]
-
-> Task :app:desugarDebugFileDependencies
 WARNING: D8: Unexpected error during rewriting of Kotlin metadata for class 'top.bienvenido.mundo.manifest.MundoSplashLauncher':
 com.android.tools.r8.internal.L10: Should never be called
 	at com.android.tools.r8.internal.tA.a(R8_8.2.42_9ad08e95c347188a6c635bdc6315e258071719194689c80a2a99dea0b762189c:3)
@@ -8293,15 +8283,22 @@ com.android.tools.r8.internal.L10: Should never be called
 
 
 > Task :app:buildNdkBuildDebug[arm64-v8a]
+
+> Task :app:compileDebugJavaWithJavac
+Note: Some input files use or override a deprecated API.
+Note: Recompile with -Xlint:deprecation for details.
+
+> Task :app:dexBuilderDebug
 > Task :app:mergeDebugJniLibFolders
+> Task :app:mergeProjectDexDebug
 > Task :app:mergeDebugNativeLibs
-> Task :app:mergeExtDexDebug
 > Task :app:validateSigningDebug
 > Task :app:writeDebugAppMetadata
 > Task :app:writeDebugSigningConfigVersions
 > Task :app:preReleaseBuild UP-TO-DATE
 > Task :app:stripDebugDebugSymbols
 > Task :app:configureNdkBuildRelease[arm64-v8a]
+> Task :app:mergeExtDexDebug
 > Task :app:buildNdkBuildRelease[arm64-v8a]
 > Task :app:mergeReleaseJniLibFolders
 > Task :app:generateReleaseBuildConfig
@@ -8309,37 +8306,37 @@ com.android.tools.r8.internal.L10: Should never be called
 > Task :app:javaPreCompileRelease
 > Task :app:checkReleaseDuplicateClasses
 > Task :app:generateReleaseResValues
-> Task :app:checkReleaseAarMetadata
 > Task :app:mapReleaseSourceSetPaths
 > Task :app:generateReleaseResources
+> Task :app:checkReleaseAarMetadata
 > Task :app:stripReleaseDebugSymbols
+> Task :app:packageReleaseResources
 > Task :app:packageDebug
 > Task :app:createDebugApkListingFileRedirect
 > Task :app:assembleDebug
-> Task :app:extractReleaseNativeDebugMetadata
-> Task :app:packageReleaseResources
-> Task :app:mergeReleaseNativeDebugMetadata
 > Task :app:createReleaseCompatibleScreenManifests
-> Task :app:parseReleaseLocalResources
 > Task :app:extractDeepLinksRelease
+> Task :app:parseReleaseLocalResources
+> Task :app:extractReleaseNativeDebugMetadata
 
 > Task :app:processReleaseMainManifest
 /home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/AndroidManifest.xml:74:5-101 Warning:
 	uses-permission#android.permission.PROCESS_OUTGOING_CALLS was tagged at AndroidManifest.xml:74 to remove other declarations but no other declaration present
 
 > Task :app:processReleaseManifest
-> Task :app:mergeReleaseResources
+> Task :app:mergeReleaseNativeDebugMetadata
 > Task :app:mergeReleaseArtProfile
 > Task :app:extractProguardFiles
 > Task :app:processReleaseJavaRes NO-SOURCE
-> Task :app:mergeReleaseShaders
 > Task :app:processReleaseManifestForPackage
+> Task :app:mergeReleaseShaders
 > Task :app:compileReleaseShaders NO-SOURCE
 > Task :app:generateReleaseAssets UP-TO-DATE
 > Task :app:mergeReleaseAssets
 > Task :app:compressReleaseAssets
 > Task :app:processApplicationManifestReleaseForBundle
 > Task :app:collectReleaseDependencies
+> Task :app:mergeReleaseResources
 > Task :app:mergeReleaseJavaResource
 > Task :app:sdkReleaseDependencyData
 > Task :app:validateSigningRelease
@@ -8364,5 +8361,5 @@ WARNING: /home/runner/.gradle/caches/transforms-3/b91f9dab850d9a00e31f249c213227
 > Task :app:createReleaseApkListingFileRedirect
 > Task :app:assembleRelease
 
-BUILD SUCCESSFUL in 1m 54s
+BUILD SUCCESSFUL in 1m 28s
 79 actionable tasks: 79 executed
