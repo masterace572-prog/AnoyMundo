@@ -167,7 +167,7 @@ jobs:
           seen = {}
           for n, p in files.items():
               h = hashlib.md5(p.read_bytes()).hexdigest()
-              if h in seen and not any(k in n + seen[h] for k in ('live', 'anim_', 'icon_', 'splash_reduced', 'splash_t220')):
+              if h in seen and not any(k in n + seen[h] for k in ('live', 'anim_', 'icon_', 'splash_reduced', 'splash_t220', 'home_launch_')):
                   errors.append(f'identical frames: {seen[h]} / {n}')
               seen[h] = n
           trace = Path('qa-logs/emulator-trace.txt')

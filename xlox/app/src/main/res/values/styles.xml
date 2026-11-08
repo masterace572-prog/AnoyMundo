@@ -251,7 +251,10 @@
 
     <!-- Splash film: "Anoy", "Loader" and "Hax" (same face, size and white). -->
     <style name="Text.Splash">
+        <!-- Both attributes: AppCompat lets the theme's app fontFamily win over
+             android:fontFamily alone. -->
         <item name="android:fontFamily">@font/inter_semibold</item>
+        <item name="fontFamily">@font/inter_semibold</item>
         <item name="android:textSize">@dimen/text_splash</item>
         <item name="android:textColor">@color/text_primary</item>
         <item name="android:letterSpacing">-0.02</item>
@@ -262,6 +265,7 @@
     <!-- Splash film: "Welcome To", smaller, slightly tracked, 72 % white. -->
     <style name="Text.SplashGreeting">
         <item name="android:fontFamily">@font/inter_regular</item>
+        <item name="fontFamily">@font/inter_regular</item>
         <item name="android:textSize">@dimen/text_splash_greeting</item>
         <item name="android:textColor">@color/text_on_black_72</item>
         <item name="android:letterSpacing">0.04</item>
