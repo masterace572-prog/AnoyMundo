@@ -65,13 +65,31 @@
 
    There's a lint quickfix to perform this conversion in the Eclipse plugin.
 
+/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/res/drawable/ic_launcher_glyph.xml:12: Warning: Very long vector path (1498 characters), which is bad for performance. Considering reducing precision, removing minor details or rasterizing vector. [VectorPath]
+        android:pathData="M30.68 43.97 24.44 62.07H28.32L29.72 57.76H36.29L37.74 62.07H41.63L35.24 43.97H30.68ZM59.61 61.46Q61.09 62.34 63.1 62.34Q65.13 62.34 66.6 61.46Q68.08 60.58 68.88 59.01Q69.69 57.43 69.69 55.34Q69.69 53.23 68.88 51.65Q68.08 50.07 66.6 49.2Q65.13 48.32 63.1 48.32Q61.09 48.32 59.61 49.2Q58.13 50.07 57.33 51.65Q56.52 53.23 56.52 55.34Q56.52 57.43 57.33 59.01Q58.13 60.58 59.61 61.46ZM72.86 62.97 72.09 65.55Q72.44 65.7 73.05 65.8Q73.66 65.9 74.36 65.9Q75.67 65.9 76.6 65.48Q77.54 65.06 78.17 64.27Q78.81 63.48 79.09 62.75L84.51 48.49H80.87L78.41 55.67Q77.98 56.98 77.65 58.31Q77.54 58.78 77.42 59.25Q77.32 58.78 77.23 58.32Q76.96 57 76.54 55.67L74.17 48.49H70.5L75.62 62.09L75.66 62.41Q75.71 62.7 75.43 62.87Q75.16 63.04 74.6 63.13Q74.03 63.21 73.3 63.03L72.86 62.97ZM45.79 62.07V54.17Q45.79 53.23 46.14 52.57Q46.5 51.92 47.12 51.57Q47.74 51.22 48.53 51.22Q49.72 51.22 50.4 51.96Q51.07 52.7 51.07 54.01V62.07H54.52V53.43Q54.52 51.82 53.94 50.68Q53.36 49.53 52.31 48.93Q51.27 48.32 49.86 48.32Q48.16 48.32 47.07 49.23Q46.17 49.97 45.65 51.26L45.6 48.49H42.34V62.07H45.79ZM64.81 59.03Q64.13 59.59 63.1 59.59Q62.08 59.59 61.4 59.03Q60.72 58.47 60.38 57.5Q60.04 56.54 60.04 55.33Q60.04 54.11 60.38 53.15Q60.72 52.19 61.4 51.63Q62.08 51.07 63.1 51.07Q64.13 51.07 64.81 51.63Q65.5 52.19 65.84 53.15Q66.18 54.11 66.18 55.33Q66.18 56.54 65.84 57.5Q65.5 58.47 64.81 59.03ZM35.35 54.97H30.62L31.24 53.07Q31.71 51.51 32.21 49.56Q32.55 48.23 32.93 46.71Q33.32 48.22 33.68 49.53Q34.2 51.47 34.71 53.07L35.35 54.97Z" />
+                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/res/drawable/ic_launcher_mark.xml:14: Warning: Very long vector path (1498 characters), which is bad for performance. Considering reducing precision, removing minor details or rasterizing vector. [VectorPath]
+            android:pathData="M30.68 43.97 24.44 62.07H28.32L29.72 57.76H36.29L37.74 62.07H41.63L35.24 43.97H30.68ZM59.61 61.46Q61.09 62.34 63.1 62.34Q65.13 62.34 66.6 61.46Q68.08 60.58 68.88 59.01Q69.69 57.43 69.69 55.34Q69.69 53.23 68.88 51.65Q68.08 50.07 66.6 49.2Q65.13 48.32 63.1 48.32Q61.09 48.32 59.61 49.2Q58.13 50.07 57.33 51.65Q56.52 53.23 56.52 55.34Q56.52 57.43 57.33 59.01Q58.13 60.58 59.61 61.46ZM72.86 62.97 72.09 65.55Q72.44 65.7 73.05 65.8Q73.66 65.9 74.36 65.9Q75.67 65.9 76.6 65.48Q77.54 65.06 78.17 64.27Q78.81 63.48 79.09 62.75L84.51 48.49H80.87L78.41 55.67Q77.98 56.98 77.65 58.31Q77.54 58.78 77.42 59.25Q77.32 58.78 77.23 58.32Q76.96 57 76.54 55.67L74.17 48.49H70.5L75.62 62.09L75.66 62.41Q75.71 62.7 75.43 62.87Q75.16 63.04 74.6 63.13Q74.03 63.21 73.3 63.03L72.86 62.97ZM45.79 62.07V54.17Q45.79 53.23 46.14 52.57Q46.5 51.92 47.12 51.57Q47.74 51.22 48.53 51.22Q49.72 51.22 50.4 51.96Q51.07 52.7 51.07 54.01V62.07H54.52V53.43Q54.52 51.82 53.94 50.68Q53.36 49.53 52.31 48.93Q51.27 48.32 49.86 48.32Q48.16 48.32 47.07 49.23Q46.17 49.97 45.65 51.26L45.6 48.49H42.34V62.07H45.79ZM64.81 59.03Q64.13 59.59 63.1 59.59Q62.08 59.59 61.4 59.03Q60.72 58.47 60.38 57.5Q60.04 56.54 60.04 55.33Q60.04 54.11 60.38 53.15Q60.72 52.19 61.4 51.63Q62.08 51.07 63.1 51.07Q64.13 51.07 64.81 51.63Q65.5 52.19 65.84 53.15Q66.18 54.11 66.18 55.33Q66.18 56.54 65.84 57.5Q65.5 58.47 64.81 59.03ZM35.35 54.97H30.62L31.24 53.07Q31.71 51.51 32.21 49.56Q32.55 48.23 32.93 46.71Q33.32 48.22 33.68 49.53Q34.2 51.47 34.71 53.07L35.35 54.97Z" />
+                              ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/res/drawable/splash_mark.xml:12: Warning: Very long vector path (1755 characters), which is bad for performance. Considering reducing precision, removing minor details or rasterizing vector. [VectorPath]
+        android:pathData="M106.54 127.89 96.51 156.97H102.73L104.98 150.03H115.54L117.87 156.97H124.13L113.86 127.89H106.54ZM153.01 155.99Q155.39 157.4 158.63 157.4Q161.88 157.4 164.25 155.99Q166.62 154.58 167.91 152.05Q169.2 149.51 169.2 146.16Q169.2 142.77 167.91 140.23Q166.62 137.69 164.25 136.28Q161.88 134.87 158.63 134.87Q155.39 134.87 153.01 136.28Q150.63 137.69 149.34 140.23Q148.05 142.77 148.05 146.16Q148.05 149.51 149.34 152.05Q150.63 154.58 153.01 155.99ZM174.31 158.41 173.06 162.55Q173.63 162.79 174.61 162.96Q175.58 163.12 176.71 163.12Q178.82 163.12 180.32 162.44Q181.82 161.76 182.84 160.49Q183.86 159.23 184.3 158.06L193.01 135.15H187.18L183.23 146.69Q182.52 148.79 182 150.93Q181.82 151.67 181.64 152.43Q181.47 151.68 181.32 150.94Q180.89 148.82 180.21 146.69L176.41 135.15H170.51L178.74 157L178.79 157.51Q178.88 157.98 178.44 158.26Q178 158.53 177.09 158.67Q176.19 158.8 175.01 158.5L174.31 158.41ZM130.81 156.97V144.27Q130.81 142.77 131.38 141.71Q131.94 140.65 132.94 140.09Q133.94 139.53 135.22 139.53Q137.13 139.53 138.21 140.72Q139.3 141.92 139.3 144.01V156.97H144.84V143.09Q144.84 140.5 143.9 138.66Q142.97 136.83 141.29 135.85Q139.61 134.87 137.35 134.87Q134.62 134.87 132.86 136.34Q131.43 137.53 130.58 139.59L130.51 135.15H125.27V156.97H130.81ZM161.37 152.08Q160.27 152.99 158.63 152.99Q156.98 152.99 155.88 152.08Q154.79 151.18 154.24 149.63Q153.7 148.08 153.7 146.14Q153.7 144.17 154.24 142.63Q154.79 141.08 155.88 140.18Q156.98 139.29 158.63 139.29Q160.27 139.29 161.37 140.18Q162.48 141.08 163.02 142.63Q163.57 144.18 163.57 146.14Q163.57 148.08 163.02 149.63Q162.48 151.18 161.37 152.08ZM114.03 145.55H106.44L107.43 142.51Q108.19 140 108.99 136.86Q109.54 134.73 110.15 132.29Q110.78 134.71 111.35 136.82Q112.19 139.94 113.01 142.51L114.03 145.55Z" />
+                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+   Explanation for issues of type "VectorPath":
+   Using long vector paths is bad for performance. There are several ways to
+   make the pathData shorter:
+   * Using less precision
+   * Removing some minor details
+   * Using the Android Studio vector conversion tool
+   * Rasterizing the image (converting to PNG)
+
 /home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/res/layout/activity_login.xml:13: Warning: Possible overdraw: Root element paints background @color/black with a theme that also paints a background (inferred theme is @style/AppTheme) [Overdraw]
     android:background="@color/black"
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 /home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/res/layout/activity_main.xml:14: Warning: Possible overdraw: Root element paints background @color/black with a theme that also paints a background (inferred theme is @style/AppTheme) [Overdraw]
     android:background="@color/black">
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/res/layout/activity_splash.xml:14: Warning: Possible overdraw: Root element paints background @color/black with a theme that also paints a background (inferred theme is @style/AppTheme_Starting) [Overdraw]
+/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/res/layout/activity_splash.xml:16: Warning: Possible overdraw: Root element paints background @color/black with a theme that also paints a background (inferred theme is @style/AppTheme_Starting) [Overdraw]
     android:background="@color/black">
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -96,7 +114,7 @@
    performance if you pre-mix the background with your drawable and use that
    resulting image or color as a custom theme background instead.
 
-/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/res/values/colors.xml:28: Warning: The resource R.color.success_tint appears to be unused [UnusedResources]
+/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/res/values/colors.xml:30: Warning: The resource R.color.success_tint appears to be unused [UnusedResources]
     <color name="success_tint">#2430D158</color>
            ~~~~~~~~~~~~~~~~~~~
 /home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/res/values/dimens.xml:15: Warning: The resource R.dimen.max_content_width appears to be unused [UnusedResources]
@@ -117,34 +135,34 @@
 /home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/res/drawable/separator.xml:2: Warning: The resource R.drawable.separator appears to be unused [UnusedResources]
 <shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
 ^
-/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/res/values/strings.xml:43: Warning: The resource R.string.need_key appears to be unused [UnusedResources]
+/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/res/values/strings.xml:45: Warning: The resource R.string.need_key appears to be unused [UnusedResources]
     <string name="need_key">Need a licence key?</string>
             ~~~~~~~~~~~~~~~
-/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/res/values/strings.xml:80: Warning: The resource R.string.section_licence appears to be unused [UnusedResources]
+/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/res/values/strings.xml:82: Warning: The resource R.string.section_licence appears to be unused [UnusedResources]
     <string name="section_licence">Licence</string>
             ~~~~~~~~~~~~~~~~~~~~~~
-/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/res/values/strings.xml:83: Warning: The resource R.string.row_status appears to be unused [UnusedResources]
+/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/res/values/strings.xml:85: Warning: The resource R.string.row_status appears to be unused [UnusedResources]
     <string name="row_status">Status</string>
             ~~~~~~~~~~~~~~~~~
-/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/res/values/strings.xml:84: Warning: The resource R.string.row_expires appears to be unused [UnusedResources]
+/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/res/values/strings.xml:86: Warning: The resource R.string.row_expires appears to be unused [UnusedResources]
     <string name="row_expires">Expires</string>
             ~~~~~~~~~~~~~~~~~~
-/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/res/values/strings.xml:106: Warning: The resource R.string.preparing_progress appears to be unused [UnusedResources]
+/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/res/values/strings.xml:108: Warning: The resource R.string.preparing_progress appears to be unused [UnusedResources]
     <string name="preparing_progress">Preparing game files · %1$d%%</string>
             ~~~~~~~~~~~~~~~~~~~~~~~~~
-/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/res/values/strings.xml:121: Warning: The resource R.string.sandbox_install_failed appears to be unused [UnusedResources]
+/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/res/values/strings.xml:123: Warning: The resource R.string.sandbox_install_failed appears to be unused [UnusedResources]
     <string name="sandbox_install_failed">Couldn\'t install the game into the container.</string>
             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/res/values/strings.xml:122: Warning: The resource R.string.package_not_found appears to be unused [UnusedResources]
+/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/res/values/strings.xml:124: Warning: The resource R.string.package_not_found appears to be unused [UnusedResources]
     <string name="package_not_found">BGMI is not installed.</string>
             ~~~~~~~~~~~~~~~~~~~~~~~~
-/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/res/values/strings.xml:137: Warning: The resource R.string.loading appears to be unused [UnusedResources]
+/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/res/values/strings.xml:139: Warning: The resource R.string.loading appears to be unused [UnusedResources]
     <string name="loading">Loading</string>
             ~~~~~~~~~~~~~~
-/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/res/values/strings.xml:141: Warning: The resource R.string.status_chip_description appears to be unused [UnusedResources]
+/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/res/values/strings.xml:143: Warning: The resource R.string.status_chip_description appears to be unused [UnusedResources]
     <string name="status_chip_description">%1$s: %2$s</string>
             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/res/values/styles.xml:164: Warning: The resource R.style.Text_Headline appears to be unused [UnusedResources]
+/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/res/values/styles.xml:165: Warning: The resource R.style.Text_Headline appears to be unused [UnusedResources]
     <style name="Text.Headline">
            ~~~~~~~~~~~~~~~~~~~~
 
@@ -253,4 +271,4 @@
    probably also specify padding on the right side (and vice versa) for
    right-to-left layout symmetry.
 
-0 errors, 41 warnings
+0 errors, 44 warnings
