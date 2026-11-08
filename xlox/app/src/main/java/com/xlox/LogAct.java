@@ -1,18 +1,12 @@
 package com.xlox;
 
-import android.Manifest;
-import android.content.ActivityNotFoundException;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
-import android.net.Uri;
-import android.os.Build;
 import android.os.Bundle;
-import android.os.Environment;
 import android.os.Handler;
 import android.os.Looper;
-import android.provider.Settings;
 import android.text.Editable;
 import android.text.InputFilter;
 import android.text.InputType;
@@ -28,7 +22,6 @@ import android.widget.ImageButton;
 import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.app.ActivityCompat;
 
 import com.google.android.material.button.MaterialButton;
 
@@ -37,6 +30,7 @@ import com.xlox.ui.UpdateGate;
 import com.xlox.utils.LibManager;
 import com.xlox.utils.Net;
 import com.xlox.utils.Prefs;
+import com.xlox.utils.StorageAccess;
 
 import java.util.HashSet;
 import java.util.Locale;
@@ -68,7 +62,6 @@ public class LogAct extends AppCompatActivity {
     private static final String PREF_USER = "USER";
     private static final Pattern KEY_PATTERN = Pattern.compile("^[A-Z0-9_-]{4,64}$");
     private static final int MAX_KEY_LENGTH = 64;
-    private static final int REQUEST_STORAGE = 100;
     /** Pause on the "Signed in" check before the home screen. */
     private static final long SUCCESS_HOLD_MS = 400L;
 
@@ -544,10 +537,9 @@ public class LogAct extends AppCompatActivity {
         }
     }
 
+    /** Shared with home (MAct) through {@link StorageAccess}. */
     static boolean hasStorageAccess(Context context) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) return Environment.isExternalStorageManager();
-        return ActivityCompat.checkSelfPermission(context, Manifest.permission.WRITE_EXTERNAL_STORAGE)
-                == android.content.pm.PackageManager.PERMISSION_GRANTED;
+        return StorageAccess.has(context);
     }
 
     private boolean hasStorageAccess() {
@@ -555,23 +547,6 @@ public class LogAct extends AppCompatActivity {
     }
 
     private void requestStorageAccess() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            try {
-                Intent intent = new Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION,
-                        Uri.fromParts("package", getPackageName(), null));
-                startActivityForResult(intent, REQUEST_STORAGE);
-            } catch (ActivityNotFoundException e) {
-                try {
-                    startActivityForResult(new Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION),
-                            REQUEST_STORAGE);
-                } catch (RuntimeException nested) {
-                    Log.w(TAG, "All-files-access settings unavailable", nested);
-                }
-            }
-        } else {
-            ActivityCompat.requestPermissions(this,
-                    new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE,
-                            Manifest.permission.READ_EXTERNAL_STORAGE}, REQUEST_STORAGE);
-        }
+        StorageAccess.request(this);
     }
 }

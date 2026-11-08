@@ -337,6 +337,34 @@ log "launch null_dead texts: $(texts)"
 launch_case throws 7
 log "launch throws texts: $(texts)"
 
+# Files access requested from Launch (All files access page on API 30+).
+# qa_action storage_launch = Launch tapped after the activation / library
+# checks with access missing. Allowed: startLaunch() continues by itself (on
+# this emulator it stops at the container activation check - there is no real
+# container - which proves the continuation ran). Denied: the permission
+# message, no copy, no launch.
+storage_case() {
+    stop_app
+    adb shell appops set $PKG MANAGE_EXTERNAL_STORAGE deny >/dev/null 2>&1 || true
+    adb shell am start -W -n $PKG/.MAct --ez qa_preview true --es qa_action storage_launch >> "$LOG" 2>&1 || log "WARN: am start MAct failed"
+    sleep 3
+    log "storage $1 prompt focus: $(focus)"
+    if [ "$1" = allow ]; then
+        adb exec-out screencap -p > "$OUT/storage_prompt.png" || true
+        log "captured storage_prompt.png"
+        adb shell appops set $PKG MANAGE_EXTERNAL_STORAGE allow >/dev/null 2>&1 || true
+    fi
+    adb shell input keyevent 4 || true        # back to Anoy
+    sleep 3
+}
+storage_case allow
+shot home_storage_granted
+log "storage allow texts: $(texts)"
+storage_case deny
+shot home_storage_denied
+log "storage deny texts: $(texts)"
+grant
+
 # TalkBack text of the licence card (one sentence).
 open_home
 log "licence card description: $(dump_ui | grep -o 'resource-id="com.xlox:id/licenceCard"[^>]*' | grep -o 'content-desc="[^"]*"')"

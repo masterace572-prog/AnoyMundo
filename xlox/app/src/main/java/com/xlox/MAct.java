@@ -29,6 +29,7 @@ import com.xlox.ui.UpdateGate;
 import com.xlox.utils.AppManager;
 import com.xlox.utils.LibManager;
 import com.xlox.utils.Prefs;
+import com.xlox.utils.StorageAccess;
 
 import java.io.File;
 import java.text.ParseException;
@@ -69,6 +70,10 @@ public class MAct extends AppCompatActivity {
     public static final String EXTRA_PREVIEW = "qa_preview";
     private static final long RECHECK_INTERVAL_MS = 60_000L;
     private static final long LAUNCH_DELAY_MS = 1200L;
+    private static final String STATE_STORAGE_PROMPT = "storage_prompt_open";
+    private static final String STATE_LAUNCH_AFTER_STORAGE = "launch_after_storage";
+    /** Home asks for missing files access after the content has settled. */
+    private static final long HOME_STORAGE_ASK_DELAY_MS = 700L;
     /**
      * When the container gives no launch intent (or starting it throws), it may
      * still have started the game itself: watch this long before reporting a
@@ -132,6 +137,11 @@ public class MAct extends AppCompatActivity {
     /** The "Couldn't launch" message is on screen. */
     private boolean launchErrorShown;
     private String qaLaunch;
+    /** Files-access prompt (for the OBB copy) is open; resolve it when we are back. */
+    private boolean storagePromptOpen;
+    private boolean leftForStoragePrompt;
+    /** The prompt came from Launch: continue with startLaunch() once access is granted. */
+    private boolean launchAfterStorage;
     private long qaLaunchAt;
     private boolean busy;
     private UpdateGate gate;
@@ -222,7 +232,24 @@ public class MAct extends AppCompatActivity {
         refreshLibrary();
         refreshGameState();
         lastRecheck = SystemClock.elapsedRealtime(); // LogAct just ran the gate.
+        if (savedInstanceState != null && savedInstanceState.getBoolean(STATE_STORAGE_PROMPT, false)) {
+            // Recreated while the files-access page was open: resolve it on resume.
+            storagePromptOpen = true;
+            leftForStoragePrompt = true;
+            launchAfterStorage = savedInstanceState.getBoolean(STATE_LAUNCH_AFTER_STORAGE, false);
+        }
         applyQaAction();
+        // Files access is needed for the OBB copy. Sign in normally asks; if it
+        // did not this run (or access is gone), ask here once so Launch isn't
+        // the first surprise. Never blocks the screen.
+        if (!preview && savedInstanceState == null && !StorageAccess.has(this)
+                && !StorageAccess.askedThisSession()) {
+            main.postDelayed(() -> {
+                if (Ui.alive(this) && !StorageAccess.has(this) && !StorageAccess.askedThisSession()) {
+                    requestStorage(false);
+                }
+            }, HOME_STORAGE_ASK_DELAY_MS);
+        }
         // Content reveals with a 40 ms stagger, 8 dp rise, 220 ms.
         Ui.stagger(findViewById(R.id.mainContent), 0);
         Ui.reveal(findViewById(R.id.actionBar), 120);
@@ -274,6 +301,7 @@ public class MAct extends AppCompatActivity {
     protected void onStop() {
         main.removeCallbacks(ticker);
         if (launchPending) leftDuringLaunch = true;
+        if (storagePromptOpen) leftForStoragePrompt = true;
         super.onStop();
     }
 
@@ -288,6 +316,69 @@ public class MAct extends AppCompatActivity {
         if (!preview) applyPanelStatus();
         reportLoaderError();
         maybeRecheckLibrary();
+        // Back from the All-files-access page (some phones never send a result).
+        if (storagePromptOpen && leftForStoragePrompt) finishStoragePrompt();
+    }
+
+    // ------------------------------------------------------- files access
+
+    /**
+     * Opens the system files-access prompt (All files access on Android 11+,
+     * the storage dialog below). With {@code thenLaunch}, the existing
+     * startLaunch() - OBB copy, then launch - continues once access is granted.
+     */
+    private void requestStorage(boolean thenLaunch) {
+        if (storagePromptOpen) return;
+        boolean shown;
+        try {
+            shown = StorageAccess.request(this);
+        } catch (RuntimeException e) {
+            Log.w(TAG, "Files-access prompt unavailable", e);
+            shown = false;
+        }
+        if (!shown) {
+            showMessage(getString(R.string.storage_permission_needed), true);
+            return;
+        }
+        launchAfterStorage = thenLaunch;
+        storagePromptOpen = true;
+        leftForStoragePrompt = false;
+    }
+
+    /** The user answered the prompt: continue the launch, or explain and stop. */
+    private void finishStoragePrompt() {
+        boolean launch = launchAfterStorage;
+        storagePromptOpen = false;
+        leftForStoragePrompt = false;
+        launchAfterStorage = false;
+        if (!Ui.alive(this)) return;
+        if (StorageAccess.has(this)) {
+            if (launch) startLaunch();
+        } else {
+            showMessage(getString(R.string.storage_permission_needed), true);
+        }
+    }
+
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+        outState.putBoolean(STATE_STORAGE_PROMPT, storagePromptOpen);
+        outState.putBoolean(STATE_LAUNCH_AFTER_STORAGE, launchAfterStorage);
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode != StorageAccess.REQUEST_CODE || !storagePromptOpen) return;
+        // Some phones report "cancelled" before the user has answered; only
+        // decide once we have really been away or access is already there.
+        if (leftForStoragePrompt || StorageAccess.has(this)) finishStoragePrompt();
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == StorageAccess.REQUEST_CODE && storagePromptOpen) finishStoragePrompt();
     }
 
     @Override
@@ -590,6 +681,10 @@ public class MAct extends AppCompatActivity {
             case "launching":
                 setBusy(true, getString(R.string.launching));
                 break;
+            case "storage_launch":
+                // Launch tapped after the activation / library checks, files access missing.
+                requestStorage(true);
+                break;
             case "error":
                 showMessage(getString(R.string.error_obb_missing), true);
                 break;
@@ -724,8 +819,9 @@ public class MAct extends AppCompatActivity {
             openGate(false);
             return;
         }
-        if (!LogAct.hasStorageAccess(this)) {
-            showMessage(getString(R.string.storage_permission_needed), true);
+        if (!StorageAccess.has(this)) {
+            // Ask for files access; startLaunch() runs again once it is granted.
+            requestStorage(true);
             return;
         }
         setBusy(true, getString(R.string.action_preparing));

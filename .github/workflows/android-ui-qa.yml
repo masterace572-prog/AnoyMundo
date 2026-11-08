@@ -141,6 +141,8 @@ jobs:
               # launch result handling
               'home_launch_started_return', 'home_launch_polish_throws_return',
               'home_launch_null_running', 'home_launch_failed', 'home_typical',
+              # files access requested from Launch
+              'storage_prompt', 'home_storage_granted', 'home_storage_denied',
               # live walkthrough
               'login', 'login_keyboard', 'login_error_empty', 'login_error_malformed', 'login_key_visible',
               'gate_check_failed_live', 'login_offline', 'login_ok_home', 'home_signout_sheet', 'signout_done',
@@ -193,6 +195,21 @@ jobs:
                   errors.append(f'launch case {case}: error shown = {failed}, expected {should_fail}')
               if not should_fail and 'text="Stop"' not in m.group(1):
                   errors.append(f'launch case {case}: game not shown as running')
+          # Files access: Launch opens the system prompt; allowed -> the launch
+          # continues by itself; denied -> the message, no copy, no launch.
+          m = re.search(r'^storage allow prompt focus: (.*)$', t, re.M)
+          if not m or 'com.xlox' in m.group(1) or 'Settings' not in m.group(1) and 'settings' not in m.group(1):
+              errors.append('Launch did not open the files-access prompt: ' + (m.group(1) if m else 'not captured'))
+          m = re.search(r'^storage allow texts: (.*)$', t, re.M)
+          if not m or 'Allow storage access' in m.group(1):
+              errors.append('files access granted but the permission message is still shown')
+          elif not any(k in m.group(1) for k in ('container isn', 'Game files not found', 'Preparing', 'Launching')):
+              errors.append('files access granted but the launch did not continue')
+          m = re.search(r'^storage deny texts: (.*)$', t, re.M)
+          if not m or 'Allow storage access' not in m.group(1):
+              errors.append('files access denied but no permission message')
+          elif any(k in m.group(1) for k in ('Preparing', 'Launching')):
+              errors.append('files access denied but the copy / launch started')
           if not re.search(r'typical phone: device card bottom \d+, launch fade top \d+: clear', t):
               errors.append('DEVICE card is covered by the Launch bar on a 411 x 914 dp phone')
           m = re.search(r'licence card description: content-desc="([^"]*)"', t)
