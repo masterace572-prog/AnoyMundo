@@ -167,6 +167,10 @@ jobs:
           t = trace.read_text(errors='replace') if trace.exists() else ''
           for line in t.splitlines():
               if line.startswith('focus for ') and 'com.xlox' not in line:
+                  # A cold start has no focused window for its first frames;
+                  # only another app in front is a failure.
+                  if 'mCurrentFocus=null' in line and ('live' in line or 'anim_' in line):
+                      continue
                   errors.append('app not in front: ' + line)
           if 'update gate passed' not in t:
               errors.append('the live update gate never let the user through')
