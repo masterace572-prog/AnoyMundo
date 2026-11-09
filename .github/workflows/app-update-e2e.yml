@@ -107,6 +107,7 @@ jobs:
       - name: Update on the emulator
         run: |
           set -u
+          trap 'echo "::error title=App update e2e::line $LINENO failed: $BASH_COMMAND"' ERR
           SDK="$ANDROID_SDK_ROOT"
           export PATH="$SDK/platform-tools:$SDK/emulator:$SDK/cmdline-tools/latest/bin:$PATH"
           mkdir -p ../e2e
@@ -121,6 +122,9 @@ jobs:
             sleep 5
           done
           export ANDROID_SERIAL=emulator-5554
+          adb wait-for-device
+          for i in $(seq 1 60); do adb shell pm path android >/dev/null 2>&1 && break; sleep 2; done
+          echo "::notice title=Emulator::booted=$(adb shell getprop sys.boot_completed | tr -d '\r') sdk=$(adb shell getprop ro.build.version.sdk | tr -d '\r')"
           sleep 10
           adb shell input keyevent 82 || true
           adb shell settings put global window_animation_scale 0.0 || true
@@ -128,8 +132,8 @@ jobs:
           adb shell settings put global animator_duration_scale 0.0 || true
 
           APK=$(ls app/build/outputs/apk/debug/*.apk | head -1)
-          adb install -r "$APK"
-          INSTALLED=$(adb shell dumpsys package com.xlox | grep -m1 -o 'versionCode=[0-9]*' | cut -d= -f2)
+          for i in 1 2 3 4 5; do adb install -r "$APK" && break; echo "install attempt $i failed"; sleep 10; done
+          INSTALLED=$(adb shell dumpsys package com.xlox | grep -m1 -o 'versionCode=[0-9]*' | cut -d= -f2 || true)
           echo "::notice title=Installed::com.xlox versionCode $INSTALLED"
           # The user allowed "Install unknown apps" for Anoy.
           adb shell appops set com.xlox REQUEST_INSTALL_PACKAGES allow
