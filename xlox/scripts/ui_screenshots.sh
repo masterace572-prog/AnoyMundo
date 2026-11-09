@@ -61,8 +61,30 @@ grant() {
 
 focus() { adb shell dumpsys window 2>/dev/null | grep -m1 'mCurrentFocus' | tr -d '\r' || true; }
 
+# Emulator flake (run 74): a "System UI isn't responding" dialog can sit over
+# every screen from boot. Dismiss another app's ANR dialog ("Wait"); an ANR
+# of Anoy itself is left on screen and logged so the run fails visibly.
+dismiss_anr() {
+    f=$(adb shell dumpsys window 2>/dev/null | grep -m1 'mCurrentFocus=' | tr -d '\r' || true)
+    case "$f" in
+        *"Not Responding: com.xlox"*) log "ERROR: Anoy itself is not responding: $f" ;;
+        *"Not Responding"*)
+            log "dismissing a system ANR dialog: $f"
+            xy=$(dump_ui | python3 -c '
+import re, sys
+m = re.search(r"text=\"Wait\"[^>]*bounds=\"\[(\d+),(\d+)\]\[(\d+),(\d+)\]\"", sys.stdin.read())
+print("%d %d" % ((int(m.group(1)) + int(m.group(3))) // 2, (int(m.group(2)) + int(m.group(4))) // 2) if m else "")
+')
+            # shellcheck disable=SC2086
+            if [ -n "$xy" ]; then adb shell input tap $xy; else adb shell input keyevent 4; fi
+            sleep 1 ;;
+    esac
+    return 0
+}
+
 shot() {
     name="$1"
+    dismiss_anr
     sleep 0.4
     adb exec-out screencap -p > "$OUT/$name.png" || log "WARN: screencap failed for $name"
     log "focus for $name: $(focus)"
@@ -137,6 +159,7 @@ open_login() {
     stop_app
     # shellcheck disable=SC2068
     adb shell am start -W -n $PKG/.LogAct $@ >> "$LOG" 2>&1 || log "WARN: am start LogAct failed"
+    dismiss_anr
     sleep 1
     wait_gone gateTitle 45 || log "WARN: update sheet still visible"
     wait_for_id keyField 10 || log "WARN: sign-in form missing"
@@ -147,6 +170,7 @@ open_login() {
 open_gate() {
     stop_app
     adb shell am start -W -n $PKG/.LogAct --es qa_gate "$1" >> "$LOG" 2>&1 || log "WARN: gate preview failed"
+    dismiss_anr
     wait_for_id gateTitle 10 || log "WARN: gate preview $1 missing"
     sleep 1.2
 }
@@ -156,6 +180,7 @@ open_home() {
     stop_app
     # shellcheck disable=SC2068
     adb shell am start -W -n $PKG/.MAct --ez qa_preview true --ez qa_freeze_clock true $@ >> "$LOG" 2>&1 || log "WARN: am start MAct failed"
+    dismiss_anr
     wait_for_id primaryAction 10 || log "WARN: home missing"
     sleep 1.5
 }
@@ -191,6 +216,10 @@ airplane() {
 log "=== emulator QA started $(date -u) ==="
 test -f "$APK" || fatal "debug APK missing at $APK"
 adb wait-for-device
+# No crash / ANR dialogs from other processes over the screenshots (Anoy's own
+# crashes are still caught from logcat by the validator).
+adb shell settings put global hide_error_dialogs 1 >/dev/null 2>&1 || true
+dismiss_anr
 adb shell settings put system font_scale 1.0 >/dev/null 2>&1 || true
 adb shell settings put secure show_ime_with_hard_keyboard 1 >/dev/null 2>&1 || true
 adb logcat -c || true
