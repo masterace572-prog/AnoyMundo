@@ -136,6 +136,21 @@ async function main() {
 
   await timing('GET /api/app/update?code=10 (as the app calls it)', '/api/app/update?code=10');
   await timing('GET /api/app/update (function, cache bypassed)', (i) => `/api/app/update?code=10&probe=${run}${i}`);
+  // 2.3.3: the function runs next to the database, the app's update check is
+  // answered from the CDN, and nothing private is cached.
+  r = await request(`/api/app/update?code=10&probe=${run}region`);
+  ok(/::bom1::/.test(r.response.headers.get('x-vercel-id') || ''), 'the panel function runs in bom1 (Mumbai, next to Supabase ap-south-1)',
+    r.response.headers.get('x-vercel-id'));
+  r = await request('/api/app/update?code=10');
+  ok(['HIT', 'STALE'].includes(r.response.headers.get('x-vercel-cache')), 'GET /api/app/update is served from the CDN cache',
+    `${r.response.headers.get('x-vercel-cache')} / ${r.response.headers.get('cache-control')}`);
+  r = await request('/api/app/update?code=10', { headers: { 'Cache-Control': 'no-cache' } });
+  console.log(`  (with a client "Cache-Control: no-cache" the CDN answered ${r.response.headers.get('x-vercel-cache')})`);
+  for (const route of ['/api/lib/manifest', '/connect']) {
+    r = await request(route);
+    ok(/no-store/.test(r.response.headers.get('cache-control') || '') && r.response.headers.get('x-vercel-cache') !== 'HIT',
+      `${route} is not cached`, `${r.response.headers.get('cache-control')} / ${r.response.headers.get('x-vercel-cache')}`);
+  }
 
   // 2. loader library endpoints
   r = await request('/api/lib/manifest');
@@ -183,6 +198,18 @@ async function main() {
   console.log(`  (signed in as ${isOwner ? 'Owner' : 'non-owner'})`);
   if (OWNER.toLowerCase() === 'anoy') ok(isOwner, 'Anoy is the Owner with an unlimited balance');
   await timing('GET /dashboard (signed in)', '/dashboard');
+  r = await request('/dashboard');
+  ok(/no-store/.test(r.response.headers.get('cache-control') || '') && r.response.headers.get('x-vercel-cache') !== 'HIT',
+    'signed-in pages are never cached publicly', r.response.headers.get('cache-control'));
+  {
+    const sprite = /data-icons="([^"]+)"/.exec(String(r.body))?.[1];
+    ok(!!sprite && !/id="ui-icons"/.test(String(r.body)), 'signed-in layout uses the icon sprite (no inline icon template)');
+    if (sprite) {
+      const svg = await request(sprite);
+      ok(svg.status === 200 && /immutable/.test(svg.response.headers.get('cache-control') || ''), `icon sprite ${sprite} is cached for a year`,
+        svg.response.headers.get('cache-control'));
+    }
+  }
   // A key that existed before this run (created by hand for the temporary
   // account, or any unused key of the account) still connects.
   r = await request('/keys/api?status=unused&per=5');
