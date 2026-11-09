@@ -224,6 +224,20 @@ async function main() {
     r = await request(route);
     ok(r.status === 200 && /ui\.css/.test(r.body), `GET ${route} -> 200`, String(r.status));
   }
+  // 2.3.4 panel polish: the new pages are live.
+  r = await request('/dashboard');
+  ok(/class="page-title">Home</.test(r.body) && /Active on a device/.test(r.body) && !/data-nav-open[^>]*aria-label="Open menu"/.test(r.body),
+    '2.3.4: Home title, "Active on a device", no top-bar menu button');
+  r = await request('/keys');
+  ok(/id="keys-list"/.test(r.body) && /id="keys-select"/.test(r.body) && /id="keys-delete-selected"/.test(r.body), '2.3.4: phone keys list with Select mode');
+  r = await request('/keys/generate');
+  ok(!/class="tab-cta"/.test(r.body) && /id="gen-bar-submit"/.test(r.body), '2.3.4: no + tab on Generate, phone Total/Generate bar');
+  r = await request('/settings');
+  ok(/href="\/logout"[^>]*data-no-prefetch[^>]*>.*Sign out/s.test(r.body), '2.3.4: Sign out row at the bottom of Settings');
+  r = await request('/keys/api?per=1');
+  ok(r.body?.ok === true && (!r.body.rows?.length || 'expires_short' in r.body.rows[0]), '2.3.4: /keys/api sends the short IST expiry');
+  r = await request('/assets/fonts/jetbrains-mono-latin-400-normal.woff2');
+  ok(r.status === 200, '2.3.4: JetBrains Mono is self-hosted');
   if (!isOwner) {
     r = await request('/lib');
     ok(r.status === 302, 'non-owners cannot open /lib');
