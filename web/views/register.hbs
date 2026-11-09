@@ -16,7 +16,6 @@
     <div class="auth-panel fade-in">
         <div class="auth-wordmark">{{brand}} <small>Panel</small></div>
         <div class="auth-card">
-            <div class="tile tile-lg">{{icon "user-plus"}}</div>
             <h1 class="auth-title">Create account</h1>
             <p class="lead">You need a referral code from an admin.</p>
 
@@ -79,12 +78,12 @@
                     </div>
                     {{#if errors.password2}}<div class="error">{{icon "circle-alert"}}<span>{{errors.password2}}</span></div>{{/if}}
                 </div>
-                <button type="submit" class="btn btn-primary btn-block btn-lg" data-busy-label="Creating account…">Create account {{icon "arrow-right"}}</button>
+                <button type="submit" class="btn btn-primary btn-block btn-lg" data-busy-label="Creating account…">Create account</button>
             </form>
         </div>
 
         <div class="auth-foot">
-            <span>Already have an account? <a href="/login">Sign in</a></span>
+            <span>Already have an account? <a href="/login">Log in</a></span>
         </div>
     </div>
 </main>

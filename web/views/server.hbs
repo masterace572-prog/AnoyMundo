@@ -14,16 +14,16 @@
                 <div class="tile orange">{{icon "power"}}</div>
                 <div><h2 class="card-title">Maintenance</h2><div class="card-sub">While on, every licence check is refused with your message.</div></div>
             </div>
-            <form method="post" action="/server" class="form" data-busy-form>
+            <form method="post" action="/server" class="form" data-busy-form data-dirty-form>
                 <input type="hidden" name="status_form" value="1">
                 <div class="switch-list">
-                    <label class="switch"><span>Maintenance mode</span><input type="checkbox" name="radios" value="on" {{#if (eq onoff.status "on")}}checked{{/if}}><span class="track"></span></label>
+                    <label class="switch"><span>Maintenance mode</span><input type="checkbox" name="radios" value="on" data-confirm-on="Turn on maintenance?" data-confirm-on-detail="While on, every licence check is refused with your message." {{#if (eq onoff.status "on")}}checked{{/if}}><span class="track"></span></label>
                 </div>
                 <div class="field">
                     <label class="label" for="myInput">Message</label>
                     <textarea class="input" name="myInput" id="myInput" rows="3" maxlength="500" placeholder="Server is under maintenance. Please try again later.">{{onoff.myinput}}</textarea>
                 </div>
-                <div><button type="submit" class="btn btn-primary" data-busy-label="Saving…">{{icon "check"}}Save</button></div>
+                <div class="save-bar" data-save-bar><button type="submit" class="btn btn-primary" data-busy-label="Saving…">{{icon "check"}}Save changes</button></div>
             </form>
         </section>
 
@@ -32,14 +32,14 @@
                 <div class="tile">{{icon "gamepad-2"}}</div>
                 <div><h2 class="card-title">Mod name</h2><div class="card-sub">Shown at the top of the mod menu</div></div>
             </div>
-            <form method="post" action="/server" class="form" data-busy-form>
+            <form method="post" action="/server" class="form" data-busy-form data-dirty-form>
                 <input type="hidden" name="modname_form" value="1">
                 <div class="field">
                     <label class="label" for="modname">Name</label>
                     <div class="input-wrap">{{icon "pencil" "lead"}}
                     <input type="text" class="input" name="modname" id="modname" value="{{server.modname}}" required maxlength="100" placeholder="Mod name"></div>
                 </div>
-                <div><button type="submit" class="btn btn-primary" data-busy-label="Saving…">{{icon "check"}}Save name</button></div>
+                <div class="save-bar" data-save-bar><button type="submit" class="btn btn-primary" data-busy-label="Saving…">{{icon "check"}}Save changes</button></div>
             </form>
         </section>
     </div>
@@ -50,7 +50,7 @@
                 <div class="tile green">{{icon "shield-check"}}</div>
                 <div><h2 class="card-title">Mod status</h2><div class="card-sub">Off shows a high-risk warning in the loader.</div></div>
             </div>
-            <form method="post" action="/server" class="form" data-busy-form>
+            <form method="post" action="/server" class="form" data-busy-form data-dirty-form>
                 <input type="hidden" name="floating_form" value="1">
                 <div class="switch-list">
                     <label class="switch"><span>Safe</span><input type="checkbox" name="_ftextr" value="Safe" {{#if (eq ftext._status "Safe")}}checked{{/if}}><span class="track"></span></label>
@@ -60,7 +60,7 @@
                     <div class="input-wrap">{{icon "sparkles" "lead"}}
                     <input type="text" class="input" name="_ftext" id="_ftext" value="{{ftext._ftext}}" required maxlength="100" placeholder="Short status line"></div>
                 </div>
-                <div><button type="submit" class="btn btn-primary" data-busy-label="Saving…">{{icon "check"}}Save status</button></div>
+                <div class="save-bar" data-save-bar><button type="submit" class="btn btn-primary" data-busy-label="Saving…">{{icon "check"}}Save changes</button></div>
             </form>
         </section>
 
@@ -70,7 +70,7 @@
                 <div class="tile purple">{{icon "layers"}}</div>
                 <div><h2 class="card-title">Features</h2><div class="card-sub">Turn mod features on or off for everyone</div></div>
             </div>
-            <form method="post" action="/server" class="form" data-busy-form>
+            <form method="post" action="/server" class="form" data-busy-form data-dirty-form>
                 <input type="hidden" name="feature_form" value="1">
                 <div class="switch-list">
                     <label class="switch"><span>ESP</span><input type="checkbox" name="ESP" value="on" {{#if (eq feature.esp "on")}}checked{{/if}}><span class="track"></span></label>
@@ -82,7 +82,7 @@
                     <label class="switch"><span>Floating text</span><input type="checkbox" name="Floating" value="on" {{#if (eq feature.floating "on")}}checked{{/if}}><span class="track"></span></label>
                     <label class="switch"><span>In-app settings</span><input type="checkbox" name="Setting" value="on" {{#if (eq feature.setting "on")}}checked{{/if}}><span class="track"></span></label>
                 </div>
-                <div><button type="submit" class="btn btn-primary" data-busy-label="Saving…">{{icon "check"}}Save features</button></div>
+                <div class="save-bar" data-save-bar><button type="submit" class="btn btn-primary" data-busy-label="Saving…">{{icon "check"}}Save changes</button></div>
             </form>
         </section>
         {{/if}}

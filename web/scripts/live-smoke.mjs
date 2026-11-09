@@ -121,7 +121,7 @@ async function main() {
   let r = await request('/api/health');
   ok(r.status === 200 && r.body?.ok === true, 'GET /api/health: Supabase reachable, schema complete', JSON.stringify(r.body).slice(0, 300));
   r = await request('/');
-  ok(r.status === 200 && /Sign In/.test(r.body) && /ui\.css/.test(r.body), 'GET / renders the sign-in page with ui.css');
+  ok(r.status === 200 && /Login/.test(r.body) && /ui\.css/.test(r.body), 'GET / renders the sign-in page with ui.css');
   ok(!/ic_anoy|tailwind|bootstrap/i.test(r.body), 'login page uses no logo image and no old CSS frameworks');
   r = await request('/register');
   ok(r.status === 200 && /Create account/.test(r.body), 'GET /register renders');

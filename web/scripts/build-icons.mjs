@@ -29,6 +29,8 @@ export const ICONS = [
   'user-round', 'users', 'wallet', 'wand-sparkles', 'wrench', 'x', 'zap',
   // 2.2.0: App update page.
   'circle-arrow-up', 'file-text', 'history', 'smartphone-nfc',
+  // 2.3.4: keys list states / offline toast.
+  'wifi-off',
 ];
 
 let iconDir;
@@ -43,6 +45,8 @@ try {
 export const CLIENT_ICONS = [
   'copy', 'check', 'pencil', 'rotate-ccw', 'trash-2', 'x', 'circle-check', 'circle-alert',
   'triangle-alert', 'key-round', 'search', 'send',
+  // 2.3.4: row "⋯" sheet, bulk select, keys states, offline toast.
+  'ellipsis', 'plus', 'wifi-off',
 ];
 
 const icons = {};

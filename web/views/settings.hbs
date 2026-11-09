@@ -1,10 +1,7 @@
 <div class="page-head">
     <div>
         <h1 class="page-title">Settings</h1>
-        <p class="page-sub">Your account and sign-in details.</p>
-    </div>
-    <div class="page-actions">
-        <a href="/logout" class="btn btn-danger">{{icon "log-out"}}Sign out</a>
+        <p class="page-sub">Your account and login details.</p>
     </div>
 </div>
 
@@ -22,7 +19,7 @@
                 <div class="list-row"><span class="lr-label">{{icon "mail" "i-sm"}}Email</span><span class="lr-value">{{user.email}}</span></div>
                 <div class="list-row"><span class="lr-label">{{icon "shield" "i-sm"}}Role</span><span class="lr-value">{{user.levelName}}</span></div>
                 <div class="list-row"><span class="lr-label">{{icon "wallet" "i-sm"}}Balance</span><span class="lr-value">{{#if unlimited}}Unlimited{{else}}₹{{user.saldoLabel}}{{/if}}</span></div>
-                <div class="list-row"><span class="lr-label">{{icon "clock" "i-sm"}}Signed in</span><span class="lr-value">{{sessionSince}}</span></div>
+                <div class="list-row"><span class="lr-label">{{icon "clock" "i-sm"}}Logged in</span><span class="lr-value">{{sessionSince}}</span></div>
                 <div class="list-row"><span class="lr-label">{{icon "hourglass" "i-sm"}}Session ends</span><span class="lr-value">{{sessionRemaining}}</span></div>
             </div>
         </section>
@@ -76,3 +73,9 @@
         </form>
     </section>
 </div>
+
+<section class="card" style="margin-top:20px">
+    <div class="list">
+        <a class="list-row" href="/logout" data-no-prefetch><span class="lr-label">{{icon "log-out" "i-sm"}}Sign out</span>{{icon "chevron-right" "chev"}}</a>
+    </div>
+</section>

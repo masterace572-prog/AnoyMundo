@@ -10,6 +10,7 @@
     <link rel="icon" href="/favicon.svg" type="image/svg+xml">
     <link rel="preload" href="/assets/fonts/inter-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
     <title>{{title}} · {{brand}}</title>
+    <script>document.documentElement.classList.add('js');</script>
     <link rel="stylesheet" href="/assets/css/ui.css">
 </head>
 <body data-icons="{{iconSprite}}">
@@ -18,9 +19,7 @@
         <div class="scrim" data-nav-close></div>
         <div class="main">
             <header class="topbar">
-                <button type="button" class="icon-btn lg" data-nav-open aria-label="Open menu">{{icon "menu"}}</button>
                 <a href="/dashboard" class="brand">{{brand}}</a>
-                <a href="/settings" class="icon-btn lg" aria-label="Account settings">{{icon "user-round"}}</a>
             </header>
             <main class="content fade-in" id="main-content">
                 {{{content}}}
@@ -33,11 +32,12 @@
         <nav class="tabbar" aria-label="Quick navigation">
             <a href="/dashboard" class="{{#if navDashboard}}active{{/if}}">{{icon "layout-dashboard"}}<span>Home</span></a>
             <a href="/keys" class="{{#if navKeys}}active{{/if}}">{{icon "key-round"}}<span>Keys</span></a>
-            <a href="/keys/generate" class="tab-cta" aria-label="Generate keys"><span class="fab">{{icon "plus"}}</span></a>
+            {{#unless navGenerate}}<a href="/keys/generate" class="tab-cta" aria-label="Generate keys"><span class="fab">{{icon "plus"}}</span></a>{{/unless}}
             <a href="/settings" class="{{#if navSettings}}active{{/if}}">{{icon "settings"}}<span>Settings</span></a>
             <button type="button" data-nav-open>{{icon "menu"}}<span>More</span></button>
         </nav>
     </div>
+    <div class="nav-progress" aria-hidden="true"></div>
     <script src="/assets/js/app-ui.js"></script>
 </body>
 </html>

@@ -51,7 +51,7 @@
                     <td data-label="Used by">{{#if this.used_by}}{{this.used_by}}{{else}}<span class="status unused">Available</span>{{/if}}</td>
                 </tr>
                 {{else}}
-                <tr class="is-empty"><td colspan="4"><div class="empty"><div class="tile gray">{{icon "ticket"}}</div><b>No codes yet</b>Create one to invite a reseller.</div></td></tr>
+                <tr class="is-empty"><td colspan="4"><div class="empty">{{icon "ticket"}}<b>No codes yet</b>Create one to invite a reseller.<a href="#set_saldo" class="btn btn-secondary" data-focus="set_saldo">Create a code</a></div></td></tr>
                 {{/each}}
             </tbody>
         </table>

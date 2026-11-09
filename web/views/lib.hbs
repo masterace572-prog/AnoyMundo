@@ -45,7 +45,7 @@
             <label class="dropzone" id="lib-drop">
                 <input type="file" name="myfile" id="lib-file" accept=".so,.zip,application/zip,application/octet-stream" aria-label="Library file">
                 <span class="tile">{{icon "upload"}}</span>
-                <b>Choose a file or drop it here</b>
+                <b><span class="touch-hide">Choose a file or drop it here</span><span class="touch-only">Choose a file</span></b>
                 <span class="file-name" id="lib-file-name">.so or .zip</span>
             </label>
             <button type="button" class="btn btn-plain btn-sm" id="lib-file-clear" hidden>{{icon "x"}}Remove file</button>

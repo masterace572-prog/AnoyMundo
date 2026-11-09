@@ -120,32 +120,69 @@ try {
     await page.fill('#custom_key', 'VIP01');
     await shot(page, `${size.name}_generate_custom`);
 
-    // Confirm dialog from the keys list.
-    await page.goto(`${BASE}/keys`);
-    await page.waitForSelector('#keys-body .icon-btn.danger', { timeout: 5000 }).catch(() => {});
-    const del = await page.$('#keys-body .icon-btn.danger');
-    if (del) { await del.click(); await page.waitForSelector('.modal-backdrop.show').catch(() => {}); await shot(page, `${size.name}_confirm`, { fullPage: false }); }
+    const problem0 = (msg) => { failures += 1; report.push(`[${size.name}] ${msg}`); console.error('CHECK', size.name, msg); };
+    if (!size.mobile) {
+      // Confirm dialog from the keys table.
+      await page.goto(`${BASE}/keys`);
+      await page.waitForSelector('#keys-body .icon-btn.danger', { timeout: 5000 }).catch(() => {});
+      const del = await page.$('#keys-body .icon-btn.danger');
+      if (del) { await del.click(); await page.waitForSelector('.modal-backdrop.show').catch(() => {}); await shot(page, `${size.name}_confirm`, { fullPage: false }); }
 
-    // Copy for customer: the button itself must briefly say "Copied", then
-    // return to its icon (the toast alone is easy to miss on a phone).
-    await page.goto(`${BASE}/keys`);
-    await page.waitForSelector('#keys-body tr:not(.skeleton)', { timeout: 5000 }).catch(() => {});
-    const share = await page.$('#keys-body button[aria-label="Copy for customer"]');
-    if (!share) {
-      failures += 1; report.push(`[${size.name}] Copy for customer button not found`);
+      // Copy for customer: the button itself must briefly say "Copied", then
+      // return to its icon (the toast alone is easy to miss).
+      await page.goto(`${BASE}/keys`);
+      await page.waitForSelector('#keys-body tr:not(.skeleton)', { timeout: 5000 }).catch(() => {});
+      const share = await page.$('#keys-body button[aria-label="Copy for customer"]');
+      if (!share) {
+        problem0('Copy for customer button not found');
+      } else {
+        await share.click();
+        await page.waitForSelector('#keys-body button.labelled .copied-label', { timeout: 3000 }).catch(() => {});
+        const during = await share.evaluate((b) => ({ text: b.textContent.trim(), cls: b.className }));
+        if (during.text !== 'Copied' || !/\blabelled\b/.test(during.cls)) problem0(`Copy for customer: no visible "Copied" on the button (${JSON.stringify(during)})`);
+        await shot(page, `${size.name}_copy_customer`, { fullPage: false });
+        await page.waitForTimeout(2300);
+        const after = await share.evaluate((b) => ({ text: b.textContent.trim(), cls: b.className, svg: !!b.querySelector('svg') }));
+        if (after.text !== '' || /\blabelled\b/.test(after.cls) || !after.svg) problem0(`Copy for customer: button did not return to its icon (${JSON.stringify(after)})`);
+      }
     } else {
-      await share.click();
-      await page.waitForSelector('#keys-body button.labelled .copied-label', { timeout: 3000 }).catch(() => {});
-      const during = await share.evaluate((b) => ({ text: b.textContent.trim(), cls: b.className }));
-      if (during.text !== 'Copied' || !/\blabelled\b/.test(during.cls)) {
-        failures += 1; report.push(`[${size.name}] Copy for customer: no visible "Copied" on the button (${JSON.stringify(during)})`);
+      // 2.3.4 phone keys list: 72 px rows, "⋯" sheet, select mode.
+      await page.goto(`${BASE}/keys`);
+      await page.waitForSelector('#keys-list .key-row:not(.skeleton)', { timeout: 5000 }).catch(() => {});
+      const rows = await page.$$eval('#keys-list .key-row:not(.skeleton)', (r) => r.map((x) => Math.round(x.getBoundingClientRect().height)));
+      if (!rows.length) problem0('keys: no phone rows rendered');
+      else if (rows.some((h) => h < 72)) problem0(`keys: a phone row is shorter than 72 px (${rows.join(',')})`);
+      const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+      if (overflow > 1) problem0(`keys: page scrolls sideways by ${overflow}px`);
+      const more = await page.$('#keys-list .key-row button[aria-label^="More actions"]');
+      if (!more) problem0('keys: row "⋯" button not found');
+      else {
+        await more.click();
+        await page.waitForSelector('.sheet.show', { timeout: 3000 }).catch(() => {});
+        const items = await page.$$eval('.sheet.show .sheet-item', (b) => b.map((x) => x.textContent.trim()));
+        if (items.join('|') !== 'Copy key|Reset devices|Edit|Delete key') problem0(`keys: sheet items are ${JSON.stringify(items)}`);
+        await shot(page, `${size.name}_keys_sheet`, { fullPage: false });
+        await page.click('.sheet.show .sheet-item.danger');
+        await page.waitForSelector('.modal-backdrop.show', { timeout: 3000 }).catch(() => {});
+        await shot(page, `${size.name}_confirm`, { fullPage: false });
+        await page.click('.modal-backdrop.show .btn-secondary').catch(() => {});
       }
-      await shot(page, `${size.name}_copy_customer`, { fullPage: false });
-      await page.waitForTimeout(2300);
-      const after = await share.evaluate((b) => ({ text: b.textContent.trim(), cls: b.className, svg: !!b.querySelector('svg') }));
-      if (after.text !== '' || /\blabelled\b/.test(after.cls) || !after.svg) {
-        failures += 1; report.push(`[${size.name}] Copy for customer: button did not return to its icon (${JSON.stringify(after)})`);
+      await page.click('#keys-select');
+      const boxes = await page.$$('#keys-list [data-pick]');
+      for (const b of boxes.slice(0, 3)) await b.click();
+      const label = (await page.textContent('#keys-selected-count').catch(() => '')) || '';
+      if (boxes.length >= 3 && label.trim() !== '3 selected') problem0(`keys: select mode says "${label.trim()}"`);
+      await shot(page, `${size.name}_keys_select`, { fullPage: false });
+      await page.click('#keys-select-cancel');
+      // Every page: nothing wider than the phone.
+      for (const [name, url] of pages) {
+        await page.goto(`${BASE}${url}`);
+        const wide = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+        if (wide > 1) problem0(`${name}: page scrolls sideways by ${wide}px at 390`);
       }
+      // No "+" tab on the generate page.
+      await page.goto(`${BASE}/keys/generate`);
+      if (await page.$('.tabbar .tab-cta')) problem0('generate: the + tab is shown on the generate page');
     }
 
     // ---- 2.2.0 layout checks: measured from the DOM, not eyeballed.

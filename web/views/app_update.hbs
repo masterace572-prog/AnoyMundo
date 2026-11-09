@@ -109,9 +109,17 @@
         ['version_name', 'version_code', 'apk_url', 'changelog'].forEach(function (n) { fieldError(n, ''); });
         result.textContent = '';
     }
+    // Spinner + label from app-ui.js ("Still working…" after 6 s).
     function busy(btn, on, label) {
+        var ui = window.AnoyUI;
+        if (ui) { if (on) ui.setBusy(btn, label); else ui.clearBusy(btn); return; }
         if (on) { btn.dataset.html = btn.innerHTML; btn.textContent = label; btn.disabled = true; }
         else { if (btn.dataset.html) btn.innerHTML = btn.dataset.html; btn.disabled = false; }
+    }
+    // A toast shown on the reloaded page.
+    function toastAfterReload(text) {
+        try { sessionStorage.setItem('anoy.toast', text); } catch (e) { /* storage off */ }
+        location.reload();
     }
     function httpsUrl(u) {
         if (!/^https:\/\/\S+$/i.test(u)) return false;
@@ -153,8 +161,8 @@
         if (bad) return say('Fix the highlighted fields. Nothing was published.');
         busy(button, true, 'Checking the link…');
         post(data).then(function (r) {
-            say('App ' + r.version_name + ' (' + r.version_code + ') is live. Reloading…', true);
-            setTimeout(function () { location.reload(); }, 1200);
+            say('App ' + r.version_name + ' (' + r.version_code + ') is live.', true);
+            setTimeout(function () { toastAfterReload('App ' + r.version_name + ' (' + r.version_code + ') published'); }, 900);
         }).catch(function (err) {
             if (err.errors) Object.keys(err.errors).forEach(function (k) { fieldError(k, err.errors[k]); });
             say(err.message || 'Publishing failed. Nothing was changed.');
@@ -165,11 +173,16 @@
     var remove = byId('app-remove');
     if (remove) remove.addEventListener('click', function () {
         if (remove.disabled) return;
-        if (!window.confirm('Remove the current app update? Phones will stop offering it.')) return;
-        busy(remove, true, 'Removing…');
-        post({ action: 'remove' }).then(function () { location.reload(); }).catch(function (err) {
-            say(err.message || 'Could not remove the update.');
-            busy(remove, false);
+        var ask = window.AnoyUI
+            ? window.AnoyUI.confirm('Remove the current app update?', 'Phones will stop offering it.', 'Remove', true)
+            : Promise.resolve(window.confirm('Remove the current app update? Phones will stop offering it.'));
+        ask.then(function (ok) {
+            if (!ok) return;
+            busy(remove, true, 'Removing…');
+            post({ action: 'remove' }).then(function () { toastAfterReload('App update removed'); }).catch(function (err) {
+                say(err.message || 'Could not remove the update.');
+                busy(remove, false);
+            });
         });
     });
 

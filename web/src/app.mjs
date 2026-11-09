@@ -11,7 +11,7 @@ import {
 } from './auth.mjs';
 import {
   renderPage, sendHtml, sendJson, sendText, buildSelect, sqlDateTime, parseIstDateTime,
-  humanDate, longDate, durationLabel, escapeHtml,
+  humanDate, longDate, shortDate, durationLabel, escapeHtml,
   iconSvg,
 } from './render.mjs';
 import { requestUrl, pathOf, parseBody, redirect, back } from './http.mjs';
@@ -166,6 +166,8 @@ async function keysList(res, user, q) {
       user_key: r.user_key,
       duration: durationLabel(r.duration),
       expires: r.expired_date ? humanDate(r.expired_date) : '',
+      // "12 Dec, 14:30" (IST) for the phone list.
+      expires_short: r.expired_date ? shortDate(r.expired_date) : '',
       max_devices: Number(r.max_devices || 1),
       devices: deviceList(r.devices).length,
       state,
@@ -765,7 +767,7 @@ function plainPage(title, message, detail = '', status = 200) {
 <h1 class="auth-title">${escapeHtml(title)}</h1>
 <p class="lead">${escapeHtml(message)}</p>
 ${detail ? `<p class="hint mono">${escapeHtml(detail)}</p>` : ''}
-<a href="/dashboard" class="btn btn-primary btn-block" style="margin-top:18px">${iconSvg('layout-dashboard')}Back to dashboard</a>
+<a href="/dashboard" class="btn btn-primary btn-block" style="margin-top:18px">${iconSvg('layout-dashboard')}Back to Home</a>
 </div>
 </div></main></body></html>`;
 }
@@ -893,7 +895,7 @@ export async function handle(req, res) {
     // ------------------------------ dashboard ------------------------------
     if (lp === '/dashboard' || lp === '/dbg') {
       const { stats } = await dashboardData(user);
-      return page(req, res, 'dashboard', { user, title: 'Dashboard', stats, unlimited: isUnlimited(user) });
+      return page(req, res, 'dashboard', { user, title: 'Home', stats, unlimited: isUnlimited(user) });
     }
 
     // --------------------------- docs (two kinds) ---------------------------

@@ -8,7 +8,7 @@
     <meta name="robots" content="noindex">
     <link rel="icon" href="/favicon.svg" type="image/svg+xml">
     <link rel="preload" href="/assets/fonts/inter-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
-    <title>Sign In · {{brand}}</title>
+    <title>Login · {{brand}}</title>
     <link rel="stylesheet" href="/assets/css/ui.css">
 </head>
 <body class="auth">
@@ -16,8 +16,7 @@
     <div class="auth-panel fade-in">
         <div class="auth-wordmark">{{brand}} <small>Panel</small></div>
         <div class="auth-card">
-            <div class="tile tile-lg">{{icon "shield-check"}}</div>
-            <h1 class="auth-title">Sign In</h1>
+            <h1 class="auth-title">Login</h1>
             <p class="lead">Welcome back. Use your panel account to continue.</p>
 
             {{> msgStatus}}
@@ -29,7 +28,7 @@
                         {{icon "user" "lead"}}
                         <input class="input" type="text" name="username" id="username" value="{{old.username}}"
                                autocomplete="username" autocapitalize="none" spellcheck="false" required minlength="3" maxlength="25"
-                               placeholder="Your username" {{#unless old.username}}autofocus{{/unless}}>
+                               placeholder="Your username" {{#unless old.username}}data-autofocus{{/unless}}>
                     </div>
                     {{#if errors.username}}<div class="error">{{icon "circle-alert"}}<span>{{errors.username}}</span></div>{{/if}}
                 </div>
@@ -38,15 +37,15 @@
                     <div class="input-wrap has-trail">
                         {{icon "lock" "lead"}}
                         <input class="input" type="password" name="password" id="password" autocomplete="current-password"
-                               required minlength="6" maxlength="45" placeholder="Your password" {{#if old.username}}autofocus{{/if}}>
+                               required minlength="6" maxlength="45" placeholder="Your password" {{#if old.username}}data-autofocus{{/if}}>
                         <div class="trail">
                             <button type="button" class="icon-btn" data-toggle-password="password" aria-label="Show password" aria-pressed="false">{{icon "eye" "when-off"}}{{icon "eye-off" "when-on"}}</button>
                         </div>
                     </div>
                     {{#if errors.password}}<div class="error">{{icon "circle-alert"}}<span>{{errors.password}}</span></div>{{/if}}
                 </div>
-                <label class="check"><input type="checkbox" name="stay_log" id="stay_log" value="yes"> Keep me signed in</label>
-                <button type="submit" class="btn btn-primary btn-block btn-lg" data-busy-label="Signing in…">Sign In {{icon "arrow-right"}}</button>
+                <label class="check"><input type="checkbox" name="stay_log" id="stay_log" value="yes"> Keep me logged in</label>
+                <button type="submit" class="btn btn-primary btn-block btn-lg" data-busy-label="Logging in…">Login</button>
             </form>
         </div>
 

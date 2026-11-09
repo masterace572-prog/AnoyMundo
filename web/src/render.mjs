@@ -19,6 +19,12 @@ Handlebars.registerHelper('initial', (...args) => {
   return name.trim().charAt(0).toUpperCase();
 });
 Handlebars.registerHelper('json', (value) => JSON.stringify(value ?? null));
+// JSON that is safe inside an inline <script> (use with triple braces).
+Handlebars.registerHelper('jsonScript', (value) => new Handlebars.SafeString(JSON.stringify(value ?? null)
+  .replace(/</g, '\\u003c').replace(/>/g, '\\u003e').replace(/&/g, '\\u0026')
+  .replace(/\u2028/g, '\\u2028').replace(/\u2029/g, '\\u2029')));
+// "1 device" / "2 devices".
+Handlebars.registerHelper('devices', (n) => `${Number(n) || 0} device${Number(n) === 1 ? '' : 's'}`);
 Handlebars.registerHelper('alertClass', (type) => {
   const allowed = ['success', 'warning', 'danger', 'info'];
   return `alert-${allowed.includes(String(type)) ? String(type) : 'info'}`;
@@ -122,6 +128,20 @@ export function humanDate(value) {
   const t = istClock(value);
   if (!t) return String(value);
   return `${t.getUTCDate()} ${MONTHS[t.getUTCMonth()]} ${t.getUTCFullYear()}, ${clock12(t)} IST`;
+}
+
+/**
+ * "12 Dec, 14:30" in IST (the year is added when it is not this year) - the
+ * short form used on the phone keys list.
+ */
+export function shortDate(value) {
+  if (!value) return '';
+  const t = istClock(value);
+  if (!t) return String(value);
+  const now = istClock(new Date());
+  const p = (n) => String(n).padStart(2, '0');
+  const year = now && now.getUTCFullYear() !== t.getUTCFullYear() ? ` ${t.getUTCFullYear()}` : '';
+  return `${t.getUTCDate()} ${MONTHS[t.getUTCMonth()]}${year}, ${p(t.getUTCHours())}:${p(t.getUTCMinutes())}`;
 }
 
 /** "8 November 2026, 10:30 PM IST". */

@@ -13,8 +13,8 @@
 
 {{> msgStatus}}
 
-<div class="grid-main">
-<section class="card">
+<div class="grid-main edit-grid">
+<section class="card edit-form">
     <div class="card-head">
         <div class="tile">{{icon "pencil"}}</div>
         <div><h2 class="card-title">Settings</h2><div class="card-sub">{{#if user.isOwner}}Every field of this key{{else}}Status of this key{{/if}}</div></div>
@@ -58,8 +58,8 @@
         <div class="field {{#if errors.expired_date}}invalid{{/if}}">
             <label class="label" for="expired_date">Expires (IST)</label>
             <div class="input-wrap">{{icon "calendar" "lead"}}
-            <input type="text" class="input mono" name="expired_date" id="expired_date" value="{{form.expired_date}}" placeholder="Not started yet" autocomplete="off"></div>
-            {{#if errors.expired_date}}<div class="error">{{icon "circle-alert"}}<span>{{errors.expired_date}}</span></div>{{else}}<div class="hint">YYYY-MM-DD HH:MM:SS, Indian time (IST). Empty = not used yet.</div>{{/if}}
+            <input type="text" class="input mono" name="expired_date" id="expired_date" value="{{form.expired_date}}" placeholder="Starts on first use" autocomplete="off"></div>
+            {{#if errors.expired_date}}<div class="error">{{icon "circle-alert"}}<span>{{errors.expired_date}}</span></div>{{else}}<div class="hint">Format 2026-12-31 23:59:00 (IST). Leave empty if unused.</div>{{/if}}
         </div>
         <div class="field {{#if errors.registrator}}invalid{{/if}}">
             <label class="label" for="registrator">Created by</label>
@@ -85,7 +85,7 @@
 </section>
 
 <aside class="stack">
-    <section class="card">
+    <section class="card edit-details">
         <div class="card-head">
             <div class="tile teal">{{icon "info"}}</div>
             <div><h2 class="card-title">Details</h2><div class="card-sub">Live state of this key</div></div>
@@ -94,11 +94,11 @@
             <div class="list-row"><span class="lr-label">{{icon "gamepad-2" "i-sm"}}Game</span><span class="lr-value">{{key.game}}</span></div>
             <div class="list-row"><span class="lr-label">{{icon "clock" "i-sm"}}Duration</span><span class="lr-value">{{key.durationLabel}}</span></div>
             <div class="list-row"><span class="lr-label">{{icon "smartphone" "i-sm"}}Devices</span><span class="lr-value num">{{key.deviceTotal}} of {{key.max_devices}}</span></div>
-            <div class="list-row"><span class="lr-label">{{icon "calendar" "i-sm"}}Expires</span><span class="lr-value">{{#if key.expiresLabel}}{{key.expiresLabel}}{{else}}Not started yet{{/if}}</span></div>
+            <div class="list-row"><span class="lr-label">{{icon "calendar" "i-sm"}}Expires</span><span class="lr-value">{{#if key.expiresLabel}}{{key.expiresLabel}}{{else}}Starts on first use{{/if}}</span></div>
             <div class="list-row"><span class="lr-label">{{icon "user" "i-sm"}}Created by</span><span class="lr-value">{{key.registrator}}</span></div>
         </div>
     </section>
-    <section class="card">
+    <section class="card edit-actions">
         <div class="card-head">
             <div class="tile orange">{{icon "wrench"}}</div>
             <div><h2 class="card-title">Actions</h2><div class="card-sub">Applied immediately</div></div>

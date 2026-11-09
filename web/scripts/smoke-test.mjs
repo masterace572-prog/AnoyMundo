@@ -114,7 +114,7 @@ try {
   ok(r.status === 200 && r.body.ok === true, 'GET /api/health reports all checks OK', JSON.stringify(r.body));
   ok(r.body.checks?.schema?.ok === true, 'schema check sees all tables');
   r = await request('/');
-  ok(r.status === 200 && /Sign In/.test(r.body) && /name="username"/.test(r.body) && /name="password"/.test(r.body), 'GET / renders the sign-in page');
+  ok(r.status === 200 && />Login</.test(r.body) && /name="username"/.test(r.body) && /name="password"/.test(r.body), 'GET / renders the sign-in page');
   ok(/\/assets\/css\/ui\.css/.test(r.body) && !/cdn\.|jquery|bootstrap|tailwind/i.test(r.body), 'sign-in page uses only the local stylesheet (no CDN)');
   ok(!/ic_anoy|logo/i.test(r.body), 'sign-in page shows no logo');
   ok(/https:\/\/t\.me\/libAkAudioVisiual/.test(r.body), 'sign-in page links the Telegram handle');

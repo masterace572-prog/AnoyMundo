@@ -4,7 +4,7 @@
         <p class="page-sub">Balance: {{#if unlimited}}Unlimited{{else}}₹{{user.saldoLabel}}{{/if}}</p>
     </div>
     <div class="page-actions">
-        <a href="/keys" class="btn btn-secondary">{{icon "key-round"}}All keys</a>
+        <a href="/keys" class="btn btn-secondary hide-tab">{{icon "key-round"}}All keys</a>
     </div>
 </div>
 
@@ -14,7 +14,7 @@
 <section class="card highlight keys-out" id="generated" style="margin-bottom:20px">
     <div class="card-head">
         <div class="tile green">{{icon "circle-check"}}</div>
-        <div><h2 class="card-title">New keys ready</h2><div class="card-sub">{{flash.game}} · {{flash.max_devices}} device(s) · the duration starts when the key is first used.</div>{{#if flash.created_label}}<div class="card-sub">Created {{flash.created_label}} · if first used now, expires {{flash.expires_if_now}}</div>{{/if}}</div>
+        <div><h2 class="card-title">New keys ready</h2><div class="card-sub">{{flash.game}} · {{devices flash.max_devices}} · the duration starts when the key is first used.</div>{{#if flash.created_label}}<div class="card-sub">Created {{flash.created_label}} · if first used now, expires {{flash.expires_if_now}}</div>{{/if}}</div>
         <span class="spacer"></span>
         <button type="button" class="btn btn-primary btn-sm" data-copy-target="generated-keys">{{icon "copy"}}Copy all</button>
     </div>
@@ -102,6 +102,12 @@
             <div class="list-row"><span>Total</span><span class="total" id="total-price">—</span></div>
         </div>
         <div class="error" id="balance-error" hidden>{{icon "circle-alert"}}<span>This order is more than your balance.</span></div>
-        <button type="submit" class="btn btn-primary btn-block btn-lg" id="generate-submit" data-busy-label="Creating…" style="margin-top:16px">{{icon "wand-sparkles"}}Generate</button>
+        <button type="submit" class="btn btn-primary btn-block btn-lg gen-side-submit" id="generate-submit" data-busy-label="Creating…" style="margin-top:16px">{{icon "wand-sparkles"}}Generate</button>
     </aside>
+    <div class="gen-spacer" aria-hidden="true"></div>
+    <!-- Phone: Total / Generate fixed above the tab bar (hidden while the keyboard is open). -->
+    <div class="gen-bar">
+        <div class="gen-total"><small>Total</small><b id="gen-bar-total">—</b></div>
+        <button type="submit" class="btn btn-primary" id="gen-bar-submit" data-busy-label="Creating…">Generate</button>
+    </div>
 </form>

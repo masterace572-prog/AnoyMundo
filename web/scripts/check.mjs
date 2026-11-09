@@ -52,12 +52,17 @@ try {
 
 // ---- static assets ----------------------------------------------------------
 for (const asset of ['public/assets/css/ui.css', 'public/assets/js/app-ui.js', 'public/favicon.svg',
-  'public/assets/fonts/inter-latin-wght-normal.woff2', 'public/assets/fonts/INTER-LICENSE.txt']) {
+  'public/assets/fonts/inter-latin-wght-normal.woff2', 'public/assets/fonts/INTER-LICENSE.txt',
+  'public/assets/fonts/jetbrains-mono-latin-400-normal.woff2', 'public/assets/fonts/jetbrains-mono-latin-500-normal.woff2',
+  'public/assets/fonts/JETBRAINS-MONO-LICENSE.txt']) {
   if (!fs.existsSync(path.join(root, asset))) errors.push(`missing static asset: ${asset}`);
 }
 const src = (rel) => fs.readFileSync(path.join(root, rel), 'utf8');
 const uiCss = src('public/assets/css/ui.css');
 if (/gradient\(/.test(uiCss)) errors.push('ui.css contains a gradient');
+// 2.3.4: flat look - no shadows, no press-scale.
+if (/box-shadow:\s*(?!none)[^;]*\d/.test(uiCss)) errors.push('ui.css contains a box-shadow');
+if (/:active[^{]*\{[^}]*scale\(/.test(uiCss)) errors.push('ui.css contains a press-scale');
 if (!/--bg:\s*#000/.test(uiCss) || !/--blue:\s*#0a84ff/i.test(uiCss)) errors.push('ui.css must keep the black / blue palette');
 
 // ---- views: no CDN, no logo, no PHP, no legacy frameworks -------------------
