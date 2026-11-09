@@ -326,6 +326,8 @@ public class MAct extends AppCompatActivity {
             fitHero(hero);
         }
         gameVersionText = findViewById(R.id.gameVersion);
+        // "BG" sits in a fixed 56 dp tile: it follows the font scale only up to 1.15x.
+        Ui.capFontScale(findViewById(R.id.gameMonogram), HERO_MAX_FONT_SCALE);
         gameStateValue = findViewById(R.id.gameStateValue);
         accessRow = findViewById(R.id.accessRow);
         accessValue = findViewById(R.id.accessValue);
@@ -1142,7 +1144,9 @@ public class MAct extends AppCompatActivity {
         } else if (look == LOOK_SOON) {
             setDot(statusValue, getString(R.string.expires_soon), R.color.warning, R.color.text_secondary);
         } else if (look == LOOK_EXPIRED) {
+            // The red "Expired" hero says it already; no second word, no dot.
             setDot(statusValue, getString(R.string.expired), R.color.danger, R.color.text_secondary);
+            statusValue.setVisibility(View.INVISIBLE);
         } else {
             setDot(statusValue, getString(R.string.dash), 0, R.color.text_tertiary);
         }

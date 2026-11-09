@@ -429,7 +429,9 @@ jobs:
               errors.append('game closed outside Anoy: not reconciled: ' + line('game_closed log')[-300:])
           # Licence refresh on return to home.
           lb, la = line('licence_extend before texts'), line('licence_extend after texts')
-          if '29d 21h' not in clock(lb) or '59d 23h' not in clock(la) or 'expiry changed' not in line('licence_extend log'):
+          # now + 60 days can render within the same millisecond (exactly 60d 00h 00m 00s).
+          if ('29d 21h' not in clock(lb) or not re.match(r'(59d 23h|60d 00h 00m 00s)', clock(la))
+                  or 'expiry changed' not in line('licence_extend log')):
               errors.append('panel extension not reflected on return to home: %s -> %s' % (lb[:200], la[:200]))
           if 'Expires soon' in lb:
               errors.append('29 days left shown as Expires soon')
@@ -515,7 +517,8 @@ jobs:
           if 'LogAct' not in line('app update not now focus'):
               errors.append('app update: Not now did not continue to sign in: ' + line('app update not now focus'))
           um = line('app update mandatory texts')
-          if 'Update required' not in um or 'Update now' not in um or 'Not now' in um:
+          # 2.3.0: "Update required" is the kicker (dumped uppercase).
+          if 'UPDATE REQUIRED' not in um.upper() or 'Update now' not in um or 'Not now' in um:
               errors.append('app update (mandatory): must offer Update now only: ' + um[:400])
           if 'AppUpdateActivity' not in line('app update mandatory back focus'):
               errors.append('app update (mandatory): back left the screen: ' + line('app update mandatory back focus'))
