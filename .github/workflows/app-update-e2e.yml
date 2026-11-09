@@ -1,0 +1,212 @@
+name: App update end-to-end
+
+# 2.3.2: proves the in-app update works against the real GitHub release.
+#  1. The panel's link check (web/src/app-release.mjs, the code the panel runs
+#     before publishing) passes on the newest anoy-v<name>-<code> asset and
+#     refuses a release web page and a missing asset.
+#  2. On an emulator, a debug build that reports the previous version code
+#     (2.3.1 = 10 for 2.3.2) is offered that same asset, taps Update now, downloads it,
+#     checks package + version code and hands it to the Android installer.
+# Debug and release builds are signed with different keys, so the final
+# install on the emulator is expected to stop at "package conflicts"; the
+# test passes once the system installer shows the update prompt.
+# Manual (Actions > App update end-to-end > Run workflow) or on a push of this file.
+on:
+  workflow_dispatch:
+  push:
+    branches: [arena/2e95185a-anoymundo]
+    paths:
+      - '.github/workflows/app-update-e2e.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: app-update-e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  link-check:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    outputs:
+      name: ${{ steps.latest.outputs.LATEST_NAME }}
+      code: ${{ steps.latest.outputs.LATEST_CODE }}
+      url: ${{ steps.latest.outputs.LATEST_URL }}
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+      - name: Newest release asset passes the panel's link check
+        id: latest
+        run: node scripts/verify-apk-link.mjs --latest
+      - name: Bad links are refused
+        run: |
+          node scripts/verify-apk-link.mjs --bad \
+            "https://github.com/${{ github.repository }}/releases/latest" \
+            "https://github.com/${{ github.repository }}/releases/download/no-such-tag/Anoy-XLOX-loader.apk" \
+            "https://anoymundo-panel.vercel.app/api/app/update"
+
+  emulator:
+    needs: link-check
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    defaults:
+      run:
+        working-directory: xlox
+    env:
+      UPDATE_NAME: ${{ needs.link-check.outputs.name }}
+      UPDATE_CODE: ${{ needs.link-check.outputs.code }}
+      UPDATE_URL: ${{ needs.link-check.outputs.url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Bundle the BGMI icon (already committed; no-op)
+        run: python3 scripts/fetch_game_icon.py
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+          cache-dependency-path: |
+            xlox/gradle/wrapper/gradle-wrapper.properties
+            xlox/build.gradle
+            xlox/app/build.gradle
+
+      - name: Install Android SDK, NDK and emulator image
+        run: |
+          SDK="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-$HOME/android-sdk}}"
+          if [ -x "$SDK/cmdline-tools/latest/bin/sdkmanager" ]; then SM="$SDK/cmdline-tools/latest/bin/sdkmanager"
+          else SM="$(command -v sdkmanager)"; fi
+          echo "ANDROID_HOME=$SDK" >> "$GITHUB_ENV"
+          echo "ANDROID_SDK_ROOT=$SDK" >> "$GITHUB_ENV"
+          yes | "$SM" --sdk_root="$SDK" --licenses > /dev/null 2>&1 || true
+          "$SM" --sdk_root="$SDK" --install "platform-tools" "platforms;android-36" "build-tools;34.0.0" \
+            "ndk;24.0.8215888" "system-images;android-33;google_apis;x86_64" "emulator" > /dev/null
+
+      - name: Build the "old" debug app (previous version code)
+        run: |
+          chmod +x gradlew
+          OLD=$((UPDATE_CODE - 1))
+          echo "OLD_CODE=$OLD" >> "$GITHUB_ENV"
+          set +e
+          ./gradlew :app:assembleDebug -PanoyQaVersionCode=$OLD --no-daemon > /tmp/assemble.log 2>&1
+          rc=$?
+          tail -30 /tmp/assemble.log
+          [ $rc -eq 0 ] || { grep -E "error:|What went wrong" /tmp/assemble.log | head -20 | sed 's/^/::error::/'; exit $rc; }
+          echo "::notice title=Old app::debug build reporting versionCode $OLD; update offered: $UPDATE_NAME ($UPDATE_CODE)"
+
+      - name: Update on the emulator
+        run: |
+          set -u
+          SDK="$ANDROID_SDK_ROOT"
+          export PATH="$SDK/platform-tools:$SDK/emulator:$SDK/cmdline-tools/latest/bin:$PATH"
+          mkdir -p ../e2e
+          if [ -e /dev/kvm ]; then sudo chmod 666 /dev/kvm || true; fi
+          export ANDROID_AVD_HOME="$HOME/.android/avd"; mkdir -p "$ANDROID_AVD_HOME"
+          echo "no" | avdmanager create avd --force -n e2e -k 'system-images;android-33;google_apis;x86_64' --device pixel_5
+          OPTS="-port 5554 -avd e2e -no-snapshot -no-window -noaudio -no-boot-anim -gpu swiftshader_indirect"
+          [ -w /dev/kvm ] || OPTS="$OPTS -accel off"
+          nohup emulator $OPTS > ../e2e/emulator.log 2>&1 &
+          for i in $(seq 1 240); do
+            [ "$(adb -s emulator-5554 shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" = "1" ] && break
+            sleep 5
+          done
+          export ANDROID_SERIAL=emulator-5554
+          sleep 10
+          adb shell input keyevent 82 || true
+          adb shell settings put global window_animation_scale 0.0 || true
+          adb shell settings put global transition_animation_scale 0.0 || true
+          adb shell settings put global animator_duration_scale 0.0 || true
+
+          APK=$(ls app/build/outputs/apk/debug/*.apk | head -1)
+          adb install -r "$APK"
+          INSTALLED=$(adb shell dumpsys package com.xlox | grep -m1 -o 'versionCode=[0-9]*' | cut -d= -f2)
+          echo "::notice title=Installed::com.xlox versionCode $INSTALLED"
+          # The user allowed "Install unknown apps" for Anoy.
+          adb shell appops set com.xlox REQUEST_INSTALL_PACKAGES allow
+          adb logcat -c
+
+          focus() { adb shell dumpsys window 2>/dev/null | grep -E 'mCurrentFocus|mFocusedApp' | head -2 | tr -s ' ' | tr '\n' ' '; }
+          texts() { adb shell uiautomator dump /sdcard/ui.xml >/dev/null 2>&1; adb shell cat /sdcard/ui.xml 2>/dev/null; }
+          shot() { adb exec-out screencap -p > "../e2e/$1.png" 2>/dev/null || true; }
+          fail() { echo "::error title=App update e2e::$1"; adb logcat -d > ../e2e/logcat.txt; shot failure; texts > ../e2e/failure.xml; exit 1; }
+
+          # Launch through the launcher activity (the only exported one) with
+          # the real release in debug-only extras.
+          adb shell "am start -n com.xlox/.SplashActivity --es qa_real_update_url '$UPDATE_URL' --ei qa_real_update_code $UPDATE_CODE --es qa_real_update_name '$UPDATE_NAME'"
+          ok=0
+          for i in $(seq 1 30); do focus | grep -q AppUpdateActivity && { ok=1; break; }; sleep 1; done
+          [ $ok = 1 ] || fail "the update screen did not open (focus: $(focus))"
+          sleep 2; shot 1-update-screen
+          texts > ../e2e/update-screen.xml
+          grep -q 'Update now' ../e2e/update-screen.xml || fail "no Update now button on the update screen"
+          echo "::notice title=Update screen::opened for $UPDATE_NAME ($UPDATE_CODE)"
+
+          BOUNDS=$(python3 -c "
+          import re,sys
+          x=open('../e2e/update-screen.xml').read()
+          m=re.search(r'resource-id=\"com.xlox:id/appUpdatePrimary\"[^>]*bounds=\"\[(\d+),(\d+)\]\[(\d+),(\d+)\]\"', x)
+          print('%d %d' % ((int(m[1])+int(m[3]))//2, (int(m[2])+int(m[4]))//2) if m else '')")
+          [ -n "$BOUNDS" ] || fail "Update now button bounds not found"
+          adb shell input tap $BOUNDS
+          echo "tapped Update now at $BOUNDS"
+
+          # Download (~real GitHub asset), package + version check, then the installer.
+          reached=0
+          for i in $(seq 1 150); do
+            F=$(focus)
+            if echo "$F" | grep -qiE 'packageinstaller|PackageInstallerActivity|InstallStart|InstallStaging'; then reached=1; break; fi
+            if adb logcat -d -s AppUpdate:W | grep -q 'Update failed'; then break; fi
+            [ $((i % 10)) = 0 ] && shot "2-progress-$i"
+            sleep 1
+          done
+          sleep 2
+          adb logcat -d > ../e2e/logcat.txt
+          grep -E 'AppUpdate|SplashActivity' ../e2e/logcat.txt | tail -40 > ../e2e/update-log.txt || true
+          cat ../e2e/update-log.txt
+          if [ $reached != 1 ]; then
+            REASON=$(grep -m1 'Update failed' ../e2e/update-log.txt | sed 's/.*Update failed: //')
+            fail "the installer did not open. App said: ${REASON:-nothing} (focus: $(focus))"
+          fi
+          shot 3-installer
+          texts > ../e2e/installer.xml
+          PROMPT=$(python3 -c "
+          import re
+          x=open('../e2e/installer.xml').read()
+          print(' | '.join(t for t in re.findall(r'text=\"([^\"]+)\"', x) if t.strip())[:300])")
+          echo "::notice title=Installer reached::$PROMPT"
+          echo "$PROMPT" | grep -qiE 'update this app|want to update|update' || fail "installer opened without an update prompt: $PROMPT"
+          grep -q 'Install session .* committed' ../e2e/logcat.txt && echo "::notice title=Install session::committed to PackageInstaller after the APK passed the package + versionCode check"
+
+          # Confirm, and report what Android says (debug key vs release key -> conflict expected).
+          BTN=$(python3 -c "
+          import re
+          x=open('../e2e/installer.xml').read()
+          for m in re.finditer(r'text=\"(Update|UPDATE|Install|INSTALL)\"[^>]*bounds=\"\[(\d+),(\d+)\]\[(\d+),(\d+)\]\"', x):
+              print('%d %d' % ((int(m[2])+int(m[4]))//2, (int(m[3])+int(m[5]))//2)); break")
+          if [ -n "$BTN" ]; then
+            adb shell input tap $BTN; sleep 8; shot 4-after-confirm
+            AFTER=$(texts | python3 -c "
+          import re,sys
+          print(' | '.join(t for t in re.findall(r'text=\"([^\"]+)\"', sys.stdin.read()) if t.strip())[:300])")
+            echo "::notice title=After confirming::$AFTER (a signature conflict is expected: this emulator app is debug-signed, the release is release-signed)"
+          fi
+          adb logcat -d > ../e2e/logcat.txt
+
+      - name: Upload screenshots and logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-update-e2e
+          path: e2e/
+          if-no-files-found: warn
+          retention-days: 14
