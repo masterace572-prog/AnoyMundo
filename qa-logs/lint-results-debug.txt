@@ -67,13 +67,13 @@
    this support FAQ for details:
    https://support.google.com/faqs/answer/9267555
 
-/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/res/layout/activity_main.xml:629: Warning: This tag and its children can be replaced by one <TextView/> and a compound drawable [UseCompoundDrawables]
+/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/res/layout/activity_main.xml:630: Warning: This tag and its children can be replaced by one <TextView/> and a compound drawable [UseCompoundDrawables]
                         <LinearLayout
                          ~~~~~~~~~~~~
-/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/res/layout/activity_main.xml:750: Warning: This tag and its children can be replaced by one <TextView/> and a compound drawable [UseCompoundDrawables]
+/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/res/layout/activity_main.xml:751: Warning: This tag and its children can be replaced by one <TextView/> and a compound drawable [UseCompoundDrawables]
                         <LinearLayout
                          ~~~~~~~~~~~~
-/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/res/layout/activity_main.xml:770: Warning: This tag and its children can be replaced by one <TextView/> and a compound drawable [UseCompoundDrawables]
+/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/res/layout/activity_main.xml:771: Warning: This tag and its children can be replaced by one <TextView/> and a compound drawable [UseCompoundDrawables]
                         <LinearLayout
                          ~~~~~~~~~~~~
 /home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/res/layout/dialog_update.xml:20: Warning: This tag and its children can be replaced by one <TextView/> and a compound drawable [UseCompoundDrawables]
@@ -277,7 +277,7 @@
    lint.unused-resources.exclude-tests =true.
    ,
 
-/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/res/layout/activity_main.xml:635: Warning: activity_main.xml has more than 80 views, bad for performance [TooManyViews]
+/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/res/layout/activity_main.xml:636: Warning: activity_main.xml has more than 80 views, bad for performance [TooManyViews]
                             <TextView
                              ~~~~~~~~
 
@@ -289,16 +289,16 @@
    The maximum view count defaults to 80 but can be configured with the
    environment variable ANDROID_LINT_MAX_VIEW_COUNT.
 
-/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/res/layout/activity_main.xml:621: Warning: Missing contentDescription attribute on image [ContentDescription]
+/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/res/layout/activity_main.xml:622: Warning: Missing contentDescription attribute on image [ContentDescription]
                             <ImageView
                              ~~~~~~~~~
-/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/res/layout/activity_main.xml:642: Warning: Missing contentDescription attribute on image [ContentDescription]
+/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/res/layout/activity_main.xml:643: Warning: Missing contentDescription attribute on image [ContentDescription]
                             <ImageView
                              ~~~~~~~~~
-/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/res/layout/activity_main.xml:763: Warning: Missing contentDescription attribute on image [ContentDescription]
+/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/res/layout/activity_main.xml:764: Warning: Missing contentDescription attribute on image [ContentDescription]
                             <ImageView
                              ~~~~~~~~~
-/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/res/layout/activity_main.xml:783: Warning: Missing contentDescription attribute on image [ContentDescription]
+/home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/res/layout/activity_main.xml:784: Warning: Missing contentDescription attribute on image [ContentDescription]
                             <ImageView
                              ~~~~~~~~~
 /home/runner/work/AnoyMundo/AnoyMundo/xlox/app/src/main/res/layout/sheet_help.xml:147: Warning: Missing contentDescription attribute on image [ContentDescription]
