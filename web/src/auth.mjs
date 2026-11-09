@@ -170,6 +170,53 @@ export function displayName(user) {
   return user.username;
 }
 
+// ---------------------------------------------------------------------------
+// 2.3.3: per-instance cache of the signed-in user's row, keyed by the session
+// cookie (its hash), for at most 15 s. Only the database read is cached:
+// every request still verifies the cookie signature and expiry and re-runs
+// every check below (renamed account, password version, status, level,
+// account expiry) against the row. Entries are dropped on sign-out and by any
+// request that can change data (app.mjs), so a password change, ban or
+// balance change on this instance applies at once; another warm instance can
+// lag by at most 15 s. The money path never uses it (key-service.mjs re-reads
+// the row before charging).
+// ---------------------------------------------------------------------------
+const SESSION_CACHE_MS = 15_000;
+const SESSION_CACHE_MAX = 500;
+const sessionCache = new Map();
+
+function sessionKey(token) {
+  return crypto.createHash('sha256').update(String(token)).digest('base64url');
+}
+
+async function cachedUserRow(token, uid) {
+  const key = sessionKey(token);
+  const hit = sessionCache.get(key);
+  const now = Date.now();
+  if (hit && now - hit.at < SESSION_CACHE_MS && hit.row && Number(hit.row.id_users) === Number(uid)) {
+    return hit.row;
+  }
+  const row = await getUserById(uid);
+  if (row) {
+    if (sessionCache.size >= SESSION_CACHE_MAX) sessionCache.delete(sessionCache.keys().next().value);
+    sessionCache.set(key, { row, at: now });
+  } else {
+    sessionCache.delete(key);
+  }
+  return row;
+}
+
+/** Drops the cached row of the session in this request's cookie (sign-out). */
+export function forgetSession(req) {
+  const token = parseCookies(req?.headers?.cookie)[SESSION_COOKIE];
+  if (token) sessionCache.delete(sessionKey(token));
+}
+
+/** Drops every cached row on this instance (any data-changing request). */
+export function forgetAllSessions() {
+  sessionCache.clear();
+}
+
 /**
  * Validates the session cookie, re-checks the user row (status / level /
  * account expiry) and returns a view-model, or null when not authenticated.
@@ -178,7 +225,7 @@ export async function currentUser(req) {
   const cookies = parseCookies(req.headers?.cookie);
   const session = readSessionToken(cookies[SESSION_COOKIE]);
   if (!session) return null;
-  const user = await getUserById(session.uid);
+  const user = await cachedUserRow(cookies[SESSION_COOKIE], session.uid);
   if (!user) return null;
   // If an account is renamed, an old cookie must not keep its privileges.
   if (String(user.username) !== String(session.un)) return null;

@@ -4,6 +4,20 @@ Screenshots, design notes (`docs/ui-redesign/…`) and the one-off generator
 scripts mentioned below were removed from the tree in the repo cleanup after
 2.3.2; they remain in git history.
 
+## 2.3.3 — speed and reliability (versionCode 12)
+
+- **Splash update check:** one attempt with 8 s connect / 10 s read (was up
+  to two attempts of 15 s / 30 s). Settings › Check for app updates keeps the
+  patient check. The failure state (amber dot, reason, Try again) is unchanged.
+- **"Up to date" remembered for 10 minutes:** after a successful check that
+  found no newer version, the splash skips the network for 10 minutes. A found
+  update is never remembered away and a failed check never counts as up to
+  date. The time of the last successful check is stored (UTC) for Settings.
+- **Panel:** the server now runs in Mumbai (Vercel `bom1`), next to its
+  database (Supabase `ap-south-1`), instead of the US. The app update answer
+  is cached by Vercel for up to a minute; signed-in pages read the account
+  from a 15-second cache; client icons come from a cached sprite.
+
 ## 2.3.2 — app updates and CI (versionCode 11)
 
 - **App update download:** a failed download says "Couldn't download the

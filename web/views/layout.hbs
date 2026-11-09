@@ -12,7 +12,7 @@
     <title>{{title}} · {{brand}}</title>
     <link rel="stylesheet" href="/assets/css/ui.css">
 </head>
-<body>
+<body data-icons="{{iconSprite}}">
     <div class="shell">
         {{> header}}
         <div class="scrim" data-nav-close></div>
@@ -38,14 +38,6 @@
             <button type="button" data-nav-open>{{icon "menu"}}<span>More</span></button>
         </nav>
     </div>
-    <template id="ui-icons">
-        <i data-icon="copy">{{icon "copy"}}</i><i data-icon="check">{{icon "check"}}</i>
-        <i data-icon="pencil">{{icon "pencil"}}</i><i data-icon="rotate-ccw">{{icon "rotate-ccw"}}</i>
-        <i data-icon="trash-2">{{icon "trash-2"}}</i><i data-icon="x">{{icon "x"}}</i>
-        <i data-icon="circle-check">{{icon "circle-check"}}</i><i data-icon="circle-alert">{{icon "circle-alert"}}</i>
-        <i data-icon="triangle-alert">{{icon "triangle-alert"}}</i><i data-icon="key-round">{{icon "key-round"}}</i>
-        <i data-icon="search">{{icon "search"}}</i><i data-icon="send">{{icon "send"}}</i>
-    </template>
     <script src="/assets/js/app-ui.js"></script>
 </body>
 </html>

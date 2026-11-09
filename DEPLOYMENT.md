@@ -5,7 +5,7 @@
 | Piece | Value |
 |---|---|
 | GitHub | `masterace572-prog/AnoyMundo`, branch `arena/2e95185a-anoymundo` |
-| Vercel project | `anoymundo-panel` — `prj_eV3iBh1EUffuxQSaV6AkIEh0kn4D`, Root Directory `web` |
+| Vercel project | `anoymundo-panel` — `prj_eV3iBh1EUffuxQSaV6AkIEh0kn4D`, Root Directory `web`, function region `bom1` (Mumbai) |
 | Supabase | `anoymundo-panel` — `bwsqenepvfwhfomdhaig` (ap-south-1) |
 | Owner | `Anoy` (level 1, unlimited balance, saabarjun705@gmail.com) |
 | Panel name / Telegram | `Anoy` / `@libAkAudioVisiual` |
@@ -15,7 +15,12 @@
 ## 1. What is deployed
 
 `web/` is the whole app. `vercel.json` pins `"framework": null` so Vercel builds
-`api/index.js` as one Node.js serverless function; `public/` is served as static
+`api/index.js` as one Node.js serverless function, in region `bom1` next to the
+Supabase database (ap-south-1; keep the two together, every page makes database
+round trips). Caching: only `GET /api/app/update` is shared-cached
+(`s-maxage=60, stale-while-revalidate=300`); everything else, including
+`/connect`, the library endpoints and every signed-in page, is `no-store`. The
+hashed icon sprite `/assets/icons/ui-<hash>.svg` is cached for a year; `public/` is served as static
 files (`/assets/css/ui.css`, `/assets/js/app-ui.js`, fonts, `/favicon.svg`) and
 every other path goes to the function. `npm run build` compiles the Handlebars
 templates into `src/templates.generated.mjs` (committed, so bundling never

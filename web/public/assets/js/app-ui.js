@@ -18,14 +18,25 @@
   }
 
   /* -------------------------------------------------------------- icons */
-  // Icons come from <template id="ui-icons"> (rendered server-side), so the
-  // script never builds SVG markup from strings.
+  // Icons come from a static, content-hashed SVG sprite (path in
+  // <body data-icons>, cached for a year), drawn with DOM calls: the script
+  // never builds SVG markup from strings.
+  var SVG_NS = 'http://www.w3.org/2000/svg';
+  var sprite = document.body ? document.body.getAttribute('data-icons') : '';
+  if (sprite) { var warm = new Image(); warm.src = sprite; }
   function icon(name, cls) {
-    var tpl = document.getElementById('ui-icons');
-    var src = tpl && tpl.content ? tpl.content.querySelector('[data-icon="' + name + '"] svg') : null;
-    if (!src) return document.createTextNode('');
-    var svg = src.cloneNode(true);
-    if (cls) svg.setAttribute('class', (svg.getAttribute('class') || '') + ' ' + cls);
+    if (!sprite || !/^[a-z0-9-]+$/.test(name)) return document.createTextNode('');
+    var svg = document.createElementNS(SVG_NS, 'svg');
+    var attrs = {
+      'class': 'i' + (cls ? ' ' + cls : ''), viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor',
+      'stroke-width': '1.75', 'stroke-linecap': 'round', 'stroke-linejoin': 'round',
+      'aria-hidden': 'true', focusable: 'false',
+    };
+    Object.keys(attrs).forEach(function (k) { svg.setAttribute(k, attrs[k]); });
+    var use = document.createElementNS(SVG_NS, 'use');
+    use.setAttribute('href', sprite + '#' + name);
+    use.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', sprite + '#' + name);
+    svg.appendChild(use);
     return svg;
   }
   function iconButton(name, label, cls) {

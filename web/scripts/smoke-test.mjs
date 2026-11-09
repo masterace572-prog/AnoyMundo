@@ -420,7 +420,8 @@ try {
   ok(r.body?.available === true && r.body?.version_code === 8 && r.body?.version_name === '2.2.0' && r.body?.mandatory === false &&
     r.body?.apk_url === appOk.apk_url && r.body?.changelog === 'New home\nSettings' && r.body?.update_available === true,
     'app update check returns the release (code 7 -> update)');
-  ok(r.response.headers.get('cache-control') === 'no-store', 'app update check is never cached');
+  ok(r.response.headers.get('cache-control') === 'public, s-maxage=60, stale-while-revalidate=300',
+    'app update check may be cached by the CDN for a minute (2.3.3)');
   r = await request('/api/app/update?code=8');
   ok(r.body?.update_available === false, 'app update check: same code -> no update');
   r = await request('/app-update', { method: 'POST', headers: SAME, body: { ...appOk, version_code: '8', type: 'mandatory' } });
@@ -481,6 +482,41 @@ try {
   ok(r.status === 200, 'favicon.svg is served');
   r = await request('/assets/fonts/inter-latin-wght-normal.woff2');
   ok(r.status === 200, 'self-hosted font is served');
+
+  // 14b. 2.3.3 speed pass: caching headers, icon sprite, session cache.
+  r = await request('/api/lib/manifest');
+  ok(r.response.headers.get('cache-control') === 'no-store', 'library manifest stays no-store (must match the uncached download)');
+  r = await request('/connect');
+  ok(r.response.headers.get('cache-control') === 'no-store', '/connect is never cached');
+  r = await request('/dashboard');
+  ok(r.response.headers.get('cache-control') === 'no-store', 'signed-in pages stay no-store');
+  ok(/app;dur=[0-9.]+/.test(r.response.headers.get('server-timing') || ''), 'Server-Timing reports the time spent in the function');
+  {
+    const sprite = /<body data-icons="(\/assets\/icons\/ui-[0-9a-f]{10}\.svg)">/.exec(r.body)?.[1];
+    ok(!!sprite && !/id="ui-icons"/.test(r.body), 'layout points app-ui.js at the hashed icon sprite (no inline icon template)');
+    const svg = sprite ? await request(sprite) : null;
+    ok(svg?.status === 200 && ['copy', 'check', 'trash-2', 'circle-alert', 'send'].every((n) => svg.body.includes(`<symbol id="${n}"`)),
+      'icon sprite is served with every client icon');
+  }
+  {
+    // An old session must stop working the moment the password changes, even
+    // though its user row was just cached.
+    await request('/logout');
+    r = await login('reseller1', 'secret123');
+    ok(r.status === 302 && r.location === '/dashboard', 'reseller signs in again for the session-cache check');
+    const before = cookies.get('am_session');
+    r = await request('/settings');
+    ok(r.status === 200, 'settings loads (user row now cached)');
+    r = await request('/settings', { method: 'POST', headers: SAME, body: form({ password_form: '1', current: 'secret123', password: 'Fresh2pass9', password2: 'Fresh2pass9' }) });
+    const after = cookies.get('am_session');
+    ok(r.status === 302 && after && after !== before, 'password change issues a new session');
+    cookies.set('am_session', before);
+    r = await request('/dashboard');
+    ok(r.status === 302 && r.location === '/login', 'the old session is refused at once (session cache cleared on password change)');
+    cookies.set('am_session', after);
+    r = await request('/dashboard');
+    ok(r.status === 200, 'the new session works');
+  }
 
   // 15. logout
   r = await request('/logout');

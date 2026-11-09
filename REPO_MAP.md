@@ -57,8 +57,9 @@ the Android loader app `com.xlox` (Java + XML Views, built in GitHub Actions).
 - `web-ui-qa.yml` (push to `web/**`): panel tests + screenshots (artifact).
 - Manual: `android-ui-qa.yml` (emulator screenshots), `app-update-e2e.yml`
   (real update download → installer), `live-smoke.yml` (live panel checks).
-- Panel production deploy: Vercel project `anoymundo-panel` from this branch
-  (pushes create previews; production is promoted on demand).
+- Panel production deploy: Vercel project `anoymundo-panel` from this branch,
+  function region `bom1` next to Supabase `ap-south-1` (pushes create previews;
+  production is promoted on demand).
 - Phones get an app update only after the owner publishes it at `/app-update`.
 
 ## Hard limits (do not change)

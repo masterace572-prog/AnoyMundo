@@ -255,8 +255,13 @@ function publicRelease(row) {
  * when nothing is published) so the app can tell "up to date" from "can't
  * check". Optional ?code=<installed versionCode> adds update_available.
  */
+// 2.3.3: the answer is the same for everyone with the same ?code=, so the
+// Vercel CDN may keep it for a minute (and serve it stale for up to five more
+// while it refreshes). Publishing or removing shows up within about a minute.
+// Errors stay no-store (sendJson only caches 200s).
+export const APP_UPDATE_CACHE = 'public, s-maxage=60, stale-while-revalidate=300';
+
 export async function handleAppUpdateCheck(res, query) {
-  res.setHeader('Cache-Control', 'no-store');
   res.setHeader('Access-Control-Allow-Origin', '*');
   let row;
   try {
@@ -271,7 +276,7 @@ export async function handleAppUpdateCheck(res, query) {
   if (Number.isFinite(installed) && installed > 0) {
     payload.update_available = !!row && Number(row.version_code) > installed;
   }
-  return sendJson(res, payload);
+  return sendJson(res, payload, 200, { cacheControl: APP_UPDATE_CACHE });
 }
 
 /** Data for the panel page. 2.3.2: only the current update - no history is shown. */

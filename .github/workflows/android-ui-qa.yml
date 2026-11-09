@@ -479,7 +479,7 @@ jobs:
           for st, want in (('up_to_date', 'Up to date'), ('available', 'Update available (v2.4.0)'),
                            ('fail', 'check for updates')):
               tx = line('splash status %s texts' % st)
-              if want not in tx or 'text="v2.3.2"' not in tx:
+              if want not in tx or 'text="v2.3.3"' not in tx:
                   errors.append('splash status %s: %r / version missing: %s' % (st, want, tx[:300]))
           if 'text="Retry"' not in line('splash status fail texts'):
               errors.append('splash: a failed check has no Retry: ' + line('splash status fail texts')[:300])
@@ -538,7 +538,7 @@ jobs:
           # Settings (2.3.1): licence, updates, device, report, version, Sign out; no Access group.
           sx = line('settings texts') + ' ' + line('settings bottom texts')
           for want in ('Settings', 'Licence key', 'Check for app updates', 'Re-download library', 'Library version',
-                       'Model', 'Android', 'Report on Telegram', 'Copy support info', 'App version', '2.3.2 (11)',
+                       'Model', 'Android', 'Report on Telegram', 'Copy support info', 'App version', '2.3.3 (12)',
                        'Sign out'):
               if want not in sx:
                   errors.append('Settings: %r missing: %s' % (want, sx[:500]))

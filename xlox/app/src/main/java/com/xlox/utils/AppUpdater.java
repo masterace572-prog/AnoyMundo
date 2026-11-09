@@ -58,6 +58,15 @@ public final class AppUpdater {
 
     private static final int CONNECT_TIMEOUT_MS = 15_000;
     private static final int READ_TIMEOUT_MS = 30_000;
+    /** 2.3.3: the splash check is one quick attempt; Settings keeps the patient one above. */
+    private static final int SPLASH_CONNECT_TIMEOUT_MS = 8_000;
+    private static final int SPLASH_READ_TIMEOUT_MS = 10_000;
+    /** A successful "no newer version" lets the splash skip the network for this long. */
+    static final long UP_TO_DATE_CACHE_MS = 10L * 60L * 1000L;
+    /** Prefs keys (UTC epoch milliseconds). Only successful checks are ever written. */
+    private static final String PREF_LAST_OK = "app_update_last_ok";
+    private static final String PREF_NONE_AT = "app_update_none_at";
+    private static final String PREF_NONE_CODE = "app_update_none_code";
     private static final int MAX_REDIRECTS = 6;
     private static final int MAX_ATTEMPTS = 3;
     private static final long MAX_APK_BYTES = 200L * 1024L * 1024L;
@@ -139,16 +148,60 @@ public final class AppUpdater {
      * Asks the panel for the current app release. Returns it when its
      * versionCode is higher than this build's, null when the app is up to date
      * (or nothing is published). Any failure throws: the caller must never
-     * treat "couldn't check" as "up to date".
+     * treat "couldn't check" as "up to date". Used by Settings: two attempts,
+     * 15 s connect / 30 s read.
      */
     public static Release check(Context context) throws UpdateException {
+        return check(context, 2, CONNECT_TIMEOUT_MS, READ_TIMEOUT_MS);
+    }
+
+    /** The splash's check: one attempt, 8 s connect / 10 s read, same rules otherwise. */
+    public static Release checkForSplash(Context context) throws UpdateException {
+        return check(context, 1, SPLASH_CONNECT_TIMEOUT_MS, SPLASH_READ_TIMEOUT_MS);
+    }
+
+    /**
+     * True when a successful check for this build found no newer version less
+     * than 10 minutes ago. Only "up to date" is remembered: a found update is
+     * never cached away and a failed check never counts.
+     */
+    public static boolean recentlyUpToDate(Context context) {
+        Prefs prefs = new Prefs(context);
+        long at = prefs.getLong(PREF_NONE_AT, 0L);
+        if (at <= 0L || prefs.getLong(PREF_NONE_CODE, 0L) != BuildConfig.VERSION_CODE) return false;
+        long age = System.currentTimeMillis() - at;
+        // A clock set backwards makes the age negative: check again.
+        return age >= 0L && age < UP_TO_DATE_CACHE_MS;
+    }
+
+    /** UTC epoch milliseconds of the last successful check (splash or Settings), 0 if none yet. */
+    public static long lastCheckedAt(Context context) {
+        return new Prefs(context).getLong(PREF_LAST_OK, 0L);
+    }
+
+    private static void remember(Context app, Release found) {
+        Prefs prefs = new Prefs(app);
+        long now = System.currentTimeMillis();
+        prefs.setLong(PREF_LAST_OK, now);
+        if (found == null) {
+            prefs.setLong(PREF_NONE_AT, now);
+            prefs.setLong(PREF_NONE_CODE, BuildConfig.VERSION_CODE);
+        } else {
+            prefs.remove(PREF_NONE_AT);
+            prefs.remove(PREF_NONE_CODE);
+        }
+    }
+
+    private static Release check(Context context, int attempts, int connectMs, int readMs) throws UpdateException {
         Context app = context.getApplicationContext();
         if (!Net.isOnline(app)) throw new UpdateException(app.getString(R.string.net_offline), true);
         IOException last = null;
-        for (int attempt = 1; attempt <= 2; attempt++) {
+        for (int attempt = 1; attempt <= attempts; attempt++) {
             HttpURLConnection connection = null;
             try {
-                connection = open(checkUrl(), "application/json");
+                // No "Cache-Control: no-cache" here: the panel answers from its
+                // CDN for up to a minute, which is what keeps this fast.
+                connection = open(checkUrl(), "application/json", connectMs, readMs, false);
                 int code = connection.getResponseCode();
                 if (code != 200) {
                     Log.w(TAG, "Update check answered HTTP " + code);
@@ -156,7 +209,9 @@ public final class AppUpdater {
                             ? app.getString(R.string.update_unavailable)
                             : app.getString(R.string.net_http, code), true);
                 }
-                return parse(app, readBody(connection, 32 * 1024));
+                Release found = parse(app, readBody(connection, 32 * 1024));
+                remember(app, found);
+                return found;
             } catch (IOException e) {
                 last = e;
                 Log.w(TAG, "Update check attempt " + attempt + " failed: " + e);
@@ -447,6 +502,11 @@ public final class AppUpdater {
 
     /** Opens a connection, following redirects by hand: every hop must stay on https. */
     private static HttpURLConnection open(String start, String accept) throws IOException {
+        return open(start, accept, CONNECT_TIMEOUT_MS, READ_TIMEOUT_MS, true);
+    }
+
+    private static HttpURLConnection open(String start, String accept, int connectMs, int readMs,
+                                          boolean noCache) throws IOException {
         String current = start;
         for (int hop = 0; hop <= MAX_REDIRECTS; hop++) {
             URL url = new URL(current);
@@ -455,13 +515,13 @@ public final class AppUpdater {
             }
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();
             connection.setInstanceFollowRedirects(false);
-            connection.setConnectTimeout(CONNECT_TIMEOUT_MS);
-            connection.setReadTimeout(READ_TIMEOUT_MS);
+            connection.setConnectTimeout(connectMs);
+            connection.setReadTimeout(readMs);
             connection.setUseCaches(false);
             connection.setRequestProperty("User-Agent", USER_AGENT);
             connection.setRequestProperty("Accept", accept);
             connection.setRequestProperty("Accept-Encoding", "identity");
-            connection.setRequestProperty("Cache-Control", "no-cache");
+            if (noCache) connection.setRequestProperty("Cache-Control", "no-cache");
             int code = connection.getResponseCode();
             if (code == 301 || code == 302 || code == 303 || code == 307 || code == 308) {
                 String location = connection.getHeaderField("Location");

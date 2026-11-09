@@ -23,6 +23,18 @@ public class Prefs {
         sp.edit().putString(key, value).apply();
     }
 
+    public long getLong(String key, long fallback) {
+        try {
+            return sp.getLong(key, fallback);
+        } catch (ClassCastException e) {
+            return fallback;
+        }
+    }
+
+    public void setLong(String key, long value) {
+        sp.edit().putLong(key, value).apply();
+    }
+
     public void remove(String key) {
         sp.edit().remove(key).apply();
     }

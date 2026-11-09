@@ -351,7 +351,13 @@ public class SplashActivity extends AppCompatActivity {
         Log.i("SplashActivity", "Checking for an app update");
         checker.execute(() -> {
             try {
-                AppUpdater.Release found = AppUpdater.check(this);
+                // 2.3.3: up to date less than 10 minutes ago -> no network.
+                if (AppUpdater.recentlyUpToDate(this)) {
+                    Log.i("SplashActivity", "Up to date (checked within 10 minutes); skipping the network check");
+                    handler.post(() -> onChecked(run, null));
+                    return;
+                }
+                AppUpdater.Release found = AppUpdater.checkForSplash(this);
                 handler.post(() -> onChecked(run, found));
             } catch (UpdateException e) {
                 Log.w("SplashActivity", "App update check failed: " + e.getMessage());

@@ -7,6 +7,7 @@ import {
 import {
   currentUser, authenticate, hashPassword, codeHash, verifyPassword,
   setSession, clearSession, getClientIp, displayName, passwordIssue,
+  forgetSession, forgetAllSessions,
 } from './auth.mjs';
 import {
   renderPage, sendHtml, sendJson, sendText, buildSelect, sqlDateTime, parseIstDateTime,
@@ -36,6 +37,17 @@ const REFERRAL_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const randomCode = (n) => Array.from({ length: n }, () => REFERRAL_ALPHABET[crypto.randomInt(REFERRAL_ALPHABET.length)]).join('');
 const inr = (v) => `₹${Number(v || 0).toLocaleString('en-IN')}`;
 const nowIso = () => new Date().toISOString();
+
+/** Server-Timing: app;dur=<ms> - time spent in this function (for speed checks). */
+function serverTiming(res) {
+  if (typeof res.end !== 'function' || typeof res.setHeader !== 'function') return;
+  const started = performance.now();
+  const end = res.end;
+  res.end = function timedEnd(...args) {
+    if (!res.headersSent) res.setHeader('Server-Timing', `app;dur=${(performance.now() - started).toFixed(1)}`);
+    return end.apply(this, args);
+  };
+}
 
 function userCtx(user) {
   return { user, title: '' };
@@ -795,6 +807,16 @@ export async function handle(req, res) {
   // Declared outside the try so the failure handler can always use them.
   let p = '/';
   const method = String(req.method || 'GET').toUpperCase();
+  serverTiming(res);
+  // A request that can change data drops the cached signed-in users first and
+  // again when done, so it and the page after it read fresh rows (auth.mjs).
+  // /connect only touches licence keys, never users, so it keeps the cache.
+  const mutating = method !== 'GET' && method !== 'HEAD'
+    && !/^\/(api\/)?connect\/?$/i.test(String(req.url || '').split('?')[0]);
+  if (mutating) {
+    forgetAllSessions();
+    res.once?.('finish', forgetAllSessions);
+  }
   try {
     const url = requestUrl(req);
     const q = url.searchParams;
@@ -859,6 +881,7 @@ export async function handle(req, res) {
       return page(req, res, 'register', { title: 'Register', clientIp: getClientIp(req) });
     }
     if (lp === '/logout') {
+      forgetSession(req);
       clearSession(res);
       return redirect(res, '/login', { msgSuccess: 'You have been signed out.' });
     }

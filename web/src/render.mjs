@@ -1,6 +1,6 @@
 import Handlebars from 'handlebars';
 import { templates } from './templates.generated.mjs';
-import { icons } from './icons.generated.mjs';
+import { icons, uiSprite } from './icons.generated.mjs';
 import { config } from './config.mjs';
 import { readFlash } from './auth.mjs';
 
@@ -242,6 +242,7 @@ export function renderPage(req, res, name, data = {}) {
   base.errors = { ...errors, ...(data.errors || {}) };
   base.form = { ...form, ...(data.form || {}), ...old };
   base.appVersion = config.version;
+  base.iconSprite = uiSprite;
   // A failed POST re-renders with the previous choices kept selected.
   base.selects = Object.fromEntries(Object.entries(base.selects || {})
     .map(([key, html]) => [key, old[key] !== undefined ? reselect(html, old[key]) : html]));
@@ -251,8 +252,10 @@ export function renderPage(req, res, name, data = {}) {
   return compile('layout')({ ...base, content, pageCss: data.pageCss || '', pageJs: data.pageJs || '' });
 }
 
-function securityHeaders(res, html) {
-  res.setHeader('Cache-Control', 'no-store');
+// Everything is no-store unless a caller passes an explicit Cache-Control
+// (2.3.3: only the public, identical-for-everyone /api/app/update does).
+function securityHeaders(res, html, cacheControl = 'no-store') {
+  res.setHeader('Cache-Control', cacheControl);
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('Referrer-Policy', 'same-origin');
   if (html) {
@@ -271,10 +274,10 @@ export function sendHtml(res, html, status = 200) {
   res.end(html);
 }
 
-export function sendJson(res, payload, status = 200) {
+export function sendJson(res, payload, status = 200, { cacheControl } = {}) {
   res.statusCode = status;
   res.setHeader('Content-Type', 'application/json; charset=utf-8');
-  securityHeaders(res, false);
+  securityHeaders(res, false, status === 200 && cacheControl ? cacheControl : 'no-store');
   res.end(JSON.stringify(payload));
 }
 
