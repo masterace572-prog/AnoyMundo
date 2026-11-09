@@ -497,8 +497,7 @@ jobs:
                   errors.append('Settings top: %r missing: %s' % (want, lt[:500]))
           # Check for app updates: Checking... -> Up to date / Couldn't check / the update screen.
           if line('app check current') != 'Up to date':
-              errors.append('Check for app updates: no "Up to date": %r (checking %r)'
-                            % (line('app check current'), line('app check checking')))
+              errors.append('Check for app updates: no "Up to date": %r' % line('app check current'))
           if line('app check failed') != "Couldn't check":
               errors.append('Check for app updates: no "Couldn\'t check": %r' % line('app check failed'))
           if 'AppUpdateActivity' not in line('app check available focus') or '2.4.0' not in line('app check available texts'):
