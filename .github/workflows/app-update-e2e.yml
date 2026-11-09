@@ -7,9 +7,11 @@ name: App update end-to-end
 #  2. On an emulator, a debug build that reports the previous version code
 #     (2.3.1 = 10 for 2.3.2) is offered that same asset, taps Update now, downloads it,
 #     checks package + version code and hands it to the Android installer.
-# Debug and release builds are signed with different keys, so the final
-# install on the emulator is expected to stop at "package conflicts"; the
-# test passes once the system installer shows the update prompt.
+# The emulator is x86_64 and the app ships arm64 code only, so the old app is
+# installed as an ABI-neutral copy signed with a throwaway key. The final
+# install of the release-signed arm64 APK is therefore expected to be refused
+# by Android (different key / ABI); the test passes once the system installer
+# shows the update prompt for the downloaded, checked APK.
 # Manual (Actions > App update end-to-end > Run workflow) or on a push of this file.
 on:
   workflow_dispatch:
@@ -132,7 +134,19 @@ jobs:
           adb shell settings put global animator_duration_scale 0.0 || true
 
           APK=$(ls app/build/outputs/apk/debug/*.apk | head -1)
-          for i in 1 2 3 4 5; do adb install -r "$APK" && break; echo "install attempt $i failed"; sleep 10; done
+          # The app ships arm64-v8a native code only; this emulator is x86_64.
+          # As in ui_screenshots.sh, install an ABI-neutral copy re-signed with
+          # a throwaway key (every JNI call is guarded; the update flow is Java).
+          APKSIGNER=$(ls "$SDK"/build-tools/*/apksigner | sort | tail -1)
+          keytool -genkeypair -keystore /tmp/e2e.keystore -alias e2e -keyalg RSA -keysize 2048 -validity 1000 \
+            -storepass android -keypass android -dname "CN=Anoy e2e" >/dev/null 2>&1
+          cp "$APK" /tmp/e2e-unsigned.apk
+          zip -q -d /tmp/e2e-unsigned.apk 'lib/arm64-v8a/*' >/dev/null 2>&1 || true
+          "$APKSIGNER" sign --ks /tmp/e2e.keystore --ks-pass pass:android --key-pass pass:android \
+            --out /tmp/e2e-old.apk /tmp/e2e-unsigned.apk
+          OUT=""
+          for i in 1 2 3 4 5; do OUT=$(adb install -r /tmp/e2e-old.apk 2>&1) && break; echo "install attempt $i: $OUT"; sleep 10; done
+          adb shell pm path com.xlox >/dev/null 2>&1 || { echo "::error title=App update e2e::old app did not install: $(echo "$OUT" | tail -1)"; exit 1; }
           INSTALLED=$(adb shell dumpsys package com.xlox | grep -m1 -o 'versionCode=[0-9]*' | cut -d= -f2 || true)
           echo "::notice title=Installed::com.xlox versionCode $INSTALLED"
           # The user allowed "Install unknown apps" for Anoy.
