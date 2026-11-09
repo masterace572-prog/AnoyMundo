@@ -99,6 +99,13 @@ public class LogAct extends AppCompatActivity {
 
     private final ExecutorService executor = Executors.newSingleThreadExecutor(r -> new Thread(r, "anoy-login"));
     private final Handler main = new Handler(Looper.getMainLooper());
+    /** 2.3.4: a login still waiting after this long says "Still logging in…". */
+    private static final long SLOW_LOGIN_MS = 8000L;
+    private final Runnable slowLogin = () -> {
+        if (!this.signingIn || !Ui.alive(this)) return;
+        Ui.setLoading(this.loginButton, true, getString(R.string.still_logging_in));
+        this.loginButton.setContentDescription(getString(R.string.still_logging_in));
+    };
 
     private Prefs prefs;
     private EditText keyInput;
@@ -292,6 +299,7 @@ public class LogAct extends AppCompatActivity {
 
     @Override
     protected void onDestroy() {
+        main.removeCallbacks(slowLogin);
         if (gate != null) gate.dispose();
         if (permissionSheet != null) {
             permissionSheet.setOnDismissListener(null);
@@ -356,7 +364,8 @@ public class LogAct extends AppCompatActivity {
     /**
      * Problems with the key go under the field (red border, alert icon, shake,
      * REJECT haptic). Network / server / VPN / maintenance messages go to the
-     * notice card with "Try again".
+     * neutral notice block with "Try again" (2.3.4: grey, not red; the message
+     * drops its own trailing "Try again." since the button is right there).
      */
     private void showError(String message) {
         if (message == null) message = getString(R.string.error_sign_in_generic);
@@ -369,7 +378,7 @@ public class LogAct extends AppCompatActivity {
         } else {
             keyError.setVisibility(View.GONE);
             keyField.setActivated(false);
-            noticeText.setText(message);
+            noticeText.setText(Ui.dropTryAgain(message));
             Ui.fade(notice, true);
             Ui.rejectHaptic(notice);
             // Connection problems aren't fixed by typing: drop the keyboard and
@@ -453,6 +462,7 @@ public class LogAct extends AppCompatActivity {
     }
 
     private void onSignInResult(boolean ok, String message) {
+        main.removeCallbacks(slowLogin);
         if (!Ui.alive(this)) return;
         if (ok) {
             // "Signed in" check + CONFIRM haptic, then the home screen.
@@ -480,8 +490,11 @@ public class LogAct extends AppCompatActivity {
         toggleKey.setEnabled(!busy);
         pasteKey.setEnabled(!busy);
         // Loading: the label is replaced by the 18 dp spinner; width unchanged.
+        // After 8 s the spinner gains "Still logging in…".
+        main.removeCallbacks(slowLogin);
         Ui.setLoading(loginButton, busy, busy ? "" : getString(R.string.sign_in));
         loginButton.setContentDescription(busy ? getString(R.string.signing_in) : null);
+        if (busy) main.postDelayed(slowLogin, SLOW_LOGIN_MS);
         updateLoginEnabled();
     }
 

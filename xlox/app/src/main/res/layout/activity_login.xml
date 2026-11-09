@@ -1,11 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Sign in (spec 3.2), 24 dp gutters:
+  Login (spec 3.2), 24 dp gutters:
     brand row (56 dp)  "Anoy Hax", left; nothing on the right
     ~72 dp space       (shrinks while the keyboard is open)
-    Sign in / subtitle / "Licence key" / field / reserved helper line
-    Sign in (56 dp) and "Get one on Telegram"
-    footer             "App 2.3.0 · Library 1.13", pinned, hidden with the keyboard
+    Login / subtitle / "Licence key" / field / reserved helper line
+    connection notice  neutral surface-2 block (wifi-off / info glyph) + Try again
+    Login (56 dp) and "Don't have a licence? Buy one" (only "Buy one" is a link)
+    footer             "App 2.3.4 · Library 1.14", pinned, hidden with the keyboard
 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -18,7 +19,7 @@
         android:id="@+id/loginBrand"
         style="@style/Text.Brand"
         android:layout_width="match_parent"
-        android:layout_height="56dp"
+        android:layout_height="@dimen/brand_row_height"
         android:gravity="center_vertical"
         android:paddingStart="@dimen/gutter_wide"
         android:paddingEnd="@dimen/gutter_wide"
@@ -138,13 +139,15 @@
                     android:visibility="gone" />
             </FrameLayout>
 
-            <!-- Connection / VPN problems: inline danger-tint block with Try again. -->
+            <!-- 2.3.4: connection / VPN / server problems: a neutral block
+                 (surface-2, secondary text, 16 dp Lucide glyph) with Try again.
+                 Problems with the key itself stay red under the field. -->
             <LinearLayout
                 android:id="@+id/loginNotice"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="@dimen/space_8"
-                android:background="@drawable/bg_error_block"
+                android:background="@drawable/bg_neutral_block"
                 android:orientation="vertical"
                 android:paddingStart="@dimen/space_12"
                 android:paddingTop="@dimen/space_12"
@@ -152,14 +155,30 @@
                 android:paddingBottom="@dimen/space_4"
                 android:visibility="gone">
 
-                <TextView
-                    android:id="@+id/loginNoticeText"
-                    style="@style/Text.BodyS"
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginEnd="@dimen/space_8"
-                    android:accessibilityLiveRegion="polite"
-                    android:textColor="@color/danger" />
+                    android:orientation="horizontal">
+
+                    <ImageView
+                        android:id="@+id/loginNoticeIcon"
+                        android:layout_width="@dimen/icon_small"
+                        android:layout_height="@dimen/icon_small"
+                        android:layout_marginTop="@dimen/space_2"
+                        android:importantForAccessibility="no"
+                        app:srcCompat="@drawable/ic_wifi_off"
+                        app:tint="@color/text_secondary" />
+
+                    <TextView
+                        android:id="@+id/loginNoticeText"
+                        style="@style/Text.BodyS"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="@dimen/space_8"
+                        android:layout_marginEnd="@dimen/space_8"
+                        android:layout_weight="1"
+                        android:accessibilityLiveRegion="polite" />
+                </LinearLayout>
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/loginNoticeRetry"

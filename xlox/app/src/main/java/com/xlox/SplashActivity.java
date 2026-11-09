@@ -54,9 +54,12 @@ import java.util.concurrent.Executors;
  * 2.2.0: meanwhile the app (APK) update check runs and the bottom status line
  * reports it. The hand-off waits for BOTH the film and the check: up to date
  * goes on to sign in (whose library UpdateGate is unchanged); a newer release
- * opens {@link AppUpdateActivity}; a failed check shows the reason and Retry
- * and never continues on its own. If the check outlasts the film, "Anoy Hax"
- * breathes until it answers.
+ * opens {@link AppUpdateActivity}; a failed check shows the reason and Try
+ * again and never continues on its own. If the check outlasts the film, "Anoy
+ * Hax" breathes until it answers. 2.3.4: a check still running after 6 s says
+ * "Taking longer than usual…" (spinner kept, no amber); after 15 s the detail
+ * line adds "Still trying. Your connection may be slow." Try again appears only
+ * after a real failure.
  * Every property is a pure function of time ({@link #applyTime}) driven by one
  * animator, so the moves stay locked together as one gesture. Text is only
  * faded and translated - never clipped and never scaled - on hardware layers.
@@ -141,11 +144,14 @@ public class SplashActivity extends AppCompatActivity {
     private static final long CURRENT_HOLD_MS = 700L;
     /** "Update available" stays readable this long after its crossfade. */
     private static final long PROCEED_MS = 400L;
-    /** Status crossfades: done 180 out / 220 in; update and failure 280 in total. */
-    private static final long DONE_OUT_MS = 180L;
-    private static final long DONE_IN_MS = 220L;
-    private static final long SWAP_OUT_MS = 100L;
-    private static final long SWAP_IN_MS = 180L;
+    /** Status crossfades (2.3.4: all of them, "Up to date" too): 100 out / 180 in. */
+    private static final long DONE_OUT_MS = Ui.SWAP_OUT;
+    private static final long DONE_IN_MS = Ui.SWAP_IN;
+    private static final long SWAP_OUT_MS = Ui.SWAP_OUT;
+    private static final long SWAP_IN_MS = Ui.SWAP_IN;
+    /** A check still running this long says so: the status, then the detail line. */
+    private static final long SLOW_STATUS_MS = Ui.SLOW_MS;
+    private static final long SLOW_DETAIL_MS = 15_000L;
     /** Debug simulation: how long the fake check takes. */
     private static final long QA_CHECK_MS = 900L;
 
@@ -339,6 +345,15 @@ public class SplashActivity extends AppCompatActivity {
         release = null;
         setStatus(getString(R.string.splash_status_checking), 0, 0, true, 0, 0);
         hideFailure();
+        handler.postDelayed(() -> {
+            if (run != checkRun || check != Check.CHECKING || !Ui.alive(this)) return;
+            Ui.swapText(statusLine, getString(R.string.splash_status_slow));
+        }, SLOW_STATUS_MS);
+        handler.postDelayed(() -> {
+            if (run != checkRun || check != Check.CHECKING || !Ui.alive(this)) return;
+            statusDetail.setText(R.string.splash_status_slow_detail);
+            Ui.fadeReserved(statusDetail, true);
+        }, SLOW_DETAIL_MS);
         if (qaUpdate != null) {
             simulateCheck(run);
             return;
@@ -383,6 +398,8 @@ public class SplashActivity extends AppCompatActivity {
             setStatus(getString(R.string.splash_status_available, found.versionName), 0, 0, false,
                     SWAP_OUT_MS, SWAP_IN_MS);
         }
+        // The slow-connection detail (if it came up) leaves with the answer.
+        Ui.fadeReserved(statusDetail, false);
         if (maybeProceed() && breath != null) {
             breath.cancel();
             name.setAlpha(1f);
@@ -394,8 +411,12 @@ public class SplashActivity extends AppCompatActivity {
         check = Check.FAILED;
         setStatus(getString(R.string.splash_status_failed), R.drawable.dot_status, R.color.warning, false,
                 SWAP_OUT_MS, SWAP_IN_MS);
-        statusDetail.setText(reason);
-        statusDetail.setVisibility(reason == null || reason.isEmpty() ? View.GONE : View.VISIBLE);
+        // Try again sits right below, so the reason drops its own "Try again."
+        String detail = Ui.dropTryAgain(reason);
+        statusDetail.animate().cancel();
+        statusDetail.setAlpha(1f);
+        statusDetail.setText(detail);
+        statusDetail.setVisibility(detail == null || detail.isEmpty() ? View.INVISIBLE : View.VISIBLE);
         retry.setVisibility(View.VISIBLE);
         // Never left invisible behind a still-running film.
         statusBar.setAlpha(1f);
@@ -404,7 +425,7 @@ public class SplashActivity extends AppCompatActivity {
     /**
      * Hands off when both the film and the check are done: up to date goes to
      * sign in, a newer release to the update screen. False while waiting (or
-     * after a failure, which waits for Retry).
+     * after a failure, which waits for Try again).
      */
     private boolean maybeProceed() {
         if (!filmDone || hold || handingOff) return false;
@@ -446,6 +467,10 @@ public class SplashActivity extends AppCompatActivity {
     }
 
     private void applyStatus(String text, int iconRes, int colourRes, boolean spinner) {
+        // Drop a pending "Taking longer than usual…" swap: the real state wins.
+        statusLine.animate().cancel();
+        statusLine.setAlpha(1f);
+        statusLine.setTag(R.id.tag_swap_text, null);
         statusLine.setText(text);
         int colour = ContextCompat.getColor(this, colourRes != 0 ? colourRes : R.color.text_secondary);
         Drawable glyph = null;
@@ -462,8 +487,12 @@ public class SplashActivity extends AppCompatActivity {
         statusSpinner.setVisibility(spinner ? View.VISIBLE : View.GONE);
     }
 
+    /** The detail line keeps its space (INVISIBLE), so the status never jumps. */
     private void hideFailure() {
-        statusDetail.setVisibility(View.GONE);
+        statusDetail.animate().cancel();
+        statusDetail.setAlpha(1f);
+        statusDetail.setVisibility(View.INVISIBLE);
+        statusDetail.setText("");
         retry.setVisibility(View.GONE);
     }
 
@@ -479,7 +508,7 @@ public class SplashActivity extends AppCompatActivity {
                     break;
                 case "fail":
                     onCheckFailed(run, getString(R.string.net_offline));
-                    // A Retry in the sample then succeeds.
+                    // A Try again in the sample then succeeds.
                     qaUpdate = "up_to_date";
                     break;
                 default:
@@ -548,7 +577,7 @@ public class SplashActivity extends AppCompatActivity {
         loader.setAlpha(1f - DISSOLVE.getInterpolation(window(swap, LOADER_OUT_START, 1f)));
 
         version.setAlpha(progress(t, VERSION_AT_MS, VERSION_MS, FAST_OUT_SLOW_IN));
-        // Once shown, the status line stays (it may carry an error and Retry).
+        // Once shown, the status line stays (it may carry an error and Try again).
         float status = progress(t, STATUS_AT_MS, STATUS_MS, FAST_OUT_SLOW_IN);
         if (statusBar.getAlpha() < status) statusBar.setAlpha(status);
     }

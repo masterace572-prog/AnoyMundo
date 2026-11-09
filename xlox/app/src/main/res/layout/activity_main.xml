@@ -6,17 +6,18 @@
     header      kicker ANOY HAX (tertiary) over "Welcome back" (Title L); on the
                 right a "?" in a 32 dp hairline circle and the 24 dp gear (48 dp
                 targets)
+    Every card (2.3.4): r20, 16 dp padding.
     notice      megaphone + ANNOUNCEMENT kicker over the panel's note, verbatim
                 (gone when empty)
-    time card   compact (r20, 16 dp): EXPIRES IN + status dot; one countdown
-                line (Title M numerals); the IST expiry date
+    time card   EXPIRES IN + status dot; one countdown line (Title M numerals);
+                the IST expiry date; "Offline · last checked …" when stale
     game card   56 dp bundled BGMI icon, BGMI + version, library; divider;
                 State and Server (Micro label over dot + Body L 500)
-    action bar  pinned; status line, task bar, Launch (56 dp); a hairline only
-                while content runs underneath it
+    action bar  pinned; status line (its space is kept while a task runs), task
+                bar, Launch (56 dp); a hairline only while content runs underneath
 
   Settings      an inset grouped list (rows from @style/Row) over home: Licence,
-                Updates, Device, Report a problem, About, Account
+                Updates (incl. App version), Device, Report a problem, Account
 -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -97,8 +98,8 @@
                 <ImageButton
                     android:id="@+id/settingsButton"
                     style="@style/IconButton"
-                    android:layout_marginStart="-8dp"
-                    android:layout_marginEnd="-12dp"
+                    android:layout_marginStart="@dimen/icon_button_pair"
+                    android:layout_marginEnd="@dimen/icon_button_edge"
                     android:contentDescription="@string/settings_open"
                     android:src="@drawable/ic_settings" />
             </LinearLayout>
@@ -117,7 +118,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="horizontal"
-                    android:padding="@dimen/space_14">
+                    android:padding="@dimen/space_16">
 
                     <ImageView
                         android:layout_width="@dimen/icon_inline"
@@ -231,7 +232,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:padding="@dimen/space_20">
+                    android:padding="@dimen/space_16">
 
                     <LinearLayout
                         android:id="@+id/gameHeader"
@@ -246,7 +247,7 @@
                             android:layout_width="@dimen/game_tile"
                             android:layout_height="@dimen/game_tile"
                             android:contentDescription="@string/game_icon_description"
-                            android:padding="0.5dp"
+                            android:padding="@dimen/game_icon_inset"
                             android:scaleType="centerCrop"
                             app:shapeAppearanceOverlay="@style/ShapeAppearance.Anoy.GameTile"
                             app:srcCompat="@drawable/ic_game_bgmi"
@@ -397,7 +398,7 @@
 
             <com.google.android.material.progressindicator.LinearProgressIndicator
                 android:id="@+id/taskProgress"
-                style="@style/Widget.Anoy.Progress.Sheet"
+                style="@style/Widget.Anoy.Progress"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="@dimen/space_12"
@@ -449,7 +450,7 @@
                     <ImageButton
                         android:id="@+id/settingsBack"
                         style="@style/IconButton"
-                        android:layout_marginStart="-12dp"
+                        android:layout_marginStart="@dimen/icon_button_edge"
                         android:contentDescription="@string/settings_back"
                         android:src="@drawable/ic_chevron_left" />
 
@@ -561,7 +562,8 @@
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
 
-                <!-- Updates (2.3.1): the splash's app check, library re-download, version -->
+                <!-- Updates: the app check (with "Last checked"), library re-download and
+                     version, and the app version -->
                 <TextView
                     style="@style/Text.Kicker.Group"
                     android:layout_marginTop="@dimen/group_gap"
@@ -583,12 +585,28 @@
                             android:clickable="true"
                             android:focusable="true">
 
-                            <TextView
-                                style="@style/Text.RowLabel"
+                            <!-- 2.3.4: two lines - the label over "Last checked …" (IST). -->
+                            <LinearLayout
                                 android:layout_width="0dp"
                                 android:layout_height="wrap_content"
                                 android:layout_weight="1"
-                                android:text="@string/settings_check_updates" />
+                                android:orientation="vertical">
+
+                                <TextView
+                                    style="@style/Text.RowLabel"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:text="@string/settings_check_updates" />
+
+                                <TextView
+                                    android:id="@+id/checkUpdateCaption"
+                                    style="@style/Text.Caption"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="@dimen/space_2"
+                                    android:accessibilityLiveRegion="polite"
+                                    android:text="@string/settings_not_checked" />
+                            </LinearLayout>
 
                             <com.google.android.material.progressindicator.CircularProgressIndicator
                                 android:id="@+id/checkUpdateSpinner"
@@ -668,6 +686,30 @@
                                 android:fontFeatureSettings="tnum"
                                 android:gravity="end"
                                 android:text="@string/dash" />
+                        </LinearLayout>
+
+                        <View style="@style/RowDivider" />
+
+                        <!-- 2.3.4: App version lives here now (the About group is gone). -->
+                        <LinearLayout
+                            style="@style/Row"
+                            android:background="@null"
+                            android:focusable="true">
+
+                            <TextView
+                                style="@style/Text.RowLabel"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="@string/settings_version" />
+
+                            <TextView
+                                android:id="@+id/appVersionValue"
+                                style="@style/Text.Mono"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginStart="@dimen/space_16"
+                                android:fontFeatureSettings="tnum" />
                         </LinearLayout>
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
@@ -788,39 +830,6 @@
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
 
-                <!-- About -->
-                <TextView
-                    style="@style/Text.Kicker.Group"
-                    android:layout_marginTop="@dimen/group_gap"
-                    android:accessibilityHeading="true"
-                    android:text="@string/settings_section_app" />
-
-                <com.google.android.material.card.MaterialCardView
-                    android:id="@+id/appCard"
-                    style="@style/Widget.Anoy.Group">
-
-                    <LinearLayout
-                        style="@style/Row"
-                        android:background="@null"
-                        android:focusable="true">
-
-                        <TextView
-                            style="@style/Text.RowLabel"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:text="@string/settings_version" />
-
-                        <TextView
-                            android:id="@+id/appVersionValue"
-                            style="@style/Text.Mono"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginStart="@dimen/space_16"
-                            android:fontFeatureSettings="tnum" />
-                    </LinearLayout>
-                </com.google.android.material.card.MaterialCardView>
-
                 <!-- Account -->
                 <TextView
                     style="@style/Text.Kicker.Group"
@@ -834,7 +843,7 @@
 
                     <LinearLayout
                         android:id="@+id/signOut"
-                        style="@style/Row.Danger"
+                        style="@style/Row"
                         android:clickable="true"
                         android:focusable="true">
 
@@ -843,8 +852,7 @@
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
-                            android:text="@string/sign_out"
-                            android:textColor="@color/danger" />
+                            android:text="@string/sign_out" />
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
             </LinearLayout>

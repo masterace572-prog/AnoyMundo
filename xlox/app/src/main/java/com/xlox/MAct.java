@@ -194,6 +194,13 @@ public class MAct extends AppCompatActivity {
     private View checkUpdateIcon;
     private TextView checkUpdateValue;
     private View checkUpdateGlyph;
+    /** 2.3.4: "Last checked today, 14:32" (IST) under the row label, or "Not checked yet". */
+    private TextView checkUpdateCaption;
+    private final Runnable slowAppCheck = () -> {
+        if (this.appCheckRunning && this.checkUpdateValue != null) {
+            Ui.swapText(this.checkUpdateValue, getString(R.string.settings_still_checking));
+        }
+    };
     private int appCheckRun;
     private boolean appCheckRunning;
     private final Runnable clearAppCheck = () -> showAppCheck(APP_CHECK_IDLE, null);
@@ -259,6 +266,21 @@ public class MAct extends AppCompatActivity {
     private boolean busy;
     private UpdateGate gate;
     private long lastRecheck;
+
+    /** Preparing game files: the delayed line, and "Still preparing…" after 15 s without progress. */
+    private static final long PREP_SLOW_MS = 15_000L;
+    /** Set once a game-files copy has finished on this phone (only changes the wording). */
+    private static final String PREF_OBB_PREPARED = "obb_prepared_once";
+    private static final String OBB_PREPARED_YES = "1";
+    private Runnable prepShow;
+    private final Runnable prepSlow = () -> {
+        if (!Ui.alive(this) || !this.busy) return;
+        if (this.statusMessage.getVisibility() == View.VISIBLE) {
+            Ui.swapText(this.statusMessage, getString(R.string.preparing_slow));
+        } else {
+            showMessage(getString(R.string.preparing_slow), false);
+        }
+    };
 
     private final Runnable runningCheck = new Runnable() {
         @Override
@@ -951,18 +973,18 @@ public class MAct extends AppCompatActivity {
         }
     }
 
-    /** "Last checked 3:04 PM" - only after a refresh could not reach the panel. */
+    /**
+     * "Offline · last checked 12 min ago" (IST, see Ui.lastChecked) - only after
+     * a refresh could not reach the panel.
+     */
     private void renderLicenceChecked() {
         if (licenceChecked == null) return;
         if (!licenceStale || lastLicenceCheckedAt <= 0) {
             licenceChecked.setVisibility(View.GONE);
             return;
         }
-        SimpleDateFormat day = istFormat("yyyyMMdd");
-        boolean today = day.format(new Date(lastLicenceCheckedAt)).equals(day.format(new Date()));
-        String when = istFormat(today ? "h:mm a 'IST'" : "d MMM, h:mm a 'IST'")
-                .format(new Date(lastLicenceCheckedAt));
-        licenceChecked.setText(getString(R.string.licence_last_checked, when));
+        licenceChecked.setText(getString(R.string.licence_offline_checked,
+                Ui.lastChecked(this, lastLicenceCheckedAt)));
         licenceChecked.setVisibility(View.VISIBLE);
     }
 
@@ -1537,6 +1559,11 @@ public class MAct extends AppCompatActivity {
 
     private void setBusy(boolean value, CharSequence label) {
         busy = value;
+        if (!value) {
+            cancelPrepTimers();
+            // Idle: a hidden status line gives its reserved space back.
+            if (statusMessage.getVisibility() == View.INVISIBLE) statusMessage.setVisibility(View.GONE);
+        }
         if (value) {
             primaryAction.setBackgroundTintList(ContextCompat.getColorStateList(this, R.color.button_bg));
             primaryAction.setTextColor(ContextCompat.getColorStateList(this, R.color.button_text));
@@ -1599,18 +1626,37 @@ public class MAct extends AppCompatActivity {
         Log.d(TAG, "Launch: preparing game files");
         setBusy(true, getString(R.string.action_preparing));
         showProgress(0, true);
-        showMessage(getString(R.string.preparing), false);
+        // 2.3.4 (text only; the copy itself is unchanged): nothing new for the
+        // first 400 ms, then the line. The very first copy explains itself;
+        // 15 s without a new percent says it is still going.
+        cancelPrepTimers();
+        statusMessage.setVisibility(View.INVISIBLE);
+        final boolean firstCopy = !OBB_PREPARED_YES.equals(new Prefs(this).getSt(PREF_OBB_PREPARED, ""));
+        main.postDelayed(prepShow = () -> {
+            if (!Ui.alive(MAct.this) || !busy) return;
+            showMessage(getString(firstCopy ? R.string.preparing_first : R.string.preparing), false);
+        }, Ui.QUIET_MS);
+        main.postDelayed(prepSlow, PREP_SLOW_MS);
         new AppManager(this).copyObbAsync(PKG_BGMI, new AppManager.CopyCallback() {
+            private int lastPercent = -1;
+
             @Override
             public void onProgressUpdate(int percent) {
                 if (!Ui.alive(MAct.this)) return;
                 showProgress(percent, false);
                 primaryAction.setText(getString(R.string.action_preparing_progress, percent));
+                if (percent != lastPercent) {
+                    lastPercent = percent;
+                    main.removeCallbacks(prepSlow);
+                    main.postDelayed(prepSlow, PREP_SLOW_MS);
+                }
             }
 
             @Override
             public void onCopyCompleted(boolean success, String error) {
                 if (!Ui.alive(MAct.this)) return;
+                cancelPrepTimers();
+                if (success) new Prefs(MAct.this).setSt(PREF_OBB_PREPARED, OBB_PREPARED_YES);
                 hideProgress();
                 if (!success && getString(R.string.obb_folder_blocked).equals(error)
                         && StorageAccess.installGrantedThisRun(MAct.this)) {
@@ -1635,6 +1681,13 @@ public class MAct extends AppCompatActivity {
                 main.postDelayed(MAct.this::launchGame, LAUNCH_DELAY_MS);
             }
         });
+    }
+
+    /** Stops the "Preparing" line's 400 ms and 15 s timers. */
+    private void cancelPrepTimers() {
+        if (prepShow != null) main.removeCallbacks(prepShow);
+        prepShow = null;
+        main.removeCallbacks(prepSlow);
     }
 
     /**
@@ -1846,15 +1899,24 @@ public class MAct extends AppCompatActivity {
     /** Caption above Launch; errors are danger text with a REJECT haptic. */
     private void showMessage(String text, boolean error) {
         launchErrorShown = false;
+        statusMessage.animate().cancel();
+        statusMessage.setAlpha(1f);
+        statusMessage.setTag(R.id.tag_swap_text, null);
         statusMessage.setText(text);
         statusMessage.setTextColor(ContextCompat.getColor(this, error ? R.color.danger : R.color.text_secondary));
         if (error) Ui.rejectHaptic(statusMessage);
         Ui.fade(statusMessage, true);
     }
 
+    /** While a task runs the line keeps its space (INVISIBLE), so nothing jumps. */
     private void hideMessage() {
         launchErrorShown = false;
-        Ui.fade(statusMessage, false);
+        cancelPrepTimers();
+        if (busy) {
+            Ui.fadeReserved(statusMessage, false);
+        } else {
+            Ui.fade(statusMessage, false);
+        }
     }
 
     private void showProgress(int percent, boolean indeterminate) {
@@ -1927,6 +1989,8 @@ public class MAct extends AppCompatActivity {
         checkUpdateIcon = findViewById(R.id.checkUpdateIcon);
         checkUpdateValue = findViewById(R.id.checkUpdateValue);
         checkUpdateGlyph = findViewById(R.id.checkUpdateGlyph);
+        checkUpdateCaption = findViewById(R.id.checkUpdateCaption);
+        renderAppCheckCaption();
         if (statusLook >= 0) applyLook(licenceStatusValue, statusLook);
         licenceKeyEye.setOnClickListener(v -> {
             Ui.tap(v);
@@ -2067,6 +2131,8 @@ public class MAct extends AppCompatActivity {
         final int run = ++appCheckRun;
         main.removeCallbacks(clearAppCheck);
         showAppCheck(APP_CHECK_CHECKING, null);
+        main.removeCallbacks(slowAppCheck);
+        main.postDelayed(slowAppCheck, Ui.SLOW_MS);
         Log.i(TAG, "Settings: checking for an app update");
         final String qa = preview ? getIntent().getStringExtra(EXTRA_QA_APP_CHECK) : null;
         if (appCheckExecutor == null) {
@@ -2113,6 +2179,9 @@ public class MAct extends AppCompatActivity {
     private void onAppChecked(int run, AppUpdater.Release release, String failure) {
         if (run != appCheckRun || !Ui.alive(this)) return;
         appCheckRunning = false;
+        main.removeCallbacks(slowAppCheck);
+        // The caption keeps the last good time; a failure doesn't change it.
+        renderAppCheckCaption();
         if (failure != null) {
             showAppCheck(APP_CHECK_FAILED, failure);
             main.postDelayed(clearAppCheck, qaHold(APP_CHECK_FAILED_MS));
@@ -2137,6 +2206,9 @@ public class MAct extends AppCompatActivity {
     /** The check row's trailing part: chevron, spinner + "Checking…", check + "Up to date", or "Couldn't check". */
     private void showAppCheck(int state, String reason) {
         if (checkUpdateValue == null) return;
+        checkUpdateValue.animate().cancel();
+        checkUpdateValue.setAlpha(1f);
+        checkUpdateValue.setTag(R.id.tag_swap_text, null);
         checkUpdateSpinner.setVisibility(state == APP_CHECK_CHECKING ? View.VISIBLE : View.GONE);
         checkUpdateIcon.setVisibility(state == APP_CHECK_CURRENT ? View.VISIBLE : View.GONE);
         checkUpdateGlyph.setVisibility(state == APP_CHECK_IDLE ? View.VISIBLE : View.GONE);
@@ -2154,8 +2226,17 @@ public class MAct extends AppCompatActivity {
         checkUpdateValue.setVisibility(View.VISIBLE);
         String spoken = getString(R.string.settings_row_description, getString(R.string.settings_check_updates),
                 getString(text));
+        if (checkUpdateCaption != null) spoken += ". " + checkUpdateCaption.getText();
         if (state == APP_CHECK_FAILED && reason != null && !reason.isEmpty()) spoken += ". " + reason;
         findViewById(R.id.checkUpdateRow).setContentDescription(spoken);
+    }
+
+    /** "Last checked 12 min ago" from the last successful check (splash or Settings), IST. */
+    private void renderAppCheckCaption() {
+        if (checkUpdateCaption == null) return;
+        long at = AppUpdater.lastCheckedAt(this);
+        checkUpdateCaption.setText(at > 0 ? getString(R.string.licence_last_checked, Ui.lastChecked(this, at))
+                : getString(R.string.settings_not_checked));
     }
 
     /** Re-download library: a confirmation first, then the usual library sheet. */
@@ -2195,6 +2276,7 @@ public class MAct extends AppCompatActivity {
         main.removeCallbacks(restoreKey);
         renderLicenceKey();
         refreshLibraryVersion();
+        renderAppCheckCaption();
         ((android.widget.ScrollView) findViewById(R.id.settingsScroll)).scrollTo(0, 0);
         // 12 dp horizontal + fade, 280 ms decelerate; instant with animations off.
         settingsPage.animate().cancel();

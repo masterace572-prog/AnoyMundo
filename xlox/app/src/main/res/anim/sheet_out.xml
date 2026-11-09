@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Sheet exit: 240 ms slide-down, accelerate. -->
 <translate xmlns:android="http://schemas.android.com/apk/res/android"
-    android:duration="240"
+    android:duration="@integer/motion_sheet_out"
     android:fromYDelta="0"
     android:interpolator="@interpolator/accelerate_m"
     android:toYDelta="100%" />

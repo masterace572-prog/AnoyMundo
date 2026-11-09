@@ -78,8 +78,9 @@ android {
         //        before install, Launch/Stop icons; release tag anoy-v<name>-<code>).
         // 2.3.3: faster splash update check (one 8 s / 10 s attempt, "up to date"
         //        remembered for 10 minutes); panel moved next to its database.
-        versionCode 12
-        versionName '2.3.3'
+        // 2.3.4: UI polish - calmer waiting states, token clean-up, Settings tidy.
+        versionCode 13
+        versionName '2.3.4'
 
         vectorDrawables {
             useSupportLibrary true

@@ -20,8 +20,9 @@
     <!-- Text -->
     <color name="text_primary">#FFF5F5F7</color>
     <color name="text_secondary">#FF9A9AA1</color>
-    <!-- Metadata only (footer versions, placeholders, unit labels). -->
-    <color name="text_tertiary">#FF6C6C72</color>
+    <!-- Metadata only (footer versions, placeholders, unit labels).
+         2.3.4: #85858C (was #6C6C72) for contrast on black and surface-1. -->
+    <color name="text_tertiary">#FF85858C</color>
     <!-- The wordmark itself stays pure white. -->
     <color name="wordmark">#FFFFFFFF</color>
 

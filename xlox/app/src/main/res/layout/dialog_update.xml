@@ -34,8 +34,8 @@
 
         <ImageView
             android:id="@+id/gateIcon"
-            android:layout_width="20dp"
-            android:layout_height="20dp"
+            android:layout_width="@dimen/icon_title"
+            android:layout_height="@dimen/icon_title"
             android:layout_marginStart="@dimen/space_8"
             android:importantForAccessibility="no"
             android:visibility="gone"

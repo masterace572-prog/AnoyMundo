@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Screen exit (fade-through "out"): 90 ms, accelerate. -->
+<!-- Screen exit (fade-through "out"): motion_press (100 ms), accelerate. -->
 <alpha xmlns:android="http://schemas.android.com/apk/res/android"
-    android:duration="90"
+    android:duration="@integer/motion_press"
     android:fromAlpha="1"
     android:interpolator="@interpolator/accelerate_m"
     android:toAlpha="0" />

@@ -5,10 +5,11 @@
                   it cross-fades out as the film starts, so the hand-off is seamless
     splashLockup  kicker "WELCOME TO", 12 dp, "Anoy Loader" (Wordmark), centred
                   at ~42 % of the height; "Loader" dissolves into "Hax" in the slot
-    splashVersion "v2.3.0", Mono 12 tertiary, top right, 24 dp from the edges
+    splashVersion "v2.3.4", Mono 12 tertiary, top right, 24 dp from the edges
     status        bottom centre, 32 dp above the navigation inset: a 14 dp spinner
-                  (or a check / amber dot) + 8 dp + Caption; on failure the
-                  existing reason and Retry below it
+                  (or a check / amber dot) + 8 dp + Caption; below it a reserved
+                  detail line (slow connection, or the failure reason) and, only
+                  after a failure, Try again
   Insets are added in code (SplashActivity).
 -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
@@ -131,7 +132,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:gravity="center_vertical"
-            android:minHeight="20dp"
+            android:minHeight="@dimen/status_row_min_height"
             android:orientation="horizontal">
 
             <com.google.android.material.progressindicator.CircularProgressIndicator
@@ -163,7 +164,7 @@
             android:gravity="center_horizontal"
             android:maxWidth="@dimen/max_content_width"
             android:textAlignment="center"
-            android:visibility="gone" />
+            android:visibility="invisible" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/splashRetry"
@@ -171,7 +172,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/space_16"
-            android:minWidth="120dp"
+            android:minWidth="@dimen/retry_min_width"
             android:text="@string/splash_retry"
             android:visibility="gone" />
     </LinearLayout>

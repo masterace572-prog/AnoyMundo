@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Sheet enter: 320 ms slide-up, decelerate, no overshoot. -->
 <translate xmlns:android="http://schemas.android.com/apk/res/android"
-    android:duration="320"
+    android:duration="@integer/motion_sheet_in"
     android:fromYDelta="100%"
     android:interpolator="@interpolator/decelerate_m"
     android:toYDelta="0" />

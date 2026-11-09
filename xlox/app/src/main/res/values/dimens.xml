@@ -6,7 +6,6 @@
     <dimen name="space_4">4dp</dimen>
     <dimen name="space_8">8dp</dimen>
     <dimen name="space_12">12dp</dimen>
-    <dimen name="space_14">14dp</dimen>
     <dimen name="space_16">16dp</dimen>
     <dimen name="space_20">20dp</dimen>
     <dimen name="space_24">24dp</dimen>
@@ -28,12 +27,14 @@
     <dimen name="group_gap">28dp</dimen>
     <dimen name="kicker_gap">8dp</dimen>
 
-    <!-- Radii -->
+    <!-- Radii (2.3.4): cards 20, controls 16. The 14 dp outliers are gone. -->
     <dimen name="radius_tiny">8dp</dimen>
-    <dimen name="radius_tile">14dp</dimen>
+    <dimen name="radius_tile">16dp</dimen>
     <dimen name="radius_control">16dp</dimen>
-    <dimen name="radius_card">24dp</dimen>
-    <dimen name="radius_compact">20dp</dimen>
+    <dimen name="radius_card">20dp</dimen>
+    <!-- The bundled BGMI icon keeps its own rounded corners, unchanged. -->
+    <dimen name="game_icon_radius">14dp</dimen>
+    <dimen name="game_icon_inset">0.5dp</dimen>
     <dimen name="sheet_radius">28dp</dimen>
     <!-- Kept for the build check: buttons are 16 dp rounded rectangles. -->
     <dimen name="button_radius">16dp</dimen>
@@ -66,6 +67,21 @@
     <dimen name="helper_line">20dp</dimen>
     <dimen name="countdown_column">70dp</dimen>
     <dimen name="splash_mark">288dp</dimen>
+    <!-- 2.3.4: values that used to be raw dp in layouts and styles. -->
+    <dimen name="brand_row_height">56dp</dimen>
+    <dimen name="status_row_min_height">20dp</dimen>
+    <dimen name="retry_min_width">120dp</dimen>
+    <dimen name="icon_title">20dp</dimen>
+    <dimen name="icon_text_button">14dp</dimen>
+    <!-- 48 dp target minus a 24 / 20 dp glyph, halved. -->
+    <dimen name="icon_button_padding">12dp</dimen>
+    <dimen name="icon_button_padding_inline">14dp</dimen>
+    <!-- Optical alignment: pull 48 dp icon targets to the 20 dp gutter. -->
+    <dimen name="icon_button_edge">-12dp</dimen>
+    <dimen name="icon_button_pair">-8dp</dimen>
+    <!-- Fixed-dp brand line heights (splash / wordmark), unchanged values. -->
+    <dimen name="line_wordmark">44dp</dimen>
+    <dimen name="line_splash_kicker">14dp</dimen>
 
     <!-- Type scale (spec 2.2) -->
     <dimen name="text_wordmark">40dp</dimen>
@@ -85,7 +101,7 @@
     <dimen name="text_mono_13">13sp</dimen>
     <dimen name="text_mono_15">15sp</dimen>
     <dimen name="text_mono_key">16sp</dimen>
-    <dimen name="text_mono_block">12.5sp</dimen>
+    <dimen name="text_mono_block">13sp</dimen>
     <dimen name="text_paste">13sp</dimen>
     <!-- Splash kicker: fixed like the wordmark (a brand lockup on one line). -->
     <dimen name="text_splash_kicker">11dp</dimen>

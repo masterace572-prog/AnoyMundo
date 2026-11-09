@@ -10,12 +10,14 @@ import android.net.Uri;
 import android.os.Build;
 import android.provider.Settings;
 import android.util.Log;
+import android.text.TextUtils;
 import android.util.TypedValue;
 import android.widget.TextView;
 import android.view.HapticFeedbackConstants;
 import android.view.View;
 import android.view.Window;
 import android.view.animation.Interpolator;
+import android.view.animation.LinearInterpolator;
 import android.view.animation.PathInterpolator;
 
 import androidx.core.graphics.Insets;
@@ -32,7 +34,10 @@ import com.google.android.material.progressindicator.IndeterminateDrawable;
 import com.google.android.material.snackbar.Snackbar;
 import com.xlox.R;
 
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.Locale;
+import java.util.TimeZone;
 
 /** UI helpers shared by every screen: insets, motion, haptics, feedback. */
 public final class Ui {
@@ -40,18 +45,35 @@ public final class Ui {
     private static final String TAG = "Ui";
 
     /**
-     * Motion tokens (spec 2.5; res/values/motion.xml): press 100 linear, short
-     * 180 (fades, swaps), medium 280 (screens, expands), long 450 (the splash
-     * dissolve). Sheets: 320 in / 240 out (res/anim/sheet_in, sheet_out).
+     * The one set of motion tokens (2.3.4; res/values/motion.xml): press 100,
+     * short 180 (fades, swaps), medium 280 (screens), sheets 320 in / 240 out
+     * (res/anim/sheet_in, sheet_out), long 450 (the splash only).
      */
     public static final long PRESS = 100L;
     public static final long SHORT = 180L;
     public static final long MEDIUM = 280L;
     public static final long LONG = 450L;
+    public static final long SHEET_IN = 320L;
+    public static final long SHEET_OUT = 240L;
+    /** Text swaps: 100 ms out, 180 ms in, linear. */
+    public static final long SWAP_OUT = PRESS;
+    public static final long SWAP_IN = SHORT;
     /** Enter: decelerate (0.2, 0, 0, 1). */
     public static final Interpolator ENTER = new PathInterpolator(0.2f, 0f, 0f, 1f);
     /** Exit: accelerate (0.4, 0, 1, 1). */
     public static final Interpolator EXIT = new PathInterpolator(0.4f, 0f, 1f, 1f);
+    /** Linear: only for short alpha swaps. */
+    public static final Interpolator LINEAR = new LinearInterpolator();
+
+    /**
+     * Calm waiting (2.3.4): nothing new appears for the first 400 ms of a wait,
+     * and a wait that runs past {@link #SLOW_MS} says so in plain words.
+     */
+    public static final long QUIET_MS = 400L;
+    public static final long SLOW_MS = 6000L;
+
+    /** Every time the app shows is India time; stored times stay UTC. */
+    public static final TimeZone IST = TimeZone.getTimeZone("Asia/Kolkata");
 
     /** Views tagged with this become the Snackbar anchor (above the action bar). */
     public static final String SNACKBAR_ANCHOR = "snackbar_anchor";
@@ -216,6 +238,97 @@ public final class Ui {
                         view.setAlpha(1f);
                     }).start();
         }
+    }
+
+    /**
+     * Like {@link #fade} but hides to INVISIBLE, so a reserved status line keeps
+     * its space and nothing below or above it moves.
+     */
+    public static void fadeReserved(View view, boolean show) {
+        if (view == null) return;
+        view.animate().cancel();
+        if (reducedMotion(view.getContext())) {
+            view.setAlpha(1f);
+            view.setVisibility(show ? View.VISIBLE : View.INVISIBLE);
+            return;
+        }
+        if (show) {
+            if (view.getVisibility() != View.VISIBLE) {
+                view.setAlpha(0f);
+                view.setVisibility(View.VISIBLE);
+            }
+            view.animate().alpha(1f).setDuration(SHORT).setInterpolator(ENTER).start();
+        } else if (view.getVisibility() == View.VISIBLE) {
+            view.animate().alpha(0f).setDuration(SHORT).setInterpolator(EXIT)
+                    .withEndAction(() -> {
+                        view.setVisibility(View.INVISIBLE);
+                        view.setAlpha(1f);
+                    }).start();
+        }
+    }
+
+    /**
+     * Changes a label with a crossfade: 100 ms out, 180 ms in, linear. Instant
+     * when the view is not on screen or under reduced motion. Repeating the
+     * text that is already showing (or on its way) does nothing.
+     */
+    public static void swapText(TextView view, CharSequence text) {
+        if (view == null) return;
+        Object pending = view.getTag(R.id.tag_swap_text);
+        CharSequence target = pending instanceof CharSequence ? (CharSequence) pending : view.getText();
+        if (TextUtils.equals(target, text)) return;
+        view.animate().cancel();
+        if (!view.isShown() || reducedMotion(view.getContext())) {
+            view.setTag(R.id.tag_swap_text, null);
+            view.setText(text);
+            view.setAlpha(1f);
+            return;
+        }
+        view.setTag(R.id.tag_swap_text, text);
+        view.animate().alpha(0f).setDuration(SWAP_OUT).setInterpolator(LINEAR).withEndAction(() -> {
+            view.setTag(R.id.tag_swap_text, null);
+            view.setText(text);
+            view.animate().alpha(1f).setDuration(SWAP_IN).setInterpolator(LINEAR).start();
+        }).start();
+    }
+
+    /**
+     * Drops a trailing "Try again." / "Try again later." from a message shown
+     * right next to a visible Try again button (the button already says it).
+     */
+    public static String dropTryAgain(String message) {
+        if (message == null) return null;
+        String m = message.trim();
+        for (String tail : new String[] {" Try again later.", " Try again."}) {
+            if (m.endsWith(tail) && m.length() > tail.length()) return m.substring(0, m.length() - tail.length()).trim();
+        }
+        return m;
+    }
+
+    /**
+     * "just now", "12 min ago", "today, 14:32", "yesterday, 14:32",
+     * "3 Nov, 14:32" (all IST), or "Not checked yet" when there is no time.
+     */
+    public static String lastChecked(Context context, long utcMillis) {
+        if (utcMillis <= 0L) return context.getString(R.string.settings_not_checked);
+        long now = System.currentTimeMillis();
+        long age = now - utcMillis;
+        if (age >= 0L && age < 60_000L) return context.getString(R.string.time_just_now);
+        if (age >= 0L && age < 60L * 60_000L) {
+            return context.getString(R.string.time_minutes_ago, (int) (age / 60_000L));
+        }
+        String time = istFormat("HH:mm").format(new Date(utcMillis));
+        SimpleDateFormat day = istFormat("yyyyMMdd");
+        String then = day.format(new Date(utcMillis));
+        if (then.equals(day.format(new Date(now)))) return context.getString(R.string.time_today, time);
+        if (then.equals(day.format(new Date(now - 86_400_000L)))) return context.getString(R.string.time_yesterday, time);
+        return istFormat("d MMM, HH:mm").format(new Date(utcMillis));
+    }
+
+    private static SimpleDateFormat istFormat(String pattern) {
+        SimpleDateFormat format = new SimpleDateFormat(pattern, Locale.ENGLISH);
+        format.setTimeZone(IST);
+        return format;
     }
 
     // ---------------------------------------------------------------- buttons

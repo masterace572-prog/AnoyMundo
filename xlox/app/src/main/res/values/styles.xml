@@ -182,7 +182,7 @@
         <item name="android:fontFamily">@font/inter_semibold</item>
         <item name="fontFamily">@font/inter_semibold</item>
         <item name="android:textSize">@dimen/text_wordmark</item>
-        <item name="lineHeight">44dp</item>
+        <item name="lineHeight">@dimen/line_wordmark</item>
         <item name="android:letterSpacing">-0.03</item>
         <item name="android:textColor">@color/wordmark</item>
         <item name="android:maxLines">1</item>
@@ -240,6 +240,11 @@
         <item name="android:textSize">@dimen/text_body_s</item>
         <item name="lineHeight">20sp</item>
         <item name="android:textColor">@color/text_secondary</item>
+    </style>
+
+    <style name="Text.BodyS.Medium">
+        <item name="android:fontFamily">@font/inter_medium</item>
+        <item name="fontFamily">@font/inter_medium</item>
     </style>
 
     <!-- Caption: 13 / 18, secondary. -->
@@ -301,7 +306,7 @@
     <!-- Splash kicker: +0.22em, fixed dp like the wordmark. -->
     <style name="Text.Kicker.Splash">
         <item name="android:textSize">@dimen/text_splash_kicker</item>
-        <item name="lineHeight">14dp</item>
+        <item name="lineHeight">@dimen/line_splash_kicker</item>
         <item name="android:letterSpacing">0.22</item>
         <item name="android:maxLines">1</item>
     </style>
@@ -398,7 +403,7 @@
         <item name="android:letterSpacing">0.02</item>
     </style>
 
-    <!-- Mono block: JetBrains Mono 400 12.5 / 20 (support-info preview). -->
+    <!-- Mono block: JetBrains Mono 400 13 / 20 (support-info preview). -->
     <style name="Text.MonoBlock">
         <item name="android:fontFamily">@font/jetbrains_mono_regular</item>
         <item name="fontFamily">@font/jetbrains_mono_regular</item>
@@ -456,7 +461,7 @@
         <item name="iconTint">@color/tonal_text</item>
     </style>
 
-    <!-- Tonal on the black background: surface-2 fill (Retry, Stop). -->
+    <!-- Tonal on the black background: surface-2 fill (Try again, Stop). -->
     <style name="Widget.Anoy.Button.Tonal.OnBackground">
         <item name="backgroundTint">@color/tonal_bg_on_black</item>
     </style>
@@ -477,7 +482,7 @@
         <item name="android:letterSpacing">0</item>
         <item name="rippleColor">@color/ripple_none</item>
         <item name="iconTint">@color/link_text</item>
-        <item name="iconSize">14dp</item>
+        <item name="iconSize">@dimen/icon_text_button</item>
         <item name="iconPadding">@dimen/space_4</item>
         <item name="iconGravity">textEnd</item>
         <item name="cornerRadius">@dimen/button_radius</item>
@@ -516,18 +521,18 @@
         <item name="android:layout_width">@dimen/touch_target</item>
         <item name="android:layout_height">@dimen/touch_target</item>
         <item name="android:background">@drawable/bg_icon_press</item>
-        <item name="android:padding">12dp</item>
+        <item name="android:padding">@dimen/icon_button_padding</item>
         <item name="android:scaleType">fitCenter</item>
         <item name="tint">@color/icon_tint</item>
     </style>
 
     <!-- 48 dp icon target, 20 dp inline glyph (field trailing icons). -->
     <style name="IconButton.Inline">
-        <item name="android:padding">14dp</item>
+        <item name="android:padding">@dimen/icon_button_padding_inline</item>
     </style>
 
     <!-- ===================================================== Surfaces -->
-    <!-- Home cards: surface-1, radius 24, fill only (no stroke on black). -->
+    <!-- Home cards: surface-1, radius 20, fill only (no stroke on black). -->
     <style name="Widget.Anoy.Card" parent="Widget.Material3.CardView.Filled">
         <item name="cardBackgroundColor">@color/surface_1</item>
         <item name="strokeWidth">0dp</item>
@@ -566,29 +571,21 @@
         <item name="cornerSize">@dimen/radius_control</item>
     </style>
 
-    <!-- Panel notice: notice-bg, 1 dp notice-stroke, radius 16. -->
-    <!-- Compact card (home licence): radius 20. -->
-    <style name="Widget.Anoy.Card.Compact">
-        <item name="cardCornerRadius">@dimen/radius_compact</item>
-        <item name="shapeAppearance">@style/ShapeAppearance.Anoy.Compact</item>
-    </style>
+    <!-- 2.3.4: every home card (notice, licence, game) is r20 with 16 dp
+         padding, so Compact is the same card. Kept as a name for the layout. -->
+    <style name="Widget.Anoy.Card.Compact" />
 
-    <style name="ShapeAppearance.Anoy.Compact" parent="">
-        <item name="cornerFamily">rounded</item>
-        <item name="cornerSize">@dimen/radius_compact</item>
-    </style>
-
+    <!-- Panel notice: notice-bg, 1 dp notice-stroke, radius 20 like the other cards. -->
     <style name="Widget.Anoy.Card.Notice">
         <item name="cardBackgroundColor">@color/notice_bg</item>
         <item name="strokeColor">@color/notice_stroke</item>
         <item name="strokeWidth">@dimen/hairline</item>
-        <item name="shapeAppearance">@style/ShapeAppearance.Anoy.Control</item>
     </style>
 
-    <!-- Game tile: radius 14. -->
+    <!-- Game icon: the bundled BGMI artwork keeps its own 14 dp corners. -->
     <style name="ShapeAppearance.Anoy.GameTile" parent="">
         <item name="cornerFamily">rounded</item>
-        <item name="cornerSize">@dimen/radius_tile</item>
+        <item name="cornerSize">@dimen/game_icon_radius</item>
     </style>
 
     <!-- Snackbar: surface-2, radius 16. -->

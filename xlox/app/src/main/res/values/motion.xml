@@ -1,5 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Motion tokens (spec 2.5). Java mirrors these in Ui (PRESS/SHORT/MEDIUM/LONG). -->
+<!--
+  The one set of motion tokens (2.3.4). Java mirrors them in Ui (PRESS, SHORT,
+  MEDIUM, LONG, SHEET_IN, SHEET_OUT).
+    press 100      press feedback, the "out" half of a text swap, screen exit
+    short 180      fades and swaps (the "in" half of a text swap)
+    medium 280     screens
+    sheet 320/240  bottom sheets in / out
+    long 450       the splash only
+  Easing: Ui.ENTER (decelerate) / Ui.EXIT (accelerate); linear only for short
+  alpha swaps. Reduced motion (animator scale 0) makes every change instant.
+-->
 <resources>
     <integer name="motion_press">100</integer>
     <integer name="motion_short">180</integer>

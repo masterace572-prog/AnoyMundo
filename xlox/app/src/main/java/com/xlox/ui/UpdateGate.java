@@ -34,6 +34,10 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * is "Update now"; the sheet cannot be dismissed (Back closes the app) and the
  * listener only fires once the library is current. When the check itself
  * fails the only action is "Try again".
+ *
+ * 2.3.4 (UI only): checking, downloading and installing that run past 6 s
+ * (downloading: 6 s without progress) say "Taking longer than usual. Keep Anoy
+ * open." Failure reasons drop their own "Try again." next to the button.
  */
 public final class UpdateGate {
 
@@ -57,6 +61,15 @@ public final class UpdateGate {
     private final Activity activity;
     private final Listener listener;
     private final Handler main = new Handler(Looper.getMainLooper());
+    /** A wait that runs past Ui.SLOW_MS says so (text only; the flow is unchanged). */
+    private final Runnable slowWait = new Runnable() {
+        @Override
+        public void run() {
+            if (message != null && Ui.alive(activity) && !cancelled.get()) {
+                Ui.swapText(message, activity.getString(R.string.update_slow));
+            }
+        }
+    };
     private final AtomicBoolean cancelled = new AtomicBoolean(false);
 
     private BottomSheetDialog dialog;
@@ -270,7 +283,11 @@ public final class UpdateGate {
      * hidden; each state shows what it needs.
      */
     private void render(int titleRes, CharSequence body, boolean error, CharSequence buttonLabel) {
+        main.removeCallbacks(slowWait);
         title.setText(titleRes);
+        message.animate().cancel();
+        message.setAlpha(1f);
+        message.setTag(R.id.tag_swap_text, null);
         message.setText(body);
         message.setVisibility(View.VISIBLE);
         // Close only after a failed re-download; the action carries the rest.
@@ -299,6 +316,13 @@ public final class UpdateGate {
     private void renderChecking() {
         render(R.string.update_checking_title, activity.getString(R.string.update_checking_message), false, null);
         showIndeterminateBar();
+        armSlow();
+    }
+
+    /** (Re)starts the 6 s "Taking longer than usual" timer for the current wait. */
+    private void armSlow() {
+        main.removeCallbacks(slowWait);
+        main.postDelayed(slowWait, Ui.SLOW_MS);
     }
 
     private void renderRequired(String version, String localVersion, boolean libUsable, long size) {
@@ -319,16 +343,18 @@ public final class UpdateGate {
     private void renderDownloading() {
         render(R.string.update_downloading_title, activity.getString(R.string.update_downloading_message),
                 false, null);
+        armSlow();
     }
 
     private void renderInstalling() {
         render(R.string.update_installing_title, activity.getString(R.string.update_installing_message),
                 false, null);
         showIndeterminateBar();
+        armSlow();
     }
 
     private void renderCheckFailed(String reason) {
-        render(R.string.update_check_failed_title, reason, true, activity.getString(R.string.try_again));
+        render(R.string.update_check_failed_title, Ui.dropTryAgain(reason), true, activity.getString(R.string.try_again));
         action.setOnClickListener(v -> {
             Ui.tap(v);
             if (optional) runRedownload();
@@ -337,7 +363,7 @@ public final class UpdateGate {
     }
 
     private void renderDownloadFailed(String reason) {
-        render(R.string.update_failed_title, reason, true, activity.getString(R.string.try_again));
+        render(R.string.update_failed_title, Ui.dropTryAgain(reason), true, activity.getString(R.string.try_again));
         action.setOnClickListener(v -> {
             Ui.tap(v);
             startDownload();
@@ -513,6 +539,13 @@ public final class UpdateGate {
 
     /** 3 dp bar with "x.x of y.y MB" in Mono; indeterminate when the size is unknown. */
     private void showProgress(long done, long total, int percent) {
+        // Progress arrived: the download is moving. Back to the normal line and
+        // restart the slow timer.
+        if (message != null && message.getTag(R.id.tag_swap_text) == null
+                && activity.getString(R.string.update_slow).contentEquals(message.getText())) {
+            Ui.swapText(message, activity.getString(R.string.update_downloading_message));
+        }
+        armSlow();
         progress.setVisibility(View.VISIBLE);
         progressText.setVisibility(View.VISIBLE);
         if (percent >= 0) {

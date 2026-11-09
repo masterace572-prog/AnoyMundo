@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Screen enter (fade-through "in"): 280 ms fade + 8 dp upward drift, decelerate. -->
+<!-- Screen enter (fade-through "in"): motion_medium (280 ms) fade + 8 dp upward drift, decelerate. -->
 <set xmlns:android="http://schemas.android.com/apk/res/android"
-    android:duration="280"
+    android:duration="@integer/motion_medium"
     android:interpolator="@interpolator/decelerate_m">
     <alpha android:fromAlpha="0" android:toAlpha="1" />
     <translate android:fromYDelta="8dp" android:toYDelta="0" />

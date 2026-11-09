@@ -4,6 +4,39 @@ Screenshots, design notes (`docs/ui-redesign/…`) and the one-off generator
 scripts mentioned below were removed from the tree in the repo cleanup after
 2.3.2; they remain in git history.
 
+## 2.3.4 — UI polish (versionCode 13)
+
+- **Tokens:** tertiary text is lighter (#85858C); the 14 dp spacing and radii
+  are gone (16); every home card is r20 with 16 dp padding, controls r16; the
+  game icon keeps its own corners; Mono blocks 13 sp; raw dp values in layouts
+  moved to `dimens.xml`; home's task bar uses the default 4 dp progress style.
+- **Words:** "Login" everywhere on the login side ("Log in with a new key",
+  "Couldn't log in", "Log in again"); "Sign out" stays. Retry buttons read
+  **Try again**, and a message next to that button no longer ends in its own
+  "Try again.". "Welcome to", "Tap Continue to open Settings.", "Open Anoy
+  again to continue.".
+- **Waiting states:** nothing new appears in the first 400 ms; text swaps are
+  100 ms out / 180 ms in; status lines keep their space so nothing jumps.
+  - Splash: after 6 s "Taking longer than usual…", after 15 s "Still trying.
+    Your connection may be slow."; Try again only after a failure.
+  - Login: "Still logging in…" after 8 s; connection / VPN problems are a
+    neutral grey block with a wifi-off glyph (key problems stay red).
+  - Home: "Offline · last checked 12 min ago"; the first game-files copy says
+    "First launch copies the game files. Keep Anoy open until it finishes.";
+    15 s without progress says "Still preparing. Large game files take a while."
+  - App update: a 4 dp bar above Update now, **Cancel download** while
+    downloading, "Download is slow. Keep Anoy open." after 8 s without data,
+    and "Update failed" over the reason.
+  - Library sheet: "Taking longer than usual. Keep Anoy open." after 6 s.
+  - Settings › Check for app updates: "Last checked today, 14:32" (IST) under
+    the label, "Still checking…" after 6 s, "Couldn't check" keeps the last
+    good time.
+- **Settings:** App version moved into Updates (no About group); Sign out is a
+  normal row (Forget this key stays red in its sheet); Cancel is tonal in every
+  sheet.
+- **Motion:** one set of tokens — 100 press / 180 fades / 280 screens / 320–240
+  sheets / 450 splash only.
+
 ## 2.3.3 — speed and reliability (versionCode 12)
 
 - **Splash update check:** one attempt with 8 s connect / 10 s read (was up

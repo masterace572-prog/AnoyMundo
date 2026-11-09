@@ -6,9 +6,10 @@
     Mono 15 "2.2.0 → 2.3.0" (old tertiary, new primary)
     32 dp, WHAT'S NEW, one Body row per item with a 4 dp tertiary dot in a
     16 dp gutter (hanging indent), 12 dp apart (rows built in code)
-  Pinned footer (hairline once content runs under it): status / error block,
-  Update now (56), the Mono byte count while downloading, then Not now (48) or,
-  for a mandatory update, a Caption saying it is required.
+  Pinned footer (hairline once content runs under it): a reserved status line
+  (or the two-line failure block), a 4 dp progress bar, Update now (56), the
+  reserved Mono byte line, then Not now (48; "Cancel download" while
+  downloading) or, for a mandatory update, a Caption saying it is required.
 -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -109,20 +110,46 @@
                 android:layout_marginBottom="@dimen/space_12"
                 android:accessibilityLiveRegion="polite"
                 android:gravity="center"
-                android:visibility="gone" />
+                android:visibility="invisible" />
 
-            <!-- Failure: danger-tint block, radius 16, padding 12. -->
-            <TextView
-                android:id="@+id/appUpdateError"
-                style="@style/Text.BodyS"
+            <!-- Failure (2.3.4): danger-tint block, radius 16, padding 12, two
+                 lines: "Update failed" (danger, medium) over the reason. -->
+            <LinearLayout
+                android:id="@+id/appUpdateErrorBlock"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="@dimen/space_12"
-                android:accessibilityLiveRegion="polite"
                 android:background="@drawable/bg_error_block"
+                android:focusable="true"
+                android:orientation="vertical"
                 android:padding="@dimen/space_12"
-                android:textColor="@color/danger"
-                android:visibility="gone" />
+                android:visibility="gone">
+
+                <TextView
+                    android:id="@+id/appUpdateErrorTitle"
+                    style="@style/Text.BodyS.Medium"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/app_update_failed_title"
+                    android:textColor="@color/danger" />
+
+                <TextView
+                    android:id="@+id/appUpdateError"
+                    style="@style/Text.BodyS"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/space_2"
+                    android:accessibilityLiveRegion="polite" />
+            </LinearLayout>
+
+            <com.google.android.material.progressindicator.LinearProgressIndicator
+                android:id="@+id/appUpdateProgress"
+                style="@style/Widget.Anoy.Progress"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="@dimen/space_12"
+                android:importantForAccessibility="no"
+                android:visibility="invisible" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/appUpdatePrimary"
@@ -139,7 +166,7 @@
                 android:layout_marginTop="@dimen/space_12"
                 android:fontFeatureSettings="tnum"
                 android:gravity="center"
-                android:visibility="gone" />
+                android:visibility="invisible" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/appUpdateLater"

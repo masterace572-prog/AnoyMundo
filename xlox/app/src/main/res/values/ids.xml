@@ -3,4 +3,5 @@
     <!-- View tags used by com.xlox.ui.Ui -->
     <item name="tag_base_padding_top" type="id" />
     <item name="tag_base_padding_bottom" type="id" />
+    <item name="tag_swap_text" type="id" />
 </resources>

@@ -25,6 +25,7 @@ import androidx.core.content.ContextCompat;
 import androidx.core.content.IntentCompat;
 
 import com.google.android.material.button.MaterialButton;
+import com.google.android.material.progressindicator.LinearProgressIndicator;
 import com.xlox.ui.Ui;
 import com.xlox.utils.AppUpdater;
 import com.xlox.utils.UpdateException;
@@ -47,8 +48,12 @@ import java.util.concurrent.atomic.AtomicBoolean;
  *       from Settings > Check for app updates, goes back to Settings).</li>
  *   <li>Update now: in-app download with progress (screen kept on), a quick
  *       validity check, then Android's own installer via a PackageInstaller
- *       session - no browser, no file:// URI. Any failure shows its reason
- *       and Retry.</li>
+ *       session - no browser, no file:// URI. Any failure shows "Update
+ *       failed" over its reason, and Try again.</li>
+ *   <li>2.3.4: a 4 dp bar above Update now; the status and byte lines keep
+ *       their space; while downloading the second button reads "Cancel
+ *       download" (mandatory updates too) and goes back to Update now; 8 s
+ *       without new bytes says "Download is slow. Keep Anoy open."</li>
  * </ul>
  */
 public class AppUpdateActivity extends AppCompatActivity {
@@ -63,12 +68,20 @@ public class AppUpdateActivity extends AppCompatActivity {
     /** After the system confirmation closes without any result, treat it as cancelled. */
     private static final long CONFIRM_TIMEOUT_MS = 6000L;
     private static final long PROGRESS_MIN_INTERVAL_MS = 120L;
+    /** No new bytes for this long: "Download is slow. Keep Anoy open." */
+    private static final long STALL_MS = 8000L;
+    private static final long STALL_CHECK_MS = 1000L;
 
     private enum State { READY, DOWNLOADING, VERIFYING, INSTALLING, FAILED, INSTALLED }
 
     private final Handler main = new Handler(Looper.getMainLooper());
     private final ExecutorService worker = Executors.newSingleThreadExecutor(r -> new Thread(r, "anoy-app-update"));
-    private final AtomicBoolean cancel = new AtomicBoolean(false);
+    /** Each download run gets its own flag, so a cancelled run can't touch the next one. */
+    private AtomicBoolean cancel = new AtomicBoolean(false);
+    private int downloadRun;
+    private long lastBytes = -1L;
+    private long lastBytesAt;
+    private boolean stallShown;
 
     private AppUpdater.Release release;
     private boolean preview;
@@ -82,7 +95,9 @@ public class AppUpdateActivity extends AppCompatActivity {
     private TextView kickerText;
     private TextView statusText;
     private TextView errorText;
+    private View errorBlock;
     private TextView progressText;
+    private LinearProgressIndicator progressBar;
     private MaterialButton primary;
     private MaterialButton later;
 
@@ -90,6 +105,19 @@ public class AppUpdateActivity extends AppCompatActivity {
         @Override
         public void onReceive(Context context, Intent intent) {
             onInstallStatus(intent);
+        }
+    };
+
+    /** While downloading: once a second, is anything still arriving? */
+    private final Runnable stallCheck = new Runnable() {
+        @Override
+        public void run() {
+            if (!Ui.alive(AppUpdateActivity.this) || state != State.DOWNLOADING) return;
+            if (!stallShown && System.currentTimeMillis() - lastBytesAt >= STALL_MS) {
+                stallShown = true;
+                Ui.swapText(statusText, getString(R.string.app_update_slow));
+            }
+            main.postDelayed(this, STALL_CHECK_MS);
         }
     };
 
@@ -116,7 +144,9 @@ public class AppUpdateActivity extends AppCompatActivity {
         kickerText = findViewById(R.id.appUpdateKicker);
         statusText = findViewById(R.id.appUpdateStatus);
         errorText = findViewById(R.id.appUpdateError);
+        errorBlock = findViewById(R.id.appUpdateErrorBlock);
         progressText = findViewById(R.id.appUpdateProgressText);
+        progressBar = findViewById(R.id.appUpdateProgress);
         primary = findViewById(R.id.appUpdatePrimary);
         later = findViewById(R.id.appUpdateLater);
 
@@ -162,8 +192,7 @@ public class AppUpdateActivity extends AppCompatActivity {
         List<String> notes = changelogItems(release.changelog);
         if (notes.isEmpty()) notes.add(getString(R.string.app_update_no_changelog));
         fillNotes(findViewById(R.id.appUpdateNotes), notes);
-        later.setVisibility(release.mandatory ? View.GONE : View.VISIBLE);
-        findViewById(R.id.appUpdateRequired).setVisibility(release.mandatory ? View.VISIBLE : View.GONE);
+        // "Not now" / "Required" visibility is set by render().
 
         primary.setOnClickListener(v -> {
             Ui.tap(v);
@@ -171,13 +200,19 @@ public class AppUpdateActivity extends AppCompatActivity {
         });
         later.setOnClickListener(v -> {
             Ui.tap(v);
-            notNow();
+            if (state == State.DOWNLOADING) {
+                cancelDownload();
+            } else {
+                notNow();
+            }
         });
         getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
             @Override
             public void handleOnBackPressed() {
                 if (release.mandatory) {
                     Ui.snackbar(AppUpdateActivity.this, getString(R.string.app_update_required_back));
+                } else if (state == State.DOWNLOADING) {
+                    cancelDownload();
                 } else if (state != State.INSTALLING && state != State.VERIFYING) {
                     notNow();
                 }
@@ -225,58 +260,99 @@ public class AppUpdateActivity extends AppCompatActivity {
 
     private void startUpdate() {
         if (state == State.DOWNLOADING || state == State.VERIFYING || state == State.INSTALLING) return;
-        cancel.set(false);
+        cancel.set(true);
+        final AtomicBoolean runCancel = new AtomicBoolean(false);
+        cancel = runCancel;
+        final int run = ++downloadRun;
         lastProgressAt = 0L;
+        lastBytes = -1L;
+        lastBytesAt = System.currentTimeMillis();
+        stallShown = false;
         render(State.DOWNLOADING, null);
-        onProgress(0, -1);
+        onProgress(run, 0, -1);
+        main.removeCallbacks(stallCheck);
+        main.postDelayed(stallCheck, STALL_CHECK_MS);
         if (preview) {
-            simulateDownload(0);
+            simulateDownload(run, 0);
             return;
         }
         worker.execute(() -> {
             try {
-                File apk = AppUpdater.download(this, release, (done, total) -> main.post(() -> onProgress(done, total)),
-                        cancel);
+                File apk = AppUpdater.download(this, release,
+                        (done, total) -> main.post(() -> onProgress(run, done, total)), runCancel);
+                if (runCancel.get()) return; // Cancel download: back to Update now, nothing installed.
                 main.post(() -> {
-                    if (Ui.alive(this)) render(State.VERIFYING, null);
+                    if (Ui.alive(this) && run == downloadRun && !runCancel.get()) render(State.VERIFYING, null);
                 });
                 int session = AppUpdater.install(this, apk);
                 Log.i(TAG, "Waiting for the installer (session " + session + ")");
                 main.post(() -> {
-                    if (!Ui.alive(this)) return;
+                    if (!Ui.alive(this) || run != downloadRun) return;
                     render(State.INSTALLING, getString(R.string.app_update_confirm));
                 });
             } catch (UpdateException e) {
                 Log.w(TAG, "Update failed: " + e.getMessage());
                 main.post(() -> {
-                    if (Ui.alive(this) && !cancel.get()) fail(e.getMessage());
+                    if (Ui.alive(this) && run == downloadRun && !runCancel.get()) fail(e.getMessage());
                 });
             } catch (RuntimeException e) {
                 Log.e(TAG, "Update crashed", e);
                 main.post(() -> {
-                    if (Ui.alive(this)) fail(getString(R.string.app_update_install_failed));
+                    if (Ui.alive(this) && run == downloadRun && !runCancel.get()) {
+                        fail(getString(R.string.app_update_install_failed));
+                    }
                 });
             }
         });
     }
 
-    private void onProgress(long done, long total) {
-        if (!Ui.alive(this) || state != State.DOWNLOADING) return;
+    /** "Cancel download": stop this run and show Update now again (mandatory too). */
+    private void cancelDownload() {
+        if (state != State.DOWNLOADING) return;
+        cancel.set(true);
+        downloadRun++;
+        Log.i(TAG, "Download cancelled");
+        render(State.READY, null);
+    }
+
+    private void onProgress(int run, long done, long total) {
+        if (!Ui.alive(this) || state != State.DOWNLOADING || run != downloadRun) return;
         long now = System.currentTimeMillis();
+        if (done != lastBytes) {
+            lastBytes = done;
+            lastBytesAt = now;
+            if (stallShown) {
+                stallShown = false;
+                Ui.swapText(statusText, getString(R.string.app_update_keep_open));
+            }
+        }
         boolean last = total > 0 && done >= total;
         if (!last && now - lastProgressAt < PROGRESS_MIN_INTERVAL_MS) return;
         lastProgressAt = now;
         progressText.setVisibility(View.VISIBLE);
+        setBarMode(total <= 0);
+        progressBar.setVisibility(View.VISIBLE);
         if (total > 0) {
             int permille = (int) Math.min(1000L, done * 1000L / total);
-            // Progress button: "Downloading 42%", the bytes in Mono below it.
+            // Progress button: "Downloading 42%", the bar above it, the bytes in Mono below.
             primary.setText(getString(R.string.app_update_downloading_percent, permille / 10));
             progressText.setText(Ui.bytesOf(this, done, total));
+            progressBar.setMax(1000);
+            progressBar.setProgressCompat(permille, !Ui.reducedMotion(this));
         } else {
             // Size unknown: the button keeps "Downloading…" and its spinner.
             progressText.setText(done > 0 ? getString(R.string.app_update_progress_unknown, Ui.bytes(done))
                     : getString(R.string.app_update_downloading));
         }
+    }
+
+    /** Switching modes on a visible indicator requires hiding it first (as in UpdateGate). */
+    private void setBarMode(boolean indeterminate) {
+        if (progressBar.isIndeterminate() == indeterminate) return;
+        int visibility = progressBar.getVisibility();
+        progressBar.setVisibility(View.INVISIBLE);
+        progressBar.setIndeterminate(indeterminate);
+        progressBar.setVisibility(visibility);
     }
 
     private void onInstallStatus(Intent intent) {
@@ -318,6 +394,7 @@ public class AppUpdateActivity extends AppCompatActivity {
     private void notNow() {
         if (release.mandatory) return;
         cancel.set(true);
+        downloadRun++;
         Log.i(TAG, "Not now: continuing with " + BuildConfig.VERSION_NAME);
         openLogin();
     }
@@ -347,10 +424,21 @@ public class AppUpdateActivity extends AppCompatActivity {
             getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         }
         later.setEnabled(!working || next == State.DOWNLOADING);
+        if (next != State.DOWNLOADING) main.removeCallbacks(stallCheck);
+        // While downloading the second button is "Cancel download", even for a
+        // mandatory update (it only returns to Update now, never past it).
+        boolean downloading = next == State.DOWNLOADING;
+        later.setText(downloading ? R.string.app_update_cancel_download : R.string.app_update_not_now);
+        later.setVisibility(downloading || !release.mandatory ? View.VISIBLE : View.GONE);
+        findViewById(R.id.appUpdateRequired).setVisibility(release.mandatory && !downloading ? View.VISIBLE : View.GONE);
+        // Bar and byte line keep their space; they show only while downloading.
+        if (!downloading) {
+            progressText.setVisibility(View.INVISIBLE);
+            progressBar.setVisibility(View.INVISIBLE);
+        }
         switch (next) {
             case READY:
                 hideStatus();
-                progressText.setVisibility(View.GONE);
                 Ui.setLoading(primary, false, getString(R.string.app_update_now));
                 primary.setEnabled(true);
                 break;
@@ -359,17 +447,14 @@ public class AppUpdateActivity extends AppCompatActivity {
                 Ui.setLoading(primary, true, getString(R.string.app_update_downloading));
                 break;
             case VERIFYING:
-                progressText.setVisibility(View.GONE);
                 showStatus(getString(R.string.app_update_keep_open), false);
                 Ui.setLoading(primary, true, getString(R.string.app_update_verifying));
                 break;
             case INSTALLING:
-                progressText.setVisibility(View.GONE);
                 showStatus(message != null ? message : getString(R.string.app_update_keep_open), false);
                 Ui.setLoading(primary, true, getString(R.string.app_update_installing));
                 break;
             case FAILED:
-                progressText.setVisibility(View.GONE);
                 showStatus(message, true);
                 Ui.setLoading(primary, false, getString(R.string.try_again));
                 primary.setEnabled(true);
@@ -382,47 +467,56 @@ public class AppUpdateActivity extends AppCompatActivity {
     }
 
     /**
-     * Quiet Caption above the button, or, for a failure, the danger-tint block
-     * "Update failed. <reason>" (the button then reads Try again).
+     * Quiet Caption above the button (its line is always reserved), or, for a
+     * failure, the danger-tint block: "Update failed" (danger, medium) over the
+     * reason, minus its own "Try again." (the button reads Try again).
      */
     private void showStatus(String text, boolean error) {
         if (text == null || text.isEmpty()) {
             hideStatus();
             return;
         }
+        statusText.animate().cancel();
+        statusText.setAlpha(1f);
+        statusText.setTag(R.id.tag_swap_text, null);
         if (error) {
             statusText.setVisibility(View.GONE);
-            errorText.setText(getString(R.string.app_update_error_block,
-                    getString(R.string.app_update_failed_title), text));
-            errorText.setVisibility(View.VISIBLE);
-            Ui.rejectHaptic(errorText);
+            errorText.setText(Ui.dropTryAgain(text));
+            errorBlock.setContentDescription(getString(R.string.app_update_error_block,
+                    getString(R.string.app_update_failed_title), errorText.getText()));
+            errorBlock.setVisibility(View.VISIBLE);
+            Ui.rejectHaptic(errorBlock);
             return;
         }
-        errorText.setVisibility(View.GONE);
+        errorBlock.setVisibility(View.GONE);
         statusText.setText(text);
         statusText.setVisibility(View.VISIBLE);
     }
 
     private void hideStatus() {
-        statusText.setVisibility(View.GONE);
-        errorText.setVisibility(View.GONE);
+        statusText.animate().cancel();
+        statusText.setAlpha(1f);
+        statusText.setVisibility(View.INVISIBLE);
+        errorBlock.setVisibility(View.GONE);
     }
 
     // --------------------------------------------------------------- QA only
 
     /** Debug sample: a fake download that ends in a clear failure (nothing is installed). */
-    private void simulateDownload(long done) {
+    private void simulateDownload(int run, long done) {
         final long total = 24L * 1024L * 1024L;
-        if (!Ui.alive(this) || state != State.DOWNLOADING) return;
+        if (!Ui.alive(this) || state != State.DOWNLOADING || run != downloadRun) return;
         if (done >= total) {
-            onProgress(total, total);
+            onProgress(run, total, total);
             main.postDelayed(() -> {
-                if (Ui.alive(this)) fail(getString(R.string.app_update_invalid));
+                if (Ui.alive(this) && run == downloadRun && state == State.DOWNLOADING) {
+                    fail(getString(R.string.app_update_invalid));
+                }
             }, 400L);
             return;
         }
-        onProgress(done, total);
-        main.postDelayed(() -> simulateDownload(done + total / 24), 300L);
+        onProgress(run, done, total);
+        main.postDelayed(() -> simulateDownload(run, done + total / 24), 300L);
     }
 
     private void applyQaState() {
@@ -432,7 +526,7 @@ public class AppUpdateActivity extends AppCompatActivity {
             case "downloading":
                 render(State.DOWNLOADING, null);
                 lastProgressAt = 0L;
-                onProgress(11L * 1024L * 1024L, 24L * 1024L * 1024L);
+                onProgress(downloadRun, 11L * 1024L * 1024L, 24L * 1024L * 1024L);
                 break;
             case "installing":
                 render(State.INSTALLING, getString(R.string.app_update_confirm));
