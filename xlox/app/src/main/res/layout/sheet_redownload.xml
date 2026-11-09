@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Re-download library (2.3.1, Settings > Updates): the shared sheet with a
+  handle. Kicker LIBRARY, the question, one line on when to use it, then the
+  primary Re-download and a tonal Cancel. Re-download hands over to the
+  existing library sheet (dialog_update) with its determinate progress.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/redownloadRoot"
+    style="@style/Sheet.Draggable">
+
+    <View style="@style/SheetHandle" />
+
+    <TextView
+        style="@style/Text.Kicker"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/row_library" />
+
+    <TextView
+        android:id="@+id/redownloadTitle"
+        style="@style/Text.TitleM"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/kicker_gap"
+        android:accessibilityHeading="true"
+        android:text="@string/redownload_title" />
+
+    <TextView
+        style="@style/Text.BodyS"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/space_8"
+        android:text="@string/redownload_message" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/redownloadConfirm"
+        style="@style/Widget.Anoy.Button.Sheet"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/space_24"
+        android:text="@string/redownload_action" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/redownloadCancel"
+        style="@style/Widget.Anoy.Button.Tonal"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/space_12"
+        android:text="@string/cancel" />
+</LinearLayout>

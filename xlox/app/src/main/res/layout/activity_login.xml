@@ -185,16 +185,32 @@
                     android:layout_height="wrap_content"
                     android:text="@string/sign_in" />
 
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/getKey"
-                    style="@style/Widget.Anoy.Button.Text"
+                <!-- 2.3.1: one centred line. Only "Buy one" is a control (48 dp
+                     target, accent, Inter 500); it opens the same Telegram link. -->
+                <LinearLayout
+                    android:id="@+id/getKeyRow"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_gravity="center_horizontal"
                     android:layout_marginTop="@dimen/space_12"
-                    android:contentDescription="@string/get_key_description"
-                    android:text="@string/get_key"
-                    app:icon="@drawable/ic_arrow_up_right" />
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        style="@style/Text.LinkLead"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:importantForAccessibility="no"
+                        android:text="@string/get_key_lead" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/getKey"
+                        style="@style/Widget.Anoy.Button.Text.Inline"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:contentDescription="@string/get_key_description"
+                        android:text="@string/get_key" />
+                </LinearLayout>
             </LinearLayout>
         </LinearLayout>
     </ScrollView>

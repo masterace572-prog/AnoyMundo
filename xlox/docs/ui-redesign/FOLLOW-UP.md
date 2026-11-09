@@ -780,3 +780,24 @@ code as 2.2.0. The website was not touched.
   still checks them) but no screen uses them any more.
 - QA's sample "available" app update moved from 2.3.0 to 2.4.0 so it stays
   newer than the app.
+
+
+## 13. 2.3.1: post-redesign follow-up
+
+Only the listed items changed; the 2.3.0 tokens stay binding.
+
+| Item | What changed | Where |
+| --- | --- | --- |
+| Splash | Status group bottom-centre, 32 dp above the nav inset, grows from the centre (crossfade, same type) | `activity_splash.xml` |
+| Sign in | Button "Login" in every state; centred "Don't have a licence? **Buy one**" (only "Buy one" is a 48 dp accent text button → same Telegram link) | `activity_login.xml`, `Text.LinkLead`, `Widget.Anoy.Button.Text.Inline` |
+| Home expiry | `Widget.Anoy.Card.Compact` (r20, pad 16): EXPIRES IN + dot / one `Text.Countdown` line (Inter 600 20 sp, tnum) / IST date. Columns, Hero numerals and the 4 dp bar removed | `activity_main.xml`, `MAct.renderCountdown` |
+| BGMI icon | `res/drawable-nodpi/ic_game_bgmi.png` (224 px from the 316 px Wikipedia WebP, fetched once by `scripts/fetch_game_icon.py` in CI and committed); 56 dp `ShapeableImageView`, centerCrop, r14, 1 dp hairline stroke. `GameIcon` (runtime URL) and the "BG" monogram removed | `activity_main.xml` |
+| Announcement | Lucide megaphone 20 dp (1.75 stroke) in warning, 12 dp gap, ANNOUNCEMENT kicker (`notice_kicker` #D9FF9F0A) → 4 dp → verbatim `Text.Notice` | `activity_main.xml` |
+| Settings | Licence group (masked first4 + • + last4 in Mono, eye toggle, tap copies → "Copied" 1.2 s; status dot; IST expiry), Updates group (AppUpdater.check → existing AppUpdateActivity, "Not now" returns to Settings; re-download confirm sheet → `UpdateGate.redownload` (optional mode: Back never exits, Close after a failure); Library version in Mono). Access and files group + footer removed (the permission / OBB logic is untouched) | `activity_main.xml`, `sheet_redownload.xml`, `MAct`, `UpdateGate`, `AppUpdateActivity` |
+| Support info | Adds `Licence key`, `Licence status`, `Expires (IST)`; note "Includes your licence key. Only share it with Anoy support." | `MAct.supportInfo`, `sheet_support_info.xml` |
+
+QA: the access_* screenshots are replaced by `settings_licence`,
+`settings_key_revealed`, `settings_key_copied`, `settings_update_current`,
+`settings_update_failed`, `settings_update_available`,
+`settings_redownload_confirm` and `gate_redownloaded` (debug extra
+`qa_app_check` = current | available | failed; `qa_gate redownloaded`).

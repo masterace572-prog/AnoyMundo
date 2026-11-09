@@ -31,6 +31,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Bundle the BGMI icon (downloaded once, then committed)
+        run: python3 scripts/fetch_game_icon.py
+
       - name: Static UI gates (no SDK needed)
         run: python3 scripts/ui_quality_gate.py
 
@@ -227,9 +230,12 @@ jobs:
               'perm_explain_all_files', 'perm_explain_install', 'home_perm_not_now', 'forget_key_done',
               'home_game_closed', 'home_licence_extended', 'home_licence_soon', 'home_licence_offline',
               'home_licence_expired_by_panel',
-              # help sheet, support info preview, Access chip
+              # help sheet, support info preview
               'help_sheet', 'help_support_info', 'help_support_copied',
-              'home_access_ready', 'home_access_needed', 'access_explain',
+              # 2.3.1: Settings > Licence / Updates, re-download
+              'settings_licence', 'settings_key_revealed', 'settings_key_copied',
+              'settings_update_current', 'settings_update_failed', 'settings_update_available',
+              'settings_redownload_confirm', 'gate_redownloaded',
               # 2.2.0: splash status line, app (APK) update screen, Settings
               'splash_status_up_to_date', 'splash_status_available', 'splash_status_fail',
               'app_update_normal', 'app_update_downloading', 'app_update_failed', 'app_update_mandatory',
@@ -247,8 +253,9 @@ jobs:
               h = hashlib.md5(p.read_bytes()).hexdigest()
               # '_scrolled': since 2.2.0 (no Device card) home fits on one screen at
               # normal sizes, so the scrolled frame can equal the top one. 2.3.0: the
-              # same holds for Settings on tall screens ('settings_bottom').
-              if h in seen and not any(k in n + seen[h] for k in ('live', 'anim_', 'icon_', 'splash_reduced', 'splash_t240', 'home_launch_', 'home_obb', 'perm_', '_scrolled', 'settings_bottom')):
+              # same holds for Settings on tall screens ('settings_bottom'). 2.3.1:
+              # 'settings_licence' is the Settings top again (= home_settings).
+              if h in seen and not any(k in n + seen[h] for k in ('live', 'anim_', 'icon_', 'splash_reduced', 'splash_t240', 'home_launch_', 'home_obb', 'perm_', '_scrolled', 'settings_bottom', 'settings_licence')):
                   errors.append(f'identical frames: {seen[h]} / {n}')
               seen[h] = n
           trace = Path('qa-logs/emulator-trace.txt')
@@ -325,12 +332,10 @@ jobs:
           def line(tag):
               m = re.search(r'^%s: (.*)$' % re.escape(tag), t, re.M)
               return m.group(1) if m else ''
-          # 2.3.0: the countdown is columns (text="29" text="days" text="21" text="hours" ...);
-          # fold them back into "29d 21h 05m 03s" so the checks read the same.
+          # 2.3.1: the countdown is one line again: "29d 21h 05m 03s", under a day "3h 00m 29s".
           def clock(tx):
-              unit = {'days': 'd', 'hours': 'h', 'min': 'm', 'sec': 's'}
-              parts = re.findall(r'text="(\d+)" text="(days|hours|min|sec)"', tx)
-              return ' '.join(n + unit[u] for n, u in parts)
+              m = re.search(r'text="(\d+d \d\dh \d\dm \d\ds|\d+h \d\dm \d\ds)"', tx)
+              return m.group(1) if m else ''
           if 'com.xlox' in line('perm_allow step1 focus') or 'ettings' not in line('perm_allow step1 focus'):
               errors.append('Launch did not open the All files access page: ' + line('perm_allow step1 focus'))
           if 'permissioncontroller' not in line('perm_allow step2 focus'):
@@ -462,36 +467,62 @@ jobs:
               if want not in ht:
                   errors.append('Help sheet: %r missing: %s' % (want, ht[:400]))
           si = line('help support info')
-          for want in ('Anoy 2.', 'Library:', 'Android:', 'Device:', 'Game:', 'Access: allowed', 'Licence:', 'Status:'):
+          # 2.3.1: the full licence key, its status and the IST expiry are included (and said so).
+          for want in ('Anoy 2.', 'Library:', 'Android:', 'Device:', 'Game:', 'Access: allowed',
+                       'Licence key: ANOY-30D-QA7K2', 'Licence status: ', 'Expires (IST): ', 'Status:'):
               if want not in si:
                   errors.append('support info: %r missing: %s' % (want, si[:400]))
+          if 'Includes your licence key. Only share it with Anoy support.' not in line('help support texts'):
+              errors.append('support info: the licence key note is missing: ' + line('help support texts')[:400])
           sv = si + ' ' + line('help support texts')
-          for bad in ('QA7K2', 'ANOY-', '/storage', '/data/', '/sdcard'):
+          for bad in ('/storage', '/data/', '/sdcard', "isn't included"):
               if bad in sv:
-                  errors.append('support info leaks %r: %s' % (bad, sv[:400]))
+                  errors.append('support info leaks / says %r: %s' % (bad, sv[:400]))
           # 2.3.0: the Copy button itself confirms ("Copied" + check), no snackbar.
           if 'text="Copied"' not in line('help copied texts') or 'Help: support info copied' not in line('help log'):
               errors.append('Copy support info: no confirmation: ' + line('help copied texts')[:300])
-          # Access chip: ready -> confirmation only; off -> explanation, Settings, no launch.
-          # 2.3.0: Settings > Access reads Ready / Needs attention next to a dot.
-          if line('access_ok chip') != 'Ready':
-              errors.append('Access chip with everything allowed: %r' % line('access_ok chip'))
-          if 'are on' not in line('access_ok texts') or 'com.xlox' not in line('access_ok focus'):
-              errors.append('Access ready tap: no confirmation, or Anoy left the screen: ' + line('access_ok focus'))
-          if line('access_missing chip') != 'Needs attention':
-              errors.append('Access chip with All files access off: %r' % line('access_missing chip'))
-          if 'text="All files access"' not in line('access_missing sheet texts') or 'Continue to Settings' not in line('access_missing sheet texts'):
-              errors.append('Access tap: the explanation sheet did not open: ' + line('access_missing sheet texts')[:300])
-          af = line('access_missing settings focus')
-          if 'com.xlox' in af or 'ettings' not in af:
-              errors.append('Access tap: Continue did not open Settings: ' + af)
-          if 'com.xlox' not in line('access_missing back focus') or line('access_missing after chip') != 'Ready':
-              errors.append('Access: not back on home as ready after the grant: %s / %r' % (line('access_missing back focus'), line('access_missing after chip')))
-          al = line('access_missing log')
-          if 'Access: asking for ALL_FILES' not in al or 'Permission explained: ALL_FILES' not in al or 'Permissions granted' not in al:
-              errors.append('Access flow log incomplete: ' + al[-400:])
-          if 'continuing the launch' in al or 'Launch: preparing' in al:
-              errors.append('Access flow started a launch: ' + al[-400:])
+          # ---- 2.3.1 ----
+          # Settings > Licence: masked key, the eye reveals it, a tap copies it.
+          km, kr, kc = line('licence masked'), line('licence revealed'), line('licence copied')
+          if not re.match(r'^ANOY\u2022{6}A7K2$', km):
+              errors.append('Settings: licence key not masked first4/last4: %r' % km)
+          if kr != 'ANOY-30D-QA7K2':
+              errors.append('Settings: the eye did not reveal the key: %r' % kr)
+          if kc != 'Copied':
+              errors.append('Settings: tapping the key row did not show Copied: %r' % kc)
+          lt = line('licence settings texts')
+          for want in ('LICENCE', 'LICENCE KEY', 'STATUS', 'EXPIRES', 'ACTIVE', 'IST', 'UPDATES',
+                       'CHECK FOR APP UPDATES', 'RE-DOWNLOAD LIBRARY', 'LIBRARY VERSION'):
+              if want not in lt.upper():
+                  errors.append('Settings top: %r missing: %s' % (want, lt[:500]))
+          # Check for app updates: Checking... -> Up to date / Couldn't check / the update screen.
+          if line('app check current') != 'Up to date':
+              errors.append('Check for app updates: no "Up to date": %r (checking %r)'
+                            % (line('app check current'), line('app check checking')))
+          if line('app check failed') != "Couldn't check":
+              errors.append('Check for app updates: no "Couldn\'t check": %r' % line('app check failed'))
+          if 'AppUpdateActivity' not in line('app check available focus') or '2.4.0' not in line('app check available texts'):
+              errors.append('Check for app updates: newer version did not open the update screen: '
+                            + line('app check available focus'))
+          if 'MAct' not in line('app check not now focus') or line('app check not now settings') != 'shown':
+              errors.append('update screen from Settings: Not now did not return to Settings: %s / %s'
+                            % (line('app check not now focus'), line('app check not now settings')))
+          # Re-download library: confirmation sheet, Cancel closes it; the "installed" state.
+          rt = line('redownload sheet texts')
+          for want in ('LIBRARY', 'Re-download library?', "Use it if the game won't launch properly",
+                       'text="Re-download"', 'text="Cancel"'):
+              if want not in rt and want.upper() not in rt.upper():
+                  errors.append('Re-download sheet: %r missing: %s' % (want, rt[:400]))
+          if line('redownload cancel') != 'closed':
+              errors.append('Re-download sheet: Cancel did not close it')
+          if 'Library 1.13 installed' not in line('redownload done texts'):
+              errors.append('Re-download: no "Library 1.13 installed": ' + line('redownload done texts')[:300])
+          # Sign in: "Login" button and "Don't have a licence? Buy one".
+          lg = line('login texts')
+          if 'text="Login"' not in lg or 'have a licence?' not in lg or 'text="Buy one"' not in lg:
+              errors.append('sign in: Login / "Don\'t have a licence? Buy one" missing: ' + lg[:400])
+          if line('login button') != 'Login':
+              errors.append('sign in: the button does not read Login: %r' % line('login button'))
           if not re.search(r'typical phone: game card bottom \d+, launch bar top \d+: clear', t):
               errors.append('GAME card is covered by the Launch bar on a 411 x 914 dp phone')
           # ---- 2.2.0 ----
@@ -499,7 +530,7 @@ jobs:
           for st, want in (('up_to_date', 'Up to date'), ('available', 'Update available (v2.4.0)'),
                            ('fail', 'check for updates')):
               tx = line('splash status %s texts' % st)
-              if want not in tx or 'text="v2.3.0"' not in tx:
+              if want not in tx or 'text="v2.3.1"' not in tx:
                   errors.append('splash status %s: %r / version missing: %s' % (st, want, tx[:300]))
           if 'text="Retry"' not in line('splash status fail texts'):
               errors.append('splash: a failed check has no Retry: ' + line('splash status fail texts')[:300])
@@ -542,25 +573,33 @@ jobs:
           if 'text="Device"' in ht2 or 'text="Sign out"' in ht2 or 'text="Anoy"' in ht2:
               errors.append('home still shows Device / Sign out / "Anoy" title: ' + ht2[:400])
           if not re.search(r'^\d+d \d\dh \d\dm \d\ds$', clock(ht2)):
-              errors.append('home countdown columns are not days / hours / min / sec: ' + ht2[:300])
+              errors.append('home countdown is not one "29d 21h 05m 03s" line: ' + ht2[:300])
+          if 'EXPIRES IN' not in ht2.upper() or 'ANNOUNCEMENT' not in ht2.upper():
+              errors.append('home: no EXPIRES IN kicker / ANNOUNCEMENT kicker: ' + ht2[:300])
+          if 'text="days"' in ht2 or 'text="sec"' in ht2:
+              errors.append('home: the old countdown columns are still there: ' + ht2[:300])
           if 'ANOY HAX' not in ht2.upper() or 'text="BGMI"' not in ht2:
               errors.append('home: no ANOY HAX kicker / BGMI title: ' + ht2[:300])
           # The countdown really ticks (frozen elsewhere in QA): two frames 2 s apart differ.
           ca, cb = files.get('home_clock_a'), files.get('home_clock_b')
           if ca and cb and ca.read_bytes() == cb.read_bytes():
               errors.append('home countdown did not tick: home_clock_a and home_clock_b are identical')
-          # Settings: device, access + OBB, report, version, Sign out.
+          # Settings (2.3.1): licence, updates, device, report, version, Sign out; no Access group.
           sx = line('settings texts') + ' ' + line('settings bottom texts')
-          for want in ('Settings', 'Model', 'Android', 'All files access', 'Install unknown apps', 'Game files (OBB)',
-                       'Report on Telegram', 'Copy support info', 'App version', '2.3.0 (9)', 'Sign out'):
+          for want in ('Settings', 'Licence key', 'Check for app updates', 'Re-download library', 'Library version',
+                       'Model', 'Android', 'Report on Telegram', 'Copy support info', 'App version', '2.3.1 (10)',
+                       'Sign out'):
               if want not in sx:
                   errors.append('Settings: %r missing: %s' % (want, sx[:500]))
+          for gone in ('All files access', 'Game files (OBB)', 'ACCESS AND FILES', 'Launch copies the game files'):
+              if gone in sx or gone in sx.upper():
+                  errors.append('Settings still shows the Access and files group (%r)' % gone)
           if 'text="Launch"' in sx or 'text="Stop"' in sx:
               errors.append('Settings shows Launch / Stop: ' + sx[:300])
-          if not re.search(r'settings rows: all=Allowed files=Allowed install=Allowed obb=(Copied|Not copied)', t):
-              errors.append('Settings rows: ' + (re.search(r'settings rows: .*', t) or re.search('', '')).group(0))
-          if line('access_missing all files row') != 'Not allowed':
-              errors.append('Settings: All files access off not shown: %r' % line('access_missing all files row'))
+          sr = line('settings licence rows')
+          if (not re.search(r'key=ANOY\u2022{6}A7K2 status=Active expires=\d+ \w{3} \d{4}, \d+:\d\d [AP]M IST library=', sr)
+                  or line('settings access group') != 'gone'):
+              errors.append('Settings licence rows / Access group: %s / %s' % (sr, line('settings access group')))
           m = re.search(r'licence card description: content-desc="([^"]*)"', t)
           if not m or not m.group(1).startswith('Licence active,'):
               errors.append('licence card is not read as one sentence: ' + (m.group(1) if m else 'missing'))
@@ -598,6 +637,10 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           mkdir -p xlox/docs/ui-redesign qa-logs
+          # The build workflow commits the bundled BGMI icon; an untracked copy
+          # fetched here would block the pull below.
+          ICON=xlox/app/src/main/res/drawable-nodpi/ic_game_bgmi.png
+          git ls-files --error-unmatch "$ICON" >/dev/null 2>&1 || rm -f "$ICON"
           git add -f qa-logs || true
           git add -f xlox/docs/ui-redesign || true
           git diff --cached --quiet && { echo "nothing to commit"; exit 0; }

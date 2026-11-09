@@ -1,5 +1,33 @@
 # Anoy Loader — changelog
 
+## 2.3.1 — post-redesign follow-up
+
+Launch / Stop, game files, permissions, sign in, licensing and the library
+and app update rules work exactly as in 2.3.0.
+
+- **Splash.** The status line (spinner + text, every state) sits centred at
+  the bottom, 32 dp above the navigation bar, and grows from the centre.
+- **Sign in.** The button reads "Login" (also "Logging in…" / "Logged in").
+  Under it: "Don't have a licence? Buy one" — only "Buy one" is tappable and
+  opens the same Telegram link as before.
+- **Home.** A compact expiry card: EXPIRES IN + status dot, one ticking line
+  ("29d 23h 59m 58s", under a day "23h 59m 58s"), then the IST date. Expired
+  shows "Expired" in red and Launch stays disabled as before. The game card
+  now shows the real BGMI icon (bundled in the app, never downloaded at
+  runtime).
+- **Announcement.** The panel notice gets a megaphone and an ANNOUNCEMENT
+  kicker above the text (still verbatim; no text = no banner).
+- **Settings.** New *Licence* group (key masked as ANOY••••••A7K2, the eye
+  reveals it, tap the row to copy it; status; expiry in IST) and *Updates*
+  group (Check for app updates — the same check as the splash, with
+  "Checking…", "Up to date" or "Couldn't check"; Re-download library with a
+  confirmation and the usual progress sheet — a failure keeps the current
+  library; Library version). The *Access and files* group is gone; Launch
+  still asks for anything missing exactly as before.
+- **Support info.** Now includes the licence key, licence status and expiry
+  (IST), and says so: "Includes your licence key. Only share it with Anoy
+  support."
+
 ## 2.3.0 — a calmer, more premium look (visual only)
 
 Everything works exactly as in 2.2.0: Launch / Stop, game files, permissions,

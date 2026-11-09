@@ -41,6 +41,8 @@ public final class UpdateGate {
     private static final long MIN_CHECKING_MS = 450L;
     /** "You're up to date" stays ~900 ms, then the sheet leaves (240 ms). */
     private static final long DONE_VISIBLE_MS = 900L;
+    /** "Library 1.13 installed" (Settings re-download) stays a little longer. */
+    private static final long REDOWNLOAD_DONE_VISIBLE_MS = 1500L;
 
     private static final ExecutorService EXECUTOR = Executors.newSingleThreadExecutor(r -> {
         Thread t = new Thread(r, "anoy-update");
@@ -66,6 +68,16 @@ public final class UpdateGate {
     private LinearProgressIndicator progress;
     private TextView progressText;
     private MaterialButton action;
+    private MaterialButton close;
+
+    /**
+     * Settings > Re-download library (2.3.1): the same check, download and
+     * install, but optional - Back never leaves the app, and after a failure
+     * the sheet can be closed (the installed library keeps working).
+     */
+    private boolean optional;
+    /** Optional mode: checking, downloading or installing (Back does nothing). */
+    private boolean working;
 
     private Downtwo.Release pending;
     private boolean finished;
@@ -76,6 +88,18 @@ public final class UpdateGate {
     private UpdateGate(Activity activity, Listener listener) {
         this.activity = activity;
         this.listener = listener;
+    }
+
+    /**
+     * Settings > Re-download library: checks what the panel publishes and
+     * downloads + installs it again through the usual path, with the usual
+     * sheet. The listener runs when the sheet closes (installed or not).
+     */
+    public static UpdateGate redownload(Activity activity, Listener listener) {
+        UpdateGate gate = new UpdateGate(activity, listener);
+        gate.optional = true;
+        if (gate.ensureDialog()) gate.runRedownload();
+        return gate;
     }
 
     /** Shows the gate immediately and checks for an update. */
@@ -139,6 +163,10 @@ public final class UpdateGate {
             case "done":
                 gate.showDone("2.4.1");
                 break;
+            case "redownloaded":
+                gate.optional = true;
+                gate.showDone("1.13");
+                break;
             case "check_failed":
                 gate.renderCheckFailed(activity.getString(R.string.net_offline));
                 break;
@@ -178,12 +206,22 @@ public final class UpdateGate {
             progress = root.findViewById(R.id.gateProgress);
             progressText = root.findViewById(R.id.gateProgressText);
             action = root.findViewById(R.id.gateAction);
+            close = root.findViewById(R.id.gateClose);
+            close.setOnClickListener(v -> {
+                Ui.tap(v);
+                finish();
+            });
             dialog = Ui.sheet(activity, root, false);
             dialog.setOnKeyListener((d, keyCode, event) -> {
                 if (keyCode != KeyEvent.KEYCODE_BACK) return false;
                 if (event.getAction() == KeyEvent.ACTION_UP) {
-                    // The update is mandatory: leaving the gate leaves the app.
-                    activity.finishAffinity();
+                    if (optional) {
+                        // Re-download: Back closes the sheet unless work is running.
+                        if (!working) finish();
+                    } else {
+                        // The update is mandatory: leaving the gate leaves the app.
+                        activity.finishAffinity();
+                    }
                 }
                 return true;
             });
@@ -234,6 +272,9 @@ public final class UpdateGate {
     private void render(int titleRes, CharSequence body, boolean error, CharSequence buttonLabel) {
         title.setText(titleRes);
         message.setText(body);
+        message.setVisibility(View.VISIBLE);
+        // Close only after a failed re-download; the action carries the rest.
+        close.setVisibility(optional && error ? View.VISIBLE : View.GONE);
         message.setTextColor(ContextCompat.getColor(activity, error ? R.color.danger : R.color.text_secondary));
         icon.setVisibility(View.GONE);
         detail.setVisibility(View.GONE);
@@ -290,7 +331,8 @@ public final class UpdateGate {
         render(R.string.update_check_failed_title, reason, true, activity.getString(R.string.try_again));
         action.setOnClickListener(v -> {
             Ui.tap(v);
-            runCheck();
+            if (optional) runRedownload();
+            else runCheck();
         });
     }
 
@@ -332,6 +374,35 @@ public final class UpdateGate {
         });
     }
 
+    /** Re-download: the panel's current release, then the usual download + install. */
+    private void runRedownload() {
+        working = true;
+        renderChecking();
+        final long started = SystemClock.elapsedRealtime();
+        EXECUTOR.execute(() -> {
+            try {
+                Downtwo.Status status = Downtwo.check(activity);
+                long wait = Math.max(0L, MIN_CHECKING_MS - (SystemClock.elapsedRealtime() - started));
+                main.postDelayed(() -> {
+                    if (cancelled.get() || !Ui.alive(activity)) return;
+                    if (status.release == null || !status.release.available) {
+                        showCheckFailed(activity.getString(R.string.update_no_release));
+                        return;
+                    }
+                    Log.i(TAG, "Re-downloading library " + status.release.version
+                            + " (installed " + status.localVersion + ")");
+                    pending = status.release;
+                    startDownload();
+                }, wait);
+            } catch (UpdateException e) {
+                post(() -> showCheckFailed(e.getMessage()));
+            } catch (Throwable t) {
+                Log.e(TAG, "Re-download check crashed", t);
+                post(() -> showCheckFailed(activity.getString(R.string.net_generic)));
+            }
+        });
+    }
+
     private void onChecked(Downtwo.Status status) {
         if (status.updateRequired) {
             showUpdate(status);
@@ -350,10 +421,12 @@ public final class UpdateGate {
     }
 
     private void showCheckFailed(String reason) {
+        working = false;
         renderCheckFailed(reason);
     }
 
     private void showDownloadFailed(String reason) {
+        working = false;
         keepScreenOn(false);
         renderDownloadFailed(reason);
     }
@@ -362,8 +435,14 @@ public final class UpdateGate {
         // The bar (if any) fills to 100 % over 180 ms; then the check.
         boolean hadBar = progress.getVisibility() == View.VISIBLE;
         int from = progress.isIndeterminate() ? 0 : progress.getProgress();
+        working = false;
         render(R.string.update_done_title, activity.getString(R.string.update_done_message, version),
                 false, null);
+        if (optional) {
+            // Re-download: one line, "Library 1.13 installed" + the check.
+            title.setText(activity.getString(R.string.redownload_done, version));
+            message.setVisibility(View.GONE);
+        }
         icon.setVisibility(View.VISIBLE);
         if (hadBar) {
             progress.setVisibility(View.VISIBLE);
@@ -379,7 +458,7 @@ public final class UpdateGate {
             }
         }
         Ui.confirm(title);
-        if (!holdDone) main.postDelayed(this::finish, DONE_VISIBLE_MS);
+        if (!holdDone) main.postDelayed(this::finish, optional ? REDOWNLOAD_DONE_VISIBLE_MS : DONE_VISIBLE_MS);
     }
 
     private void startDownload() {
@@ -388,6 +467,7 @@ public final class UpdateGate {
             runCheck();
             return;
         }
+        working = true;
         renderDownloading();
         final long expected = release.size;
         lastPercent = -2;

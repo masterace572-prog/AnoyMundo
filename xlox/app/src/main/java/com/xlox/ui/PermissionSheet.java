@@ -75,30 +75,6 @@ public final class PermissionSheet {
         return sheet;
     }
 
-    /**
-     * The informational variant for Game files (OBB): nothing to allow, so no
-     * steps and no settings page - the existing hint and one "Got it".
-     */
-    public static BottomSheetDialog showObbInfo(@NonNull Activity activity) {
-        View view = LayoutInflater.from(activity).inflate(R.layout.sheet_permission, null, false);
-        ((TextView) view.findViewById(R.id.permExplainKicker)).setText(R.string.settings_section_state);
-        ((TextView) view.findViewById(R.id.permExplainTitle)).setText(R.string.settings_obb);
-        view.findViewById(R.id.permWhyTitle).setVisibility(View.GONE);
-        ((TextView) view.findViewById(R.id.permExplainMessage)).setText(R.string.settings_obb_hint);
-        view.findViewById(R.id.permHowTitle).setVisibility(View.GONE);
-        view.findViewById(R.id.permSteps).setVisibility(View.GONE);
-        view.findViewById(R.id.permExplainNotNow).setVisibility(View.GONE);
-        com.google.android.material.button.MaterialButton ok = view.findViewById(R.id.permExplainContinue);
-        ok.setText(R.string.help_got_it);
-        BottomSheetDialog sheet = Ui.sheet(activity, view, true);
-        ok.setOnClickListener(v -> {
-            Ui.tap(v);
-            sheet.dismiss();
-        });
-        sheet.show();
-        return sheet;
-    }
-
     /** Numbered steps: Mono 12 tertiary numbers in a 24 dp gutter, Body text, 8 dp apart. */
     private static void addSteps(Activity activity, LinearLayout list, int... steps) {
         LayoutInflater inflater = LayoutInflater.from(activity);

@@ -313,6 +313,8 @@ log "splash live log: $(adb logcat -d -v tag -s SplashActivity:V 2>/dev/null | g
 wait_for_id keyField 10 || log "WARN: sign-in form missing after the gate"
 hide_keyboard
 shot login
+log "login texts: $(texts)"
+log "login button: $(node_text login)"
 tap_id userkey || tap_id keyField || true
 sleep 1.5
 log "keyboard state: $(adb shell dumpsys input_method | grep -m1 -E 'mInputShown|isInputViewShown' | tr -d '\r')"
@@ -436,7 +438,8 @@ saved_key() { adb shell run-as $PKG cat shared_prefs/settings.xml 2>/dev/null | 
 open_settings --es qa_saved_key ANOY-30D-QA7K2
 shot home_settings
 log "settings texts: $(texts)"
-log "settings rows: all=$(node_text permAllFilesValue) files=$(node_text permFilesValue) install=$(node_text permInstallValue) obb=$(node_text obbValue)"
+log "settings licence rows: key=$(node_text licenceKeyValue) status=$(node_text licenceStatusValue) expires=$(node_text licenceExpiresValue) library=$(node_text libraryVersionValue)"
+log "settings access group: $(has_id stateGroup && echo present || echo gone)"
 scroll_settings
 shot home_settings_bottom
 log "settings bottom texts: $(texts)"
@@ -875,11 +878,13 @@ stop_app
 adb shell rm -rf $GOBB >/dev/null 2>&1 || true
 grant
 
-# ---------------------------------------------- Help and Settings > Access
+# ------------------------------------ Help and Settings > Licence / Updates
 # Help: "?" in the header opens three tips; Copy support info previews what
-# it copies (never the licence key), the first-run tips show once only.
-# Access chip: ready -> a short confirmation; something off -> the existing
-# explanation sheet, then Settings, and no launch afterwards.
+# it copies (2.3.1: including the licence key, status and IST expiry), the
+# first-run tips show once only.
+# Settings (2.3.1): the licence key is masked, the eye reveals it, a tap
+# copies it ("Copied"); Check for app updates (sample answers); the
+# re-download confirmation and the "installed" library sheet.
 help_log() { adb logcat -d -v tag -s MAct:V 2>/dev/null | grep -E 'Help:|Access:|Permission|Launch' | grep -v '	at ' | tr -d '\r' | tr '\n' '|'; }
 stop_app
 adb shell pm clear $PKG >/dev/null 2>&1 || true
@@ -925,38 +930,59 @@ done
 log "help copied texts: $copied_texts"
 shot help_support_copied
 log "help log: $(help_log)"
-# Access chip with everything allowed.
+# Settings > Licence: masked key, eye reveals it, a tap copies it.
 adb logcat -c || true
-open_settings
-log "access_ok chip: $(node_text accessValue)"
-tap_id accessRow || true
+open_settings --es qa_saved_key ANOY-30D-QA7K2
+log "licence masked: $(node_text licenceKeyValue)"
+log "licence settings texts: $(texts)"
+shot settings_licence
+tap_id licenceKeyEye || true
+sleep 0.6
+log "licence revealed: $(node_text licenceKeyValue)"
+shot settings_key_revealed
+tap_id licenceKeyRow || true
 sleep 0.4
-# The snackbar lasts ~2.75 s: read the screen first, screenshot after.
-log "access_ok texts: $(texts)"
-shot home_access_ready
-log "access_ok focus: $(focus)"
-# All files access off: explanation sheet, Settings, back -> ready, no launch.
-adb shell appops set $PKG MANAGE_EXTERNAL_STORAGE deny >/dev/null 2>&1 || true
-adb logcat -c || true
+# "Copied" holds 6 s under qa_freeze_clock (~1.2 s otherwise): read first.
+log "licence copied: $(node_text licenceKeyValue)"
+shot settings_key_copied
+# Check for app updates: up to date / couldn't check / a newer version.
+open_settings --es qa_app_check current
+tap_id checkUpdateRow || true
+sleep 0.2
+log "app check checking: $(node_text checkUpdateValue)"
+sleep 1.4
+log "app check current: $(node_text checkUpdateValue)"
+shot settings_update_current
+open_settings --es qa_app_check failed
+tap_id checkUpdateRow || true
+sleep 1.6
+log "app check failed: $(node_text checkUpdateValue)"
+shot settings_update_failed
+open_settings --es qa_app_check available
+tap_id checkUpdateRow || true
+wait_for_id appUpdatePrimary 8 || log "WARN: update screen missing"
+sleep 1
+log "app check available focus: $(focus)"
+log "app check available texts: $(texts)"
+shot settings_update_available
+tap_id appUpdateLater || true
+sleep 1.5
+log "app check not now focus: $(focus)"
+log "app check not now settings: $(has_id settingsPage && echo shown || echo gone)"
+# Re-download library: the confirmation, then Cancel (no download in QA).
 open_settings
-log "access_missing chip: $(node_text accessValue)"
-log "access_missing all files row: $(node_text permAllFilesValue)"
-shot home_access_needed
-tap_id accessRow || true
+tap_id redownloadRow || true
 sleep 1.2
-shot access_explain
-log "access_missing sheet texts: $(texts)"
-tap_id permExplainContinue || true
-sleep 2.5
-log "access_missing settings focus: $(focus)"
-adb shell appops set $PKG MANAGE_EXTERNAL_STORAGE allow >/dev/null 2>&1 || true
-adb shell input keyevent 4 || true
-sleep 3
-log "access_missing back focus: $(focus)"
-log "access_missing after chip: $(node_text accessValue)"
-log "access_missing log: $(help_log)"
+log "redownload sheet texts: $(texts)"
+shot settings_redownload_confirm
+tap_id redownloadCancel || true
+sleep 0.8
+log "redownload cancel: $(has_id redownloadRoot && echo open || echo closed)"
+# The library sheet's "installed" state after a re-download (debug preview).
+open_gate redownloaded
+log "redownload done texts: $(texts)"
+shot gate_redownloaded
 stop_app
-grant
 
 # ------------------------------------- 11. minified release build (real flow)
 if [ -f "$RELEASE_APK" ]; then

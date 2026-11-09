@@ -43,7 +43,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * UpdateGate, which stay exactly as they were.
  * <ul>
  *   <li>Mandatory: changelog + "Update now" only; back does not leave.</li>
- *   <li>Normal: also "Not now", which continues to sign in.</li>
+ *   <li>Normal: also "Not now", which continues to sign in (or, when opened
+ *       from Settings > Check for app updates, goes back to Settings).</li>
  *   <li>Update now: in-app download with progress (screen kept on), a quick
  *       validity check, then Android's own installer via a PackageInstaller
  *       session - no browser, no file:// URI. Any failure shows its reason
@@ -57,6 +58,8 @@ public class AppUpdateActivity extends AppCompatActivity {
     public static final String EXTRA_QA_PREVIEW = "qa_update_preview";
     /** Debug builds only: start the sample in a state - downloading | installing | failed. */
     public static final String EXTRA_QA_STATE = "qa_update_state";
+    /** 2.3.1: opened from Settings (signed in) - "Not now" returns there instead of sign in. */
+    public static final String EXTRA_FROM_SETTINGS = "app_update_from_settings";
     /** After the system confirmation closes without any result, treat it as cancelled. */
     private static final long CONFIRM_TIMEOUT_MS = 6000L;
     private static final long PROGRESS_MIN_INTERVAL_MS = 120L;
@@ -322,6 +325,12 @@ public class AppUpdateActivity extends AppCompatActivity {
     private void openLogin() {
         if (opened) return;
         opened = true;
+        if (getIntent().getBooleanExtra(EXTRA_FROM_SETTINGS, false)) {
+            // Signed in already: back to Settings, which is still underneath.
+            finish();
+            overridePendingTransition(R.anim.fade_in, R.anim.fade_out);
+            return;
+        }
         startActivity(new Intent(this, LogAct.class));
         overridePendingTransition(R.anim.fade_in, R.anim.fade_out);
         finish();

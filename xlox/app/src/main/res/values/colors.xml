@@ -42,6 +42,8 @@
     <color name="notice_stroke">#FF2D2511</color>
     <color name="notice_text">#FFEDE6D3</color>
     <color name="notice_icon">#FFFF9F0A</color>
+    <!-- Notice kicker: warning at ~85 %. -->
+    <color name="notice_kicker">#D9FF9F0A</color>
 
     <!-- Effects -->
     <color name="scrim">#A3000000</color>

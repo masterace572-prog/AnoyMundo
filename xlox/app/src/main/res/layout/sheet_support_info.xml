@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
   Support info (spec 3.9): the shared sheet with a handle. Kicker HELP +
-  Title M, Body S "Your licence key isn't included.", the exact text that is
+  Title M, Body S "Includes your licence key. Only share it with Anoy
+  support." (2.3.1), the exact text that is
   copied in a #0E0E10 hairline block (Mono 12.5 / 20, keys secondary; at most
   ~45 % of the height, scrolls inside), then Copy (48) and Cancel. After Copy
   the button reads "Copied" with a check for ~800 ms, then the sheet closes.
@@ -31,7 +32,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="@dimen/space_8"
-        android:text="@string/support_info_no_key" />
+        android:text="@string/support_info_includes_key" />
 
     <ScrollView
         android:id="@+id/supportInfoScroll"

@@ -6,15 +6,17 @@
     header      kicker ANOY HAX (tertiary) over "Welcome back" (Title L); on the
                 right a "?" in a 32 dp hairline circle and the 24 dp gear (48 dp
                 targets)
-    notice      the panel's note, verbatim (gone when empty)
-    time card   TIME LEFT + status dot; days / hours / min / sec columns (Hero
-                numerals over Micro units, no colons); 4 dp bar; "Expires ..."
-    game card   56 dp tile ("BG" monogram), BGMI + version, library; divider;
+    notice      megaphone + ANNOUNCEMENT kicker over the panel's note, verbatim
+                (gone when empty)
+    time card   compact (r20, 16 dp): EXPIRES IN + status dot; one countdown
+                line (Title M numerals); the IST expiry date
+    game card   56 dp bundled BGMI icon, BGMI + version, library; divider;
                 State and Server (Micro label over dot + Body L 500)
     action bar  pinned; status line, task bar, Launch (56 dp); a hairline only
                 while content runs underneath it
 
-  Settings      an inset grouped list (rows from @style/Row) over home
+  Settings      an inset grouped list (rows from @style/Row) over home: Licence,
+                Updates, Device, Report a problem, About, Account
 -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -118,28 +120,42 @@
                     android:padding="@dimen/space_14">
 
                     <ImageView
-                        android:layout_width="@dimen/icon_small"
-                        android:layout_height="@dimen/icon_small"
-                        android:layout_marginTop="3dp"
+                        android:layout_width="@dimen/icon_inline"
+                        android:layout_height="@dimen/icon_inline"
                         android:importantForAccessibility="no"
-                        app:srcCompat="@drawable/ic_info"
+                        app:srcCompat="@drawable/ic_megaphone"
                         app:tint="@color/notice_icon" />
 
-                    <TextView
-                        android:id="@+id/panelNote"
-                        style="@style/Text.Notice"
+                    <LinearLayout
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="@dimen/space_12"
                         android:layout_weight="1"
-                        android:importantForAccessibility="no" />
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:id="@+id/panelNoteKicker"
+                            style="@style/Text.Kicker.Notice"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:importantForAccessibility="no"
+                            android:text="@string/announcement" />
+
+                        <TextView
+                            android:id="@+id/panelNote"
+                            style="@style/Text.Notice"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="@dimen/space_4"
+                            android:importantForAccessibility="no" />
+                    </LinearLayout>
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
             <!-- ==================================================== time card -->
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/licenceCard"
-                style="@style/Widget.Anoy.Card"
+                style="@style/Widget.Anoy.Card.Compact"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:focusable="true">
@@ -148,7 +164,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:padding="@dimen/space_24">
+                    android:padding="@dimen/space_16">
 
                     <LinearLayout
                         android:layout_width="match_parent"
@@ -162,7 +178,7 @@
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
-                            android:text="@string/row_time_left" />
+                            android:text="@string/licence_expires_in" />
 
                         <TextView
                             android:id="@+id/statusValue"
@@ -175,126 +191,21 @@
                             android:text="@string/dash" />
                     </LinearLayout>
 
-                    <!-- Countdown: one column per unit; days / hours drop out when zero. -->
-                    <LinearLayout
-                        android:id="@+id/timeLeftValue"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="@dimen/space_20"
-                        android:baselineAligned="false"
-                        android:orientation="horizontal">
-
-                        <LinearLayout
-                            android:id="@+id/countDaysColumn"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:orientation="vertical">
-
-                            <TextView
-                                android:id="@+id/countDays"
-                                style="@style/Text.Hero"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content" />
-
-                            <TextView
-                                style="@style/Text.Micro"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:layout_marginTop="@dimen/space_4"
-                                android:text="@string/unit_days" />
-                        </LinearLayout>
-
-                        <LinearLayout
-                            android:id="@+id/countHoursColumn"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:orientation="vertical">
-
-                            <TextView
-                                android:id="@+id/countHours"
-                                style="@style/Text.Hero"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content" />
-
-                            <TextView
-                                style="@style/Text.Micro"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:layout_marginTop="@dimen/space_4"
-                                android:text="@string/unit_hours" />
-                        </LinearLayout>
-
-                        <LinearLayout
-                            android:id="@+id/countMinutesColumn"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:orientation="vertical">
-
-                            <TextView
-                                android:id="@+id/countMinutes"
-                                style="@style/Text.Hero"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content" />
-
-                            <TextView
-                                style="@style/Text.Micro"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:layout_marginTop="@dimen/space_4"
-                                android:text="@string/unit_minutes" />
-                        </LinearLayout>
-
-                        <LinearLayout
-                            android:id="@+id/countSecondsColumn"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:orientation="vertical">
-
-                            <TextView
-                                android:id="@+id/countSeconds"
-                                style="@style/Text.Hero"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content" />
-
-                            <TextView
-                                style="@style/Text.Micro"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:layout_marginTop="@dimen/space_4"
-                                android:text="@string/unit_seconds" />
-                        </LinearLayout>
-                    </LinearLayout>
-
-                    <!-- Loading "—" (tertiary) or "Expired" (danger) in the Hero size. -->
+                    <!-- One line: "29d 23h 59m 58s" (under a day "23h 59m 58s"), "Expired" or "—". -->
                     <TextView
-                        android:id="@+id/licenceExpiredText"
-                        style="@style/Text.Hero"
+                        android:id="@+id/timeLeftValue"
+                        style="@style/Text.Countdown"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="@dimen/space_20"
-                        android:text="@string/dash"
-                        android:textColor="@color/text_tertiary"
-                        android:visibility="gone" />
-
-                    <com.google.android.material.progressindicator.LinearProgressIndicator
-                        android:id="@+id/licenceProgress"
-                        style="@style/Widget.Anoy.Progress"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="@dimen/space_20"
-                        android:importantForAccessibility="no"
-                        android:max="1000" />
+                        android:layout_marginTop="@dimen/space_8"
+                        android:text="@string/dash" />
 
                     <TextView
                         android:id="@+id/expiresValue"
                         style="@style/Text.Caption"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="@dimen/space_12"
+                        android:layout_marginTop="@dimen/space_4"
                         android:fontFeatureSettings="tnum" />
 
                     <TextView
@@ -329,31 +240,18 @@
                         android:gravity="center_vertical"
                         android:orientation="horizontal">
 
-                        <FrameLayout
+                        <!-- The BGMI icon, bundled (res/drawable-nodpi); never loaded at runtime. -->
+                        <com.google.android.material.imageview.ShapeableImageView
                             android:id="@+id/gameTile"
                             android:layout_width="@dimen/game_tile"
                             android:layout_height="@dimen/game_tile"
-                            android:background="@drawable/bg_game_tile"
-                            android:contentDescription="@string/game_icon_description">
-
-                            <TextView
-                                android:id="@+id/gameMonogram"
-                                style="@style/Text.Monogram"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:layout_gravity="center"
-                                android:importantForAccessibility="no"
-                                android:text="@string/game_monogram" />
-
-                            <com.google.android.material.imageview.ShapeableImageView
-                                android:id="@+id/gameIcon"
-                                android:layout_width="match_parent"
-                                android:layout_height="match_parent"
-                                android:importantForAccessibility="no"
-                                android:scaleType="centerCrop"
-                                android:visibility="gone"
-                                app:shapeAppearanceOverlay="@style/ShapeAppearance.Anoy.GameTile" />
-                        </FrameLayout>
+                            android:contentDescription="@string/game_icon_description"
+                            android:padding="0.5dp"
+                            android:scaleType="centerCrop"
+                            app:shapeAppearanceOverlay="@style/ShapeAppearance.Anoy.GameTile"
+                            app:srcCompat="@drawable/ic_game_bgmi"
+                            app:strokeColor="@color/hairline"
+                            app:strokeWidth="@dimen/hairline" />
 
                         <LinearLayout
                             android:layout_width="0dp"
@@ -565,10 +463,218 @@
                         android:text="@string/settings" />
                 </LinearLayout>
 
-                <!-- Device -->
+                <!-- Licence (2.3.1): key (masked, eye reveals, tap copies), status, expiry -->
                 <TextView
                     style="@style/Text.Kicker.Group"
                     android:layout_marginTop="@dimen/space_24"
+                    android:accessibilityHeading="true"
+                    android:text="@string/settings_section_licence" />
+
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/licenceGroup"
+                    style="@style/Widget.Anoy.Group">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical">
+
+                        <LinearLayout
+                            android:id="@+id/licenceKeyRow"
+                            style="@style/Row"
+                            android:paddingTop="@dimen/space_4"
+                            android:paddingEnd="@dimen/space_4"
+                            android:paddingBottom="@dimen/space_4"
+                            android:clickable="true"
+                            android:focusable="true">
+
+                            <TextView
+                                style="@style/Text.RowLabel"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/licence_key" />
+
+                            <TextView
+                                android:id="@+id/licenceKeyValue"
+                                style="@style/Text.Mono.Key"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_marginStart="@dimen/space_16"
+                                android:layout_weight="1"
+                                android:text="@string/dash" />
+
+                            <ImageButton
+                                android:id="@+id/licenceKeyEye"
+                                style="@style/IconButton.Inline"
+                                android:contentDescription="@string/licence_key_show"
+                                android:src="@drawable/ic_eye" />
+                        </LinearLayout>
+
+                        <View style="@style/RowDivider" />
+
+                        <LinearLayout
+                            style="@style/Row"
+                            android:background="@null"
+                            android:focusable="true">
+
+                            <TextView
+                                style="@style/Text.RowLabel"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/settings_licence_status" />
+
+                            <TextView
+                                android:id="@+id/licenceStatusValue"
+                                style="@style/Text.RowValue"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_marginStart="@dimen/space_16"
+                                android:layout_weight="1"
+                                android:drawablePadding="@dimen/space_8"
+                                android:text="@string/dash" />
+                        </LinearLayout>
+
+                        <View style="@style/RowDivider" />
+
+                        <LinearLayout
+                            style="@style/Row"
+                            android:background="@null"
+                            android:focusable="true">
+
+                            <TextView
+                                style="@style/Text.RowLabel"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/settings_licence_expires" />
+
+                            <TextView
+                                android:id="@+id/licenceExpiresValue"
+                                style="@style/Text.RowValue"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_marginStart="@dimen/space_16"
+                                android:layout_weight="1"
+                                android:fontFeatureSettings="tnum"
+                                android:text="@string/dash" />
+                        </LinearLayout>
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- Updates (2.3.1): the splash's app check, library re-download, version -->
+                <TextView
+                    style="@style/Text.Kicker.Group"
+                    android:layout_marginTop="@dimen/group_gap"
+                    android:accessibilityHeading="true"
+                    android:text="@string/settings_section_updates" />
+
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/updatesGroup"
+                    style="@style/Widget.Anoy.Group">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical">
+
+                        <LinearLayout
+                            android:id="@+id/checkUpdateRow"
+                            style="@style/Row"
+                            android:clickable="true"
+                            android:focusable="true">
+
+                            <TextView
+                                style="@style/Text.RowLabel"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="@string/settings_check_updates" />
+
+                            <com.google.android.material.progressindicator.CircularProgressIndicator
+                                android:id="@+id/checkUpdateSpinner"
+                                style="@style/Widget.Anoy.StatusSpinner"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginStart="@dimen/space_16"
+                                android:importantForAccessibility="no"
+                                android:indeterminate="true"
+                                android:visibility="gone" />
+
+                            <ImageView
+                                android:id="@+id/checkUpdateIcon"
+                                android:layout_width="@dimen/icon_small"
+                                android:layout_height="@dimen/icon_small"
+                                android:layout_marginStart="@dimen/space_16"
+                                android:importantForAccessibility="no"
+                                android:visibility="gone"
+                                app:srcCompat="@drawable/ic_check"
+                                app:tint="@color/success" />
+
+                            <TextView
+                                android:id="@+id/checkUpdateValue"
+                                style="@style/Text.RowValue"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginStart="@dimen/space_8"
+                                android:accessibilityLiveRegion="polite"
+                                android:visibility="gone" />
+
+                            <ImageView
+                                android:id="@+id/checkUpdateGlyph"
+                                style="@style/RowGlyph"
+                                app:srcCompat="@drawable/ic_chevron_right" />
+                        </LinearLayout>
+
+                        <View style="@style/RowDivider" />
+
+                        <LinearLayout
+                            android:id="@+id/redownloadRow"
+                            style="@style/Row"
+                            android:clickable="true"
+                            android:focusable="true">
+
+                            <TextView
+                                style="@style/Text.RowLabel"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="@string/settings_redownload" />
+
+                            <ImageView
+                                style="@style/RowGlyph"
+                                app:srcCompat="@drawable/ic_chevron_right" />
+                        </LinearLayout>
+
+                        <View style="@style/RowDivider" />
+
+                        <LinearLayout
+                            style="@style/Row"
+                            android:background="@null"
+                            android:focusable="true">
+
+                            <TextView
+                                style="@style/Text.RowLabel"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/settings_library_version" />
+
+                            <TextView
+                                android:id="@+id/libraryVersionValue"
+                                style="@style/Text.Mono"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_marginStart="@dimen/space_16"
+                                android:layout_weight="1"
+                                android:fontFeatureSettings="tnum"
+                                android:gravity="end"
+                                android:text="@string/dash" />
+                        </LinearLayout>
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- Device -->
+                <TextView
+                    style="@style/Text.Kicker.Group"
+                    android:layout_marginTop="@dimen/group_gap"
                     android:accessibilityHeading="true"
                     android:text="@string/settings_section_device" />
 
@@ -624,177 +730,6 @@
                         </LinearLayout>
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
-
-                <!-- Access and files -->
-                <TextView
-                    style="@style/Text.Kicker.Group"
-                    android:layout_marginTop="@dimen/group_gap"
-                    android:accessibilityHeading="true"
-                    android:text="@string/settings_section_state" />
-
-                <com.google.android.material.card.MaterialCardView
-                    android:id="@+id/stateGroup"
-                    style="@style/Widget.Anoy.Group">
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="vertical">
-
-                        <LinearLayout
-                            android:id="@+id/accessRow"
-                            style="@style/Row"
-                            android:clickable="true"
-                            android:focusable="true">
-
-                            <TextView
-                                style="@style/Text.RowLabel"
-                                android:layout_width="0dp"
-                                android:layout_height="wrap_content"
-                                android:layout_weight="1"
-                                android:text="@string/access_label" />
-
-                            <TextView
-                                android:id="@+id/accessValue"
-                                style="@style/Text.RowValue"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:layout_marginStart="@dimen/space_16"
-                                android:drawablePadding="@dimen/space_8" />
-
-                            <ImageView
-                                android:id="@+id/accessGlyph"
-                                style="@style/RowGlyph"
-                                android:visibility="gone"
-                                app:srcCompat="@drawable/ic_chevron_right" />
-                        </LinearLayout>
-
-                        <View style="@style/RowDivider" />
-
-                        <LinearLayout
-                            android:id="@+id/permAllFilesRow"
-                            style="@style/Row"
-                            android:clickable="true"
-                            android:focusable="true">
-
-                            <TextView
-                                style="@style/Text.RowLabel"
-                                android:layout_width="0dp"
-                                android:layout_height="wrap_content"
-                                android:layout_weight="1"
-                                android:text="@string/settings_all_files" />
-
-                            <TextView
-                                android:id="@+id/permAllFilesValue"
-                                style="@style/Text.RowValue"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:layout_marginStart="@dimen/space_16" />
-
-                            <ImageView
-                                android:id="@+id/permAllFilesGlyph"
-                                style="@style/RowGlyph"
-                                android:visibility="gone"
-                                app:srcCompat="@drawable/ic_chevron_right" />
-                        </LinearLayout>
-
-                        <View style="@style/RowDivider" />
-
-                        <LinearLayout
-                            android:id="@+id/permFilesRow"
-                            style="@style/Row"
-                            android:clickable="true"
-                            android:focusable="true">
-
-                            <TextView
-                                style="@style/Text.RowLabel"
-                                android:layout_width="0dp"
-                                android:layout_height="wrap_content"
-                                android:layout_weight="1"
-                                android:text="@string/settings_files" />
-
-                            <TextView
-                                android:id="@+id/permFilesValue"
-                                style="@style/Text.RowValue"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:layout_marginStart="@dimen/space_16" />
-
-                            <ImageView
-                                android:id="@+id/permFilesGlyph"
-                                style="@style/RowGlyph"
-                                android:visibility="gone"
-                                app:srcCompat="@drawable/ic_chevron_right" />
-                        </LinearLayout>
-
-                        <View style="@style/RowDivider" />
-
-                        <LinearLayout
-                            android:id="@+id/permInstallRow"
-                            style="@style/Row"
-                            android:clickable="true"
-                            android:focusable="true">
-
-                            <TextView
-                                style="@style/Text.RowLabel"
-                                android:layout_width="0dp"
-                                android:layout_height="wrap_content"
-                                android:layout_weight="1"
-                                android:text="@string/settings_install" />
-
-                            <TextView
-                                android:id="@+id/permInstallValue"
-                                style="@style/Text.RowValue"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:layout_marginStart="@dimen/space_16" />
-
-                            <ImageView
-                                android:id="@+id/permInstallGlyph"
-                                style="@style/RowGlyph"
-                                android:visibility="gone"
-                                app:srcCompat="@drawable/ic_chevron_right" />
-                        </LinearLayout>
-
-                        <View style="@style/RowDivider" />
-
-                        <LinearLayout
-                            android:id="@+id/obbRow"
-                            style="@style/Row"
-                            android:clickable="true"
-                            android:focusable="true">
-
-                            <TextView
-                                style="@style/Text.RowLabel"
-                                android:layout_width="0dp"
-                                android:layout_height="wrap_content"
-                                android:layout_weight="1"
-                                android:text="@string/settings_obb" />
-
-                            <TextView
-                                android:id="@+id/obbValue"
-                                style="@style/Text.RowValue"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:layout_marginStart="@dimen/space_16" />
-
-                            <ImageView
-                                android:id="@+id/obbGlyph"
-                                style="@style/RowGlyph"
-                                android:visibility="gone"
-                                app:srcCompat="@drawable/ic_chevron_right" />
-                        </LinearLayout>
-                    </LinearLayout>
-                </com.google.android.material.card.MaterialCardView>
-
-                <TextView
-                    style="@style/Text.Caption"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="@dimen/space_8"
-                    android:paddingStart="@dimen/row_padding"
-                    android:paddingEnd="@dimen/row_padding"
-                    android:text="@string/settings_obb_hint" />
 
                 <!-- Report a problem -->
                 <TextView

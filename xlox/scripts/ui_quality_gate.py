@@ -205,7 +205,10 @@ logo = []
 for p in MAIN.rglob("*"):
     if p.is_file() and re.search(r"ic_anoy|logo", p.name, re.I):
         logo.append(rel(p))
-    if p.is_file() and p.suffix.lower() in {".png", ".jpg", ".jpeg", ".webp"} and "res" in p.parts:
+    # 2.3.1: the one allowed bitmap is the bundled BGMI game icon (the game's
+    # own artwork from Wikipedia, fetched by scripts/fetch_game_icon.py).
+    if p.is_file() and p.suffix.lower() in {".png", ".jpg", ".jpeg", ".webp"} and "res" in p.parts \
+            and p.name != "ic_game_bgmi.png":
         logo.append(f"bitmap resource {rel(p)}")
 for f in xml_files + java_files:
     if re.search(r"ic_anoy|@drawable/logo|R\.drawable\.logo|@mipmap/", f.read_text()):

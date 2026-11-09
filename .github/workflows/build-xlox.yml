@@ -40,6 +40,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Bundle the BGMI icon (downloaded once, then committed)
+        run: python3 scripts/fetch_game_icon.py
+
       - name: JDK 17
         uses: actions/setup-java@v5
         with:
@@ -228,6 +231,8 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -f dist/Anoy-XLOX-loader.apk dist/xlox-loader.zip
+          # 2.3.1: the bundled BGMI icon, so later builds need no download.
+          git add -f xlox/app/src/main/res/drawable-nodpi/ic_game_bgmi.png
           git diff --cached --quiet && { echo "No deliverable changes"; exit 0; }
           git commit -m "Add built XLOX loader APK (build ${{ github.run_number }}) [skip ci]"
           for i in 1 2 3 4 5; do

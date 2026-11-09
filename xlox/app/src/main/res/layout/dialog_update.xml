@@ -3,6 +3,7 @@
   Library update sheet (spec 3.3): the shared sheet, non-dismissible, so no
   handle. Kicker LIBRARY, Title M (+ a 20 dp green check when up to date),
   Body S, then a 3 dp bar, the Mono byte count and one action when needed.
+  Settings > Re-download library reuses it (optional: Close after a failure).
 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -82,5 +83,15 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="@dimen/space_24"
+        android:visibility="gone" />
+
+    <!-- Settings re-download only: closes the sheet after a failure (the old library stays). -->
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/gateClose"
+        style="@style/Widget.Anoy.Button.Tonal"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/space_12"
+        android:text="@string/close"
         android:visibility="gone" />
 </LinearLayout>

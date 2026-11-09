@@ -206,14 +206,14 @@
         <item name="android:letterSpacing">-0.012</item>
     </style>
 
-    <!-- Hero numeral: Inter 600 36 / 40, tabular figures, -0.02em. -->
-    <style name="Text.Hero">
+    <!-- Licence countdown (home): one line, Inter 600 20 sp, tabular numerals. -->
+    <style name="Text.Countdown">
         <item name="android:fontFamily">@font/inter_semibold</item>
         <item name="fontFamily">@font/inter_semibold</item>
-        <item name="android:textSize">@dimen/text_hero</item>
-        <item name="lineHeight">40sp</item>
-        <item name="android:letterSpacing">-0.02</item>
+        <item name="android:textSize">@dimen/text_title_m</item>
+        <item name="lineHeight">26sp</item>
         <item name="android:fontFeatureSettings">tnum</item>
+        <item name="android:textColor">@color/text_primary</item>
         <item name="android:maxLines">1</item>
     </style>
 
@@ -280,6 +280,11 @@
         <item name="android:textColor">@color/text_secondary</item>
     </style>
 
+    <!-- Notice kicker (ANNOUNCEMENT): the kicker in amber at ~85 %. -->
+    <style name="Text.Kicker.Notice">
+        <item name="android:textColor">@color/notice_kicker</item>
+    </style>
+
     <style name="Text.Kicker.Tertiary">
         <item name="android:textColor">@color/text_tertiary</item>
     </style>
@@ -310,6 +315,13 @@
         <item name="android:textColor">@color/link_text</item>
     </style>
 
+    <!-- Login "Don't have a licence?": the plain lead-in before "Buy one". -->
+    <style name="Text.LinkLead">
+        <item name="android:textSize">@dimen/text_link</item>
+        <item name="lineHeight">20sp</item>
+        <item name="android:textColor">@color/text_secondary</item>
+    </style>
+
     <!-- Login brand row: "Anoy Hax", Inter 600 15. -->
     <style name="Text.Brand">
         <item name="android:fontFamily">@font/inter_semibold</item>
@@ -326,16 +338,6 @@
         <item name="lineHeight">20sp</item>
         <item name="android:textColor">@color/text_secondary</item>
         <item name="android:gravity">center</item>
-    </style>
-
-    <!-- Game tile monogram "BG": Inter 600 20. -->
-    <style name="Text.Monogram">
-        <item name="android:fontFamily">@font/inter_semibold</item>
-        <item name="fontFamily">@font/inter_semibold</item>
-        <item name="android:textSize">@dimen/text_monogram</item>
-        <item name="lineHeight">26sp</item>
-        <item name="android:textColor">@color/text_secondary</item>
-        <item name="android:letterSpacing">-0.012</item>
     </style>
 
     <!-- Panel notice copy: Body 15 / 22, notice text, regular - never bold. -->
@@ -370,6 +372,16 @@
         <item name="android:textSize">@dimen/text_mono_13</item>
         <item name="lineHeight">18sp</item>
         <item name="android:textColor">@color/text_secondary</item>
+    </style>
+
+    <!-- Settings licence key: Mono 15, end-aligned, one line. -->
+    <style name="Text.Mono.Key">
+        <item name="android:textSize">@dimen/text_mono_15</item>
+        <item name="lineHeight">20sp</item>
+        <item name="android:gravity">end|center_vertical</item>
+        <item name="android:maxLines">1</item>
+        <item name="android:ellipsize">middle</item>
+        <item name="android:fontFeatureSettings">tnum</item>
     </style>
 
     <style name="Text.Mono.Footer">
@@ -471,6 +483,12 @@
         <item name="cornerRadius">@dimen/button_radius</item>
     </style>
 
+    <!-- A link inside a sentence ("Buy one"): 48 dp tall target, tight sides. -->
+    <style name="Widget.Anoy.Button.Text.Inline" parent="Widget.Anoy.Button.Text">
+        <item name="android:paddingStart">@dimen/space_4</item>
+        <item name="android:paddingEnd">@dimen/space_4</item>
+    </style>
+
     <style name="TextAppearance.Anoy.TextButton" parent="TextAppearance.Material3.LabelLarge">
         <item name="android:fontFamily">@font/inter_medium</item>
         <item name="fontFamily">@font/inter_medium</item>
@@ -549,6 +567,17 @@
     </style>
 
     <!-- Panel notice: notice-bg, 1 dp notice-stroke, radius 16. -->
+    <!-- Compact card (home licence): radius 20. -->
+    <style name="Widget.Anoy.Card.Compact">
+        <item name="cardCornerRadius">@dimen/radius_compact</item>
+        <item name="shapeAppearance">@style/ShapeAppearance.Anoy.Compact</item>
+    </style>
+
+    <style name="ShapeAppearance.Anoy.Compact" parent="">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">@dimen/radius_compact</item>
+    </style>
+
     <style name="Widget.Anoy.Card.Notice">
         <item name="cardBackgroundColor">@color/notice_bg</item>
         <item name="strokeColor">@color/notice_stroke</item>
