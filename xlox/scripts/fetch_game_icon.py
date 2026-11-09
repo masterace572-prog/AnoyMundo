@@ -13,6 +13,8 @@ Run from xlox/:  python3 scripts/fetch_game_icon.py
 import io
 import subprocess
 import sys
+import time
+import urllib.error
 import urllib.request
 from pathlib import Path
 
@@ -20,6 +22,45 @@ URL = "https://upload.wikimedia.org/wikipedia/en/6/63/Battleground_Mobile_India.
 ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / "app/src/main/res/drawable-nodpi/ic_game_bgmi.png"
 SIZE = 224
+
+
+UA = "AnoyBuild/2.3.1 (https://github.com/masterace572-prog/AnoyMundo; ci@users.noreply.github.com) python-urllib"
+# The same file: the original, then Wikimedia's own resize of it.
+SOURCES = [
+    URL,
+    "https://upload.wikimedia.org/wikipedia/en/thumb/6/63/Battleground_Mobile_India.webp/316px-Battleground_Mobile_India.webp.png",
+    "https://en.wikipedia.org/wiki/Special:FilePath/Battleground_Mobile_India.webp",
+]
+
+
+def download():
+    notes = []
+    for url in SOURCES:
+        for attempt in range(1, 3):
+            try:
+                request = urllib.request.Request(url, headers={"User-Agent": UA, "Accept": "image/*,*/*"})
+                with urllib.request.urlopen(request, timeout=30) as response:
+                    data = response.read()
+                if len(data) >= 1024:
+                    print(f"downloaded {url}")
+                    return data, notes
+                notes.append(f"{url} -> {len(data)} bytes")
+            except urllib.error.HTTPError as e:
+                notes.append(f"{url} -> HTTP {e.code}")
+            except Exception as e:  # noqa: BLE001
+                notes.append(f"{url} -> {type(e).__name__}: {e}")
+            time.sleep(2 * attempt)
+        # curl as a second client (different TLS stack / headers).
+        try:
+            out = subprocess.run(["curl", "-sSL", "--retry", "2", "-A", UA, "-o", "-", "-w", "", url],
+                                 capture_output=True, timeout=60)
+            if out.returncode == 0 and len(out.stdout) >= 1024 and not out.stdout.lstrip().startswith(b"<"):
+                print(f"downloaded {url} (curl)")
+                return out.stdout, notes
+            notes.append(f"curl {url} -> rc {out.returncode}, {len(out.stdout)} bytes {out.stderr[:120]!r}")
+        except Exception as e:  # noqa: BLE001
+            notes.append(f"curl {url} -> {e}")
+    return b"", notes
 
 
 def main() -> int:
@@ -32,21 +73,10 @@ def main() -> int:
         subprocess.check_call([sys.executable, "-m", "pip", "install", "--quiet", "Pillow"])
     from PIL import Image
 
-    request = urllib.request.Request(URL, headers={
-        # Wikimedia refuses requests without a descriptive User-Agent.
-        "User-Agent": "AnoyBuild/2.3.1 (https://github.com/masterace572-prog/AnoyMundo; CI icon bundling)",
-        "Accept": "image/webp,image/*",
-    })
-    data = b""
-    for attempt in range(1, 4):
-        try:
-            with urllib.request.urlopen(request, timeout=30) as response:
-                data = response.read()
-            break
-        except Exception as e:  # noqa: BLE001 - report and retry
-            print(f"attempt {attempt}: {e}", file=sys.stderr)
+    data, notes = download()
     if len(data) < 1024:
-        print("::error::Could not download the BGMI icon from Wikipedia", file=sys.stderr)
+        # stdout, so GitHub shows it as an annotation on the run.
+        print("::error::Could not download the BGMI icon: " + " | ".join(notes))
         return 1
 
     image = Image.open(io.BytesIO(data))
