@@ -977,8 +977,7 @@ shot settings_key_copied
 # Check for app updates: up to date / couldn't check / a newer version.
 open_settings --es qa_app_check current
 tap_id checkUpdateRow || true
-sleep 0.2
-log "app check checking: $(node_text checkUpdateValue)"
+# "Up to date" holds 8 s under qa_freeze_clock (3 s otherwise).
 sleep 1.4
 log "app check current: $(node_text checkUpdateValue)"
 shot settings_update_current

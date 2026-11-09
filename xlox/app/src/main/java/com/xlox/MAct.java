@@ -2092,18 +2092,23 @@ public class MAct extends AppCompatActivity {
         }
     }
 
+    /** Debug QA (frozen clock): transient row states stay long enough for a uiautomator dump. */
+    private long qaHold(long normalMs) {
+        return preview && getIntent().getBooleanExtra(EXTRA_QA_FREEZE_CLOCK, false) ? Math.max(normalMs, 8000L) : normalMs;
+    }
+
     private void onAppChecked(int run, AppUpdater.Release release, String failure) {
         if (run != appCheckRun || !Ui.alive(this)) return;
         appCheckRunning = false;
         if (failure != null) {
             showAppCheck(APP_CHECK_FAILED, failure);
-            main.postDelayed(clearAppCheck, APP_CHECK_FAILED_MS);
+            main.postDelayed(clearAppCheck, qaHold(APP_CHECK_FAILED_MS));
             return;
         }
         if (release == null) {
             Log.i(TAG, "Settings: app is up to date (" + BuildConfig.VERSION_CODE + ")");
             showAppCheck(APP_CHECK_CURRENT, null);
-            main.postDelayed(clearAppCheck, APP_CHECK_CURRENT_MS);
+            main.postDelayed(clearAppCheck, qaHold(APP_CHECK_CURRENT_MS));
             return;
         }
         Log.i(TAG, "Settings: app update available: " + release.versionName + " (" + release.versionCode + ")");

@@ -519,17 +519,18 @@
 
                             <TextView
                                 style="@style/Text.RowLabel"
-                                android:layout_width="wrap_content"
+                                android:layout_width="0dp"
                                 android:layout_height="wrap_content"
+                                android:layout_weight="1"
                                 android:text="@string/settings_licence_status" />
 
+                            <!-- wrap_content: the dot sits right before the word, at the end. -->
                             <TextView
                                 android:id="@+id/licenceStatusValue"
                                 style="@style/Text.RowValue"
-                                android:layout_width="0dp"
+                                android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:layout_marginStart="@dimen/space_16"
-                                android:layout_weight="1"
                                 android:drawablePadding="@dimen/space_8"
                                 android:text="@string/dash" />
                         </LinearLayout>

@@ -4,6 +4,8 @@
   handle. Kicker LIBRARY, the question, one line on when to use it, then the
   primary Re-download and a tonal Cancel. Re-download hands over to the
   existing library sheet (dialog_update) with its determinate progress.
+  The button drops the buttons' tabular figures: Inter's tabular hyphen would
+  read "Re - download".
 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/redownloadRoot"
@@ -39,6 +41,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="@dimen/space_24"
+        android:fontFeatureSettings="kern"
         android:text="@string/redownload_action" />
 
     <com.google.android.material.button.MaterialButton
