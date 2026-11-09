@@ -75,6 +75,34 @@ async function request(route, { method = 'GET', body, headers = {}, raw = false 
   return { response, status: response.status, body: parsed, location: response.headers.get('location') };
 }
 
+// Response-time probe (2.3.3). One warm-up request, then `n` timed requests;
+// prints the median as a ::notice:: so it shows in the run summary. The
+// x-vercel-id header names the edge and the function region
+// ("<edge>::<function region>::<id>"); Server-Timing (app;dur=) is the time
+// spent inside the function, independent of where this runner is.
+async function timing(label, route, n = 7) {
+  const totals = [];
+  const server = [];
+  let id = '';
+  let cache = '';
+  const at = (i) => (typeof route === 'function' ? route(i) : route);
+  await request(at(-1));
+  for (let i = 0; i < n; i++) {
+    const t0 = performance.now();
+    const r = await request(at(i));
+    totals.push(performance.now() - t0);
+    const dur = /app;dur=([0-9.]+)/.exec(r.response.headers.get('server-timing') || '');
+    if (dur) server.push(Number(dur[1]));
+    id = (r.response.headers.get('x-vercel-id') || '').split('::').slice(0, -1).join('::');
+    cache = r.response.headers.get('x-vercel-cache') || '';
+  }
+  const median = (a) => (a.length ? [...a].sort((x, y) => x - y)[Math.floor(a.length / 2)].toFixed(0) : 'n/a');
+  const line = `TIMING ${label}: median ${median(totals)} ms (min ${Math.min(...totals).toFixed(0)}, max ${Math.max(...totals).toFixed(0)}), ` +
+    `in function ${median(server)} ms, route ${id || '?'}, cache ${cache || '-'}`;
+  console.log(`  ${line}`);
+  if (process.env.GITHUB_ACTIONS) console.log(`::notice::${line}`);
+}
+
 const form = (o) => new URLSearchParams(o);
 const SAME = { 'sec-fetch-site': 'same-origin' };
 const KEY_RE = new RegExp(`^${PREFIX}-(2H|5H|1D|3D|7D|14D|30D)-[A-Z0-9]{4,10}$`);
@@ -105,6 +133,9 @@ async function main() {
   ok(/--blue/.test(r.body) && /#000/.test(r.body) && !/linear-gradient/.test(r.body), 'ui.css is the flat black/blue theme');
   r = await request('/connect');
   ok(r.body?.web_info?._client === 'Anoy', 'GET /connect info reports the Anoy brand');
+
+  await timing('GET /api/app/update?code=10 (as the app calls it)', '/api/app/update?code=10');
+  await timing('GET /api/app/update (function, cache bypassed)', (i) => `/api/app/update?code=10&probe=${run}${i}`);
 
   // 2. loader library endpoints
   r = await request('/api/lib/manifest');
@@ -141,6 +172,7 @@ async function main() {
   const isOwner = /Unlimited/.test(r.body) && /Owner/.test(r.body);
   console.log(`  (signed in as ${isOwner ? 'Owner' : 'non-owner'})`);
   if (OWNER.toLowerCase() === 'anoy') ok(isOwner, 'Anoy is the Owner with an unlimited balance');
+  await timing('GET /dashboard (signed in)', '/dashboard');
   const routes = ['/dashboard', '/keys', '/keys/generate', '/settings', '/api-keys', '/api-docs', '/docs'];
   if (isOwner) routes.push('/server', '/admin/manage-users', '/admin/create-referral', '/lib');
   for (const route of routes) {
