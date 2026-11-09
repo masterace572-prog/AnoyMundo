@@ -227,4 +227,4 @@ jobs:
           name: app-update-e2e
           path: e2e/
           if-no-files-found: warn
-          retention-days: 14
+          retention-days: 7

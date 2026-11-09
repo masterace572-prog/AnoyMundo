@@ -1,4 +1,4 @@
-# AnoyMundo — licence panel + Android loader (v2.0)
+# AnoyMundo — licence panel + Android loader
 
 Two parts, one repository:
 
@@ -9,10 +9,12 @@ Two parts, one repository:
 
 **Live panel:** https://anoymundo-panel.vercel.app
 
-More detail: [DEPLOYMENT.md](DEPLOYMENT.md) (setup, environment, database,
+More detail: [REPO_MAP.md](REPO_MAP.md) (where everything lives, for
+reviewers), [DEPLOYMENT.md](DEPLOYMENT.md) (setup, environment, database,
 verification), [API.md](API.md) (personal API keys, `/api/v1`),
 [INTEGRATION.md](INTEGRATION.md) (loader ⇄ panel contract),
-[xlox/README.md](xlox/README.md) (Android app).
+[xlox/README.md](xlox/README.md) (Android app),
+[xlox/CHANGELOG.md](xlox/CHANGELOG.md) (app versions).
 
 ---
 
@@ -67,19 +69,20 @@ keys. Deleting a never-used key refunds what it cost.
 Routes: `/login`, `/register`, `/dashboard`, `/keys` (search, filters, paging,
 edit, reset devices, delete), `/keys/generate`, `/settings`, `/server`
 (maintenance, mod status, feature flags), `/admin/manage-users`,
-`/admin/create-referral`, `/lib` (loader library release), `/api-keys`,
-`/api-docs`, `/docs`.
+`/admin/create-referral`, `/lib` (loader library release), `/app-update`
+(Android app (APK) update), `/api-keys`, `/api-docs`, `/docs`.
 
 Loader endpoints: `POST /connect` (licence check), `GET /api/lib/manifest`
 (`{version, available, size, sha256}`), `GET /api/lib/version` (plain text),
 `GET /api/lib/download` (ZIP with `X-Release-Version` / `X-Content-SHA256`),
+`GET /api/app/update?code=<versionCode>` (current app update, if any),
 `GET /api/health`.
 
 ```bash
 cd web
 npm ci
 npm run build      # compiles templates + static checks
-npm test           # 130 end-to-end checks against an in-memory database
+npm test           # end-to-end checks against an in-memory database
 npm run dev        # http://localhost:3000 (memory DB unless Supabase env is set)
 ```
 
@@ -88,24 +91,26 @@ deployment (see the **Live deployment smoke test** workflow).
 
 ## Android loader
 
-Splash → **update check** → sign in with the licence key → home.
+Splash (app update check) → sign in (library update gate, then licence key)
+→ home (Launch / Stop, Settings).
 
-- **Splash:** black screen with the “Anoy” wordmark, no logo image.
-- **Update gate:** before sign-in the app always asks the panel for the
-  library manifest. If a newer library exists (or none is installed) the only
-  option is **Update now** — sign-in stays blocked until the download is
-  verified (size + SHA-256) and installed. Network errors show a plain reason
-  and **Try again**. If the library is current the app continues on its own.
-  The check repeats silently when the app returns to the foreground.
-- **Sign in:** looks like a normal login but takes the licence key; paste,
-  show/hide, upper-case input, readable errors (unknown / expired / blocked
-  key, device limit, clock, offline, timeout, VPN).
-- **Home:** licence status, expiry and live countdown, game and library state,
-  one blue primary action (Launch / Stop / Install game / Sign in again).
+- **App (APK) update:** the splash asks `GET /api/app/update`. A newer
+  version code opens `AppUpdateActivity`: download over https, check that the
+  APK is this package with a higher version code, then hand it to Android's
+  PackageInstaller. Mandatory updates cannot be skipped. "No update" never
+  blocks the splash.
+- **Library update gate:** before sign-in the app asks `GET /api/lib/manifest`.
+  If a newer library exists (or none is installed) the only option is
+  **Update now**; sign-in stays blocked until the download is verified
+  (size + SHA-256) and installed.
+- **Sign in:** takes the licence key; the native code calls `POST /connect`.
+- **Home:** licence expiry and countdown (IST), game and library state, one
+  primary action (Launch / Stop / Install game / Sign in again), Settings.
 
-Builds run on GitHub Actions (`.github/workflows/build-xlox.yml`), which
-publishes a signed APK as a GitHub release; `android-ui-qa.yml` runs lint, the
-UI gates and emulator screenshots (`docs/ui-redesign/screenshots`).
+Builds run on GitHub Actions: `build-xlox.yml` (every push to `xlox/**`) builds,
+lints and checks the signed APK and publishes it as the GitHub release
+`anoy-v<versionName>-<versionCode>`; `android-ui-qa.yml` (manual) captures
+emulator screenshots as a workflow artifact.
 
 ### Icons
 
@@ -115,11 +120,11 @@ so neither build needs extra tooling:
 
 - Panel: `node web/scripts/build-icons.mjs` → `web/src/icons.generated.mjs`
   (runs in `prebuild`; use `{{icon "name"}}` in views).
-- App: `node xlox/scripts/lucide_vectors.mjs` → `xlox/app/src/main/res/drawable/ic_*.xml`
-  (VectorDrawables; needs `npm ci` in `web/` first).
+- App: `xlox/app/src/main/res/drawable/ic_*.xml` (VectorDrawables, committed;
+  the one-off generator script was removed and is in git history).
 
-`web-ui-qa.yml` captures desktop and phone screenshots of every panel page
-(`docs/ui-redesign/web`).
+`web-ui-qa.yml` runs the panel tests and uploads desktop and phone screenshots
+of every panel page as a workflow artifact.
 
 ## Repository layout
 
@@ -131,10 +136,10 @@ web/                     panel (Vercel root directory)
   public/assets/         ui.css, app-ui.js, fonts, favicon.svg
   scripts/               build, checks, smoke tests, dev server
 supabase/schema.sql      full schema (fresh projects)
-supabase/migrations/     applied migrations (v2 fresh start + owner)
+supabase/migrations/     applied migrations (v2 fresh start, app_release)
 xlox/                    Android loader (Gradle project)
-.github/workflows/       APK build, UI QA, live smoke test
+.github/workflows/       APK build + release, UI QA, update e2e, live smoke test
 ```
 
-The original archives (`Free Source .zip`, `XLOX-Loader-Source.zip`) are kept
-for reference only.
+The original source archives, old screenshots and QA logs were removed from
+the tree; they remain in git history.

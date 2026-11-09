@@ -579,4 +579,4 @@ jobs:
             xlox/docs/ui-redesign/
             qa-logs/
           if-no-files-found: warn
-          retention-days: 30
+          retention-days: 7

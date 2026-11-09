@@ -1,4 +1,4 @@
-# Deployment — Anoy panel on Vercel + Supabase (v2.0)
+# Deployment — Anoy panel on Vercel + Supabase
 
 **Live site:** https://anoymundo-panel.vercel.app
 
@@ -38,6 +38,8 @@ regressions.
   - updates `create_keys_atomic` so level-1 accounts are never charged.
   Server settings (maintenance, mod status, feature flags) and the loader
   release are kept.
+- Migration `supabase/migrations/20261107_v2_2_app_release.sql` adds the
+  `app_release` table behind `/app-update` and `GET /api/app/update`.
 
 Check:
 
@@ -71,15 +73,16 @@ Android app verifies both after downloading.
 
 No secret is committed (`.env*` is git-ignored).
 
-Deployments are created from the branch (Vercel dashboard → Deployments →
-Redeploy, or the API with `gitSource.ref = arena/2e95185a-anoymundo`).
-Automatic deploys on push are off for this project.
+Pushes to the branch create preview deployments only. Production
+(`anoymundo-panel.vercel.app`) is deployed from the branch on demand (Vercel
+dashboard → Deployments → Promote / Redeploy, or the API with
+`gitSource.ref = arena/2e95185a-anoymundo` and `target = production`).
 
 ## 4. Verification
 
 | Where | What |
 |---|---|
-| `cd web && npm test` | 130 end-to-end checks against an in-memory DB: sign-in, every page, random + custom keys (format, upper case, duplicates, 4–6 char endings), charging/refunds, `/connect`, maintenance, feature flags, API keys and `/api/v1`, library upload/manifest/download, security guards |
+| `cd web && npm test` | end-to-end checks against an in-memory DB: sign-in, every page, random + custom keys (format, upper case, duplicates, 4–6 char endings), charging/refunds, `/connect`, maintenance, feature flags, API keys and `/api/v1`, library upload/manifest/download, security guards |
 | **Live deployment smoke test** workflow | `web/scripts/live-smoke.mjs` against the live site: health, pages, assets, manifest vs. download SHA-256, and — when the repository secret `PANEL_OWNER_PASSWORD` is set — Owner sign-in, key creation (random, custom, duplicate), `/connect`, API keys, then deletes everything it created. With a reseller account (`temp_password` input) it checks reseller pages and verifies charges and refunds instead |
 | `GET /api/health` | `{ ok: true }` with database + schema checks |
 
@@ -96,12 +99,16 @@ Automatic deploys on push are off for this project.
 
 ## 6. Android loader builds
 
-`.github/workflows/build-xlox.yml` (push to the branch or manual run) builds the
-signed release APK with JDK 17, the runner's Android SDK and NDK `24.0.8215888`,
-runs Android Lint, checks 16 KB ELF alignment of `libXloX.so` and the loader
-ZIP, uploads the `xlox-apk` artifact, creates a GitHub release
-`xlox-v2.0.0-run<N>` and commits `dist/Anoy-XLOX-loader.apk`.
-`android-ui-qa.yml` runs the UI gates and emulator screenshots.
+`.github/workflows/build-xlox.yml` (push to `xlox/**` or manual run) runs the
+static UI gates, builds the signed release APK with JDK 17, the runner's
+Android SDK and NDK `24.0.8215888`, runs Android Lint, checks the APK's
+permissions and the 16 KB ELF alignment of `libXloX.so` and the loader ZIP,
+uploads the `xlox-apk` artifact (7 days) and publishes the GitHub release
+`anoy-v<versionName>-<versionCode>` (marked Latest; every other release and tag
+is deleted). Nothing is committed back to the repository. The owner then
+publishes the update in the panel at `/app-update` (**Use latest build**).
+`android-ui-qa.yml` (manual) runs emulator screenshots; `app-update-e2e.yml`
+(manual) tests the in-app update against the real release asset.
 
 ## 7. Local development & troubleshooting
 

@@ -1,7 +1,8 @@
 name: Web UI QA
 
 # Renders the panel with the offline dev server and saves desktop + phone
-# screenshots of every page to docs/ui-redesign/web for visual review.
+# screenshots of every page, uploaded as the "web-ui-screenshots" artifact
+# (7 days). Nothing is committed to the repository.
 on:
   workflow_dispatch:
   push:
@@ -11,7 +12,7 @@ on:
       - '.github/workflows/web-ui-qa.yml'
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: web-ui-qa-${{ github.ref }}
@@ -46,20 +47,4 @@ jobs:
           name: web-ui-screenshots
           path: docs/ui-redesign/web/
           if-no-files-found: warn
-          retention-days: 30
-      - name: Commit screenshots
-        if: always()
-        working-directory: ${{ github.workspace }}
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          mkdir -p docs/ui-redesign/web
-          git add -f docs/ui-redesign/web || true
-          git diff --cached --quiet && { echo "nothing to commit"; exit 0; }
-          git commit -q -m "Web UI screenshots (run ${{ github.run_number }}) [skip ci]"
-          for attempt in 1 2 3 4 5 6 7 8; do
-            git push origin HEAD:arena/2e95185a-anoymundo && exit 0
-            git pull --rebase -q origin arena/2e95185a-anoymundo || { git rebase --abort; git pull --no-rebase --no-edit -q -X ours origin arena/2e95185a-anoymundo || true; }
-            sleep 5
-          done
-          exit 1
+          retention-days: 7

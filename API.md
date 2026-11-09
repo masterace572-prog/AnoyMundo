@@ -356,6 +356,5 @@ cannot be enumerated with an API key.
 
 ---
 
-**Related:** [`API_AGENT_PROMPT.md`](API_AGENT_PROMPT.md) (copy-paste prompt for
-building a site), [`INTEGRATION.md`](INTEGRATION.md) (loader / C++ docs),
+**Related:** [`INTEGRATION.md`](INTEGRATION.md) (loader / C++ docs),
 [`DEPLOYMENT.md`](DEPLOYMENT.md) (infrastructure).

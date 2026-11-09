@@ -1,6 +1,20 @@
-# ---- extracted archives (local reference only, originals are in git) -------
+# ---- extracted archives (local reference only) ------------------------------
 _extract/
 legacy/
+
+# ---- CI / QA output: uploaded as workflow artifacts, never committed --------
+qa-logs/
+e2e/
+dist/
+docs/ui-redesign/
+xlox/docs/ui-redesign/
+**/screenshots/
+*.log
+# Build outputs (the APK is published as a GitHub release asset)
+*.apk
+*.aab
+*.apk.idsig
+*.zip
 
 # ---- Node / Vercel ---------------------------------------------------------
 node_modules/

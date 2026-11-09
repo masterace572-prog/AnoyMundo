@@ -20,11 +20,12 @@ flags, expiry fields, error text, and simple C++ integration code.
 | `POST` | `/connect` | licence check → the full mod payload (main endpoint) |
 | `GET` | `/connect?game=…&user_key=…&serial=…` | same as POST, for loaders that use GET |
 | `GET` | `/connect` (no params) | `web_info` / `web__dev` panel information |
-| `GET` | `/api/health` | `ok`, Supabase connection, lib version, `13/13` schema check |
+| `GET` | `/api/health` | `ok`, Supabase connection, lib version, `14/14` schema check |
 | `GET` | `/api/lib/manifest` | JSON `{ ok, version, available, size, sha256, file_name, source, notes, updated_at }` — what the Android app checks before sign-in (`503` if the database is unreachable) |
 | `GET` | `/api/lib/version` | plain text version, e.g. `1.0\n` (legacy loaders) |
 | `GET` | `/api/lib/download` | the current loader ZIP with `X-Release-Version` and `X-Content-SHA256` headers (or 302 to an external URL, 404 when nothing is published) |
 | `GET` | `/api/lib/info` | JSON list of uploaded releases |
+| `GET` | `/api/app/update?code=<versionCode>` | the Android app's own update: `{ ok, available, version_name, version_code, apk_url, changelog, mandatory, published_at, update_available }` (`available:false` when nothing is published; never cached) |
 
 `POST /connect` is also reachable as `/api/connect`.
 Legacy aliases still work: `/version.txt`, `/api/version`, `/lib/version.txt`,
@@ -307,8 +308,6 @@ your own UI/hooks — the API itself is pure JSON over HTTPS.
 - [`API.md`](API.md) — the **key-management REST API** (`/api/v1/*`) with
   personal API keys. Use it to create, list, update, reset and delete licence
   keys from your own site or bot. Also rendered at `/api-docs` in the panel.
-- [`API_AGENT_PROMPT.md`](API_AGENT_PROMPT.md) — a ready-to-paste prompt that
-  fully describes that API for building a separate site with another AI agent.
 - [`DEPLOYMENT.md`](DEPLOYMENT.md) — infrastructure and verification record.
 
 Unauthenticated requests to panel pages redirect to `/login`.

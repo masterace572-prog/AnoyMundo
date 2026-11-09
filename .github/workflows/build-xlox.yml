@@ -164,6 +164,7 @@ jobs:
           name: lint-report
           path: xlox/app/build/reports/lint-results-release.*
           if-no-files-found: ignore
+          retention-days: 7
 
       - name: Build starter loader ZIP (arm64-v8a libbgmi.so)
         run: |
@@ -228,11 +229,11 @@ jobs:
           path: |
             dist/Anoy-XLOX-loader.apk
             dist/xlox-loader.zip
-          retention-days: 30
+          retention-days: 7
           if-no-files-found: error
 
-      # The sandbox cannot reach actions artifact storage, so also publish a
-      # durable download link and place the deliverables on this branch.
+      # The APK is published as a GitHub release (durable download link); build
+      # outputs are never committed to the repository.
       - name: Publish APK as a GitHub release (anoy-v<name>-<code>, Latest)
         if: env.XLOX_SIGNED == 'true'
         working-directory: ${{ github.workspace }}
@@ -284,23 +285,6 @@ jobs:
           left=$(gh api --paginate "repos/$REPO/releases?per_page=100" --jq '.[].tag_name' | tr '\n' ' ')
           echo "::notice title=Releases cleaned::deleted $deleted releases and $tags leftover tags; remaining: $left"
           [ "$failed" -eq 0 ] || echo "::warning::$failed releases/tags could not be deleted"
-
-      - name: Commit deliverables to the working branch
-        if: env.XLOX_SIGNED == 'true'
-        working-directory: ${{ github.workspace }}
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -f dist/Anoy-XLOX-loader.apk dist/xlox-loader.zip
-          # 2.3.1: the bundled BGMI icon, so later builds need no download.
-          git add -f xlox/app/src/main/res/drawable-nodpi/ic_game_bgmi.png
-          git diff --cached --quiet && { echo "No deliverable changes"; exit 0; }
-          git commit -m "Add built XLOX loader APK (build ${{ github.run_number }}) [skip ci]"
-          for i in 1 2 3 4 5; do
-            git pull --rebase -X theirs origin arena/2e95185a-anoymundo && git push origin HEAD:arena/2e95185a-anoymundo && exit 0
-            echo "push attempt $i failed; retrying"; sleep $((i * 5))
-          done
-          exit 1
 
       - name: Check the panel lib + version endpoints
         run: |

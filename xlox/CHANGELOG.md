@@ -1,5 +1,27 @@
 # Anoy Loader — changelog
 
+Screenshots, design notes (`docs/ui-redesign/…`) and the one-off generator
+scripts mentioned below were removed from the tree in the repo cleanup after
+2.3.2; they remain in git history.
+
+## 2.3.2 — app updates and CI (versionCode 11)
+
+- **App update download:** a failed download says "Couldn't download the
+  update (HTTP <code>). Try again later." with **Try again**; server errors
+  (5xx, 408, 429) are retried, a web page instead of a file is refused.
+- **APK check:** before PackageInstaller the downloaded APK must be
+  `com.xlox` with the announced, higher version code, otherwise "This update
+  file doesn't match the app." Nothing is installed.
+- **Splash:** a published release that is not newer counts as up to date.
+- **Launch / Stop:** Lucide play / stop glyph before the label (20 dp, tinted
+  like the label); the busy state still shows the spinner.
+- **Panel `/app-update`:** "Use latest build" (newest GitHub release), the
+  APK link is fetched and must be a real APK before publishing, the version
+  code must be higher than the current update, Remove, no history card.
+- **CI:** releases are tagged `anoy-v<versionName>-<versionCode>`; older
+  releases and tags are deleted after each publish. UI QA is manual; the
+  build runs the static UI gates and the APK permissions check.
+
 ## 2.3.1 — post-redesign follow-up
 
 Launch / Stop, game files, permissions, sign in, licensing and the library
@@ -194,7 +216,7 @@ sign in and licence, app and library updates. Only the look changed.
   The system splash shows the same static wordmark. Reduced motion skips the
   choreography. Sign-in, the update check and game launch are unchanged.
 
-Details, timings and screenshots: `docs/ui-redesign/FOLLOW-UP.md`.
+Details, timings and screenshots: `docs/ui-redesign/FOLLOW-UP.md` (git history).
 
 ## 2.1.0 follow-up — launch error, home tidy (splash/icon since replaced)
 
@@ -211,7 +233,7 @@ Details, timings and screenshots: `docs/ui-redesign/FOLLOW-UP.md`.
 - **Home**: DEVICE fits above the Launch bar on a typical phone; the notice no
   longer leaves an orphan word; long model names stay on one tidy line.
 
-Details and screenshots: `docs/ui-redesign/FOLLOW-UP.md`.
+Details and screenshots: `docs/ui-redesign/FOLLOW-UP.md` (git history).
 
 ## 2.1.0 (versionCode 6) — UI redesign
 
@@ -295,5 +317,5 @@ in small caps via the style).
 purple, emoji, Toast, default spinner or plain Button, ≥ 44dp targets, every
 referenced resource exists, and the Lottie budget. The `android-ui-qa` workflow
 builds debug and minified release, runs lint and captures every screen and
-state on an emulator in `docs/ui-redesign/after/`. Before / after pairs are in
-`docs/ui-redesign/README.md`.
+state on an emulator (now uploaded as a workflow artifact; the old committed
+screenshots and `docs/ui-redesign/README.md` are in git history).

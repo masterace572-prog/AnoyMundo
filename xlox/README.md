@@ -1,43 +1,45 @@
-# Anoy loader (Android, v2.0.0)
+# Anoy loader (Android)
 
 Android (arm64-v8a) loader app `com.xlox`, wired to the **Anoy** panel and
-built in CI. minSdk 21, targetSdk 28, compileSdk 36.
+built in CI. minSdk 21, targetSdk 28, compileSdk 36. The current version is in
+`app/build.gradle` (`versionName` / `versionCode`); history in
+[CHANGELOG.md](CHANGELOG.md).
 
 ## Screens and flow
 
 ```
-SplashActivity ──► LogAct (update gate ► licence-key sign in) ──► MAct (home)
+SplashActivity ──► (AppUpdateActivity) ──► LogAct ──► MAct
+  app update check    APK update          library gate   home + Settings
+                                          + sign in
 ```
 
-| Screen | What it does |
-|---|---|
-| **Splash** (`SplashActivity`, launcher) | Black screen, “Anoy” wordmark, caption and version. No logo image. ~1 s, then sign in. |
-| **Update gate** (`ui/UpdateGate`, dialog over sign in) | Always checks `GET /api/lib/manifest` first. **Update required** when the panel has a newer library or none is installed: the only button is **Update now**, Back closes the app, sign in stays disabled until the download is verified and installed. Shows real progress (`42% · 1.2 MB of 2.9 MB`). Network problems show a plain reason (offline, timeout, DNS, TLS, server error, no space) and **Try again**. If the library is current the dialog closes by itself. |
-| **Sign in** (`LogAct`) | Login-style screen that takes the licence key (`ANOY-7D-GKFHJ`). Upper-case input, paste, show/hide, inline errors for unknown / expired / blocked keys, device limit, clock, invalid token, maintenance message, offline, timeout and VPN. Asks only for storage access (needed to copy the OBB); it never asks for “Install unknown apps”. |
-| **Home** (`MAct`) | Grouped list: licence status, expiry, live time left, game + state, library version, server status, device. One blue primary action: **Launch**, **Stop**, **Install game** or **Sign in again**. |
-
-The gate runs again silently whenever the app returns to the foreground (at
-most once a minute, never during a launch), so a new release published while
-the app is open is still enforced.
+| Screen | Code / layout | What it does |
+|---|---|---|
+| **Splash** (launcher) | `SplashActivity`, `activity_splash` | Wordmark film (~3 s, reduced motion respected) and a status line while `AppUpdater.check` asks `GET /api/app/update`. A newer version code opens the update screen; "up to date" continues on its own; a failed check shows the reason and **Retry**. |
+| **App update** | `AppUpdateActivity`, `activity_app_update`, `item_changelog` | Changelog, **Update now** (and **Not now** unless mandatory). `AppUpdater` downloads over https (redirects https-only, retries for 5xx/408/429), checks the APK is `com.xlox` with the announced, higher version code, then commits it to a `PackageInstaller` session. Errors are shown inline with **Try again**. |
+| **Library gate** | `ui/UpdateGate`, `dialog_update` (bottom sheet) | Checks `GET /api/lib/manifest`. When a newer library exists, or none is installed, the only action is **Update now**; Back closes the app; sign in stays blocked until the download is verified (size + SHA-256) and installed. Also re-runs silently when the app returns to the foreground, and backs Settings → Re-download library. |
+| **Sign in** | `LogAct`, `activity_login` | Takes the licence key (`ANOY-7D-GKFHJ`); the native code calls `POST /connect` and verifies the token. Readable errors for unknown / expired / blocked keys, device limit, clock, maintenance, offline, timeout, VPN. |
+| **Home** | `MAct`, `activity_main` | Licence expiry card (IST countdown), game card (bundled BGMI icon, library, state, server), announcement, one primary action: **Launch** / **Stop** / **Install game** / **Sign in again**. Launch copies the OBB (`utils/AppManager`) and starts the game inside the container. |
+| **Settings** | `MAct.openSettings`, sheets `sheet_*` | Licence (masked key, status, expiry), Updates (check for app updates, re-download library), device, support info, Telegram report, Sign out / Forget. Permissions are requested through `ui/PermissionSheet` (`sheet_permission`). |
 
 ## Design
 
-Black background, white text, blue rounded buttons, iOS-style grouped rows.
-Text never has a background of its own. No Material Components, no splash
-library, no images — everything is vector/shape drawables, the Inter and
-JetBrains Mono fonts (`res/font`) and four layouts:
+Black background, white text, one accent (`#0A84FF`). Views + XML only (no
+Compose), Material Components 1.13 (`MaterialButton`, cards, bottom sheets),
+Lottie for two small animations (`res/raw/anoy_sync.json`,
+`anoy_success.json`), fonts Inter and JetBrains Mono (`res/font`).
 
 | File | Contents |
 |---|---|
-| `res/values/colors.xml` | the whole palette (black, white, three text greys, blue, green, orange, red, separator) |
-| `res/values/styles.xml` | `AppTheme`, `AppTheme.Splash`, `AnoyDialog`, text styles `Text.*`, `Button.Primary`, `Button.Text` |
-| `res/values/dimens.xml`, `strings.xml` | sizes and every user-visible string |
-| `res/layout/` | `activity_splash`, `activity_login`, `activity_main`, `dialog_update` |
-| `java/com/xlox/ui/Ui.java` | small helpers: reveal animation, busy buttons, haptics, byte formatting |
+| `res/values/colors.xml` | every colour token (raw colours appear only here) |
+| `res/values/styles.xml` | `AppTheme`, `Text.*` type scale, `Widget.Anoy.*` buttons / cards / sheets / progress, rows |
+| `res/values/dimens.xml`, `motion.xml`, `strings.xml` | spacing, motion timings, every user-visible string |
+| `res/layout/` | 5 activities (`activity_*`), 5 bottom sheets (`sheet_*`, `dialog_update`), 2 list items |
+| `java/com/xlox/ui/Ui.java` | helpers: busy buttons, reveal animation, haptics, byte formatting |
 
-`scripts/ui_quality_gate.py` enforces this (no logo, palette-only colours, no
-text backgrounds, black/white/blue theme, every resource exists, format
-arguments match) and runs in CI.
+`scripts/ui_quality_gate.py` enforces the rules statically (palette-only
+colours, styled MaterialButtons, no Toast / default ProgressBar, every
+referenced resource exists, format arguments match) and runs in every build.
 
 ## Reliability
 
@@ -131,7 +133,7 @@ no dependencies):
 
 ```bash
 python3 scripts/check_elf_alignment.py my-loader.zip
-python3 scripts/check_elf_alignment.py --fail-on-unaligned ../dist/Anoy-XLOX-loader.apk
+python3 scripts/check_elf_alignment.py --fail-on-unaligned app/build/outputs/apk/release/app-release.apk
 ```
 
 On the device, confirm the page size and capture the exact linker error:
@@ -202,13 +204,17 @@ cd xlox
 ./gradlew assembleRelease
 ```
 
-CI (`.github/workflows/build-xlox.yml`) runs on pushes touching `xlox/**`,
-installs the SDK/NDK, builds the signed release APK, runs Android Lint,
-checks ELF alignment, uploads the `xlox-apk` artifact and creates a GitHub
-release `xlox-v2.0.0-run<N>`. `workflow_dispatch` can additionally publish the
-starter ZIP to `/lib` when `publish_loader_zip` is ticked (needs the
-`PANEL_OWNER_PASSWORD` repository secret). `android-ui-qa.yml` captures
-emulator screenshots of every screen into `docs/ui-redesign/screenshots`.
+CI (`.github/workflows/build-xlox.yml`) runs on pushes touching `xlox/**`:
+static UI gates, SDK/NDK install, signed release APK, Android Lint, APK
+permissions check (`scripts/check_apk_permissions.py`), ELF alignment, the
+`xlox-apk` artifact (7 days) and the GitHub release
+`anoy-v<versionName>-<versionCode>` (Latest; all other releases and tags are
+deleted). Nothing is committed back. `workflow_dispatch` can additionally
+publish the starter ZIP to `/lib` when `publish_loader_zip` is ticked (needs
+the `PANEL_OWNER_PASSWORD` repository secret). Manual workflows:
+`android-ui-qa.yml` (emulator screenshots of every screen, uploaded as the
+`ui-qa` artifact) and `app-update-e2e.yml` (in-app update against the real
+release asset on an emulator).
 
 ### Release signing
 
@@ -226,6 +232,6 @@ gitignored `xlox/local.properties`:
 In GitHub Actions, add `XLOX_STORE_PASSWORD` and `XLOX_KEY_PASSWORD` as
 repository secrets (Settings → Secrets and variables → Actions). Without them
 `build-xlox.yml` still compiles and lints, but builds an unsigned APK and
-skips the GitHub release and the `dist/` commit. The UI QA workflow re-signs
+skips the GitHub release. The UI QA workflow re-signs
 its test install with a throwaway key either way. CI never generates a new
 key: APKs signed with a different key cannot update an installed copy.
