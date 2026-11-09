@@ -4,6 +4,10 @@ name: Live deployment smoke test
 # Signed-in checks need the repository secret PANEL_OWNER_PASSWORD (Owner
 # account). Without it only the public checks run. Everything the test
 # creates is deleted again.
+# 2.3.3: a push whose commit message contains [temp-account] instead asks for
+# a temporary reseller account (scripts/temp-account.mjs: the password stays on
+# the runner, only its bcrypt hash is published as the commit status
+# "temp-account"); the test waits up to 5 minutes for it to exist.
 on:
   workflow_dispatch:
     inputs:
@@ -23,6 +27,10 @@ on:
     branches: [arena/2e95185a-anoymundo]
     paths: ['.github/workflows/live-smoke.yml', 'web/scripts/live-smoke.mjs']
 
+permissions:
+  contents: read
+  statuses: write
+
 jobs:
   smoke:
     runs-on: ubuntu-latest
@@ -32,12 +40,21 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
+      - name: Request a temporary test account
+        if: contains(github.event.head_commit.message, '[temp-account]')
+        working-directory: web
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          npm ci --no-audit --no-fund
+          node scripts/temp-account.mjs
       - name: End-to-end checks against the live panel
         working-directory: web
         env:
           BASE: ${{ inputs.base || 'https://anoymundo-panel.vercel.app' }}
-          OWNER_USERNAME: ${{ inputs.username || 'Anoy' }}
-          OWNER_PASSWORD: ${{ inputs.temp_password || secrets.PANEL_OWNER_PASSWORD }}
+          OWNER_USERNAME: ${{ env.TEMP_USER || inputs.username || 'Anoy' }}
+          OWNER_PASSWORD: ${{ env.TEMP_PASSWORD || inputs.temp_password || secrets.PANEL_OWNER_PASSWORD }}
+          WAIT_FOR_ACCOUNT: ${{ env.TEMP_USER && '300' || '' }}
         run: |
           if [ -n "$OWNER_PASSWORD" ]; then echo "::add-mask::$OWNER_PASSWORD"; fi
           node scripts/live-smoke.mjs

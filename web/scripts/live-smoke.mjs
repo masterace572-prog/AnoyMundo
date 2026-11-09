@@ -162,6 +162,16 @@ async function main() {
   }
 
   // 3. sign in as the owner
+  // A temporary account (live-smoke.yml) appears once a maintainer has created
+  // it; until then the login is refused, so poll gently.
+  const waitUntil = Date.now() + Number(process.env.WAIT_FOR_ACCOUNT || 0) * 1000;
+  while (Date.now() < waitUntil) {
+    r = await request('/login', { method: 'POST', body: form({ username: OWNER, password: PASSWORD }) });
+    if (r.status === 302 && r.location === '/dashboard') break;
+    console.log(`  (waiting for the temporary account ${OWNER})`);
+    await new Promise((done) => setTimeout(done, 20000));
+  }
+  if (cookies.has('am_session')) await request('/logout');
   r = await request('/login', { method: 'POST', body: form({ username: OWNER, password: 'definitely-wrong' }) });
   ok(r.status === 302 && !cookies.has('am_session'), 'a wrong password is refused');
   r = await request('/login', { method: 'POST', body: form({ username: OWNER, password: PASSWORD }) });
@@ -173,6 +183,14 @@ async function main() {
   console.log(`  (signed in as ${isOwner ? 'Owner' : 'non-owner'})`);
   if (OWNER.toLowerCase() === 'anoy') ok(isOwner, 'Anoy is the Owner with an unlimited balance');
   await timing('GET /dashboard (signed in)', '/dashboard');
+  // A key that existed before this run (created by hand for the temporary
+  // account, or any unused key of the account) still connects.
+  r = await request('/keys/api?status=unused&per=5');
+  const existing = (r.body?.rows || []).find((row) => /EXIST/.test(row.user_key));
+  if (existing) {
+    r = await request('/connect', { method: 'POST', body: form({ game: existing.game, user_key: existing.user_key, serial: `smoke${run}` }) });
+    ok(r.body?.status === true && /^[a-f0-9]{32}$/.test(r.body?.data?.token || ''), 'POST /connect accepts a key that existed before this deployment', JSON.stringify(r.body).slice(0, 200));
+  }
   const routes = ['/dashboard', '/keys', '/keys/generate', '/settings', '/api-keys', '/api-docs', '/docs'];
   if (isOwner) routes.push('/server', '/admin/manage-users', '/admin/create-referral', '/lib');
   for (const route of routes) {
