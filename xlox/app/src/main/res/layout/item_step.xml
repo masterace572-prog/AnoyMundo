@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- One "How to allow" step: Mono 12 tertiary number in a 24 dp gutter + Body. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal">
+
+    <TextView
+        android:id="@+id/stepNumber"
+        style="@style/Text.Mono.Footer"
+        android:layout_width="@dimen/space_24"
+        android:layout_height="wrap_content"
+        android:fontFeatureSettings="tnum"
+        android:importantForAccessibility="no"
+        app:lineHeight="22sp" />
+
+    <TextView
+        android:id="@+id/stepText"
+        style="@style/Text.Body"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1" />
+</LinearLayout>

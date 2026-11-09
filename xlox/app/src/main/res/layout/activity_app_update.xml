@@ -1,105 +1,105 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  2.2.0 in-app app update (the APK - never the library, see UpdateGate).
-  Scrolling header + "What's new" card, with a pinned bottom panel: status
-  line, progress and the buttons. Mandatory releases have no "Not now".
-  appUpdateRoot gets the status-bar inset; the panel gets the navigation bar.
+  App (APK) update (spec 3.4), 24 dp gutters, no icon tile:
+    kicker  UPDATE AVAILABLE / UPDATE REQUIRED
+    Title L "A new version is ready"
+    Mono 15 "2.2.0 → 2.3.0" (old tertiary, new primary)
+    32 dp, WHAT'S NEW, one Body row per item with a 4 dp tertiary dot in a
+    16 dp gutter (hanging indent), 12 dp apart (rows built in code)
+  Pinned footer (hairline once content runs under it): status / error block,
+  Update now (56), the Mono byte count while downloading, then Not now (48) or,
+  for a mandatory update, a Caption saying it is required.
 -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/appUpdateRoot"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:background="@color/black">
 
     <ScrollView
         android:id="@+id/appUpdateScroll"
         style="@style/Scroll"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:clipToPadding="false">
+        android:layout_height="match_parent">
 
         <LinearLayout
             android:id="@+id/appUpdateContent"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:paddingStart="@dimen/screen_padding"
-            android:paddingTop="48dp"
-            android:paddingEnd="@dimen/screen_padding"
-            android:paddingBottom="200dp">
-
-            <ImageView
-                android:id="@+id/appUpdateIcon"
-                style="@style/TileLarge"
-                android:background="@drawable/bg_status_blue"
-                app:srcCompat="@drawable/ic_arrow_down_to_line"
-                app:tint="@color/blue" />
+            android:paddingStart="@dimen/gutter_wide"
+            android:paddingTop="@dimen/space_48"
+            android:paddingEnd="@dimen/gutter_wide">
 
             <TextView
-                android:id="@+id/appUpdateTitle"
-                style="@style/Text.LargeTitle"
+                android:id="@+id/appUpdateKicker"
+                style="@style/Text.Kicker"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="20dp"
-                android:accessibilityHeading="true"
                 android:text="@string/app_update_title" />
 
             <TextView
-                android:id="@+id/appUpdateSubtitle"
-                style="@style/Text.Secondary"
+                android:id="@+id/appUpdateTitle"
+                style="@style/Text.TitleL"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="@dimen/space_8" />
+                android:layout_marginTop="@dimen/kicker_gap"
+                android:accessibilityHeading="true"
+                android:text="@string/app_update_headline" />
 
             <TextView
-                style="@style/Text.SectionHeader"
+                android:id="@+id/appUpdateSubtitle"
+                style="@style/Text.Mono"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/space_12"
+                android:fontFeatureSettings="tnum"
+                android:textColor="@color/text_primary"
+                android:textSize="@dimen/text_mono_15"
+                app:lineHeight="22sp" />
+
+            <TextView
+                android:id="@+id/appUpdateNotesTitle"
+                style="@style/Text.Kicker"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="@dimen/space_32"
                 android:accessibilityHeading="true"
                 android:text="@string/app_update_whats_new" />
 
-            <com.google.android.material.card.MaterialCardView
-                android:id="@+id/appUpdateNotesCard"
+            <!-- Changelog rows (dot + Body text), filled by AppUpdateActivity. -->
+            <LinearLayout
+                android:id="@+id/appUpdateNotes"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content">
-
-                <TextView
-                    android:id="@+id/appUpdateNotes"
-                    style="@style/Text.Callout"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:lineSpacingExtra="6sp"
-                    android:padding="@dimen/card_padding"
-                    android:textIsSelectable="false" />
-            </com.google.android.material.card.MaterialCardView>
+                android:layout_height="wrap_content"
+                android:orientation="vertical" />
         </LinearLayout>
     </ScrollView>
 
-    <!-- Pinned panel over a 24 dp fade, like home's action bar. -->
     <LinearLayout
         android:id="@+id/appUpdateBar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_gravity="bottom"
-        android:orientation="vertical">
+        android:background="@color/black"
+        android:orientation="vertical"
+        android:tag="snackbar_anchor">
 
         <View
-            android:layout_width="match_parent"
-            android:layout_height="@dimen/fade_height"
-            android:background="@drawable/bg_fade"
-            android:importantForAccessibility="no" />
+            android:id="@+id/appUpdateDivider"
+            style="@style/Divider"
+            android:visibility="invisible" />
 
         <LinearLayout
             android:id="@+id/appUpdatePanel"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:background="@color/black"
             android:orientation="vertical"
-            android:paddingStart="@dimen/screen_padding"
-            android:paddingTop="@dimen/space_8"
-            android:paddingEnd="@dimen/screen_padding"
-            android:paddingBottom="@dimen/space_12">
+            android:paddingStart="@dimen/gutter_wide"
+            android:paddingTop="@dimen/space_12"
+            android:paddingEnd="@dimen/gutter_wide"
+            android:paddingBottom="@dimen/space_16">
 
             <TextView
                 android:id="@+id/appUpdateStatus"
@@ -108,29 +108,20 @@
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="@dimen/space_12"
                 android:accessibilityLiveRegion="polite"
-                android:drawablePadding="6dp"
-                android:gravity="center_vertical"
-                android:paddingStart="@dimen/space_4"
-                android:paddingEnd="@dimen/space_4"
-                android:visibility="gone" />
-
-            <com.google.android.material.progressindicator.LinearProgressIndicator
-                android:id="@+id/appUpdateProgress"
-                style="@style/Widget.Anoy.Progress"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:max="1000"
-                android:visibility="gone" />
-
-            <TextView
-                android:id="@+id/appUpdateProgressText"
-                style="@style/Text.Mono"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="@dimen/space_8"
-                android:layout_marginBottom="@dimen/space_12"
                 android:gravity="center"
-                android:textColor="@color/text_secondary"
+                android:visibility="gone" />
+
+            <!-- Failure: danger-tint block, radius 16, padding 12. -->
+            <TextView
+                android:id="@+id/appUpdateError"
+                style="@style/Text.BodyS"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="@dimen/space_12"
+                android:accessibilityLiveRegion="polite"
+                android:background="@drawable/bg_error_block"
+                android:padding="@dimen/space_12"
+                android:textColor="@color/danger"
                 android:visibility="gone" />
 
             <com.google.android.material.button.MaterialButton
@@ -140,13 +131,33 @@
                 android:layout_height="wrap_content"
                 android:text="@string/app_update_now" />
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/appUpdateLater"
-                style="@style/Widget.Anoy.Button.Text"
+            <TextView
+                android:id="@+id/appUpdateProgressText"
+                style="@style/Text.Mono.Footer"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="@dimen/space_4"
+                android:layout_marginTop="@dimen/space_12"
+                android:fontFeatureSettings="tnum"
+                android:gravity="center"
+                android:visibility="gone" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/appUpdateLater"
+                style="@style/Widget.Anoy.Button.Text.Secondary"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/space_8"
                 android:text="@string/app_update_not_now" />
+
+            <TextView
+                android:id="@+id/appUpdateRequired"
+                style="@style/Text.Caption"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/space_12"
+                android:gravity="center"
+                android:text="@string/app_update_required_back"
+                android:visibility="gone" />
         </LinearLayout>
     </LinearLayout>
 </FrameLayout>

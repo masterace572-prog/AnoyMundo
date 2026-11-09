@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Help: 32 dp hairline circle; fills surface-2 while pressed. -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:enterFadeDuration="100"
+    android:exitFadeDuration="100">
+    <item android:state_pressed="true">
+        <shape android:shape="oval">
+            <solid android:color="@color/surface_2" />
+            <stroke android:width="@dimen/hairline" android:color="@color/hairline" />
+        </shape>
+    </item>
+    <item>
+        <shape android:shape="oval">
+            <solid android:color="@color/transparent" />
+            <stroke android:width="@dimen/hairline" android:color="@color/hairline" />
+        </shape>
+    </item>
+</selector>

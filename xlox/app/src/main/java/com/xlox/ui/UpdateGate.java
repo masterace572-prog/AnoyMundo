@@ -1,7 +1,7 @@
 package com.xlox.ui;
 
+import android.animation.ValueAnimator;
 import android.app.Activity;
-import android.content.res.ColorStateList;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.SystemClock;
@@ -10,15 +10,11 @@ import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.WindowManager;
-import android.widget.ImageView;
+import android.view.animation.LinearInterpolator;
 import android.widget.TextView;
 
 import androidx.core.content.ContextCompat;
-import androidx.core.widget.ImageViewCompat;
 
-import com.airbnb.lottie.LottieAnimationView;
-import com.airbnb.lottie.LottieDrawable;
-import com.airbnb.lottie.RenderMode;
 import com.google.android.material.bottomsheet.BottomSheetDialog;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.progressindicator.LinearProgressIndicator;
@@ -43,7 +39,8 @@ public final class UpdateGate {
 
     private static final String TAG = "UpdateGate";
     private static final long MIN_CHECKING_MS = 450L;
-    private static final long DONE_VISIBLE_MS = 700L;
+    /** "You're up to date" stays ~900 ms, then the sheet leaves (240 ms). */
+    private static final long DONE_VISIBLE_MS = 900L;
 
     private static final ExecutorService EXECUTOR = Executors.newSingleThreadExecutor(r -> {
         Thread t = new Thread(r, "anoy-update");
@@ -61,9 +58,7 @@ public final class UpdateGate {
     private final AtomicBoolean cancelled = new AtomicBoolean(false);
 
     private BottomSheetDialog dialog;
-    private LottieAnimationView anim;
-    private int animRes;
-    private ImageView icon;
+    private View icon;
     private volatile long lastUnknownPost;
     private TextView title;
     private TextView message;
@@ -166,7 +161,6 @@ public final class UpdateGate {
         cancelled.set(true);
         main.removeCallbacksAndMessages(null);
         keepScreenOn(false);
-        if (anim != null) anim.cancelAnimation();
         dismissQuietly();
     }
 
@@ -177,8 +171,6 @@ public final class UpdateGate {
         if (dialog != null) return true;
         try {
             View root = LayoutInflater.from(activity).inflate(R.layout.dialog_update, null, false);
-            anim = root.findViewById(R.id.gateAnim);
-            anim.setRenderMode(RenderMode.HARDWARE);
             icon = root.findViewById(R.id.gateIcon);
             title = root.findViewById(R.id.gateTitle);
             message = root.findViewById(R.id.gateMessage);
@@ -234,14 +226,15 @@ public final class UpdateGate {
 
     // ------------------------------------------------------------- rendering
 
-    private static final int VISUAL_NONE = 0;
-    private static final int VISUAL_SYNC = 1;
-    private static final int VISUAL_SUCCESS = 2;
-
-    private void render(int titleRes, CharSequence body, int visual, CharSequence buttonLabel) {
+    /**
+     * One state of the sheet: title, Body S message (danger for errors), an
+     * optional action. The bar, the byte line, the size and the check are
+     * hidden; each state shows what it needs.
+     */
+    private void render(int titleRes, CharSequence body, boolean error, CharSequence buttonLabel) {
         title.setText(titleRes);
         message.setText(body);
-        setVisual(visual);
+        message.setTextColor(ContextCompat.getColor(activity, error ? R.color.danger : R.color.text_secondary));
         icon.setVisibility(View.GONE);
         detail.setVisibility(View.GONE);
         progress.setVisibility(View.GONE);
@@ -256,49 +249,24 @@ public final class UpdateGate {
         }
     }
 
-    /** Lottie slot: anoy_sync loops while checking, anoy_success plays once. */
-    private void setVisual(int visual) {
-        if (visual == VISUAL_NONE) {
-            anim.cancelAnimation();
-            anim.setVisibility(View.GONE);
-            animRes = 0;
-            return;
-        }
-        int res = visual == VISUAL_SYNC ? R.raw.anoy_sync : R.raw.anoy_success;
-        anim.setVisibility(View.VISIBLE);
-        if (animRes == res) return;
-        animRes = res;
-        anim.setAnimation(res);
-        if (Ui.reducedMotion(activity)) {
-            // Reduced motion: the final frame, no movement.
-            anim.setProgress(1f);
-            return;
-        }
-        anim.setRepeatCount(visual == VISUAL_SYNC ? LottieDrawable.INFINITE : 0);
-        anim.playAnimation();
-    }
-
-    /** 56 dp tile above the title for non-animated states. */
-    private void showIcon(int drawable, int tile, int tint) {
-        icon.setImageResource(drawable);
-        icon.setBackgroundResource(tile);
-        ImageViewCompat.setImageTintList(icon, ColorStateList.valueOf(ContextCompat.getColor(activity, tint)));
-        icon.setVisibility(View.VISIBLE);
+    /** 3 dp indeterminate bar (checking, installing). */
+    private void showIndeterminateBar() {
+        progress.setVisibility(View.VISIBLE);
+        setIndeterminate(true);
     }
 
     private void renderChecking() {
-        render(R.string.update_checking_title, activity.getString(R.string.update_checking_message), VISUAL_SYNC, null);
+        render(R.string.update_checking_title, activity.getString(R.string.update_checking_message), false, null);
+        showIndeterminateBar();
     }
 
     private void renderRequired(String version, String localVersion, boolean libUsable, long size) {
         CharSequence body = libUsable
                 ? activity.getString(R.string.update_required_message, version, localVersion)
                 : activity.getString(R.string.update_required_message_missing, version);
-        render(R.string.update_required_title, body, VISUAL_NONE, activity.getString(R.string.update_now));
-        showIcon(R.drawable.ic_download, R.drawable.bg_status_blue, R.color.blue);
+        render(R.string.update_required_title, body, false, activity.getString(R.string.update_now));
         if (size > 0) {
-            detail.setText(Ui.bytes(size));
-            detail.setContentDescription(activity.getString(R.string.update_size, Ui.bytes(size)));
+            detail.setText(activity.getString(R.string.update_size, Ui.bytes(size)));
             detail.setVisibility(View.VISIBLE);
         }
         action.setOnClickListener(v -> {
@@ -309,22 +277,17 @@ public final class UpdateGate {
 
     private void renderDownloading() {
         render(R.string.update_downloading_title, activity.getString(R.string.update_downloading_message),
-                VISUAL_NONE, null);
-        showIcon(R.drawable.ic_download, R.drawable.bg_status_blue, R.color.blue);
+                false, null);
     }
 
     private void renderInstalling() {
         render(R.string.update_installing_title, activity.getString(R.string.update_installing_message),
-                VISUAL_NONE, null);
-        showIcon(R.drawable.ic_package, R.drawable.bg_status_blue, R.color.blue);
-        progress.setVisibility(View.VISIBLE);
-        setIndeterminate(true);
+                false, null);
+        showIndeterminateBar();
     }
 
     private void renderCheckFailed(String reason) {
-        render(R.string.update_check_failed_title, reason, VISUAL_NONE, activity.getString(R.string.try_again));
-        showIcon(R.drawable.ic_wifi_off, R.drawable.bg_status_danger, R.color.danger);
-        action.setIconResource(R.drawable.ic_rotate_cw);
+        render(R.string.update_check_failed_title, reason, true, activity.getString(R.string.try_again));
         action.setOnClickListener(v -> {
             Ui.tap(v);
             runCheck();
@@ -332,9 +295,7 @@ public final class UpdateGate {
     }
 
     private void renderDownloadFailed(String reason) {
-        render(R.string.update_failed_title, reason, VISUAL_NONE, activity.getString(R.string.try_again));
-        showIcon(R.drawable.ic_circle_alert, R.drawable.bg_status_danger, R.color.danger);
-        action.setIconResource(R.drawable.ic_rotate_cw);
+        render(R.string.update_failed_title, reason, true, activity.getString(R.string.try_again));
         action.setOnClickListener(v -> {
             Ui.tap(v);
             startDownload();
@@ -398,8 +359,25 @@ public final class UpdateGate {
     }
 
     private void showDone(String version) {
+        // The bar (if any) fills to 100 % over 180 ms; then the check.
+        boolean hadBar = progress.getVisibility() == View.VISIBLE;
+        int from = progress.isIndeterminate() ? 0 : progress.getProgress();
         render(R.string.update_done_title, activity.getString(R.string.update_done_message, version),
-                VISUAL_SUCCESS, null);
+                false, null);
+        icon.setVisibility(View.VISIBLE);
+        if (hadBar) {
+            progress.setVisibility(View.VISIBLE);
+            setIndeterminate(false);
+            if (Ui.reducedMotion(activity)) {
+                progress.setProgressCompat(100, false);
+            } else {
+                ValueAnimator fill = ValueAnimator.ofInt(from, 100);
+                fill.setDuration(Ui.SHORT);
+                fill.setInterpolator(new LinearInterpolator());
+                fill.addUpdateListener(a -> progress.setProgressCompat((int) a.getAnimatedValue(), false));
+                fill.start();
+            }
+        }
         Ui.confirm(title);
         if (!holdDone) main.postDelayed(this::finish, DONE_VISIBLE_MS);
     }
@@ -453,19 +431,21 @@ public final class UpdateGate {
         });
     }
 
-    /** 6 dp bar with mono tabular text; indeterminate when the size is unknown. */
+    /** 3 dp bar with "x.x of y.y MB" in Mono; indeterminate when the size is unknown. */
     private void showProgress(long done, long total, int percent) {
         progress.setVisibility(View.VISIBLE);
         progressText.setVisibility(View.VISIBLE);
         if (percent >= 0) {
             setIndeterminate(false);
             progress.setProgressCompat(percent, !Ui.reducedMotion(activity));
-            progressText.setText(activity.getString(R.string.update_progress, percent,
+            progressText.setText(Ui.bytesOf(activity, done, total));
+            progressText.setContentDescription(activity.getString(R.string.update_progress, percent,
                     Ui.bytes(done), Ui.bytes(total)));
         } else {
             // Size unknown: an indeterminate bar, never one that looks complete.
             setIndeterminate(true);
             progressText.setText(activity.getString(R.string.update_progress_unknown, Ui.bytes(done)));
+            progressText.setContentDescription(null);
         }
     }
 
@@ -473,7 +453,6 @@ public final class UpdateGate {
         if (finished || cancelled.get()) return;
         finished = true;
         keepScreenOn(false);
-        if (anim != null) anim.cancelAnimation();
         dismissQuietly();
         if (listener != null && Ui.alive(activity)) listener.onReady();
     }

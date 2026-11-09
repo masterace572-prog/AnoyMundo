@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Static checks for the Android UI (2.1 redesign brief).
+"""Static checks for the Android UI (2.1 brief, updated for the 2.3.0 spec).
 
 Runs on a plain checkout (no Android SDK needed). Exits non-zero when a gate
 fails and prints a PASS/FAIL line for every gate.
@@ -9,8 +9,10 @@ Gates
   2. Format strings get the right number of arguments in getString().
   3. No app logo anywhere: no ic_anoy / logo images, no bitmap resources.
   4. Colours only come from the palette in values/colors.xml.
-  5. Text never gets a filled background (only outline status chips).
-  6. Window and screens are black, primary text is white, buttons are blue pills.
+  5. Text never gets a filled background (2.3.0: no chips at all; only the
+     danger error block and the hairline help circle, which are controls).
+  6. Window and screens are black, primary text is off-white #F5F5F7, buttons
+     are blue with the 16 dp radius.
   7. Layouts contain no hardcoded user-visible text or raw text sizes.
   8. Brief rules: no purple / teal / bg_tile_*, no emoji, no default spinner,
      no Toast, no dynamic colour; Material / splashscreen / Lottie present at
@@ -225,6 +227,8 @@ gate("Colours come only from values/colors.xml", raw_colour)
 
 # --------------------------------------------- 5. no background behind text
 text_bg = []
+# 2.3.0: the error block (danger tint, r16) and the 32 dp hairline "?" circle.
+TEXT_BG_ALLOWED = ("@drawable/bg_error_block", "@drawable/bg_help_circle")
 text_tags = ("TextView", "EditText", "CheckedTextView")
 for f in layouts:
     doc = minidom.parse(str(f))
@@ -233,8 +237,8 @@ for f in layouts:
             if tag == "EditText":
                 continue  # the input field shape is a control, not text styling
             bg = el.getAttribute("android:background")
-            if bg.startswith("@drawable/bg_chip_"):
-                continue  # outline-only status chip (checked below)
+            if bg in TEXT_BG_ALLOWED:
+                continue  # a control shape, not text styling
             if bg and bg not in ("@null", "@android:color/transparent"):
                 text_bg.append(f"{rel(f)}: <{tag} id={el.getAttribute('android:id')}> background={bg}")
 styles_src = (RES / "values/styles.xml").read_text()
@@ -248,9 +252,7 @@ for f in java_files:
         if any(k in var for k in ("text", "label", "title", "message", "value", "note", "footer", "error")):
             text_bg.append(f"{rel(f)}: {m.group(0)}")
 for chip in sorted(RES.glob("drawable/bg_chip_*.xml")):
-    src = chip.read_text()
-    if "<stroke" not in src or not re.search(r'<solid android:color="@color/transparent"', src):
-        text_bg.append(f"{rel(chip)} must be an outline (transparent fill + stroke)")
+    text_bg.append(f"{rel(chip)}: 2.3.0 has no chips or pills - status is a 6 dp dot + text")
 gate("Text has no filled background of its own", text_bg)
 
 # --------------------------------------------- 6. black / white / blue theme
@@ -271,7 +273,7 @@ if not re.search(r'<style name="AppTheme"[^>]*>.*?name="android:windowBackground
     theme.append("AppTheme windowBackground is not @color/black")
 if not re.search(r'name="android:textColorPrimary">@color/(white|text_primary)<', styles_src):
     theme.append("primary text colour is not white")
-if colour("text_primary") and colour("text_primary") not in ("#FFFFFF", "#FFFFFFFF"):
+if colour("text_primary") and colour("text_primary") not in ("#F5F5F7", "#FFF5F5F7"):
     theme.append(f"text_primary is {colour('text_primary')}")
 m_btn = re.search(r'<style name="Widget.Anoy.Button" [^>]*>(.*?)</style>', styles_src, re.S)
 btn_bg = (RES / "color/button_bg.xml").read_text() if (RES / "color/button_bg.xml").exists() else ""
@@ -279,8 +281,8 @@ if not m_btn or "@color/button_bg" not in m_btn.group(1) or "@dimen/button_radiu
     theme.append("Widget.Anoy.Button is not a button_bg tinted pill with button_radius")
 if "@color/blue" not in btn_bg:
     theme.append("color/button_bg is not blue")
-if not re.search(r'<dimen name="button_radius">28dp<', (RES / "values/dimens.xml").read_text()):
-    theme.append("button_radius must be 28dp (56 dp pill)")
+if not re.search(r'<dimen name="button_radius">16dp<', (RES / "values/dimens.xml").read_text()):
+    theme.append("button_radius must be 16dp (2.3.0 spec)")
 for f in layouts:
     src = f.read_text()
     # Root element only. No background at all is fine: the theme window is black
@@ -289,7 +291,8 @@ for f in layouts:
     root = minidom.parseString(src.encode()).documentElement
     root_bg = root.getAttribute("android:background")
     # Sheet layouts (dialog_*, sheet_*) inherit the sheet surface.
-    if root_bg and root_bg != "@color/black":
+    if root_bg and root_bg != "@color/black" and not (
+            f.name.startswith(("sheet_", "dialog_")) and root_bg == "@drawable/bg_sheet"):
         theme.append(f"{rel(f)}: root background {root_bg}")
 gate("Black background, white text, rounded blue buttons", theme)
 

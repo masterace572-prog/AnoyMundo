@@ -38,18 +38,18 @@ import java.util.concurrent.Executors;
  * (res/drawable/splash_mark.xml, the launcher icon's outlines). This activity
  * starts on the same image in the same place, then:
  * <pre>
- *   0.00-0.50 s  arrive   "Welcome To / Anoy Loader" fades in and rises 12 dp
- *                         while the system wordmark cross-fades out
- *   0.50-1.15 s  read     hold
- *   1.15-1.67 s  leave    "Welcome To" fades out while drifting up 8 dp
- *   1.20-1.80 s  move     "Anoy Loader" glides up onto the true screen centre
- *   1.56-2.26 s  swap     "Loader" cross-dissolves into "Hax" in the same slot
- *                         while the pair re-centres. The fades overlap: "Hax"
- *                         is in by 70 % and "Loader" only leaves from 30 %, so
- *                         both words share the slot mid-way and it never looks
- *                         empty - no gap, no pop
- *   2.26-2.85 s  settle   hold "Anoy Hax"
- *   2.85 s       handoff  existing 320 ms cross-fade into LogAct (~3.17 s)
+ *   0.00-0.40 s  arrive   kicker "WELCOME TO" fades in (400 ms) while the system
+ *                         wordmark cross-fades out; "Anoy Loader" follows 120 ms
+ *                         later (no rise); the version at ~0.26 s, status ~0.6 s
+ *   0.52-1.15 s  read     hold
+ *   1.15-1.67 s  leave    the kicker fades out while drifting up 8 dp
+ *   1.20-1.72 s  move     "Anoy Loader" glides up onto the lockup's centre line
+ *   1.56-2.01 s  swap     "Loader" dissolves into "Hax" in the same slot, opacity
+ *                         only, 450 ms, while the pair re-centres. The fades
+ *                         overlap: "Hax" is in by 70 % and "Loader" only leaves
+ *                         from 30 %, so the slot never looks empty
+ *   2.01-2.85 s  settle   hold "Anoy Hax"
+ *   2.85 s       handoff  280 ms cross-fade into LogAct (~3.13 s)
  * </pre>
  * 2.2.0: meanwhile the app (APK) update check runs and the bottom status line
  * reports it. The hand-off waits for BOTH the film and the check: up to date
@@ -68,24 +68,23 @@ public class SplashActivity extends AppCompatActivity {
     // ---- Timeline (ms). Tuned together: change one, check the others. ----
     /** System-splash wordmark cross-fades out as the lockup arrives. */
     private static final long MARK_FADE_MS = 220L;
-    /** Arrive: rise into place (emphasized decelerate) and fade in. */
-    private static final long ARRIVE_MS = 500L;
+    /** Arrive: opacity only. The kicker first, the name 120 ms later. */
     private static final long ARRIVE_FADE_MS = 400L;
-    private static final float ARRIVE_RISE_DP = 12f;
+    private static final long NAME_AT_MS = 120L;
     /** Leave: the greeting fades out and drifts up. Never clipped or scaled. */
     private static final long CUT_AT_MS = 1150L;
     private static final long CUT_MS = 520L;
     private static final float CUT_DRIFT_DP = 8f;
     /** Move: "Anoy Loader" glides into the space the greeting left. */
     private static final long MOVE_AT_MS = CUT_AT_MS + 50L;
-    private static final long MOVE_MS = 600L;
+    private static final long MOVE_MS = 520L;
     /**
      * Swap: "Loader" and "Hax" cross-dissolve in the same slot (start edges
      * aligned) while the pair re-centres. It starts as the move settles, so the
      * whole cut reads as one continuous gesture.
      */
     private static final long SWAP_AT_MS = MOVE_AT_MS + 360L;
-    private static final long SWAP_MS = 700L;
+    private static final long SWAP_MS = 450L;
     /**
      * Overlapping fade windows within the swap: "Hax" fades in over 0-70 % and
      * "Loader" fades out over 30-100 %. Mid-way both are 84 % visible, so the
@@ -93,9 +92,11 @@ public class SplashActivity extends AppCompatActivity {
      */
     private static final float HAX_IN_END = 0.70f;
     private static final float LOADER_OUT_START = 0.30f;
-    /** Version footer fades in early, as before. */
+    /** Version fades in early; the status line at ~600 ms. */
     private static final long VERSION_AT_MS = 260L;
     private static final long VERSION_MS = 320L;
+    private static final long STATUS_AT_MS = 600L;
+    private static final long STATUS_MS = 280L;
     /** End of the film = hand-off (plus the 320 ms activity cross-fade). */
     private static final long FILM_MS = 2850L;
     /** Reduced motion: hold the welcome, cut to the final line, hold, hand off. */
@@ -110,7 +111,6 @@ public class SplashActivity extends AppCompatActivity {
     /** Inter cap height (1490 / 2048 em): used to centre the line optically. */
     private static final float CAP_HEIGHT_EM = 1490f / 2048f;
 
-    private static final Interpolator EMPHASIZED_DECELERATE = new PathInterpolator(0.05f, 0.7f, 0.1f, 1f);
     private static final Interpolator FAST_OUT_SLOW_IN = new PathInterpolator(0.4f, 0f, 0.2f, 1f);
     /**
      * Symmetric ease-in-out for the cross-dissolve and its slide: no
@@ -129,8 +129,15 @@ public class SplashActivity extends AppCompatActivity {
     public static final String EXTRA_QA_APP_UPDATE = "qa_app_update";
     /** Status line: the check starts once the version and status have faded in. */
     private static final long CHECK_AT_MS = VERSION_AT_MS + VERSION_MS;
-    /** "Proceeding..." / "Update available" stay readable this long before the hand-off. */
+    /** "Up to date" (green check) stays on screen at least this long before the hand-off. */
+    private static final long CURRENT_HOLD_MS = 700L;
+    /** "Update available" stays readable this long after its crossfade. */
     private static final long PROCEED_MS = 400L;
+    /** Status crossfades: done 180 out / 220 in; update and failure 280 in total. */
+    private static final long DONE_OUT_MS = 180L;
+    private static final long DONE_IN_MS = 220L;
+    private static final long SWAP_OUT_MS = 100L;
+    private static final long SWAP_IN_MS = 180L;
     /** Debug simulation: how long the fake check takes. */
     private static final long QA_CHECK_MS = 900L;
 
@@ -149,7 +156,10 @@ public class SplashActivity extends AppCompatActivity {
     private TextView hax;
     private TextView version;
     private View statusBar;
+    private View statusRow;
     private View statusSpinner;
+    /** Uptime when the current status text appeared (for the "Up to date" hold). */
+    private long statusShownAt;
     private TextView statusLine;
     private TextView statusDetail;
     private View retry;
@@ -162,7 +172,6 @@ public class SplashActivity extends AppCompatActivity {
     private String qaUpdate;
     private ValueAnimator film;
     private ValueAnimator breath;
-    private float risePx;
     private float driftPx;
     /** Measured after layout: vertical move to the centre, horizontal re-centre. */
     private float moveDy;
@@ -203,6 +212,7 @@ public class SplashActivity extends AppCompatActivity {
             version = findViewById(R.id.splashVersion);
             version.setText(getString(R.string.splash_version, BuildConfig.VERSION_NAME));
             statusBar = findViewById(R.id.splashStatusBar);
+            statusRow = findViewById(R.id.splashStatusRow);
             statusSpinner = findViewById(R.id.splashStatusSpinner);
             statusLine = findViewById(R.id.splashStatus);
             statusDetail = findViewById(R.id.splashStatusDetail);
@@ -211,7 +221,6 @@ public class SplashActivity extends AppCompatActivity {
                 Ui.tap(v);
                 startCheck();
             });
-            risePx = Ui.dp(this, ARRIVE_RISE_DP);
             driftPx = Ui.dp(this, CUT_DRIFT_DP);
             // One real word space between "Anoy" and the Loader/Hax slot.
             TextView anoy = findViewById(R.id.splashAnoy);
@@ -219,9 +228,9 @@ public class SplashActivity extends AppCompatActivity {
             ViewGroup.MarginLayoutParams slot = (ViewGroup.MarginLayoutParams) slotView.getLayoutParams();
             slot.setMarginStart(Math.round(anoy.getPaint().measureText(" ")));
             slotView.setLayoutParams(slot);
-            final int footerMargin = getResources().getDimensionPixelSize(R.dimen.space_24);
-            final int versionTop = getResources().getDimensionPixelSize(R.dimen.space_16);
-            final int versionEnd = getResources().getDimensionPixelSize(R.dimen.screen_padding);
+            final int footerMargin = getResources().getDimensionPixelSize(R.dimen.space_32);
+            final int versionTop = getResources().getDimensionPixelSize(R.dimen.gutter_wide);
+            final int versionEnd = getResources().getDimensionPixelSize(R.dimen.gutter_wide);
             Ui.onInsets(root, (bars, bottom, ime) -> {
                 // Only re-lays out when an inset really changes - never per frame.
                 ViewGroup.MarginLayoutParams lp = (ViewGroup.MarginLayoutParams) version.getLayoutParams();
@@ -234,8 +243,10 @@ public class SplashActivity extends AppCompatActivity {
                 }
                 ViewGroup.MarginLayoutParams sp = (ViewGroup.MarginLayoutParams) statusBar.getLayoutParams();
                 int margin = footerMargin + bars.bottom;
-                if (sp.bottomMargin != margin) {
+                if (sp.bottomMargin != margin || sp.leftMargin != bars.left || sp.rightMargin != bars.right) {
                     sp.bottomMargin = margin;
+                    sp.leftMargin = bars.left;
+                    sp.rightMargin = bars.right;
                     statusBar.setLayoutParams(sp);
                 }
             });
@@ -311,7 +322,7 @@ public class SplashActivity extends AppCompatActivity {
         final int run = ++checkRun;
         check = Check.CHECKING;
         release = null;
-        setStatus(getString(R.string.splash_status_checking), 0, R.color.text_tertiary, true);
+        setStatus(getString(R.string.splash_status_checking), 0, 0, true, 0, 0);
         hideFailure();
         if (qaUpdate != null) {
             simulateCheck(run);
@@ -338,12 +349,13 @@ public class SplashActivity extends AppCompatActivity {
         if (found == null) {
             check = Check.CURRENT;
             Log.i("SplashActivity", "App is up to date (" + BuildConfig.VERSION_CODE + ")");
-            setStatus(getString(R.string.splash_status_current), R.drawable.ic_circle_check, R.color.success, false);
+            setStatus(getString(R.string.splash_status_current), R.drawable.ic_check, R.color.success, false,
+                    DONE_OUT_MS, DONE_IN_MS);
         } else {
             check = Check.AVAILABLE;
             Log.i("SplashActivity", "App update available: " + found.versionName + " (" + found.versionCode + ")");
-            setStatus(getString(R.string.splash_status_available, found.versionName),
-                    R.drawable.ic_arrow_down_to_line, R.color.blue, false);
+            setStatus(getString(R.string.splash_status_available, found.versionName), 0, 0, false,
+                    SWAP_OUT_MS, SWAP_IN_MS);
         }
         if (maybeProceed() && breath != null) {
             breath.cancel();
@@ -354,7 +366,8 @@ public class SplashActivity extends AppCompatActivity {
     private void onCheckFailed(int run, String reason) {
         if (run != checkRun || !Ui.alive(this)) return;
         check = Check.FAILED;
-        setStatus(getString(R.string.splash_status_failed), R.drawable.ic_circle_alert, R.color.danger, false);
+        setStatus(getString(R.string.splash_status_failed), R.drawable.dot_status, R.color.warning, false,
+                SWAP_OUT_MS, SWAP_IN_MS);
         statusDetail.setText(reason);
         statusDetail.setVisibility(reason == null || reason.isEmpty() ? View.GONE : View.VISIBLE);
         retry.setVisibility(View.VISIBLE);
@@ -369,24 +382,46 @@ public class SplashActivity extends AppCompatActivity {
      */
     private boolean maybeProceed() {
         if (!filmDone || hold || handingOff) return false;
+        long shown = android.os.SystemClock.uptimeMillis() - statusShownAt;
         if (check == Check.CURRENT) {
+            // The green check + "Up to date" holds for at least 700 ms.
             handingOff = true;
-            setStatus(getString(R.string.splash_status_proceeding), 0, R.color.text_tertiary, true);
-            handler.postDelayed(this::openLogin, PROCEED_MS);
+            handler.postDelayed(this::openLogin, Math.max(0L, DONE_OUT_MS + CURRENT_HOLD_MS - shown));
             return true;
         }
         if (check == Check.AVAILABLE && release != null) {
             handingOff = true;
-            handler.postDelayed(this::openUpdate, PROCEED_MS);
+            handler.postDelayed(this::openUpdate, Math.max(0L, SWAP_OUT_MS + SWAP_IN_MS + PROCEED_MS - shown));
             return true;
         }
         return false;
     }
 
-    private void setStatus(String text, int iconRes, int colourRes, boolean spinner) {
-        int colour = ContextCompat.getColor(this, colourRes);
+    /**
+     * Status line: Caption text with a 14 dp spinner, a tinted glyph (green
+     * check, amber dot) or nothing. With durations it crossfades (opacity
+     * only); before the line is visible, or with animations off, it is instant.
+     */
+    private void setStatus(String text, int iconRes, int colourRes, boolean spinner, long outMs, long inMs) {
+        statusShownAt = android.os.SystemClock.uptimeMillis();
+        boolean animate = outMs > 0 && statusBar.getAlpha() > 0f && !Ui.reducedMotion(this);
+        statusRow.animate().cancel();
+        if (!animate) {
+            statusRow.setAlpha(1f);
+            applyStatus(text, iconRes, colourRes, spinner);
+            return;
+        }
+        statusRow.animate().alpha(0f).setDuration(outMs).setInterpolator(new LinearInterpolator())
+                .withEndAction(() -> {
+                    if (!Ui.alive(this)) return;
+                    applyStatus(text, iconRes, colourRes, spinner);
+                    statusRow.animate().alpha(1f).setDuration(inMs).setInterpolator(new LinearInterpolator()).start();
+                }).start();
+    }
+
+    private void applyStatus(String text, int iconRes, int colourRes, boolean spinner) {
         statusLine.setText(text);
-        statusLine.setTextColor(colour);
+        int colour = ContextCompat.getColor(this, colourRes != 0 ? colourRes : R.color.text_secondary);
         Drawable glyph = null;
         if (iconRes != 0) {
             glyph = ContextCompat.getDrawable(this, iconRes);
@@ -429,7 +464,7 @@ public class SplashActivity extends AppCompatActivity {
     }
 
     private static AppUpdater.Release sampleRelease(boolean mandatory) {
-        return new AppUpdater.Release("2.3.0", BuildConfig.VERSION_CODE + 1,
+        return new AppUpdater.Release("2.4.0", BuildConfig.VERSION_CODE + 1,
                 "https://github.com/masterace572-prog/AnoyMundo/releases/download/sample/Anoy.apk",
                 "Faster start-up\nClearer update messages\nFixes for the game files copy", mandatory);
     }
@@ -453,7 +488,9 @@ public class SplashActivity extends AppCompatActivity {
         // Optical centre of the line = middle of the cap band above the baseline.
         float capCentre = lockup.getTop() + name.getTop() + anoy.getTop() + anoy.getBaseline()
                 - CAP_HEIGHT_EM * anoy.getTextSize() / 2f;
-        moveDy = root.getHeight() / 2f - capCentre;
+        // Once the kicker has left, the name settles on the lockup's centre line
+        // (~42 % of the height), so the screen keeps its composition.
+        moveDy = lockup.getTop() + lockup.getHeight() / 2f - capCentre;
         // "Hax" sits where "Loader" starts; shift the pair so "Anoy Hax" is centred.
         recentreDx = (loader.getWidth() - hax.getWidth()) / 2f;
         measured = true;
@@ -464,13 +501,14 @@ public class SplashActivity extends AppCompatActivity {
     private void applyTime(long t) {
         mark.setAlpha(1f - progress(t, 0, MARK_FADE_MS, FAST_OUT_SLOW_IN));
 
-        lockup.setAlpha(progress(t, 0, ARRIVE_FADE_MS, FAST_OUT_SLOW_IN));
-        lockup.setTranslationY((1f - progress(t, 0, ARRIVE_MS, EMPHASIZED_DECELERATE)) * risePx);
+        lockup.setAlpha(1f);
+        float arrive = progress(t, 0, ARRIVE_FADE_MS, FAST_OUT_SLOW_IN);
+        if (breath == null) name.setAlpha(progress(t, NAME_AT_MS, ARRIVE_FADE_MS, FAST_OUT_SLOW_IN));
 
         // Greeting leaves: fade + gentle upward drift, sub-pixel. It stays
         // VISIBLE until its alpha is exactly 0.
         float leave = progress(t, CUT_AT_MS, CUT_MS, FAST_OUT_SLOW_IN);
-        greeting.setAlpha(1f - leave);
+        greeting.setAlpha(arrive * (1f - leave));
         greeting.setTranslationY(-leave * driftPx);
         greeting.setVisibility(leave >= 1f ? View.INVISIBLE : View.VISIBLE);
 
@@ -483,10 +521,10 @@ public class SplashActivity extends AppCompatActivity {
         hax.setAlpha(DISSOLVE.getInterpolation(window(swap, 0f, HAX_IN_END)));
         loader.setAlpha(1f - DISSOLVE.getInterpolation(window(swap, LOADER_OUT_START, 1f)));
 
-        float footer = progress(t, VERSION_AT_MS, VERSION_MS, FAST_OUT_SLOW_IN);
-        version.setAlpha(footer);
+        version.setAlpha(progress(t, VERSION_AT_MS, VERSION_MS, FAST_OUT_SLOW_IN));
         // Once shown, the status line stays (it may carry an error and Retry).
-        if (statusBar.getAlpha() < footer) statusBar.setAlpha(footer);
+        float status = progress(t, STATUS_AT_MS, STATUS_MS, FAST_OUT_SLOW_IN);
+        if (statusBar.getAlpha() < status) statusBar.setAlpha(status);
     }
 
     /**
@@ -556,7 +594,7 @@ public class SplashActivity extends AppCompatActivity {
         if (opened || !Ui.alive(this)) return;
         opened = true;
         startActivity(new Intent(this, LogAct.class));
-        // 320 ms crossfade + 8 dp drift (res/anim/fade_in, fade_out).
+        // 280 ms crossfade (res/anim/fade_in, fade_out).
         overridePendingTransition(R.anim.fade_in, R.anim.fade_out);
         finish();
     }

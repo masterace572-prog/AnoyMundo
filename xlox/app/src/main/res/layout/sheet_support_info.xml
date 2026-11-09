@@ -1,62 +1,69 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Preview of the support info before it is copied (no licence key, no paths). -->
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<!--
+  Support info (spec 3.9): the shared sheet with a handle. Kicker HELP +
+  Title M, Body S "Your licence key isn't included.", the exact text that is
+  copied in a #0E0E10 hairline block (Mono 12.5 / 20, keys secondary; at most
+  ~45 % of the height, scrolls inside), then Copy (48) and Cancel. After Copy
+  the button reads "Copied" with a check for ~800 ms, then the sheet closes.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/supportInfoRoot"
-    android:layout_width="match_parent"
-    android:layout_height="wrap_content">
+    style="@style/Sheet.Draggable">
 
-    <LinearLayout
+    <View style="@style/SheetHandle" />
+
+    <TextView
+        style="@style/Text.Kicker"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:paddingStart="@dimen/space_24"
-        android:paddingTop="@dimen/space_32"
-        android:paddingEnd="@dimen/space_24"
-        android:paddingBottom="@dimen/space_24">
+        android:text="@string/help_title" />
+
+    <TextView
+        style="@style/Text.TitleM"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/kicker_gap"
+        android:accessibilityHeading="true"
+        android:text="@string/support_info_title" />
+
+    <TextView
+        style="@style/Text.BodyS"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/space_8"
+        android:text="@string/support_info_no_key" />
+
+    <ScrollView
+        android:id="@+id/supportInfoScroll"
+        style="@style/Scroll"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/space_16"
+        android:background="@drawable/bg_well"
+        android:fillViewport="false">
 
         <TextView
-            style="@style/Text.Title"
+            android:id="@+id/supportInfoText"
+            style="@style/Text.MonoBlock"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:accessibilityHeading="true"
-            android:text="@string/support_info_title" />
+            android:padding="@dimen/space_16"
+            android:textIsSelectable="true" />
+    </ScrollView>
 
-        <TextView
-            style="@style/Text.Secondary"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/space_8"
-            android:text="@string/support_info_message" />
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/supportInfoCopy"
+        style="@style/Widget.Anoy.Button.Sheet"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/space_20"
+        android:text="@string/support_info_copy" />
 
-        <com.google.android.material.card.MaterialCardView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/space_16">
-
-            <TextView
-                android:id="@+id/supportInfoText"
-                style="@style/Text.Mono"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:padding="@dimen/card_padding"
-                android:textSize="@dimen/text_caption"
-                android:textIsSelectable="true" />
-        </com.google.android.material.card.MaterialCardView>
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/supportInfoCopy"
-            style="@style/Widget.Anoy.Button"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/space_24"
-            android:text="@string/support_info_copy" />
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/supportInfoCancel"
-            style="@style/Widget.Anoy.Button.Secondary"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/space_12"
-            android:text="@string/cancel" />
-    </LinearLayout>
-</ScrollView>
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/supportInfoCancel"
+        style="@style/Widget.Anoy.Button.Text.Secondary"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/space_4"
+        android:text="@string/cancel" />
+</LinearLayout>

@@ -5,30 +5,33 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageInstaller;
-import android.content.res.ColorStateList;
-import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
+import android.text.SpannableStringBuilder;
+import android.text.Spanned;
+import android.text.style.ForegroundColorSpan;
+import android.view.LayoutInflater;
 import android.view.View;
+import android.view.ViewGroup;
 import android.view.WindowManager;
-import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import androidx.activity.OnBackPressedCallback;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 import androidx.core.content.IntentCompat;
-import androidx.core.widget.TextViewCompat;
 
 import com.google.android.material.button.MaterialButton;
-import com.google.android.material.progressindicator.LinearProgressIndicator;
 import com.xlox.ui.Ui;
 import com.xlox.utils.AppUpdater;
 import com.xlox.utils.UpdateException;
 
 import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -73,10 +76,9 @@ public class AppUpdateActivity extends AppCompatActivity {
     private long lastProgressAt;
     private boolean opened;
 
-    private ImageView icon;
-    private TextView titleText;
+    private TextView kickerText;
     private TextView statusText;
-    private LinearProgressIndicator progress;
+    private TextView errorText;
     private TextView progressText;
     private MaterialButton primary;
     private MaterialButton later;
@@ -108,10 +110,9 @@ public class AppUpdateActivity extends AppCompatActivity {
         }
         Ui.edgeToEdge(this);
         setContentView(R.layout.activity_app_update);
-        icon = findViewById(R.id.appUpdateIcon);
-        titleText = findViewById(R.id.appUpdateTitle);
+        kickerText = findViewById(R.id.appUpdateKicker);
         statusText = findViewById(R.id.appUpdateStatus);
-        progress = findViewById(R.id.appUpdateProgress);
+        errorText = findViewById(R.id.appUpdateError);
         progressText = findViewById(R.id.appUpdateProgressText);
         primary = findViewById(R.id.appUpdatePrimary);
         later = findViewById(R.id.appUpdateLater);
@@ -120,28 +121,46 @@ public class AppUpdateActivity extends AppCompatActivity {
         View content = findViewById(R.id.appUpdateContent);
         View bar = findViewById(R.id.appUpdateBar);
         View panel = findViewById(R.id.appUpdatePanel);
+        View divider = findViewById(R.id.appUpdateDivider);
+        android.widget.ScrollView scroll = findViewById(R.id.appUpdateScroll);
         Ui.maxWidth(content, 600);
         Ui.maxWidth(panel, 600);
+        // Pinned footer: a hairline only while content runs underneath it.
+        Runnable syncDivider = () -> divider.setVisibility(scroll.canScrollVertically(1) ? View.VISIBLE : View.INVISIBLE);
+        scroll.getViewTreeObserver().addOnScrollChangedListener(syncDivider::run);
+        scroll.addOnLayoutChangeListener((v, l, t, r, b, ol, ot, or, ob) -> v.post(syncDivider));
         Ui.onInsets(root, (bars, bottom, ime) -> {
             root.setPadding(bars.left, bars.top, bars.right, 0);
             Ui.padBottom(panel, bars.bottom);
         });
         bar.addOnLayoutChangeListener((v, l, t, r, b, ol, ot, or, ob) -> {
-            int needed = (b - t) + Ui.dp(this, 16);
+            int needed = (b - t) + Ui.dp(this, 24);
             if (content.getPaddingBottom() != needed) {
                 content.setPadding(content.getPaddingLeft(), content.getPaddingTop(),
                         content.getPaddingRight(), needed);
             }
         });
 
-        titleText.setText(release.mandatory ? R.string.app_update_title_required : R.string.app_update_title);
-        ((TextView) findViewById(R.id.appUpdateSubtitle)).setText(getString(release.mandatory
+        kickerText.setText(release.mandatory ? R.string.app_update_title_required : R.string.app_update_title);
+        // "2.2.0 → 2.3.0": the installed version tertiary, the new one primary.
+        TextView versions = findViewById(R.id.appUpdateSubtitle);
+        SpannableStringBuilder line = new SpannableStringBuilder(BuildConfig.VERSION_NAME);
+        line.setSpan(new ForegroundColorSpan(ContextCompat.getColor(this, R.color.text_tertiary)),
+                0, line.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        int arrow = line.length();
+        line.append(" \u2192 ");
+        line.setSpan(new ForegroundColorSpan(ContextCompat.getColor(this, R.color.text_tertiary)),
+                arrow, line.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        line.append(release.versionName);
+        versions.setText(line);
+        versions.setContentDescription(getString(release.mandatory
                         ? R.string.app_update_subtitle_required : R.string.app_update_subtitle,
                 release.versionName, BuildConfig.VERSION_NAME));
-        String notes = formatChangelog(release.changelog);
-        ((TextView) findViewById(R.id.appUpdateNotes)).setText(notes != null ? notes
-                : getString(R.string.app_update_no_changelog));
+        List<String> notes = changelogItems(release.changelog);
+        if (notes.isEmpty()) notes.add(getString(R.string.app_update_no_changelog));
+        fillNotes(findViewById(R.id.appUpdateNotes), notes);
         later.setVisibility(release.mandatory ? View.GONE : View.VISIBLE);
+        findViewById(R.id.appUpdateRequired).setVisibility(release.mandatory ? View.VISIBLE : View.GONE);
 
         primary.setOnClickListener(v -> {
             Ui.tap(v);
@@ -171,22 +190,32 @@ public class AppUpdateActivity extends AppCompatActivity {
                 + (release.mandatory ? ", mandatory" : ""));
         render(State.READY, null);
         if (preview) applyQaState();
-        Ui.stagger((android.view.ViewGroup) content, 0);
-        Ui.reveal(bar, 120);
     }
 
-    /** Bulleted, trimmed changelog lines; a plain line when the release has none. */
-    static String formatChangelog(String raw) {
-        if (raw == null || raw.trim().isEmpty()) return null;
-        StringBuilder b = new StringBuilder();
+    /** Trimmed changelog lines without their list markers; empty when the release has none. */
+    static List<String> changelogItems(String raw) {
+        List<String> items = new ArrayList<>();
+        if (raw == null || raw.trim().isEmpty()) return items;
         for (String line : raw.replace("\r", "").split("\n")) {
             String t = line.trim();
             if (t.isEmpty()) continue;
             if (t.startsWith("- ") || t.startsWith("* ") || t.startsWith("\u2022 ")) t = t.substring(2).trim();
-            if (b.length() > 0) b.append('\n');
-            b.append("\u2022  ").append(t);
+            if (!t.isEmpty()) items.add(t);
         }
-        return b.length() == 0 ? null : b.toString();
+        return items;
+    }
+
+    /** One row per item: a 4 dp tertiary dot in a 16 dp gutter, Body text, 12 dp apart. */
+    private void fillNotes(LinearLayout list, List<String> items) {
+        LayoutInflater inflater = LayoutInflater.from(this);
+        list.removeAllViews();
+        for (int i = 0; i < items.size(); i++) {
+            View row = inflater.inflate(R.layout.item_changelog, list, false);
+            ((TextView) row.findViewById(R.id.changelogText)).setText(items.get(i));
+            ViewGroup.MarginLayoutParams lp = (ViewGroup.MarginLayoutParams) row.getLayoutParams();
+            lp.topMargin = getResources().getDimensionPixelSize(i == 0 ? R.dimen.space_16 : R.dimen.space_12);
+            list.addView(row, lp);
+        }
     }
 
     // ------------------------------------------------------------------ flow
@@ -234,24 +263,14 @@ public class AppUpdateActivity extends AppCompatActivity {
         boolean last = total > 0 && done >= total;
         if (!last && now - lastProgressAt < PROGRESS_MIN_INTERVAL_MS) return;
         lastProgressAt = now;
-        progress.setVisibility(View.VISIBLE);
         progressText.setVisibility(View.VISIBLE);
         if (total > 0) {
             int permille = (int) Math.min(1000L, done * 1000L / total);
-            if (progress.isIndeterminate()) {
-                progress.setVisibility(View.INVISIBLE);
-                progress.setIndeterminate(false);
-                progress.setVisibility(View.VISIBLE);
-            }
-            progress.setProgressCompat(permille, !Ui.reducedMotion(this));
-            progressText.setText(getString(R.string.app_update_progress, permille / 10,
-                    Ui.bytes(done), Ui.bytes(total)));
+            // Progress button: "Downloading 42%", the bytes in Mono below it.
+            primary.setText(getString(R.string.app_update_downloading_percent, permille / 10));
+            progressText.setText(Ui.bytesOf(this, done, total));
         } else {
-            if (!progress.isIndeterminate()) {
-                progress.setVisibility(View.INVISIBLE);
-                progress.setIndeterminate(true);
-                progress.setVisibility(View.VISIBLE);
-            }
+            // Size unknown: the button keeps "Downloading…" and its spinner.
             progressText.setText(done > 0 ? getString(R.string.app_update_progress_unknown, Ui.bytes(done))
                     : getString(R.string.app_update_downloading));
         }
@@ -321,81 +340,63 @@ public class AppUpdateActivity extends AppCompatActivity {
         later.setEnabled(!working || next == State.DOWNLOADING);
         switch (next) {
             case READY:
-                setIcon(R.drawable.ic_arrow_down_to_line, R.drawable.bg_status_blue, R.color.blue);
                 hideStatus();
-                progress.setVisibility(View.GONE);
                 progressText.setVisibility(View.GONE);
                 Ui.setLoading(primary, false, getString(R.string.app_update_now));
                 primary.setEnabled(true);
                 break;
             case DOWNLOADING:
-                setIcon(R.drawable.ic_arrow_down_to_line, R.drawable.bg_status_blue, R.color.blue);
                 showStatus(getString(R.string.app_update_keep_open), false);
                 Ui.setLoading(primary, true, getString(R.string.app_update_downloading));
                 break;
             case VERIFYING:
-                progress.setVisibility(View.GONE);
                 progressText.setVisibility(View.GONE);
                 showStatus(getString(R.string.app_update_keep_open), false);
                 Ui.setLoading(primary, true, getString(R.string.app_update_verifying));
                 break;
             case INSTALLING:
-                progress.setVisibility(View.GONE);
                 progressText.setVisibility(View.GONE);
                 showStatus(message != null ? message : getString(R.string.app_update_keep_open), false);
                 Ui.setLoading(primary, true, getString(R.string.app_update_installing));
                 break;
             case FAILED:
-                setIcon(R.drawable.ic_circle_alert, R.drawable.bg_status_danger, R.color.danger);
-                titleText.setText(R.string.app_update_failed_title);
-                progress.setVisibility(View.GONE);
                 progressText.setVisibility(View.GONE);
                 showStatus(message, true);
-                Ui.setLoading(primary, false, getString(R.string.app_update_retry));
+                Ui.setLoading(primary, false, getString(R.string.try_again));
                 primary.setEnabled(true);
                 break;
             case INSTALLED:
-                setIcon(R.drawable.ic_circle_check, R.drawable.bg_status_blue, R.color.blue);
                 showStatus(message, false);
                 Ui.setSuccess(primary, getString(R.string.app_update_done));
                 break;
         }
-        if (next != State.FAILED) {
-            titleText.setText(release.mandatory ? R.string.app_update_title_required : R.string.app_update_title);
-        }
     }
 
-    private void setIcon(int drawable, int tile, int colour) {
-        icon.setImageResource(drawable);
-        icon.setBackgroundResource(tile);
-        icon.setImageTintList(ColorStateList.valueOf(ContextCompat.getColor(this, colour)));
-    }
-
+    /**
+     * Quiet Caption above the button, or, for a failure, the danger-tint block
+     * "Update failed. <reason>" (the button then reads Try again).
+     */
     private void showStatus(String text, boolean error) {
         if (text == null || text.isEmpty()) {
             hideStatus();
             return;
         }
-        statusText.setText(text);
-        statusText.setTextColor(ContextCompat.getColor(this, error ? R.color.danger : R.color.text_secondary));
-        Drawable glyph = null;
         if (error) {
-            glyph = ContextCompat.getDrawable(this, R.drawable.ic_circle_alert);
-            if (glyph != null) {
-                int size = getResources().getDimensionPixelSize(R.dimen.icon_small);
-                glyph = glyph.mutate();
-                glyph.setBounds(0, 0, size, size);
-            }
-            Ui.rejectHaptic(statusText);
+            statusText.setVisibility(View.GONE);
+            errorText.setText(getString(R.string.app_update_error_block,
+                    getString(R.string.app_update_failed_title), text));
+            errorText.setVisibility(View.VISIBLE);
+            Ui.rejectHaptic(errorText);
+            return;
         }
-        statusText.setCompoundDrawablesRelative(glyph, null, null, null);
-        TextViewCompat.setCompoundDrawableTintList(statusText,
-                ColorStateList.valueOf(ContextCompat.getColor(this, R.color.danger)));
+        errorText.setVisibility(View.GONE);
+        statusText.setText(text);
         statusText.setVisibility(View.VISIBLE);
     }
 
     private void hideStatus() {
         statusText.setVisibility(View.GONE);
+        errorText.setVisibility(View.GONE);
     }
 
     // --------------------------------------------------------------- QA only

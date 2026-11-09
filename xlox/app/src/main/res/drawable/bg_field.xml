@@ -1,27 +1,28 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- 56 dp field, 14 dp radius: hairline at rest, 1.5 dp blue focus, red on error. -->
+<!-- Key field: 56 dp, surface-2, radius 16. Hairline at rest, 1.5 dp accent on
+     focus (120 ms), danger on error (state_activated). No glow, no ring. -->
 <selector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:enterFadeDuration="150"
-    android:exitFadeDuration="150">
+    android:enterFadeDuration="120"
+    android:exitFadeDuration="120">
     <item android:state_activated="true">
         <shape android:shape="rectangle">
-            <solid android:color="@color/surface" />
+            <solid android:color="@color/surface_2" />
             <stroke android:width="@dimen/focus_stroke" android:color="@color/danger" />
-            <corners android:radius="@dimen/field_radius" />
+            <corners android:radius="@dimen/radius_control" />
         </shape>
     </item>
     <item android:state_focused="true">
         <shape android:shape="rectangle">
-            <solid android:color="@color/surface" />
-            <stroke android:width="@dimen/focus_stroke" android:color="@color/blue" />
-            <corners android:radius="@dimen/field_radius" />
+            <solid android:color="@color/surface_2" />
+            <stroke android:width="@dimen/focus_stroke" android:color="@color/accent" />
+            <corners android:radius="@dimen/radius_control" />
         </shape>
     </item>
     <item>
         <shape android:shape="rectangle">
-            <solid android:color="@color/surface" />
+            <solid android:color="@color/surface_2" />
             <stroke android:width="@dimen/hairline" android:color="@color/hairline" />
-            <corners android:radius="@dimen/field_radius" />
+            <corners android:radius="@dimen/radius_control" />
         </shape>
     </item>
 </selector>

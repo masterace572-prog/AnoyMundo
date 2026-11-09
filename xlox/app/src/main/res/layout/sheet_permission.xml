@@ -1,35 +1,68 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Explains a special-access settings page before Anoy opens it. -->
+<!--
+  Permission sheet (spec 3.9): the shared sheet with a handle. Kicker
+  PERMISSION, the permission's name (Title M), WHY WE ASK + the existing
+  explanation, HOW TO ALLOW + numbered steps (Mono 12 tertiary numbers in a
+  24 dp gutter; rows built by PermissionSheet), then Continue to Settings (48)
+  and Not now. The Game files (OBB) variant is informational: no steps, one
+  "Got it".
+-->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/permExplainRoot"
-    android:layout_width="match_parent"
-    android:layout_height="wrap_content"
-    android:orientation="vertical"
-    android:paddingStart="@dimen/space_24"
-    android:paddingTop="@dimen/space_32"
-    android:paddingEnd="@dimen/space_24"
-    android:paddingBottom="@dimen/space_24">
+    style="@style/Sheet.Draggable">
+
+    <View style="@style/SheetHandle" />
+
+    <TextView
+        android:id="@+id/permExplainKicker"
+        style="@style/Text.Kicker"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/perm_kicker" />
 
     <TextView
         android:id="@+id/permExplainTitle"
-        style="@style/Text.Title"
+        style="@style/Text.TitleM"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/kicker_gap"
         android:accessibilityHeading="true"
-        tools:text="@string/perm_explain_all_files_title" />
+        tools:text="@string/settings_all_files" />
+
+    <TextView
+        android:id="@+id/permWhyTitle"
+        style="@style/Text.Kicker.Tertiary"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/space_20"
+        android:text="@string/perm_why" />
 
     <TextView
         android:id="@+id/permExplainMessage"
-        style="@style/Text.Secondary"
+        style="@style/Text.Body.Secondary"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="@dimen/space_8"
-        tools:text="@string/perm_explain_all_files_message" />
+        tools:text="@string/perm_why_all_files" />
+
+    <TextView
+        android:id="@+id/permHowTitle"
+        style="@style/Text.Kicker.Tertiary"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/space_20"
+        android:text="@string/perm_how" />
+
+    <LinearLayout
+        android:id="@+id/permSteps"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical" />
 
     <com.google.android.material.button.MaterialButton
         android:id="@+id/permExplainContinue"
-        style="@style/Widget.Anoy.Button"
+        style="@style/Widget.Anoy.Button.Sheet"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="@dimen/space_24"
@@ -37,9 +70,9 @@
 
     <com.google.android.material.button.MaterialButton
         android:id="@+id/permExplainNotNow"
-        style="@style/Widget.Anoy.Button.Secondary"
+        style="@style/Widget.Anoy.Button.Text.Secondary"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="@dimen/space_12"
+        android:layout_marginTop="@dimen/space_4"
         android:text="@string/not_now" />
 </LinearLayout>

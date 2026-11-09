@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!-- Icon buttons: grey at rest, white when pressed, blue when on (selected). -->
-<selector xmlns:android="http://schemas.android.com/apk/res/android">
-    <item android:alpha="0.4" android:color="@color/text_secondary" android:state_enabled="false" />
-    <item android:color="@color/blue" android:state_selected="true" />
-    <item android:color="@color/white" android:state_pressed="true" />
-    <item android:color="@color/text_secondary" />
-</selector>

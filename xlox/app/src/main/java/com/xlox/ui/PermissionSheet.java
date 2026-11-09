@@ -4,6 +4,8 @@ import android.app.Activity;
 import android.os.Build;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.view.ViewGroup;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -18,6 +20,9 @@ import com.xlox.utils.StorageAccess;
  * Settings" opens the page exactly as before; "Not now" (or dismissing the
  * sheet) leaves it closed. The Files runtime dialog explains itself and gets
  * no sheet.
+ *
+ * <p>2.3.0 look (spec 3.9): kicker PERMISSION, the permission's name, WHY WE
+ * ASK and HOW TO ALLOW (numbered steps), both built from the existing copy.
  */
 public final class PermissionSheet {
 
@@ -42,10 +47,15 @@ public final class PermissionSheet {
                                          @NonNull Callback callback) {
         View view = LayoutInflater.from(activity).inflate(R.layout.sheet_permission, null, false);
         boolean install = need == StorageAccess.Need.INSTALL;
-        ((TextView) view.findViewById(R.id.permExplainTitle)).setText(install
-                ? R.string.perm_explain_install_title : R.string.perm_explain_all_files_title);
+        TextView title = view.findViewById(R.id.permExplainTitle);
+        title.setText(install ? R.string.settings_install : R.string.settings_all_files);
+        // TalkBack hears the existing one-line request first.
+        title.setContentDescription(activity.getString(install
+                ? R.string.perm_explain_install_title : R.string.perm_explain_all_files_title));
         ((TextView) view.findViewById(R.id.permExplainMessage)).setText(install
-                ? R.string.perm_explain_install_message : R.string.perm_explain_all_files_message);
+                ? R.string.perm_why_install : R.string.perm_why_all_files);
+        addSteps(activity, view.findViewById(R.id.permSteps),
+                R.string.perm_step_settings, R.string.perm_step_turn_on);
         BottomSheetDialog sheet = Ui.sheet(activity, view, true);
         final boolean[] answered = {false};
         view.findViewById(R.id.permExplainContinue).setOnClickListener(v -> {
@@ -63,5 +73,43 @@ public final class PermissionSheet {
         });
         sheet.show();
         return sheet;
+    }
+
+    /**
+     * The informational variant for Game files (OBB): nothing to allow, so no
+     * steps and no settings page - the existing hint and one "Got it".
+     */
+    public static BottomSheetDialog showObbInfo(@NonNull Activity activity) {
+        View view = LayoutInflater.from(activity).inflate(R.layout.sheet_permission, null, false);
+        ((TextView) view.findViewById(R.id.permExplainKicker)).setText(R.string.settings_section_state);
+        ((TextView) view.findViewById(R.id.permExplainTitle)).setText(R.string.settings_obb);
+        view.findViewById(R.id.permWhyTitle).setVisibility(View.GONE);
+        ((TextView) view.findViewById(R.id.permExplainMessage)).setText(R.string.settings_obb_hint);
+        view.findViewById(R.id.permHowTitle).setVisibility(View.GONE);
+        view.findViewById(R.id.permSteps).setVisibility(View.GONE);
+        view.findViewById(R.id.permExplainNotNow).setVisibility(View.GONE);
+        com.google.android.material.button.MaterialButton ok = view.findViewById(R.id.permExplainContinue);
+        ok.setText(R.string.help_got_it);
+        BottomSheetDialog sheet = Ui.sheet(activity, view, true);
+        ok.setOnClickListener(v -> {
+            Ui.tap(v);
+            sheet.dismiss();
+        });
+        sheet.show();
+        return sheet;
+    }
+
+    /** Numbered steps: Mono 12 tertiary numbers in a 24 dp gutter, Body text, 8 dp apart. */
+    private static void addSteps(Activity activity, LinearLayout list, int... steps) {
+        LayoutInflater inflater = LayoutInflater.from(activity);
+        for (int i = 0; i < steps.length; i++) {
+            View row = inflater.inflate(R.layout.item_step, list, false);
+            ((TextView) row.findViewById(R.id.stepNumber)).setText(
+                    activity.getString(R.string.perm_step_number, i + 1));
+            ((TextView) row.findViewById(R.id.stepText)).setText(steps[i]);
+            ViewGroup.MarginLayoutParams lp = (ViewGroup.MarginLayoutParams) row.getLayoutParams();
+            lp.topMargin = activity.getResources().getDimensionPixelSize(R.dimen.space_8);
+            list.addView(row, lp);
+        }
     }
 }

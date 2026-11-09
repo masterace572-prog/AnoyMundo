@@ -1,12 +1,12 @@
 package com.xlox;
 
+import android.animation.ValueAnimator;
 import android.content.ActivityNotFoundException;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
-import android.content.res.ColorStateList;
 import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Build;
@@ -109,7 +109,10 @@ public class MAct extends AppCompatActivity {
     /** A launched game that the container never reports is dropped after this. */
     private static final long RUNNING_FIRST_SEEN_MS = 30_000L;
     /** Skeletons pulse for at most this long, then stay static. */
-    private static final long SKELETON_PULSE_MS = 3000L;
+    /** The licence bar fills once, over 600 ms, when home first shows it. */
+    private static final long BAR_FILL_MS = 600L;
+    /** Hero numerals follow the font scale up to 1.15x, then hold (they can't wrap). */
+    private static final float HERO_MAX_FONT_SCALE = 1.15f;
     /** Licence refresh: on return to home at most this often... */
     private static final long LICENCE_REFRESH_MIN_MS = 60_000L;
     /** ...and quietly this often while home stays open. */
@@ -159,10 +162,17 @@ public class MAct extends AppCompatActivity {
     private TextView statusValue;
     private TextView licenceExpiredText;
     private LinearProgressIndicator licenceProgress;
-    private View heroSkeleton;
-    private View serverSkeleton;
     private TextView expiresValue;
-    private TextView timeLeftValue;
+    /** Countdown: one column per unit (days / hours drop out when zero). */
+    private View timeLeftValue;
+    private View countDaysColumn;
+    private View countHoursColumn;
+    private TextView countDays;
+    private TextView countHours;
+    private TextView countMinutes;
+    private TextView countSeconds;
+    private boolean barFilled;
+    private TextView gameVersionText;
     private TextView gameStateValue;
     private View accessRow;
     private TextView accessValue;
@@ -188,7 +198,6 @@ public class MAct extends AppCompatActivity {
 
     private long expiryMillis = -1L;
     private SimpleDateFormat expiryFormat;
-    private View licenceSoonRow;
     private TextView licenceChecked;
     /** Licence refresh (see maybeRefreshLicence). */
     private final ExecutorService licenceExecutor =
@@ -305,10 +314,18 @@ public class MAct extends AppCompatActivity {
         statusValue = findViewById(R.id.statusValue);
         licenceExpiredText = findViewById(R.id.licenceExpiredText);
         licenceProgress = findViewById(R.id.licenceProgress);
-        heroSkeleton = findViewById(R.id.heroSkeleton);
-        serverSkeleton = findViewById(R.id.serverSkeleton);
         expiresValue = findViewById(R.id.expiresValue);
         timeLeftValue = findViewById(R.id.timeLeftValue);
+        countDaysColumn = findViewById(R.id.countDaysColumn);
+        countHoursColumn = findViewById(R.id.countHoursColumn);
+        countDays = findViewById(R.id.countDays);
+        countHours = findViewById(R.id.countHours);
+        countMinutes = findViewById(R.id.countMinutes);
+        countSeconds = findViewById(R.id.countSeconds);
+        for (TextView hero : new TextView[] {countDays, countHours, countMinutes, countSeconds, licenceExpiredText}) {
+            fitHero(hero);
+        }
+        gameVersionText = findViewById(R.id.gameVersion);
         gameStateValue = findViewById(R.id.gameStateValue);
         accessRow = findViewById(R.id.accessRow);
         accessValue = findViewById(R.id.accessValue);
@@ -365,12 +382,7 @@ public class MAct extends AppCompatActivity {
         // Sign in just checked the licence: the first refresh waits its turn.
         lastLicenceAttempt = SystemClock.elapsedRealtime();
         lastLicenceCheckedAt = System.currentTimeMillis();
-        licenceSoonRow = findViewById(R.id.licenceSoonRow);
         licenceChecked = findViewById(R.id.licenceChecked);
-        findViewById(R.id.licenceRenew).setOnClickListener(v -> {
-            Ui.tap(v);
-            Ui.openUrl(this, getString(R.string.telegram_url));
-        });
         applyPanelStatus();
         refreshLibrary();
         refreshGameState();
@@ -402,9 +414,40 @@ public class MAct extends AppCompatActivity {
             }, HOME_STORAGE_ASK_DELAY_MS);
         }
         if (preview && getIntent().getBooleanExtra(EXTRA_QA_SETTINGS, false)) openSettings();
-        // Content reveals with a 40 ms stagger, 8 dp rise, 220 ms.
-        Ui.stagger(findViewById(R.id.mainContent), 0);
-        Ui.reveal(findViewById(R.id.actionBar), 120);
+        // Login -> home is the activity transition (anim/fade_in: 280 ms, 8 dp up).
+        setupActionDivider();
+    }
+
+    /** The pinned Launch bar gets its hairline only while content is under it. */
+    private void setupActionDivider() {
+        View scroll = findViewById(R.id.mainScroll);
+        View divider = findViewById(R.id.actionDivider);
+        if (scroll == null || divider == null) return;
+        Runnable update = () -> divider.setVisibility(
+                scroll.canScrollVertically(1) ? View.VISIBLE : View.INVISIBLE);
+        scroll.getViewTreeObserver().addOnScrollChangedListener(update::run);
+        scroll.getViewTreeObserver().addOnGlobalLayoutListener(update::run);
+    }
+
+    /**
+     * Hero numerals: shrink to fit their column, and follow the font scale only
+     * up to 1.15x - a countdown can't wrap, and larger sizes would clip.
+     */
+    private void fitHero(TextView hero) {
+        android.util.DisplayMetrics dm = getResources().getDisplayMetrics();
+        float baseSp = getResources().getDimension(R.dimen.text_hero) / dm.scaledDensity;
+        float scale = Math.min(getResources().getConfiguration().fontScale, HERO_MAX_FONT_SCALE);
+        int maxDp = Math.max(21, Math.round(baseSp * scale));
+        // Autosize needs a bounded box: one line, a fixed height for the largest size.
+        hero.setMaxLines(1);
+        hero.setIncludeFontPadding(false);
+        hero.setLineSpacing(0f, 1f); // the style's 40 sp line height would not shrink with the text
+        android.view.ViewGroup.LayoutParams lp = hero.getLayoutParams();
+        lp.height = Ui.dp(this, maxDp * 1.3f);
+        hero.setLayoutParams(lp);
+        // Sizes in dp (not sp), so the cap holds whatever the system font scale.
+        TextViewCompat.setAutoSizeTextTypeUniformWithConfiguration(hero,
+                20, maxDp, 1, android.util.TypedValue.COMPLEX_UNIT_DIP);
     }
 
     /** Status bar above the content; navigation bar under the action bar. */
@@ -775,23 +818,12 @@ public class MAct extends AppCompatActivity {
         if (preview && status == null && !loading) status = "Safe";
         status = tidyPanelText(status);
         if (status == null || status.isEmpty() || loading) {
-            // Unknown: a skeleton that pulses briefly, then a dash.
-            serverValue.setVisibility(View.GONE);
-            serverSkeleton.setVisibility(View.VISIBLE);
-            Ui.pulse(serverSkeleton, SKELETON_PULSE_MS);
-            if (!loading) main.postDelayed(() -> {
-                if (serverSkeleton.getVisibility() != View.VISIBLE) return;
-                Ui.stopPulse(serverSkeleton);
-                serverSkeleton.setVisibility(View.GONE);
-                setChip(serverValue, getString(R.string.dash), 0, 0);
-            }, SKELETON_PULSE_MS);
+            // Unknown (or still loading): a tertiary dash, no dot.
+            setDot(serverValue, getString(R.string.dash), 0, R.color.text_tertiary);
         } else {
-            Ui.stopPulse(serverSkeleton);
-            serverSkeleton.setVisibility(View.GONE);
             String lower = status.toLowerCase(Locale.US);
             boolean safe = lower.contains("safe") && !lower.contains("unsafe") && !lower.contains("not safe");
-            setChip(serverValue, status, safe ? R.drawable.ic_shield_check : R.drawable.ic_triangle_alert,
-                    safe ? CHIP_SUCCESS : CHIP_WARNING);
+            setDot(serverValue, status, safe ? R.color.success : R.color.warning, R.color.text_primary);
         }
         String rawNote = preview ? qaNote() : readNative(NativeField.CREDIT);
         String note = tidyNote(rawNote);
@@ -991,42 +1023,36 @@ public class MAct extends AppCompatActivity {
         if (timeLeftValue == null) return;
         boolean loading = preview && getIntent().getBooleanExtra(EXTRA_QA_LOADING, false);
         if (expiryMillis <= 0 || loading) {
-            // Unknown expiry: skeleton (pulses up to 3 s), neutral chip.
+            // Unknown expiry: a tertiary dash in the Hero size, no dot, empty bar.
             timeLeftValue.setVisibility(View.GONE);
-            licenceProgress.setVisibility(View.GONE);
-            if (heroSkeleton.getVisibility() != View.VISIBLE) {
-                heroSkeleton.setVisibility(View.VISIBLE);
-                Ui.pulse(heroSkeleton, SKELETON_PULSE_MS);
-            }
+            showHeroWord(getString(R.string.dash), R.color.text_tertiary);
+            setBar(0, false);
             Object raw = expiresValue.getTag();
             expiresValue.setText(raw != null ? getString(R.string.expires_on, raw) : "");
             expiresValue.setVisibility(raw != null ? View.VISIBLE : View.GONE);
             setStatusLook(LOOK_UNKNOWN);
-            licenceSoonRow.setVisibility(View.GONE);
             announce(getString(R.string.licence_a11y_unknown), -2L);
             return;
         }
-        heroSkeleton.setVisibility(View.GONE);
-        Ui.stopPulse(heroSkeleton);
         String expiresText = String.valueOf(expiresValue.getTag());
+        expiresValue.setVisibility(View.VISIBLE);
         long remaining = expiryMillis - System.currentTimeMillis();
         if (remaining <= 0) {
             if (!expired) {
                 expired = true;
                 refreshPrimary();
             }
+            // Expired: the word in danger, an empty bar, "Expired <date>".
             setStatusLook(LOOK_EXPIRED);
-            licenceSoonRow.setVisibility(View.GONE);
             timeLeftValue.setVisibility(View.GONE);
-            licenceProgress.setVisibility(View.GONE);
-            licenceExpiredText.setVisibility(View.VISIBLE);
+            showHeroWord(getString(R.string.expired), R.color.danger);
+            setBar(0, false);
             expiresValue.setText(getString(R.string.expired_on, expiresText));
             announce(getString(R.string.licence_a11y_expired, longDate.format(new Date(expiryMillis))), -1L);
             return;
         }
         boolean soon = remaining <= lowTimeMillis();
         setStatusLook(soon ? LOOK_SOON : LOOK_ACTIVE);
-        licenceSoonRow.setVisibility(soon ? View.VISIBLE : View.GONE);
         timeLeftValue.setVisibility(View.VISIBLE);
         licenceExpiredText.setVisibility(View.GONE);
         expiresValue.setText(getString(R.string.expires_on, expiresText));
@@ -1035,13 +1061,17 @@ public class MAct extends AppCompatActivity {
         long hours = (total % 86400L) / 3600L;
         long minutes = (total % 3600L) / 60L;
         long seconds = total % 60L;
-        // Always ticking: "29d 23h 59m 12s".
-        timeLeftValue.setText(getString(R.string.time_left_value, days, hours, minutes, seconds));
+        // Always ticking. Under a day the days column goes; under an hour, hours.
+        countDaysColumn.setVisibility(days > 0 ? View.VISIBLE : View.GONE);
+        countHoursColumn.setVisibility(days > 0 || hours > 0 ? View.VISIBLE : View.GONE);
+        countDays.setText(String.valueOf(days));
+        countHours.setText(String.format(Locale.US, "%02d", hours));
+        countMinutes.setText(String.format(Locale.US, "%02d", minutes));
+        countSeconds.setText(String.format(Locale.US, "%02d", seconds));
         if (totalMillis > 0 && remaining <= totalMillis) {
-            licenceProgress.setVisibility(View.VISIBLE);
-            licenceProgress.setProgressCompat((int) (remaining * 1000L / totalMillis), false);
+            setBar((int) (remaining * 1000L / totalMillis), soon);
         } else {
-            licenceProgress.setVisibility(View.GONE);
+            setBar(1000, soon);
         }
         long minute = total / 60L;
         if (minute != lastA11yMinute) {
@@ -1060,6 +1090,37 @@ public class MAct extends AppCompatActivity {
         }
     }
 
+    /** "—" while loading or "Expired", in the Hero size, where the countdown sits. */
+    private void showHeroWord(String word, int colourRes) {
+        licenceExpiredText.setText(word);
+        licenceExpiredText.setTextColor(ContextCompat.getColor(this, colourRes));
+        licenceExpiredText.setVisibility(View.VISIBLE);
+    }
+
+    /**
+     * The 4 dp licence bar (per mille of the licence left): accent, amber on the
+     * last day. It fills once over 600 ms the first time, then follows the
+     * clock without animating; instant with animations off.
+     */
+    private void setBar(int permille, boolean warning) {
+        licenceProgress.setVisibility(View.VISIBLE);
+        licenceProgress.setIndicatorColor(ContextCompat.getColor(this, warning ? R.color.warning : R.color.accent));
+        if (!barFilled && permille > 0 && !Ui.reducedMotion(this)) {
+            barFilled = true;
+            ValueAnimator fill = ValueAnimator.ofInt(0, permille);
+            fill.setDuration(BAR_FILL_MS);
+            fill.setInterpolator(Ui.ENTER);
+            fill.addUpdateListener(a -> licenceProgress.setProgressCompat((int) a.getAnimatedValue(), false));
+            fill.start();
+            licenceProgress.setTag(fill);
+            return;
+        }
+        Object running = licenceProgress.getTag();
+        if (running instanceof ValueAnimator && ((ValueAnimator) running).isRunning()) return;
+        if (permille > 0) barFilled = true;
+        licenceProgress.setProgressCompat(permille, false);
+    }
+
     /** TalkBack reads the licence card as one sentence; updated once a minute. */
     private void announce(String sentence, long minuteKey) {
         if (minuteKey == lastA11yMinute) return;
@@ -1072,47 +1133,48 @@ public class MAct extends AppCompatActivity {
     private static final int LOOK_EXPIRED = 2;
     private static final int LOOK_SOON = 3;
 
-    /** Licence status chip: icon + word, outline only. */
+    /** Licence status: a 6 dp dot + word (Caption 500); nothing but a dash when unknown. */
     private void setStatusLook(int look) {
         if (look == statusLook) return;
         statusLook = look;
         if (look == LOOK_ACTIVE) {
-            setChip(statusValue, getString(R.string.active), R.drawable.ic_shield_check, CHIP_SUCCESS);
+            setDot(statusValue, getString(R.string.active), R.color.success, R.color.text_secondary);
         } else if (look == LOOK_SOON) {
-            setChip(statusValue, getString(R.string.expires_soon), R.drawable.ic_timer, CHIP_WARNING);
+            setDot(statusValue, getString(R.string.expires_soon), R.color.warning, R.color.text_secondary);
         } else if (look == LOOK_EXPIRED) {
-            setChip(statusValue, getString(R.string.expired), R.drawable.ic_shield_x, CHIP_DANGER);
+            setDot(statusValue, getString(R.string.expired), R.color.danger, R.color.text_secondary);
         } else {
-            setChip(statusValue, getString(R.string.dash), 0, 0);
+            setDot(statusValue, getString(R.string.dash), 0, R.color.text_tertiary);
         }
     }
 
-    private static final int CHIP_SUCCESS = 1;
-    private static final int CHIP_WARNING = 2;
-    private static final int CHIP_DANGER = 3;
-
-    /** Outline pill in the status colour with a leading Lucide glyph. */
-    private void setChip(TextView chip, CharSequence text, int iconRes, int kind) {
-        int colour = kind == CHIP_SUCCESS ? R.color.success : kind == CHIP_WARNING ? R.color.warning
-                : kind == CHIP_DANGER ? R.color.danger : R.color.text_secondary;
-        int bg = kind == CHIP_SUCCESS ? R.drawable.bg_chip_success : kind == CHIP_WARNING ? R.drawable.bg_chip_warning
-                : kind == CHIP_DANGER ? R.drawable.bg_chip_danger : R.drawable.bg_chip_neutral;
-        chip.setVisibility(View.VISIBLE);
-        chip.setText(text);
-        chip.setTextColor(ContextCompat.getColor(this, colour));
-        chip.setBackgroundResource(bg);
-        android.graphics.drawable.Drawable icon = null;
-        if (iconRes != 0) {
-            icon = ContextCompat.getDrawable(this, iconRes);
-            if (icon != null) {
-                int size = getResources().getDimensionPixelSize(R.dimen.icon_chip);
-                icon = icon.mutate();
-                icon.setBounds(0, 0, size, size);
+    /**
+     * Status = a 6 dp dot in the state colour + plain text (spec 2.6: no pills,
+     * no chips, at most three dots per screen). {@code dotColour} 0 = no dot.
+     */
+    private void setDot(TextView view, CharSequence text, int dotColour, int textColour) {
+        view.setVisibility(View.VISIBLE);
+        view.setText(text);
+        view.setTextColor(ContextCompat.getColor(this, textColour));
+        android.graphics.drawable.Drawable dot = null;
+        if (dotColour != 0) {
+            dot = ContextCompat.getDrawable(this, R.drawable.dot);
+            if (dot != null) {
+                dot = androidx.core.graphics.drawable.DrawableCompat.wrap(dot.mutate());
+                androidx.core.graphics.drawable.DrawableCompat.setTint(dot, ContextCompat.getColor(this, dotColour));
+                int size = getResources().getDimensionPixelSize(R.dimen.dot);
+                dot.setBounds(0, 0, size, size);
             }
         }
-        chip.setCompoundDrawablesRelative(icon, null, null, null);
-        TextViewCompat.setCompoundDrawableTintList(chip,
-                ColorStateList.valueOf(ContextCompat.getColor(this, colour)));
+        view.setCompoundDrawablesRelative(dot, null, null, null);
+    }
+
+    /** Settings values: secondary when fine; warning text + a chevron when something is missing. */
+    private void setRowValue(TextView value, CharSequence text, boolean attention, int glyphId) {
+        value.setText(text);
+        value.setTextColor(ContextCompat.getColor(this, attention ? R.color.warning : R.color.text_secondary));
+        View glyph = findViewById(glyphId);
+        if (glyph != null) glyph.setVisibility(attention ? View.VISIBLE : View.GONE);
     }
 
     /** Licence length from the saved key ("ANOY-7D-..." = 7 days), or -1. */
@@ -1263,16 +1325,23 @@ public class MAct extends AppCompatActivity {
         gameInstalled = isInstalled(PKG_BGMI) || qaLaunch != null;
         if (!gameInstalled) gameRunning = false;
         String gameVersion = installedVersionName(PKG_BGMI);
-        gameTitle.setText(gameVersion != null ? getString(R.string.game_title_version, gameVersion)
-                : getString(R.string.game_name));
-        if (!gameInstalled) {
-            setChip(gameStateValue, getString(R.string.state_not_installed), R.drawable.ic_circle_alert, CHIP_WARNING);
-        } else if (gameRunning) {
-            setChip(gameStateValue, getString(R.string.state_running), R.drawable.ic_play, CHIP_SUCCESS);
-        } else if (readyToLaunch()) {
-            setChip(gameStateValue, getString(R.string.state_ready), R.drawable.ic_circle_check, CHIP_SUCCESS);
+        gameTitle.setText(R.string.game_name);
+        gameTitle.setContentDescription(gameVersion != null ? getString(R.string.game_title_version, gameVersion) : null);
+        if (gameVersion != null) {
+            gameVersionText.setText(getString(R.string.splash_version, gameVersion));
+            gameVersionText.setVisibility(View.VISIBLE);
         } else {
-            setChip(gameStateValue, getString(R.string.state_installed), R.drawable.ic_circle_check, 0);
+            gameVersionText.setVisibility(View.GONE);
+        }
+        if (!gameInstalled) {
+            setDot(gameStateValue, getString(R.string.state_not_installed), R.color.warning, R.color.text_primary);
+        } else if (gameRunning) {
+            setDot(gameStateValue, getString(R.string.state_running), R.color.success, R.color.text_primary);
+        } else if (readyToLaunch()) {
+            setDot(gameStateValue, getString(R.string.state_ready), R.color.success, R.color.text_primary);
+        } else {
+            // Installed, but the library, a permission or the container isn't ready.
+            setDot(gameStateValue, getString(R.string.state_installed), R.color.warning, R.color.text_primary);
         }
         refreshAccess();
         refreshPrimary();
@@ -1284,20 +1353,24 @@ public class MAct extends AppCompatActivity {
     private void refreshAccess() {
         if (accessValue == null) return;
         boolean ok = StorageAccess.firstMissing(this) == null;
-        setChip(accessValue, getString(ok ? R.string.access_ok : R.string.access_needed),
-                ok ? R.drawable.ic_circle_check : R.drawable.ic_circle_alert, ok ? CHIP_SUCCESS : CHIP_WARNING);
-        accessRow.setContentDescription(getString(R.string.access_description, accessValue.getText()));
-        setPermissionRow(R.id.permAllFilesRow, permAllFilesValue, R.string.settings_all_files, StorageAccess.Need.ALL_FILES);
-        setPermissionRow(R.id.permFilesRow, permFilesValue, R.string.settings_files, StorageAccess.Need.FILES);
-        setPermissionRow(R.id.permInstallRow, permInstallValue, R.string.settings_install, StorageAccess.Need.INSTALL);
+        setDot(accessValue, getString(ok ? R.string.state_ready : R.string.access_value_needed),
+                ok ? R.color.success : R.color.warning, ok ? R.color.text_secondary : R.color.warning);
+        findViewById(R.id.accessGlyph).setVisibility(ok ? View.GONE : View.VISIBLE);
+        accessRow.setContentDescription(getString(R.string.access_description,
+                getString(ok ? R.string.access_ok : R.string.access_needed)));
+        setPermissionRow(R.id.permAllFilesRow, permAllFilesValue, R.string.settings_all_files,
+                StorageAccess.Need.ALL_FILES, R.id.permAllFilesGlyph);
+        setPermissionRow(R.id.permFilesRow, permFilesValue, R.string.settings_files,
+                StorageAccess.Need.FILES, R.id.permFilesGlyph);
+        setPermissionRow(R.id.permInstallRow, permInstallValue, R.string.settings_install,
+                StorageAccess.Need.INSTALL, R.id.permInstallGlyph);
         if (settingsPage != null && settingsPage.getVisibility() == View.VISIBLE) refreshObb();
     }
 
-    private void setPermissionRow(int rowId, TextView chip, int labelRes, StorageAccess.Need need) {
+    private void setPermissionRow(int rowId, TextView chip, int labelRes, StorageAccess.Need need, int glyphId) {
         if (chip == null) return;
         boolean granted = StorageAccess.has(this, need);
-        setChip(chip, getString(granted ? R.string.settings_granted : R.string.settings_missing),
-                granted ? R.drawable.ic_circle_check : R.drawable.ic_circle_alert, granted ? CHIP_SUCCESS : CHIP_WARNING);
+        setRowValue(chip, getString(granted ? R.string.settings_granted : R.string.settings_missing), !granted, glyphId);
         findViewById(rowId).setContentDescription(getString(R.string.settings_row_description,
                 getString(labelRes), chip.getText()));
     }
@@ -1319,7 +1392,8 @@ public class MAct extends AppCompatActivity {
         if (obbValue == null) return;
         final int run = ++obbCheckRun;
         if (obbValue.getText().length() == 0) {
-            setChip(obbValue, getString(R.string.settings_obb_checking), 0, 0);
+            setRowValue(obbValue, getString(R.string.settings_obb_checking), false, R.id.obbGlyph);
+            obbValue.setTextColor(ContextCompat.getColor(this, R.color.text_tertiary));
         }
         try {
             ioExecutor.execute(() -> {
@@ -1333,9 +1407,9 @@ public class MAct extends AppCompatActivity {
                 final boolean done = copied;
                 main.post(() -> {
                     if (!Ui.alive(this) || run != obbCheckRun) return;
-                    setChip(obbValue, getString(done ? R.string.settings_obb_copied : R.string.settings_obb_missing),
-                            done ? R.drawable.ic_circle_check : R.drawable.ic_circle_alert,
-                            done ? CHIP_SUCCESS : CHIP_WARNING);
+                    setRowValue(obbValue, getString(done ? R.string.settings_obb_copied : R.string.settings_obb_missing),
+                            !done, R.id.obbGlyph);
+                    findViewById(R.id.obbRow).setClickable(!done);
                     findViewById(R.id.obbRow).setContentDescription(getString(R.string.settings_row_description,
                             getString(R.string.settings_obb), obbValue.getText()));
                 });
@@ -1395,11 +1469,20 @@ public class MAct extends AppCompatActivity {
     private void showSupportInfo() {
         String info = supportInfo();
         View sheetView = LayoutInflater.from(this).inflate(R.layout.sheet_support_info, null, false);
-        ((TextView) sheetView.findViewById(R.id.supportInfoText)).setText(info);
+        ((TextView) sheetView.findViewById(R.id.supportInfoText)).setText(dimKeys(info));
+        // The block scrolls inside once it passes ~45 % of the screen height.
+        View scroll = sheetView.findViewById(R.id.supportInfoScroll);
+        int maxHeight = Math.round(getResources().getDisplayMetrics().heightPixels * 0.45f);
+        scroll.addOnLayoutChangeListener((v, l, t, r, b, ol, ot, or, ob) -> {
+            if (v.getHeight() > maxHeight) {
+                v.getLayoutParams().height = maxHeight;
+                v.post(v::requestLayout);
+            }
+        });
         BottomSheetDialog sheet = Ui.sheet(this, sheetView, true);
-        sheetView.findViewById(R.id.supportInfoCopy).setOnClickListener(v -> {
+        MaterialButton copy = sheetView.findViewById(R.id.supportInfoCopy);
+        copy.setOnClickListener(v -> {
             Ui.tap(v);
-            sheet.dismiss();
             boolean copied = false;
             try {
                 ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
@@ -1410,13 +1493,36 @@ public class MAct extends AppCompatActivity {
             } catch (RuntimeException e) {
                 Log.w(TAG, "Help: clipboard unavailable", e);
             }
-            if (copied) {
-                Log.d(TAG, "Help: support info copied");
-                Ui.snackbar(this, getString(R.string.support_info_copied));
+            if (!copied) {
+                sheet.dismiss();
+                return;
             }
+            // The button itself confirms: check + "Copied" for ~800 ms, then close.
+            Log.d(TAG, "Help: support info copied");
+            Ui.setSuccess(copy, getString(R.string.support_info_copied_short));
+            copy.announceForAccessibility(getString(R.string.support_info_copied));
+            main.postDelayed(() -> {
+                if (sheet.isShowing()) sheet.dismiss();
+            }, preview && getIntent().getBooleanExtra(EXTRA_QA_FREEZE_CLOCK, false) ? 4000L : 800L);
         });
         sheetView.findViewById(R.id.supportInfoCancel).setOnClickListener(v -> sheet.dismiss());
         sheet.show();
+    }
+
+    /** Support block: the "Key:" part of each line in secondary, values in primary. */
+    private CharSequence dimKeys(String info) {
+        android.text.SpannableString text = new android.text.SpannableString(info);
+        int secondary = ContextCompat.getColor(this, R.color.text_secondary);
+        int start = 0;
+        for (String line : info.split("\n", -1)) {
+            int colon = line.indexOf(": ");
+            if (colon > 0) {
+                text.setSpan(new android.text.style.ForegroundColorSpan(secondary), start, start + colon + 1,
+                        android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            }
+            start += line.length() + 1;
+        }
+        return text;
     }
 
     /**
@@ -1521,9 +1627,10 @@ public class MAct extends AppCompatActivity {
 
     private void refreshLibrary() {
         String version = LibManager.installedVersion(this);
-        libraryValue.setText(version != null ? version : getString(R.string.state_not_installed));
+        libraryValue.setText(version != null ? getString(R.string.library_version, version)
+                : getString(R.string.library_not_installed));
         libraryValue.setTextColor(ContextCompat.getColor(this,
-                version != null ? R.color.text_secondary : R.color.warning));
+                version != null ? R.color.text_tertiary : R.color.warning));
     }
 
     private boolean isInstalled(String pkg) {
@@ -1541,27 +1648,28 @@ public class MAct extends AppCompatActivity {
     private void refreshPrimary() {
         if (busy) return;
         int label;
-        int icon = 0;
         if (expired) {
             label = R.string.sign_in_again;
         } else if (!gameInstalled) {
             label = R.string.install_game;
-            icon = R.drawable.ic_download;
         } else if (gameRunning) {
             label = R.string.stop;
-            icon = R.drawable.ic_square;
         } else {
             label = R.string.launch;
-            icon = R.drawable.ic_play;
         }
         Ui.setLoading(primaryAction, false, getString(label));
-        // Cosmetic: a leading glyph makes the main control read at a glance.
-        if (icon != 0) primaryAction.setIconResource(icon);
+        // Running: Stop is surface-2 with danger text - never a red slab.
+        boolean stop = gameRunning && !expired && gameInstalled;
+        primaryAction.setBackgroundTintList(ContextCompat.getColorStateList(this,
+                stop ? R.color.tonal_bg_on_black : R.color.button_bg));
+        primaryAction.setTextColor(ContextCompat.getColorStateList(this, stop ? R.color.danger_text : R.color.button_text));
     }
 
     private void setBusy(boolean value, CharSequence label) {
         busy = value;
         if (value) {
+            primaryAction.setBackgroundTintList(ContextCompat.getColorStateList(this, R.color.button_bg));
+            primaryAction.setTextColor(ContextCompat.getColorStateList(this, R.color.button_text));
             Ui.setLoading(primaryAction, true, label);
         } else {
             refreshPrimary();
@@ -1861,24 +1969,12 @@ public class MAct extends AppCompatActivity {
 
     // ---------------------------------------------------------------- status
 
-    /** Caption above the pill; errors get a danger glyph and REJECT haptic. */
+    /** Caption above Launch; errors are danger text with a REJECT haptic. */
     private void showMessage(String text, boolean error) {
         launchErrorShown = false;
         statusMessage.setText(text);
         statusMessage.setTextColor(ContextCompat.getColor(this, error ? R.color.danger : R.color.text_secondary));
-        android.graphics.drawable.Drawable icon = null;
-        if (error) {
-            icon = ContextCompat.getDrawable(this, R.drawable.ic_circle_alert);
-            if (icon != null) {
-                int size = getResources().getDimensionPixelSize(R.dimen.icon_small);
-                icon = icon.mutate();
-                icon.setBounds(0, 0, size, size);
-            }
-            Ui.rejectHaptic(statusMessage);
-        }
-        statusMessage.setCompoundDrawablesRelative(icon, null, null, null);
-        TextViewCompat.setCompoundDrawableTintList(statusMessage,
-                ColorStateList.valueOf(ContextCompat.getColor(this, R.color.danger)));
+        if (error) Ui.rejectHaptic(statusMessage);
         Ui.fade(statusMessage, true);
     }
 
@@ -1932,16 +2028,10 @@ public class MAct extends AppCompatActivity {
      * hidden - never "Anoy", never the key, never an invented name.
      */
     private void setupHeader() {
+        // 2.3.0: the kicker is the product name (ANOY HAX), the title "Welcome back".
         String name = displayName();
-        TextView kicker = findViewById(R.id.homeKicker);
         TextView title = findViewById(R.id.homeTitle);
-        if (name != null) {
-            kicker.setVisibility(View.VISIBLE);
-            title.setText(name);
-        } else {
-            kicker.setVisibility(View.GONE);
-            title.setText(R.string.home_title);
-        }
+        title.setText(name != null ? name : getString(R.string.home_title));
     }
 
     /** No name field in the session payload yet: see setupHeader. */
@@ -1949,15 +2039,19 @@ public class MAct extends AppCompatActivity {
         return null;
     }
 
-    /** GameIcon.GAME_ICON_URL, cached; the vector placeholder stays on any failure. */
+    /** GameIcon.GAME_ICON_URL, cached; the "BG" monogram stays on any failure. */
     private void loadGameIcon() {
         ImageView icon = findViewById(R.id.gameIcon);
+        View monogram = findViewById(R.id.gameMonogram);
         try {
             ioExecutor.execute(() -> {
                 android.graphics.Bitmap bitmap = GameIcon.load(this);
                 if (bitmap == null) return;
                 main.post(() -> {
-                    if (Ui.alive(this)) icon.setImageBitmap(bitmap);
+                    if (!Ui.alive(this)) return;
+                    icon.setImageBitmap(bitmap);
+                    icon.setVisibility(View.VISIBLE);
+                    monogram.setVisibility(View.GONE);
                 });
             });
         } catch (RejectedExecutionException ignored) {
@@ -1994,6 +2088,12 @@ public class MAct extends AppCompatActivity {
             Ui.tap(v);
             onPermissionRowTapped(StorageAccess.Need.INSTALL, R.string.settings_install);
         });
+        findViewById(R.id.obbRow).setOnClickListener(v -> {
+            // Missing game files: informational only - Launch copies them.
+            Ui.tap(v);
+            PermissionSheet.showObbInfo(this);
+        });
+        findViewById(R.id.obbRow).setClickable(false);
         findViewById(R.id.settingsTelegram).setOnClickListener(v -> {
             Ui.tap(v);
             Ui.openUrl(this, getString(R.string.telegram_url));
@@ -2017,9 +2117,18 @@ public class MAct extends AppCompatActivity {
         refreshAccess();
         refreshObb();
         ((android.widget.ScrollView) findViewById(R.id.settingsScroll)).scrollTo(0, 0);
+        // 12 dp horizontal + fade, 280 ms decelerate; instant with animations off.
+        settingsPage.animate().cancel();
         settingsPage.setVisibility(View.VISIBLE);
-        settingsPage.setAlpha(0f);
-        settingsPage.animate().alpha(1f).setDuration(Ui.reducedMotion(this) ? 0 : 180).start();
+        if (Ui.reducedMotion(this)) {
+            settingsPage.setAlpha(1f);
+            settingsPage.setTranslationX(0f);
+        } else {
+            settingsPage.setAlpha(0f);
+            settingsPage.setTranslationX(Ui.dp(this, 12));
+            settingsPage.animate().alpha(1f).translationX(0f).setDuration(Ui.MEDIUM)
+                    .setInterpolator(Ui.ENTER).start();
+        }
         // Launch / Stop stay on home only.
         actionBarView.setVisibility(View.INVISIBLE);
         settingsBack.setEnabled(true);
@@ -2030,8 +2139,17 @@ public class MAct extends AppCompatActivity {
         Log.d(TAG, "Settings: close");
         settingsBack.setEnabled(false);
         settingsPage.animate().cancel();
-        settingsPage.setVisibility(View.GONE);
         actionBarView.setVisibility(View.VISIBLE);
+        if (Ui.reducedMotion(this)) {
+            settingsPage.setVisibility(View.GONE);
+        } else {
+            settingsPage.animate().alpha(0f).translationX(Ui.dp(this, 12)).setDuration(Ui.SHORT)
+                    .setInterpolator(Ui.EXIT).withEndAction(() -> {
+                        settingsPage.setVisibility(View.GONE);
+                        settingsPage.setAlpha(1f);
+                        settingsPage.setTranslationX(0f);
+                    }).start();
+        }
         main.removeCallbacks(ticker);
         main.post(ticker);
     }

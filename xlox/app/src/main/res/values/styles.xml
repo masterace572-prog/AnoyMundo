@@ -1,88 +1,80 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Anoy design system (UI brief). Dark only: there is no values-night, so the
-  app looks identical whatever the system light/dark setting. Every Material 3
-  colour role is mapped to a token so no Material baseline colour can appear,
-  and dynamic (wallpaper) colour is never applied.
+  Anoy 2.3.0 design system (UI redesign specification). Dark only: there is no
+  values-night. Every Material 3 colour role maps to a token, and dynamic
+  (wallpaper) colour is never applied.
 
-  Type uses two Inter weights only - Regular and Semibold. Where the brief
-  lists "medium" (caption, section header, chips) Regular is used so the
-  two-weight rule holds.
+  Type: Inter 400 / 500 / 600 and JetBrains Mono 400 / 500 (res/font, SIL OFL).
+  Line heights use the AppCompat `lineHeight` attribute so they hold on API 21.
 -->
 <resources>
 
     <!-- ===================================================== Themes -->
     <style name="AppTheme" parent="Theme.Material3.Dark.NoActionBar">
-        <!-- Primary = blue -->
-        <item name="colorPrimary">@color/blue</item>
-        <item name="colorOnPrimary">@color/white</item>
-        <item name="colorPrimaryContainer">@color/blue_disabled</item>
-        <item name="colorOnPrimaryContainer">@color/white</item>
-        <item name="colorPrimaryInverse">@color/blue</item>
-        <item name="colorPrimaryFixed">@color/blue</item>
-        <item name="colorPrimaryFixedDim">@color/blue_pressed</item>
-        <item name="colorOnPrimaryFixed">@color/white</item>
-        <item name="colorOnPrimaryFixedVariant">@color/white</item>
-        <!-- Secondary / tertiary = neutrals and blue only -->
+        <item name="colorPrimary">@color/accent</item>
+        <item name="colorOnPrimary">@color/on_accent</item>
+        <item name="colorPrimaryContainer">@color/accent_tint</item>
+        <item name="colorOnPrimaryContainer">@color/text_primary</item>
+        <item name="colorPrimaryInverse">@color/accent</item>
+        <item name="colorPrimaryFixed">@color/accent</item>
+        <item name="colorPrimaryFixedDim">@color/accent_pressed</item>
+        <item name="colorOnPrimaryFixed">@color/on_accent</item>
+        <item name="colorOnPrimaryFixedVariant">@color/on_accent</item>
         <item name="colorSecondary">@color/text_secondary</item>
-        <item name="colorOnSecondary">@color/black</item>
-        <item name="colorSecondaryContainer">@color/surface_raised</item>
-        <item name="colorOnSecondaryContainer">@color/white</item>
-        <item name="colorSecondaryFixed">@color/surface_raised</item>
-        <item name="colorSecondaryFixedDim">@color/surface</item>
-        <item name="colorOnSecondaryFixed">@color/white</item>
+        <item name="colorOnSecondary">@color/background</item>
+        <item name="colorSecondaryContainer">@color/surface_2</item>
+        <item name="colorOnSecondaryContainer">@color/text_primary</item>
+        <item name="colorSecondaryFixed">@color/surface_2</item>
+        <item name="colorSecondaryFixedDim">@color/surface_1</item>
+        <item name="colorOnSecondaryFixed">@color/text_primary</item>
         <item name="colorOnSecondaryFixedVariant">@color/text_secondary</item>
-        <item name="colorTertiary">@color/blue</item>
-        <item name="colorOnTertiary">@color/white</item>
-        <item name="colorTertiaryContainer">@color/surface_raised</item>
-        <item name="colorOnTertiaryContainer">@color/white</item>
-        <item name="colorTertiaryFixed">@color/surface_raised</item>
-        <item name="colorTertiaryFixedDim">@color/surface</item>
-        <item name="colorOnTertiaryFixed">@color/white</item>
+        <item name="colorTertiary">@color/accent</item>
+        <item name="colorOnTertiary">@color/on_accent</item>
+        <item name="colorTertiaryContainer">@color/surface_2</item>
+        <item name="colorOnTertiaryContainer">@color/text_primary</item>
+        <item name="colorTertiaryFixed">@color/surface_2</item>
+        <item name="colorTertiaryFixedDim">@color/surface_1</item>
+        <item name="colorOnTertiaryFixed">@color/text_primary</item>
         <item name="colorOnTertiaryFixedVariant">@color/text_secondary</item>
-        <!-- Error -->
         <item name="colorError">@color/danger</item>
-        <item name="colorOnError">@color/white</item>
+        <item name="colorOnError">@color/on_accent</item>
         <item name="colorErrorContainer">@color/danger_tint</item>
         <item name="colorOnErrorContainer">@color/danger</item>
-        <!-- Surfaces -->
         <item name="android:colorBackground">@color/black</item>
-        <item name="colorOnBackground">@color/white</item>
-        <item name="colorSurface">@color/surface</item>
-        <item name="colorOnSurface">@color/white</item>
-        <item name="colorSurfaceVariant">@color/surface_raised</item>
+        <item name="colorOnBackground">@color/text_primary</item>
+        <item name="colorSurface">@color/surface_1</item>
+        <item name="colorOnSurface">@color/text_primary</item>
+        <item name="colorSurfaceVariant">@color/surface_2</item>
         <item name="colorOnSurfaceVariant">@color/text_secondary</item>
-        <item name="colorSurfaceInverse">@color/surface_raised</item>
-        <item name="colorOnSurfaceInverse">@color/white</item>
-        <item name="colorSurfaceBright">@color/surface_raised</item>
-        <item name="colorSurfaceDim">@color/black</item>
-        <item name="colorSurfaceContainerLowest">@color/black</item>
-        <item name="colorSurfaceContainerLow">@color/surface</item>
-        <item name="colorSurfaceContainer">@color/surface</item>
-        <item name="colorSurfaceContainerHigh">@color/surface_raised</item>
-        <item name="colorSurfaceContainerHighest">@color/surface_raised</item>
+        <item name="colorSurfaceInverse">@color/surface_2</item>
+        <item name="colorOnSurfaceInverse">@color/text_primary</item>
+        <item name="colorSurfaceBright">@color/surface_2</item>
+        <item name="colorSurfaceDim">@color/background</item>
+        <item name="colorSurfaceContainerLowest">@color/background</item>
+        <item name="colorSurfaceContainerLow">@color/surface_1</item>
+        <item name="colorSurfaceContainer">@color/surface_1</item>
+        <item name="colorSurfaceContainerHigh">@color/surface_2</item>
+        <item name="colorSurfaceContainerHighest">@color/surface_3</item>
         <item name="colorOutline">@color/hairline</item>
-        <item name="colorOutlineVariant">@color/separator</item>
+        <item name="colorOutlineVariant">@color/divider</item>
         <item name="elevationOverlayEnabled">false</item>
-        <!-- Framework / AppCompat -->
-        <item name="colorAccent">@color/blue</item>
+        <item name="colorAccent">@color/accent</item>
         <item name="colorControlNormal">@color/text_secondary</item>
-        <item name="colorControlActivated">@color/blue</item>
-        <item name="colorControlHighlight">@color/ripple_light</item>
+        <item name="colorControlActivated">@color/accent</item>
+        <!-- Press feedback is a fill change (surface-3), never a ripple wash. -->
+        <item name="colorControlHighlight">@color/ripple_none</item>
         <item name="android:textColorPrimary">@color/text_primary</item>
         <item name="android:textColorSecondary">@color/text_secondary</item>
         <item name="android:textColorTertiary">@color/text_tertiary</item>
         <item name="android:textColorHint">@color/text_tertiary</item>
-        <item name="android:textColorHighlight">@color/blue_tint</item>
-        <item name="android:textColorLink">@color/blue</item>
+        <item name="android:textColorHighlight">@color/accent_tint</item>
+        <item name="android:textColorLink">@color/accent</item>
         <item name="android:fontFamily">@font/inter_regular</item>
         <item name="fontFamily">@font/inter_regular</item>
-        <!-- Window: black, edge-to-edge (bars made transparent in Ui.edgeToEdge) -->
         <item name="android:windowBackground">@color/black</item>
         <item name="android:statusBarColor">@color/black</item>
         <item name="android:navigationBarColor">@color/black</item>
         <item name="android:windowAnimationStyle">@style/AnoyWindowAnimation</item>
-        <!-- Components -->
         <item name="materialButtonStyle">@style/Widget.Anoy.Button</item>
         <item name="materialCardViewStyle">@style/Widget.Anoy.Card</item>
         <item name="snackbarStyle">@style/Widget.Anoy.Snackbar</item>
@@ -92,9 +84,9 @@
         <item name="linearProgressIndicatorStyle">@style/Widget.Anoy.Progress</item>
     </style>
 
-    <!-- Launcher theme: core-splashscreen draws a black window with the static
-         Anoy wordmark (the launcher icon's outlines, scripts/brand_wordmark.py);
-         SplashActivity starts on the same image, then switches to AppTheme. -->
+    <!-- Launcher theme: the Android 12+ system splash is black with the white
+         Anoy wordmark (the launcher icon's outlines), and SplashActivity starts
+         on the same image, so there is only one splash. -->
     <style name="AppTheme.Starting" parent="Theme.SplashScreen">
         <item name="windowSplashScreenBackground">@color/black</item>
         <item name="windowSplashScreenAnimatedIcon">@drawable/splash_mark</item>
@@ -103,6 +95,7 @@
         <item name="android:navigationBarColor">@color/black</item>
     </style>
 
+    <!-- Screen transitions: 280 ms crossfade (medium). -->
     <style name="AnoyWindowAnimation" parent="@android:style/Animation.Activity">
         <item name="android:activityOpenEnterAnimation">@anim/fade_in</item>
         <item name="android:activityOpenExitAnimation">@anim/fade_out</item>
@@ -110,23 +103,33 @@
         <item name="android:activityCloseExitAnimation">@anim/fade_out</item>
     </style>
 
-    <!-- Bottom sheets: 28 dp top corners, no handle, 60 % scrim, edge-to-edge. -->
+    <!-- ===================================================== Sheets (spec 3.9) -->
+    <!-- One sheet for everything: 64 % scrim, 320 ms slide-up, 240 ms exit. The
+         sheet surface (surface-2, 28 dp top corners, hairline top edge) is the
+         content root's background, so the Material container is transparent. -->
     <style name="ThemeOverlay.Anoy.BottomSheet" parent="ThemeOverlay.Material3.BottomSheetDialog">
         <item name="bottomSheetStyle">@style/Widget.Anoy.BottomSheet</item>
-        <item name="android:backgroundDimAmount">0.6</item>
+        <item name="android:backgroundDimAmount">0.64</item>
         <item name="enableEdgeToEdge">true</item>
         <item name="android:navigationBarColor">@color/transparent</item>
         <item name="android:statusBarColor">@color/transparent</item>
+        <item name="android:windowAnimationStyle">@style/AnoySheetAnimation</item>
+    </style>
+
+    <style name="AnoySheetAnimation" parent="@android:style/Animation.Dialog">
+        <item name="android:windowEnterAnimation">@anim/sheet_in</item>
+        <item name="android:windowExitAnimation">@anim/sheet_out</item>
     </style>
 
     <style name="Widget.Anoy.BottomSheet" parent="Widget.Material3.BottomSheet.Modal">
-        <item name="backgroundTint">@color/surface</item>
+        <item name="backgroundTint">@color/transparent</item>
         <item name="shapeAppearance">@style/ShapeAppearance.Anoy.Sheet</item>
         <item name="shapeAppearanceOverlay">@null</item>
         <item name="behavior_skipCollapsed">true</item>
         <item name="behavior_fitToContents">true</item>
         <item name="android:elevation">0dp</item>
-        <item name="paddingBottomSystemWindowInsets">true</item>
+        <item name="android:maxWidth">@dimen/sheet_max_width</item>
+        <item name="paddingBottomSystemWindowInsets">false</item>
     </style>
 
     <style name="ShapeAppearance.Anoy.Sheet" parent="">
@@ -137,144 +140,264 @@
         <item name="cornerSizeBottomRight">0dp</item>
     </style>
 
-    <!-- ===================================================== Type -->
+    <!-- Sheet content root: surface + 24 dp gutters (bottom inset added in code). -->
+    <style name="Sheet" parent="">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:background">@drawable/bg_sheet</item>
+        <item name="android:orientation">vertical</item>
+        <item name="android:paddingStart">@dimen/gutter_wide</item>
+        <item name="android:paddingEnd">@dimen/gutter_wide</item>
+        <item name="android:paddingTop">@dimen/gutter_wide</item>
+        <item name="android:paddingBottom">@dimen/gutter_wide</item>
+    </style>
+
+    <!-- Dismissible sheets: the content starts below the 36 x 4 dp handle. -->
+    <style name="Sheet.Draggable">
+        <item name="android:paddingTop">@dimen/space_8</item>
+    </style>
+
+    <style name="SheetHandle" parent="">
+        <item name="android:layout_width">@dimen/handle_width</item>
+        <item name="android:layout_height">@dimen/handle_height</item>
+        <item name="android:layout_gravity">center_horizontal</item>
+        <item name="android:layout_marginBottom">@dimen/space_20</item>
+        <item name="android:background">@drawable/bg_handle</item>
+        <item name="android:importantForAccessibility">no</item>
+    </style>
+
+    <!-- ===================================================== Type (spec 2.2) -->
     <style name="Text" parent="">
         <item name="android:fontFamily">@font/inter_regular</item>
+        <item name="fontFamily">@font/inter_regular</item>
         <item name="android:textColor">@color/text_primary</item>
         <item name="android:includeFontPadding">false</item>
-        <item name="android:textSize">@dimen/text_body</item>
-        <item name="android:lineSpacingExtra">4sp</item>
+        <item name="android:textSize">@dimen/text_body_l</item>
+        <item name="lineHeight">22sp</item>
+        <item name="android:letterSpacing">0</item>
     </style>
 
-    <!-- 32 sp semibold, -0.02 -->
-    <style name="Text.LargeTitle">
+    <!-- Wordmark: Inter 600 40 / 44, -0.03em, pure white. Fixed dp (brand lockup). -->
+    <style name="Text.Wordmark">
         <item name="android:fontFamily">@font/inter_semibold</item>
-        <item name="android:textSize">@dimen/text_large_title</item>
+        <item name="fontFamily">@font/inter_semibold</item>
+        <item name="android:textSize">@dimen/text_wordmark</item>
+        <item name="lineHeight">44dp</item>
+        <item name="android:letterSpacing">-0.03</item>
+        <item name="android:textColor">@color/wordmark</item>
+        <item name="android:maxLines">1</item>
+    </style>
+
+    <!-- Title L: Inter 600 28 / 34, -0.02em. -->
+    <style name="Text.TitleL">
+        <item name="android:fontFamily">@font/inter_semibold</item>
+        <item name="fontFamily">@font/inter_semibold</item>
+        <item name="android:textSize">@dimen/text_title_l</item>
+        <item name="lineHeight">34sp</item>
         <item name="android:letterSpacing">-0.02</item>
-        <item name="android:lineSpacingExtra">2sp</item>
     </style>
 
-    <!-- 22 sp semibold -->
-    <style name="Text.Title">
+    <!-- Title M: Inter 600 20 / 26, -0.012em. -->
+    <style name="Text.TitleM">
         <item name="android:fontFamily">@font/inter_semibold</item>
-        <item name="android:textSize">@dimen/text_title</item>
-        <item name="android:letterSpacing">-0.01</item>
+        <item name="fontFamily">@font/inter_semibold</item>
+        <item name="android:textSize">@dimen/text_title_m</item>
+        <item name="lineHeight">26sp</item>
+        <item name="android:letterSpacing">-0.012</item>
     </style>
 
-    <!-- 17 sp semibold -->
-    <style name="Text.Headline">
+    <!-- Hero numeral: Inter 600 36 / 40, tabular figures, -0.02em. -->
+    <style name="Text.Hero">
         <item name="android:fontFamily">@font/inter_semibold</item>
-        <item name="android:textSize">@dimen/text_headline</item>
+        <item name="fontFamily">@font/inter_semibold</item>
+        <item name="android:textSize">@dimen/text_hero</item>
+        <item name="lineHeight">40sp</item>
+        <item name="android:letterSpacing">-0.02</item>
+        <item name="android:fontFeatureSettings">tnum</item>
+        <item name="android:maxLines">1</item>
     </style>
 
-    <!-- 16 sp regular -->
-    <style name="Text.Body" />
+    <!-- Body L: 16 / 22 (Settings rows, field text). -->
+    <style name="Text.BodyL" />
 
-    <style name="Text.Secondary">
+    <style name="Text.BodyL.Medium">
+        <item name="android:fontFamily">@font/inter_medium</item>
+        <item name="fontFamily">@font/inter_medium</item>
+    </style>
+
+    <!-- Body: 15 / 22 (sheet paragraphs, changelog). -->
+    <style name="Text.Body">
+        <item name="android:textSize">@dimen/text_body</item>
+        <item name="lineHeight">22sp</item>
+    </style>
+
+    <style name="Text.Body.Secondary">
         <item name="android:textColor">@color/text_secondary</item>
     </style>
 
-    <!-- 15 sp (notice card text) -->
-    <style name="Text.Callout">
-        <item name="android:textSize">@dimen/text_callout</item>
+    <!-- Body S: 14 / 20, secondary explanation. -->
+    <style name="Text.BodyS">
+        <item name="android:textSize">@dimen/text_body_s</item>
+        <item name="lineHeight">20sp</item>
+        <item name="android:textColor">@color/text_secondary</item>
     </style>
 
-    <!-- 13 sp secondary -->
+    <!-- Caption: 13 / 18, secondary. -->
     <style name="Text.Caption">
         <item name="android:textSize">@dimen/text_caption</item>
+        <item name="lineHeight">18sp</item>
         <item name="android:textColor">@color/text_secondary</item>
-        <item name="android:lineSpacingExtra">3sp</item>
     </style>
 
-    <!-- 13 sp caps +0.06 tertiary; sits 8 dp above its card -->
-    <style name="Text.SectionHeader">
-        <item name="android:textSize">@dimen/text_caption</item>
-        <item name="android:textColor">@color/text_tertiary</item>
-        <item name="android:textAllCaps">true</item>
-        <item name="android:letterSpacing">0.06</item>
-        <item name="android:paddingStart">@dimen/card_padding</item>
-        <item name="android:paddingEnd">@dimen/card_padding</item>
-        <item name="android:layout_marginBottom">@dimen/section_gap</item>
+    <style name="Text.Caption.Medium">
+        <item name="android:fontFamily">@font/inter_medium</item>
+        <item name="fontFamily">@font/inter_medium</item>
     </style>
 
     <style name="Text.Error">
         <item name="android:textSize">@dimen/text_caption</item>
+        <item name="lineHeight">18sp</item>
         <item name="android:textColor">@color/danger</item>
-        <item name="android:lineSpacingExtra">3sp</item>
     </style>
 
-    <style name="Text.RowLabel">
-        <item name="android:textColor">@color/text_primary</item>
+    <!-- Micro: Inter 500 12 / 16 (unit labels, "State" / "Server"). -->
+    <style name="Text.Micro">
+        <item name="android:fontFamily">@font/inter_medium</item>
+        <item name="fontFamily">@font/inter_medium</item>
+        <item name="android:textSize">@dimen/text_micro</item>
+        <item name="lineHeight">16sp</item>
+        <item name="android:textColor">@color/text_secondary</item>
     </style>
+
+    <!-- Kicker: Inter 600 11 / 14, uppercase, +0.08em. -->
+    <style name="Text.Kicker">
+        <item name="android:fontFamily">@font/inter_semibold</item>
+        <item name="fontFamily">@font/inter_semibold</item>
+        <item name="android:textSize">@dimen/text_kicker</item>
+        <item name="lineHeight">14sp</item>
+        <item name="android:letterSpacing">0.08</item>
+        <item name="android:textAllCaps">true</item>
+        <item name="android:textColor">@color/text_secondary</item>
+    </style>
+
+    <style name="Text.Kicker.Tertiary">
+        <item name="android:textColor">@color/text_tertiary</item>
+    </style>
+
+    <!-- Group kicker: inset 16 dp to line up with the row text, 8 dp above the list. -->
+    <style name="Text.Kicker.Group">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:paddingStart">@dimen/row_padding</item>
+        <item name="android:paddingEnd">@dimen/row_padding</item>
+        <item name="android:layout_marginBottom">@dimen/kicker_gap</item>
+    </style>
+
+    <!-- Splash kicker: +0.22em, fixed dp like the wordmark. -->
+    <style name="Text.Kicker.Splash">
+        <item name="android:textSize">@dimen/text_splash_kicker</item>
+        <item name="lineHeight">14dp</item>
+        <item name="android:letterSpacing">0.22</item>
+        <item name="android:maxLines">1</item>
+    </style>
+
+    <!-- Link: Inter 500 15 / 20, accent. -->
+    <style name="Text.Link">
+        <item name="android:fontFamily">@font/inter_medium</item>
+        <item name="fontFamily">@font/inter_medium</item>
+        <item name="android:textSize">@dimen/text_link</item>
+        <item name="lineHeight">20sp</item>
+        <item name="android:textColor">@color/link_text</item>
+    </style>
+
+    <!-- Login brand row: "Anoy Hax", Inter 600 15. -->
+    <style name="Text.Brand">
+        <item name="android:fontFamily">@font/inter_semibold</item>
+        <item name="fontFamily">@font/inter_semibold</item>
+        <item name="android:textSize">@dimen/text_brand</item>
+        <item name="lineHeight">20sp</item>
+    </style>
+
+    <!-- Help: a typographic "?" (Inter 600 15) inside a 32 dp hairline circle. -->
+    <style name="Text.HelpGlyph">
+        <item name="android:fontFamily">@font/inter_semibold</item>
+        <item name="fontFamily">@font/inter_semibold</item>
+        <item name="android:textSize">@dimen/text_help_glyph</item>
+        <item name="lineHeight">20sp</item>
+        <item name="android:textColor">@color/text_secondary</item>
+        <item name="android:gravity">center</item>
+    </style>
+
+    <!-- Game tile monogram "BG": Inter 600 20. -->
+    <style name="Text.Monogram">
+        <item name="android:fontFamily">@font/inter_semibold</item>
+        <item name="fontFamily">@font/inter_semibold</item>
+        <item name="android:textSize">@dimen/text_monogram</item>
+        <item name="lineHeight">26sp</item>
+        <item name="android:textColor">@color/text_secondary</item>
+        <item name="android:letterSpacing">-0.012</item>
+    </style>
+
+    <!-- Panel notice copy: Body 15 / 22, notice text, regular - never bold. -->
+    <style name="Text.Notice">
+        <item name="android:textSize">@dimen/text_body</item>
+        <item name="lineHeight">22sp</item>
+        <item name="android:textColor">@color/notice_text</item>
+    </style>
+
+    <!-- Rows: label Body L primary, value Body L secondary at the end. -->
+    <style name="Text.RowLabel" />
 
     <style name="Text.RowValue">
         <item name="android:textColor">@color/text_secondary</item>
         <item name="android:gravity">end|center_vertical</item>
     </style>
 
-    <!-- Device values (long model names): one right-aligned line that shrinks
-         to 12 sp before it ellipsizes, instead of splitting mid-name. -->
+    <!-- Long device names: one line that shrinks to 12 sp before it ellipsizes. -->
     <style name="Text.RowValue.SingleLine">
         <item name="android:maxLines">1</item>
         <item name="android:ellipsize">end</item>
         <item name="autoSizeTextType">uniform</item>
         <item name="autoSizeMinTextSize">12sp</item>
-        <item name="autoSizeMaxTextSize">@dimen/text_body</item>
+        <item name="autoSizeMaxTextSize">@dimen/text_body_l</item>
         <item name="autoSizeStepGranularity">1sp</item>
     </style>
 
-    <!-- Countdown: 40 sp semibold tabular; autosizes down at large font scales -->
-    <style name="Text.Hero">
-        <item name="android:fontFamily">@font/inter_semibold</item>
-        <item name="android:textSize">@dimen/text_hero</item>
-        <item name="android:letterSpacing">-0.02</item>
-        <item name="android:fontFeatureSettings">tnum</item>
-        <item name="android:lineSpacingExtra">0sp</item>
-    </style>
-
+    <!-- Mono: JetBrains Mono 400 12-13 / 18 (versions, footer, sizes). -->
     <style name="Text.Mono">
         <item name="android:fontFamily">@font/jetbrains_mono_regular</item>
-        <item name="android:fontFeatureSettings">tnum</item>
+        <item name="fontFamily">@font/jetbrains_mono_regular</item>
+        <item name="android:textSize">@dimen/text_mono_13</item>
+        <item name="lineHeight">18sp</item>
+        <item name="android:textColor">@color/text_secondary</item>
     </style>
 
     <style name="Text.Mono.Footer">
-        <item name="android:textSize">@dimen/text_caption</item>
+        <item name="android:textSize">@dimen/text_mono</item>
         <item name="android:textColor">@color/text_tertiary</item>
     </style>
 
-    <style name="Text.Chip">
-        <item name="android:textSize">@dimen/text_caption</item>
-        <item name="android:lineSpacingExtra">0sp</item>
-        <!-- Two lines so large text wraps instead of truncating. -->
-        <item name="android:maxLines">2</item>
+    <!-- Mono key: JetBrains Mono 500 16 / 24, +0.02em. -->
+    <style name="Text.MonoKey">
+        <item name="android:fontFamily">@font/jetbrains_mono_medium</item>
+        <item name="fontFamily">@font/jetbrains_mono_medium</item>
+        <item name="android:textSize">@dimen/text_mono_key</item>
+        <item name="lineHeight">24sp</item>
+        <item name="android:letterSpacing">0.02</item>
     </style>
 
-    <!-- Splash film: "Anoy", "Loader" and "Hax" (same face, size and white). -->
-    <style name="Text.Splash">
-        <!-- Both attributes: AppCompat lets the theme's app fontFamily win over
-             android:fontFamily alone. -->
-        <item name="android:fontFamily">@font/inter_semibold</item>
-        <item name="fontFamily">@font/inter_semibold</item>
-        <item name="android:textSize">@dimen/text_splash</item>
+    <!-- Mono block: JetBrains Mono 400 12.5 / 20 (support-info preview). -->
+    <style name="Text.MonoBlock">
+        <item name="android:fontFamily">@font/jetbrains_mono_regular</item>
+        <item name="fontFamily">@font/jetbrains_mono_regular</item>
+        <item name="android:textSize">@dimen/text_mono_block</item>
+        <item name="lineHeight">20sp</item>
         <item name="android:textColor">@color/text_primary</item>
-        <item name="android:letterSpacing">-0.02</item>
-        <item name="android:includeFontPadding">false</item>
-        <item name="android:maxLines">1</item>
-    </style>
-
-    <!-- Splash film: "Welcome To", smaller, slightly tracked, 72 % white. -->
-    <style name="Text.SplashGreeting">
-        <item name="android:fontFamily">@font/inter_regular</item>
-        <item name="fontFamily">@font/inter_regular</item>
-        <item name="android:textSize">@dimen/text_splash_greeting</item>
-        <item name="android:textColor">@color/text_on_black_72</item>
-        <item name="android:letterSpacing">0.04</item>
-        <item name="android:includeFontPadding">false</item>
-        <item name="android:maxLines">1</item>
     </style>
 
     <!-- ===================================================== Buttons -->
-    <!-- Primary pill: 56 dp, radius 28, blue; 0.98 press scale. -->
+    <!-- Primary: 56 dp, radius 16, accent; pressed accent-pressed; disabled
+         surface-2 with a tertiary label. No press scale, no ripple wash. -->
     <style name="Widget.Anoy.Button" parent="Widget.Material3.Button">
         <item name="android:minHeight">@dimen/button_height</item>
         <item name="android:insetTop">0dp</item>
@@ -283,152 +406,190 @@
         <item name="android:paddingEnd">@dimen/space_24</item>
         <item name="cornerRadius">@dimen/button_radius</item>
         <item name="backgroundTint">@color/button_bg</item>
-        <item name="rippleColor">@color/ripple_light</item>
+        <item name="rippleColor">@color/ripple_none</item>
         <item name="android:textColor">@color/button_text</item>
         <item name="android:textAppearance">@style/TextAppearance.Anoy.Button</item>
         <item name="android:fontFamily">@font/inter_semibold</item>
-        <item name="android:textSize">@dimen/text_headline</item>
+        <item name="android:textSize">@dimen/text_button</item>
         <item name="android:textAllCaps">false</item>
-        <item name="android:letterSpacing">0</item>
+        <item name="android:letterSpacing">-0.005</item>
+        <item name="android:fontFeatureSettings">tnum</item>
         <item name="android:maxLines">2</item>
         <item name="iconTint">@color/button_text</item>
         <item name="iconSize">@dimen/button_progress</item>
         <item name="iconPadding">@dimen/space_8</item>
         <item name="iconGravity">textStart</item>
         <item name="android:elevation">0dp</item>
-        <item name="android:stateListAnimator">@animator/press_scale</item>
+        <item name="android:stateListAnimator">@null</item>
     </style>
 
     <style name="TextAppearance.Anoy.Button" parent="TextAppearance.Material3.LabelLarge">
         <item name="android:fontFamily">@font/inter_semibold</item>
         <item name="fontFamily">@font/inter_semibold</item>
-        <item name="android:textSize">@dimen/text_headline</item>
+        <item name="android:textSize">@dimen/text_button</item>
         <item name="android:textAllCaps">false</item>
-        <item name="android:letterSpacing">0</item>
+        <item name="android:letterSpacing">-0.005</item>
     </style>
 
-    <!-- Quiet text button (Telegram, Cancel, Try again inside notices). -->
+    <!-- Primary inside a sheet: 48 dp. -->
+    <style name="Widget.Anoy.Button.Sheet">
+        <item name="android:minHeight">@dimen/button_height_sheet</item>
+    </style>
+
+    <!-- Tonal inside a sheet: surface-3 fill, primary label, 48 dp. -->
+    <style name="Widget.Anoy.Button.Tonal">
+        <item name="android:minHeight">@dimen/button_height_sheet</item>
+        <item name="backgroundTint">@color/tonal_bg</item>
+        <item name="android:textColor">@color/tonal_text</item>
+        <item name="iconTint">@color/tonal_text</item>
+    </style>
+
+    <!-- Tonal on the black background: surface-2 fill (Retry, Stop). -->
+    <style name="Widget.Anoy.Button.Tonal.OnBackground">
+        <item name="backgroundTint">@color/tonal_bg_on_black</item>
+    </style>
+
+    <!-- Text button: Link style (Inter 500 15), 48 dp target. -->
     <style name="Widget.Anoy.Button.Text" parent="Widget.Material3.Button.TextButton">
-        <item name="android:minHeight">@dimen/icon_button</item>
-        <item name="android:minWidth">@dimen/icon_button</item>
+        <item name="android:minHeight">@dimen/touch_target</item>
+        <item name="android:minWidth">@dimen/touch_target</item>
         <item name="android:insetTop">0dp</item>
         <item name="android:insetBottom">0dp</item>
         <item name="android:paddingStart">@dimen/space_12</item>
         <item name="android:paddingEnd">@dimen/space_12</item>
         <item name="android:textColor">@color/link_text</item>
         <item name="android:textAppearance">@style/TextAppearance.Anoy.TextButton</item>
-        <item name="android:fontFamily">@font/inter_semibold</item>
-        <item name="android:textSize">@dimen/text_callout</item>
+        <item name="android:fontFamily">@font/inter_medium</item>
+        <item name="android:textSize">@dimen/text_link</item>
         <item name="android:textAllCaps">false</item>
         <item name="android:letterSpacing">0</item>
-        <item name="rippleColor">@color/ripple_blue</item>
+        <item name="rippleColor">@color/ripple_none</item>
         <item name="iconTint">@color/link_text</item>
-        <item name="iconSize">@dimen/icon_small</item>
-        <item name="iconPadding">@dimen/space_8</item>
-        <item name="iconGravity">textStart</item>
+        <item name="iconSize">14dp</item>
+        <item name="iconPadding">@dimen/space_4</item>
+        <item name="iconGravity">textEnd</item>
         <item name="cornerRadius">@dimen/button_radius</item>
     </style>
 
     <style name="TextAppearance.Anoy.TextButton" parent="TextAppearance.Material3.LabelLarge">
-        <item name="android:fontFamily">@font/inter_semibold</item>
-        <item name="fontFamily">@font/inter_semibold</item>
-        <item name="android:textSize">@dimen/text_callout</item>
+        <item name="android:fontFamily">@font/inter_medium</item>
+        <item name="fontFamily">@font/inter_medium</item>
+        <item name="android:textSize">@dimen/text_link</item>
         <item name="android:textAllCaps">false</item>
         <item name="android:letterSpacing">0</item>
     </style>
 
-    <!-- Secondary pill on sheets (Cancel): raised neutral fill. -->
-    <style name="Widget.Anoy.Button.Secondary">
-        <item name="backgroundTint">@color/surface_raised</item>
-        <item name="android:textColor">@color/text_primary</item>
-        <item name="iconTint">@color/text_primary</item>
+    <!-- Quiet text button in secondary (Not now, Cancel). -->
+    <style name="Widget.Anoy.Button.Text.Secondary">
+        <item name="android:textColor">@color/quiet_text</item>
+        <item name="iconTint">@color/quiet_text</item>
     </style>
 
-    <!-- Destructive pill (Sign out confirm). -->
-    <style name="Widget.Anoy.Button.Destructive">
-        <item name="backgroundTint">@color/surface_raised</item>
-        <item name="android:textColor">@color/destructive_text</item>
-        <item name="iconTint">@color/destructive_text</item>
+    <!-- "Paste" inside the key field: 13 sp 600, accent. -->
+    <style name="Widget.Anoy.Button.Text.Paste">
+        <item name="android:fontFamily">@font/inter_semibold</item>
+        <item name="android:textSize">@dimen/text_paste</item>
+        <item name="android:paddingStart">@dimen/space_12</item>
+        <item name="android:paddingEnd">@dimen/space_16</item>
     </style>
 
-    <!-- 44 dp icon button, tinted Lucide glyph. -->
+    <!-- 48 dp icon target, 24 dp outline glyph, no container. -->
     <style name="IconButton" parent="">
-        <item name="android:layout_width">@dimen/icon_button</item>
-        <item name="android:layout_height">@dimen/icon_button</item>
-        <item name="android:background">@drawable/bg_icon_button</item>
+        <item name="android:layout_width">@dimen/touch_target</item>
+        <item name="android:layout_height">@dimen/touch_target</item>
+        <item name="android:background">@drawable/bg_icon_press</item>
         <item name="android:padding">12dp</item>
         <item name="android:scaleType">fitCenter</item>
-        <item name="tint">@color/icon_button_tint</item>
+        <item name="tint">@color/icon_tint</item>
+    </style>
+
+    <!-- 48 dp icon target, 20 dp inline glyph (field trailing icons). -->
+    <style name="IconButton.Inline">
+        <item name="android:padding">14dp</item>
     </style>
 
     <!-- ===================================================== Surfaces -->
-    <style name="Widget.Anoy.Card" parent="Widget.Material3.CardView.Outlined">
-        <item name="cardBackgroundColor">@color/surface</item>
-        <item name="strokeColor">@color/hairline</item>
-        <item name="strokeWidth">@dimen/hairline</item>
-        <item name="cardCornerRadius">@dimen/card_radius</item>
+    <!-- Home cards: surface-1, radius 24, fill only (no stroke on black). -->
+    <style name="Widget.Anoy.Card" parent="Widget.Material3.CardView.Filled">
+        <item name="cardBackgroundColor">@color/surface_1</item>
+        <item name="strokeWidth">0dp</item>
+        <item name="cardCornerRadius">@dimen/radius_card</item>
         <item name="cardElevation">0dp</item>
-        <item name="rippleColor">@color/ripple_light</item>
+        <item name="rippleColor">@color/ripple_none</item>
         <item name="shapeAppearance">@style/ShapeAppearance.Anoy.Card</item>
         <item name="shapeAppearanceOverlay">@null</item>
     </style>
 
     <style name="ShapeAppearance.Anoy.Card" parent="">
         <item name="cornerFamily">rounded</item>
-        <item name="cornerSize">@dimen/card_radius</item>
+        <item name="cornerSize">@dimen/radius_card</item>
     </style>
 
-    <!-- Amber notice: 12 % fill, 24 % border. -->
+    <!-- Inset grouped list: surface-1, radius 16, no stroke; clips its rows. -->
+    <style name="Widget.Anoy.Group" parent="Widget.Material3.CardView.Filled">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="cardBackgroundColor">@color/surface_1</item>
+        <item name="strokeWidth">0dp</item>
+        <item name="cardCornerRadius">@dimen/radius_control</item>
+        <item name="cardElevation">0dp</item>
+        <item name="rippleColor">@color/ripple_none</item>
+        <item name="shapeAppearance">@style/ShapeAppearance.Anoy.Control</item>
+        <item name="shapeAppearanceOverlay">@null</item>
+    </style>
+
+    <!-- The same list inside a sheet: surface-3 on surface-2. -->
+    <style name="Widget.Anoy.Group.InSheet">
+        <item name="cardBackgroundColor">@color/surface_3</item>
+    </style>
+
+    <style name="ShapeAppearance.Anoy.Control" parent="">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">@dimen/radius_control</item>
+    </style>
+
+    <!-- Panel notice: notice-bg, 1 dp notice-stroke, radius 16. -->
     <style name="Widget.Anoy.Card.Notice">
-        <item name="cardBackgroundColor">@color/warning_tint</item>
-        <item name="strokeColor">@color/warning_border</item>
-        <item name="shapeAppearance">@style/ShapeAppearance.Anoy.Field</item>
+        <item name="cardBackgroundColor">@color/notice_bg</item>
+        <item name="strokeColor">@color/notice_stroke</item>
+        <item name="strokeWidth">@dimen/hairline</item>
+        <item name="shapeAppearance">@style/ShapeAppearance.Anoy.Control</item>
     </style>
 
-    <!-- 2.2.0 home: rounded game icon. -->
-    <style name="ShapeAppearance.Anoy.GameIcon" parent="">
+    <!-- Game tile: radius 14. -->
+    <style name="ShapeAppearance.Anoy.GameTile" parent="">
         <item name="cornerFamily">rounded</item>
-        <item name="cornerSize">@dimen/game_icon_radius</item>
+        <item name="cornerSize">@dimen/radius_tile</item>
     </style>
 
-    <style name="ShapeAppearance.Anoy.Field" parent="">
-        <item name="cornerFamily">rounded</item>
-        <item name="cornerSize">@dimen/field_radius</item>
-    </style>
-
-    <!-- Snackbar: raised surface, 14 dp radius, blue action. -->
+    <!-- Snackbar: surface-2, radius 16. -->
     <style name="Widget.Anoy.Snackbar" parent="Widget.Material3.Snackbar">
-        <item name="backgroundTint">@color/surface_raised</item>
-        <item name="shapeAppearance">@style/ShapeAppearance.Anoy.Snackbar</item>
+        <item name="backgroundTint">@color/surface_2</item>
+        <item name="shapeAppearance">@style/ShapeAppearance.Anoy.Control</item>
         <item name="shapeAppearanceOverlay">@null</item>
         <item name="android:layout_margin">@dimen/screen_padding</item>
         <item name="actionTextColorAlpha">1</item>
     </style>
 
-    <style name="ShapeAppearance.Anoy.Snackbar" parent="">
-        <item name="cornerFamily">rounded</item>
-        <item name="cornerSize">@dimen/snackbar_radius</item>
-    </style>
-
     <style name="Widget.Anoy.Snackbar.Text" parent="Widget.Material3.Snackbar.TextView">
         <item name="android:textColor">@color/text_primary</item>
         <item name="android:fontFamily">@font/inter_regular</item>
-        <item name="android:textSize">@dimen/text_callout</item>
+        <item name="android:textSize">@dimen/text_body</item>
         <item name="android:maxLines">4</item>
     </style>
 
     <style name="Widget.Anoy.Snackbar.Action" parent="Widget.Material3.Button.TextButton.Snackbar">
-        <item name="android:textColor">@color/blue</item>
-        <item name="android:fontFamily">@font/inter_semibold</item>
+        <item name="android:textColor">@color/accent</item>
+        <item name="android:fontFamily">@font/inter_medium</item>
         <item name="android:textAllCaps">false</item>
     </style>
 
-    <!-- Linear progress: rounded, track #2C2C2E, no M3 stop dot or gap. -->
+    <!-- Progress: 4 dp, pill ends, accent on progress-track. -->
     <style name="Widget.Anoy.Progress" parent="Widget.Material3.LinearProgressIndicator">
-        <item name="indicatorColor">@color/blue</item>
-        <item name="trackColor">@color/track</item>
-        <item name="trackThickness">@dimen/progress_thick</item>
-        <item name="trackCornerRadius">3dp</item>
+        <item name="indicatorColor">@color/accent</item>
+        <item name="trackColor">@color/progress_track</item>
+        <item name="trackThickness">@dimen/progress_hero</item>
+        <item name="trackCornerRadius">2dp</item>
         <item name="trackStopIndicatorSize">0dp</item>
         <item name="indicatorTrackGapSize">0dp</item>
         <item name="waveAmplitude">0dp</item>
@@ -436,81 +597,94 @@
         <item name="hideAnimationBehavior">none</item>
     </style>
 
-    <style name="Widget.Anoy.Progress.Thin">
-        <item name="trackThickness">@dimen/progress_thin</item>
-        <item name="trackCornerRadius">2dp</item>
+    <!-- Sheets: 3 dp. -->
+    <style name="Widget.Anoy.Progress.Sheet">
+        <item name="trackThickness">@dimen/progress_sheet</item>
+        <item name="trackCornerRadius">1.5dp</item>
     </style>
 
-    <!-- 18 dp inline indicator used as a MaterialButton icon while loading. -->
+    <!-- 18 dp arc spinner in white, used inside buttons while loading. -->
     <style name="Widget.Anoy.ButtonProgress" parent="Widget.Material3.CircularProgressIndicator.ExtraSmall">
         <item name="indicatorSize">@dimen/button_progress</item>
         <item name="trackThickness">2dp</item>
         <item name="indicatorInset">0dp</item>
-        <item name="indicatorColor">@color/white</item>
+        <item name="indicatorColor">@color/on_accent</item>
         <item name="trackColor">@color/transparent</item>
         <item name="indicatorTrackGapSize">0dp</item>
         <item name="trackCornerRadius">1dp</item>
     </style>
 
-    <!-- ===================================================== Rows & tiles -->
-    <!-- 32 dp neutral tile, 9 dp radius, #8E8E93 glyph. -->
-    <style name="Tile" parent="">
-        <item name="android:layout_width">@dimen/tile_size</item>
-        <item name="android:layout_height">@dimen/tile_size</item>
-        <item name="android:padding">@dimen/tile_padding</item>
-        <item name="android:background">@drawable/bg_tile</item>
-        <item name="android:importantForAccessibility">no</item>
-        <item name="tint">@color/text_secondary</item>
+    <!-- Splash status: 14 dp thin arc (1.5 dp), secondary. -->
+    <style name="Widget.Anoy.StatusSpinner" parent="Widget.Material3.CircularProgressIndicator.ExtraSmall">
+        <item name="indicatorSize">@dimen/status_spinner</item>
+        <item name="trackThickness">1.5dp</item>
+        <item name="indicatorInset">0dp</item>
+        <item name="indicatorColor">@color/text_secondary</item>
+        <item name="trackColor">@color/transparent</item>
+        <item name="indicatorTrackGapSize">0dp</item>
+        <item name="trackCornerRadius">0.75dp</item>
     </style>
 
-    <style name="TileLarge" parent="">
-        <item name="android:layout_width">@dimen/tile_large</item>
-        <item name="android:layout_height">@dimen/tile_large</item>
-        <item name="android:padding">@dimen/tile_large_padding</item>
-        <item name="android:importantForAccessibility">no</item>
-    </style>
-
-    <style name="ListRow" parent="">
+    <!-- ===================================================== Rows -->
+    <!-- Settings / sheet row: 52 dp, 16 dp inner padding, pressed surface-3. -->
+    <style name="Row" parent="">
         <item name="android:layout_width">match_parent</item>
         <item name="android:layout_height">wrap_content</item>
         <item name="android:minHeight">@dimen/row_height</item>
         <item name="android:gravity">center_vertical</item>
         <item name="android:orientation">horizontal</item>
-        <item name="android:paddingStart">@dimen/card_padding</item>
-        <item name="android:paddingEnd">@dimen/card_padding</item>
-        <item name="android:paddingTop">@dimen/space_8</item>
-        <item name="android:paddingBottom">@dimen/space_8</item>
-        <item name="android:focusable">true</item>
+        <item name="android:paddingStart">@dimen/row_padding</item>
+        <item name="android:paddingEnd">@dimen/row_padding</item>
+        <item name="android:paddingTop">@dimen/space_12</item>
+        <item name="android:paddingBottom">@dimen/space_12</item>
+        <item name="android:background">@drawable/bg_row</item>
     </style>
 
-    <!-- Separator inset 56 dp (16 padding + 32 tile + 8 gap). -->
-    <style name="Separator" parent="">
+    <style name="Row.InSheet">
+        <item name="android:background">@drawable/bg_row_in_sheet</item>
+    </style>
+
+    <!-- Destructive row: pressed danger-tint. -->
+    <style name="Row.Danger">
+        <item name="android:background">@drawable/bg_row_danger</item>
+    </style>
+
+    <style name="Row.Danger.InSheet" />
+
+    <!-- Divider inside a grouped list, inset 16 dp from the left. -->
+    <style name="RowDivider" parent="">
         <item name="android:layout_width">match_parent</item>
         <item name="android:layout_height">@dimen/hairline</item>
-        <item name="android:layout_marginStart">@dimen/row_inset</item>
-        <item name="android:background">@color/separator</item>
+        <item name="android:layout_marginStart">@dimen/row_padding</item>
+        <item name="android:background">@color/divider</item>
         <item name="android:importantForAccessibility">no</item>
     </style>
 
-    <!-- Status chip: outline pill, icon + word, no fill behind the text. -->
-    <style name="Chip" parent="Text.Chip">
-        <item name="android:layout_width">wrap_content</item>
-        <item name="android:layout_height">wrap_content</item>
-        <item name="android:minHeight">@dimen/chip_height</item>
-        <item name="android:gravity">center_vertical</item>
-        <item name="android:paddingStart">10dp</item>
-        <item name="android:paddingEnd">12dp</item>
-        <item name="android:paddingTop">4dp</item>
-        <item name="android:paddingBottom">4dp</item>
-        <item name="android:drawablePadding">6dp</item>
+    <!-- Trailing 20 dp glyph on actionable rows. -->
+    <style name="RowGlyph" parent="">
+        <item name="android:layout_width">@dimen/icon_inline</item>
+        <item name="android:layout_height">@dimen/icon_inline</item>
+        <item name="android:layout_marginStart">@dimen/space_8</item>
+        <item name="android:importantForAccessibility">no</item>
+        <item name="tint">@color/text_tertiary</item>
     </style>
 
-    <style name="Skeleton" parent="">
-        <item name="android:layout_width">96dp</item>
-        <item name="android:layout_height">@dimen/skeleton_height</item>
-        <item name="android:background">@drawable/bg_skeleton</item>
+    <!-- 6 dp status dot. Colour set with a tint. -->
+    <style name="Dot" parent="">
+        <item name="android:layout_width">@dimen/dot</item>
+        <item name="android:layout_height">@dimen/dot</item>
+        <item name="android:layout_marginEnd">@dimen/space_8</item>
+        <item name="android:src">@drawable/dot</item>
         <item name="android:importantForAccessibility">no</item>
-        <item name="android:visibility">gone</item>
+        <item name="tint">@color/success</item>
+    </style>
+
+    <!-- Plain divider (1 dp, full width). -->
+    <style name="Divider" parent="">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">@dimen/hairline</item>
+        <item name="android:background">@color/divider</item>
+        <item name="android:importantForAccessibility">no</item>
     </style>
 
     <style name="Scroll" parent="">

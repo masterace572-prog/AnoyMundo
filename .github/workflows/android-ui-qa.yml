@@ -246,8 +246,9 @@ jobs:
           for n, p in files.items():
               h = hashlib.md5(p.read_bytes()).hexdigest()
               # '_scrolled': since 2.2.0 (no Device card) home fits on one screen at
-              # normal sizes, so the scrolled frame can equal the top one.
-              if h in seen and not any(k in n + seen[h] for k in ('live', 'anim_', 'icon_', 'splash_reduced', 'splash_t240', 'home_launch_', 'home_obb', 'perm_', '_scrolled')):
+              # normal sizes, so the scrolled frame can equal the top one. 2.3.0: the
+              # same holds for Settings on tall screens ('settings_bottom').
+              if h in seen and not any(k in n + seen[h] for k in ('live', 'anim_', 'icon_', 'splash_reduced', 'splash_t240', 'home_launch_', 'home_obb', 'perm_', '_scrolled', 'settings_bottom')):
                   errors.append(f'identical frames: {seen[h]} / {n}')
               seen[h] = n
           trace = Path('qa-logs/emulator-trace.txt')
@@ -324,6 +325,12 @@ jobs:
           def line(tag):
               m = re.search(r'^%s: (.*)$' % re.escape(tag), t, re.M)
               return m.group(1) if m else ''
+          # 2.3.0: the countdown is columns (text="29" text="days" text="21" text="hours" ...);
+          # fold them back into "29d 21h 05m 03s" so the checks read the same.
+          def clock(tx):
+              unit = {'days': 'd', 'hours': 'h', 'min': 'm', 'sec': 's'}
+              parts = re.findall(r'text="(\d+)" text="(days|hours|min|sec)"', tx)
+              return ' '.join(n + unit[u] for n, u in parts)
           if 'com.xlox' in line('perm_allow step1 focus') or 'ettings' not in line('perm_allow step1 focus'):
               errors.append('Launch did not open the All files access page: ' + line('perm_allow step1 focus'))
           if 'permissioncontroller' not in line('perm_allow step2 focus'):
@@ -376,10 +383,12 @@ jobs:
               errors.append('Install unknown apps page not shown: ' + line('perm_install_deny prompt focus'))
           # Explanation sheet right before the All files access / Install unknown apps
           # pages (not before the Files dialog); "Not now" opens no page.
-          for tag, title in (('perm_explain_all_files', 'Allow All files access'),
-                             ('perm_explain_install', 'Allow Install unknown apps')):
+          # 2.3.0: kicker PERMISSION, the permission name as the title, WHY WE ASK / HOW TO ALLOW.
+          for tag, title in (('perm_explain_all_files', 'text="All files access"'),
+                             ('perm_explain_install', 'text="Install unknown apps"')):
               tx = line(tag + ' texts')
-              if title not in tx or 'Continue to Settings' not in tx or 'Not now' not in tx:
+              if (title not in tx or 'Continue to Settings' not in tx or 'Not now' not in tx
+                      or 'HOW TO ALLOW' not in tx.upper()):
                   errors.append('%s: no explanation sheet before the settings page: %s' % (tag, tx[:300]))
               if 'com.xlox' not in line(tag + ' focus'):
                   errors.append('%s: the settings page opened before the explanation: %s' % (tag, line(tag + ' focus')))
@@ -420,15 +429,16 @@ jobs:
               errors.append('game closed outside Anoy: not reconciled: ' + line('game_closed log')[-300:])
           # Licence refresh on return to home.
           lb, la = line('licence_extend before texts'), line('licence_extend after texts')
-          if '29d 21h' not in lb or '59d 23h' not in la or 'expiry changed' not in line('licence_extend log'):
+          if '29d 21h' not in clock(lb) or '59d 23h' not in clock(la) or 'expiry changed' not in line('licence_extend log'):
               errors.append('panel extension not reflected on return to home: %s -> %s' % (lb[:200], la[:200]))
           if 'Expires soon' in lb:
               errors.append('29 days left shown as Expires soon')
           sa = line('licence_soon after texts')
-          if 'Expires soon' not in sa or 'Renew' not in sa or not re.search(r'3h 0\dm', sa):
-              errors.append('low time: no Expires soon / Renew nudge: ' + sa[:400])
+          # 2.3.0: no Renew button (Help covers renewing); no days column under a day.
+          if 'Expires soon' not in sa or not re.search(r'^0?3h 0\dm \d\ds$', clock(sa)):
+              errors.append('low time: no Expires soon / hours-first countdown: ' + sa[:400])
           fa, fl = line('licence_fail after texts'), line('licence_fail log')
-          if 'Last checked' not in fa or '29d 21h' not in fa or 'Sign in again' in fa or 'Expired' in fa:
+          if 'Last checked' not in fa or '29d 21h' not in clock(fa) or 'Sign in again' in fa or 'Expired' in fa:
               errors.append('refresh failure: last known time not kept quietly: ' + fa[:400])
           if 'keeping the last known time' not in fl or 'No active session' in fl:
               errors.append('refresh failure: signed out or not handled: ' + fl[-300:])
@@ -445,8 +455,8 @@ jobs:
           if '14 Nov 2026, 10:30 PM IST' not in xi:
               errors.append('IST: 2026-11-14T17:00:00.000Z must read "14 Nov 2026, 10:30 PM IST" (as on the website): ' + xi[:300])
           ht = line('help sheet texts')
-          for want in ('Launching the game', 'Files missing or access needed', 'Renewing your licence',
-                       'Copy support info', 'Help on Telegram', 'Got it'):
+          # 2.3.0: the topics are kickers (dumped uppercase) LAUNCH / FILES AND ACCESS / RENEW.
+          for want in ('LAUNCH', 'FILES AND ACCESS', 'RENEW', 'Copy support info', 'Help on Telegram', 'Got it'):
               if want not in ht:
                   errors.append('Help sheet: %r missing: %s' % (want, ht[:400]))
           si = line('help support info')
@@ -457,35 +467,37 @@ jobs:
           for bad in ('QA7K2', 'ANOY-', '/storage', '/data/', '/sdcard'):
               if bad in sv:
                   errors.append('support info leaks %r: %s' % (bad, sv[:400]))
-          if 'Support info copied' not in line('help copied texts') or 'Help: support info copied' not in line('help log'):
+          # 2.3.0: the Copy button itself confirms ("Copied" + check), no snackbar.
+          if 'text="Copied"' not in line('help copied texts') or 'Help: support info copied' not in line('help log'):
               errors.append('Copy support info: no confirmation: ' + line('help copied texts')[:300])
           # Access chip: ready -> confirmation only; off -> explanation, Settings, no launch.
-          if line('access_ok chip') != 'Access ready':
+          # 2.3.0: Settings > Access reads Ready / Needs attention next to a dot.
+          if line('access_ok chip') != 'Ready':
               errors.append('Access chip with everything allowed: %r' % line('access_ok chip'))
           if 'are on' not in line('access_ok texts') or 'com.xlox' not in line('access_ok focus'):
               errors.append('Access ready tap: no confirmation, or Anoy left the screen: ' + line('access_ok focus'))
-          if line('access_missing chip') != 'Access needs attention':
+          if line('access_missing chip') != 'Needs attention':
               errors.append('Access chip with All files access off: %r' % line('access_missing chip'))
-          if 'Allow All files access' not in line('access_missing sheet texts'):
+          if 'text="All files access"' not in line('access_missing sheet texts') or 'Continue to Settings' not in line('access_missing sheet texts'):
               errors.append('Access tap: the explanation sheet did not open: ' + line('access_missing sheet texts')[:300])
           af = line('access_missing settings focus')
           if 'com.xlox' in af or 'ettings' not in af:
               errors.append('Access tap: Continue did not open Settings: ' + af)
-          if 'com.xlox' not in line('access_missing back focus') or line('access_missing after chip') != 'Access ready':
+          if 'com.xlox' not in line('access_missing back focus') or line('access_missing after chip') != 'Ready':
               errors.append('Access: not back on home as ready after the grant: %s / %r' % (line('access_missing back focus'), line('access_missing after chip')))
           al = line('access_missing log')
           if 'Access: asking for ALL_FILES' not in al or 'Permission explained: ALL_FILES' not in al or 'Permissions granted' not in al:
               errors.append('Access flow log incomplete: ' + al[-400:])
           if 'continuing the launch' in al or 'Launch: preparing' in al:
               errors.append('Access flow started a launch: ' + al[-400:])
-          if not re.search(r'typical phone: game card bottom \d+, launch fade top \d+: clear', t):
+          if not re.search(r'typical phone: game card bottom \d+, launch bar top \d+: clear', t):
               errors.append('GAME card is covered by the Launch bar on a 411 x 914 dp phone')
           # ---- 2.2.0 ----
           # Splash: version top right, status line from the (simulated) check.
-          for st, want in (('up_to_date', 'Up to date'), ('available', 'Update available (v2.3.0)'),
+          for st, want in (('up_to_date', 'Up to date'), ('available', 'Update available (v2.4.0)'),
                            ('fail', 'check for updates')):
               tx = line('splash status %s texts' % st)
-              if want not in tx or 'text="v2.2.0"' not in tx:
+              if want not in tx or 'text="v2.3.0"' not in tx:
                   errors.append('splash status %s: %r / version missing: %s' % (st, want, tx[:300]))
           if 'text="Retry"' not in line('splash status fail texts'):
               errors.append('splash: a failed check has no Retry: ' + line('splash status fail texts')[:300])
@@ -497,7 +509,8 @@ jobs:
           if 'Keep Anoy open' not in line('app update downloading texts') or '%' not in line('app update downloading texts'):
               errors.append('app update: no download progress: ' + line('app update downloading texts')[:300])
           uf = line('app update failed texts')
-          if 'text="Retry"' not in uf or 'valid Anoy update' not in uf or 'Update failed' not in uf:
+          # 2.3.0: the failure block reads "Update failed. <reason>" and the button Try again.
+          if 'text="Try again"' not in uf or 'valid Anoy update' not in uf or 'Update failed. ' not in uf:
               errors.append('app update: failure without reason / Retry: ' + uf[:400])
           if 'LogAct' not in line('app update not now focus'):
               errors.append('app update: Not now did not continue to sign in: ' + line('app update not now focus'))
@@ -525,8 +538,10 @@ jobs:
               errors.append('home header / notice: %s' % ht2[:400])
           if 'text="Device"' in ht2 or 'text="Sign out"' in ht2 or 'text="Anoy"' in ht2:
               errors.append('home still shows Device / Sign out / "Anoy" title: ' + ht2[:400])
-          if not re.search(r'\d+d \d\dh \d\dm \d\ds', ht2):
-              errors.append('home countdown is not "Xd XXh XXm XXs": ' + ht2[:300])
+          if not re.search(r'^\d+d \d\dh \d\dm \d\ds$', clock(ht2)):
+              errors.append('home countdown columns are not days / hours / min / sec: ' + ht2[:300])
+          if 'ANOY HAX' not in ht2.upper() or 'text="BGMI"' not in ht2:
+              errors.append('home: no ANOY HAX kicker / BGMI title: ' + ht2[:300])
           # The countdown really ticks (frozen elsewhere in QA): two frames 2 s apart differ.
           ca, cb = files.get('home_clock_a'), files.get('home_clock_b')
           if ca and cb and ca.read_bytes() == cb.read_bytes():
@@ -534,7 +549,7 @@ jobs:
           # Settings: device, access + OBB, report, version, Sign out.
           sx = line('settings texts') + ' ' + line('settings bottom texts')
           for want in ('Settings', 'Model', 'Android', 'All files access', 'Install unknown apps', 'Game files (OBB)',
-                       'Report on Telegram', 'Copy support info', '2.2.0 (8)', 'Sign out'):
+                       'Report on Telegram', 'Copy support info', 'App version', '2.3.0 (9)', 'Sign out'):
               if want not in sx:
                   errors.append('Settings: %r missing: %s' % (want, sx[:500]))
           if 'text="Launch"' in sx or 'text="Stop"' in sx:

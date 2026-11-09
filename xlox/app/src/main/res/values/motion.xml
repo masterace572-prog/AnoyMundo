@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Motion tokens (spec 2.5). Java mirrors these in Ui (PRESS/SHORT/MEDIUM/LONG). -->
+<resources>
+    <integer name="motion_press">100</integer>
+    <integer name="motion_short">180</integer>
+    <integer name="motion_medium">280</integer>
+    <integer name="motion_long">450</integer>
+    <integer name="motion_sheet_in">320</integer>
+    <integer name="motion_sheet_out">240</integer>
+</resources>

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 56 dp game tile: surface-2, hairline, radius 14 (holds the "BG" monogram). -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <solid android:color="@color/surface_2" />
+    <stroke android:width="@dimen/hairline" android:color="@color/hairline" />
+    <corners android:radius="@dimen/radius_tile" />
+</shape>

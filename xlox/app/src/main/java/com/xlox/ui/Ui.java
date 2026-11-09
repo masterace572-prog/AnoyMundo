@@ -1,7 +1,6 @@
 package com.xlox.ui;
 
 import android.animation.ObjectAnimator;
-import android.animation.ValueAnimator;
 import android.app.Activity;
 import android.content.ActivityNotFoundException;
 import android.content.Context;
@@ -15,10 +14,8 @@ import android.util.TypedValue;
 import android.widget.TextView;
 import android.view.HapticFeedbackConstants;
 import android.view.View;
-import android.view.ViewGroup;
 import android.view.Window;
 import android.view.animation.Interpolator;
-import android.view.animation.OvershootInterpolator;
 import android.view.animation.PathInterpolator;
 
 import androidx.core.graphics.Insets;
@@ -42,14 +39,19 @@ public final class Ui {
 
     private static final String TAG = "Ui";
 
-    /** Motion tokens (UI brief). */
-    public static final long FAST = 150L;
-    public static final long MEDIUM = 220L;
-    public static final long SLOW = 320L;
-    /** FastOutSlowIn - enters. */
-    public static final Interpolator ENTER = new PathInterpolator(0.4f, 0f, 0.2f, 1f);
-    /** LinearOutSlowIn - sheets and incoming elements. */
-    public static final Interpolator SHEET = new PathInterpolator(0f, 0f, 0.2f, 1f);
+    /**
+     * Motion tokens (spec 2.5; res/values/motion.xml): press 100 linear, short
+     * 180 (fades, swaps), medium 280 (screens, expands), long 450 (the splash
+     * dissolve). Sheets: 320 in / 240 out (res/anim/sheet_in, sheet_out).
+     */
+    public static final long PRESS = 100L;
+    public static final long SHORT = 180L;
+    public static final long MEDIUM = 280L;
+    public static final long LONG = 450L;
+    /** Enter: decelerate (0.2, 0, 0, 1). */
+    public static final Interpolator ENTER = new PathInterpolator(0.2f, 0f, 0f, 1f);
+    /** Exit: accelerate (0.4, 0, 1, 1). */
+    public static final Interpolator EXIT = new PathInterpolator(0.4f, 0f, 1f, 1f);
 
     /** Views tagged with this become the Snackbar anchor (above the action bar). */
     public static final String SNACKBAR_ANCHOR = "snackbar_anchor";
@@ -176,7 +178,7 @@ public final class Ui {
         float d = dp(view.getContext(), 6);
         view.animate().cancel();
         ObjectAnimator shake = ObjectAnimator.ofFloat(view, View.TRANSLATION_X, 0f, d, -d, d * 0.6f, -d * 0.4f, 0f);
-        shake.setDuration(SLOW);
+        shake.setDuration(MEDIUM);
         shake.start();
     }
 
@@ -192,33 +194,7 @@ public final class Ui {
         }
     }
 
-    /** Fade + 8 dp rise (220 ms, FastOutSlowIn); instant under reduced motion. */
-    public static void reveal(View view, long delayMs) {
-        if (view == null) return;
-        view.animate().cancel();
-        if (reducedMotion(view.getContext())) {
-            view.setAlpha(1f);
-            view.setTranslationY(0f);
-            return;
-        }
-        view.setAlpha(0f);
-        view.setTranslationY(dp(view.getContext(), 8));
-        view.animate().alpha(1f).translationY(0f).setStartDelay(delayMs).setDuration(MEDIUM)
-                .setInterpolator(ENTER).start();
-    }
-
-    /** Reveals each visible child with a 40 ms stagger. */
-    public static void stagger(ViewGroup group, long startDelayMs) {
-        if (group == null) return;
-        int n = 0;
-        for (int i = 0; i < group.getChildCount(); i++) {
-            View child = group.getChildAt(i);
-            if (child.getVisibility() != View.VISIBLE) continue;
-            reveal(child, startDelayMs + 40L * n++);
-        }
-    }
-
-    /** Crossfade a view in or out (150 ms). */
+    /** Crossfade a view in or out (180 ms); instant under reduced motion. */
     public static void fade(View view, boolean show) {
         if (view == null) return;
         view.animate().cancel();
@@ -232,46 +208,14 @@ public final class Ui {
                 view.setAlpha(0f);
                 view.setVisibility(View.VISIBLE);
             }
-            view.animate().alpha(1f).setDuration(FAST).setInterpolator(ENTER).start();
+            view.animate().alpha(1f).setDuration(SHORT).setInterpolator(ENTER).start();
         } else if (view.getVisibility() == View.VISIBLE) {
-            view.animate().alpha(0f).setDuration(FAST).setInterpolator(ENTER)
+            view.animate().alpha(0f).setDuration(SHORT).setInterpolator(EXIT)
                     .withEndAction(() -> {
                         view.setVisibility(View.GONE);
                         view.setAlpha(1f);
                     }).start();
         }
-    }
-
-    /** Skeleton pulse (alpha 1 -> 0.45) for at most {@code maxMs}, then static. */
-    public static void pulse(View view, long maxMs) {
-        if (view == null) return;
-        Object running = view.getTag(R.id.tag_pulse);
-        if (running instanceof ValueAnimator) ((ValueAnimator) running).cancel();
-        view.setAlpha(1f);
-        if (reducedMotion(view.getContext())) return;
-        ObjectAnimator a = ObjectAnimator.ofFloat(view, View.ALPHA, 1f, 0.45f);
-        a.setDuration(700L);
-        a.setRepeatMode(ValueAnimator.REVERSE);
-        a.setRepeatCount((int) Math.max(1, (maxMs / 700L) | 1)); // odd count ends back at 1
-        a.setInterpolator(ENTER);
-        view.setTag(R.id.tag_pulse, a);
-        a.start();
-    }
-
-    public static void stopPulse(View view) {
-        if (view == null) return;
-        Object running = view.getTag(R.id.tag_pulse);
-        if (running instanceof ValueAnimator) ((ValueAnimator) running).cancel();
-        view.setAlpha(1f);
-    }
-
-    /** A small spring used only for the success check. */
-    public static void spring(View view) {
-        if (view == null || reducedMotion(view.getContext())) return;
-        view.setScaleX(0.96f);
-        view.setScaleY(0.96f);
-        view.animate().scaleX(1f).scaleY(1f).setDuration(SLOW)
-                .setInterpolator(new OvershootInterpolator(2.2f)).start();
     }
 
     // ---------------------------------------------------------------- buttons
@@ -284,12 +228,15 @@ public final class Ui {
     }
 
     /**
-     * Loading pill: label + inline indicator; the button keeps its colour and
+     * Loading button: inline 18 dp indicator (+ label, or the indicator alone
+     * when the label is empty); the button keeps its colour and size and
      * ignores taps while loading.
      */
     public static void setLoading(MaterialButton button, boolean loading, CharSequence label) {
         if (button == null) return;
         button.setText(label);
+        button.setIconPadding(loading && (label == null || label.length() == 0)
+                ? 0 : dp(button.getContext(), 8));
         if (loading) {
             if (!(button.getIcon() instanceof IndeterminateDrawable)) {
                 button.setIcon(buttonProgress(button.getContext()));
@@ -301,14 +248,14 @@ public final class Ui {
         }
     }
 
-    /** Success pill: check icon + label + CONFIRM haptic + small spring. */
+    /** Success: check icon + label + CONFIRM haptic. No scale, no overshoot. */
     public static void setSuccess(MaterialButton button, CharSequence label) {
         if (button == null) return;
         button.setIconResource(R.drawable.ic_check);
+        button.setIconPadding(dp(button.getContext(), 8));
         button.setText(label);
         button.setClickable(false);
         confirm(button);
-        spring(button);
     }
 
     public static String bytes(long value) {
@@ -317,9 +264,22 @@ public final class Ui {
         return String.format(Locale.US, "%.1f MB", value / (1024.0 * 1024.0));
     }
 
+    /** "18.4 of 43.0 MB": both numbers in the unit of the total (tabular in Mono). */
+    public static String bytesOf(Context context, long done, long total) {
+        String doneText;
+        if (total < 1024) {
+            doneText = String.valueOf(done);
+        } else if (total < 1024L * 1024L) {
+            doneText = String.format(Locale.US, "%.0f", done / 1024.0);
+        } else {
+            doneText = String.format(Locale.US, "%.1f", done / (1024.0 * 1024.0));
+        }
+        return context.getString(R.string.progress_bytes, doneText, bytes(total));
+    }
+
     // --------------------------------------------------------------- feedback
 
-    /** Raised Snackbar (14 dp radius, blue action) anchored above the action bar. */
+    /** Snackbar (surface-2, radius 16, accent action) anchored above the action bar. */
     public static void snackbar(Activity activity, CharSequence message) {
         snackbar(activity, message, Snackbar.LENGTH_LONG);
     }
@@ -354,14 +314,27 @@ public final class Ui {
 
     // ------------------------------------------------------------------ sheets
 
-    /** Modal bottom sheet: expanded, no collapsed state, 28 dp corners, 60 % scrim. */
+    /**
+     * The one sheet (spec 3.9): surface-2, 28 dp top corners with a hairline top
+     * edge (the content's @style/Sheet background), 64 % scrim, 320 ms in /
+     * 240 ms out, at most 560 dp wide, expanded with no collapsed state, and
+     * padded above the navigation bar so the surface runs behind it.
+     */
     public static BottomSheetDialog sheet(Activity activity, View content, boolean dismissable) {
         BottomSheetDialog dialog = new BottomSheetDialog(activity, R.style.ThemeOverlay_Anoy_BottomSheet);
         dialog.setContentView(content);
+        ViewCompat.setOnApplyWindowInsetsListener(content, (v, insets) -> {
+            Insets bars = insets.getInsets(WindowInsetsCompat.Type.systemBars()
+                    | WindowInsetsCompat.Type.displayCutout());
+            padBottom(v, bars.bottom);
+            return insets;
+        });
+        ViewCompat.requestApplyInsets(content);
         dialog.setCancelable(dismissable);
         dialog.setCanceledOnTouchOutside(dismissable);
         BottomSheetBehavior<?> behavior = dialog.getBehavior();
         behavior.setSkipCollapsed(true);
+        behavior.setMaxWidth(activity.getResources().getDimensionPixelSize(R.dimen.sheet_max_width));
         behavior.setDraggable(dismissable);
         behavior.setHideable(dismissable);
         behavior.setState(BottomSheetBehavior.STATE_EXPANDED);

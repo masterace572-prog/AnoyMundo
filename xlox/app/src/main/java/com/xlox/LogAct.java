@@ -18,6 +18,7 @@ import android.view.View;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.EditText;
+import android.view.ViewGroup;
 import android.widget.ImageButton;
 import android.widget.TextView;
 
@@ -102,9 +103,8 @@ public class LogAct extends AppCompatActivity {
     private Prefs prefs;
     private EditText keyInput;
     private View keyField;
-    private View keyIcon;
     private ImageButton toggleKey;
-    private ImageButton pasteKey;
+    private View pasteKey;
     private TextView keyError;
     private MaterialButton loginButton;
     private View notice;
@@ -131,7 +131,6 @@ public class LogAct extends AppCompatActivity {
         // A single-line key can't wrap: cap its scale so ANOY-7D-XXXXX fits at 2.0.
         Ui.capFontScale(keyInput, 1.5f);
         keyField = findViewById(R.id.keyField);
-        keyIcon = findViewById(R.id.keyIcon);
         toggleKey = findViewById(R.id.toggleKey);
         pasteKey = findViewById(R.id.pasteKey);
         keyError = findViewById(R.id.keyError);
@@ -167,7 +166,6 @@ public class LogAct extends AppCompatActivity {
                 updateLoginEnabled();
             }
         });
-        keyInput.setOnFocusChangeListener((v, hasFocus) -> syncKeyIcon());
         keyInput.setOnEditorActionListener((v, actionId, event) -> {
             boolean enter = event != null && event.getKeyCode() == KeyEvent.KEYCODE_ENTER
                     && event.getAction() == KeyEvent.ACTION_DOWN;
@@ -198,8 +196,6 @@ public class LogAct extends AppCompatActivity {
 
         updateVersionFooter();
         setFormEnabled(false);
-        Ui.stagger(findViewById(R.id.loginContent), 0);
-        Ui.reveal(findViewById(R.id.loginActions), 120);
 
         // QA only (debug builds): show one update-gate state without the network.
         String qaGate = BuildConfig.DEBUG && getIntent() != null ? getIntent().getStringExtra(EXTRA_QA_GATE) : null;
@@ -219,8 +215,21 @@ public class LogAct extends AppCompatActivity {
         Ui.maxWidth(findViewById(R.id.loginActions), 440);
         Ui.onInsets(root, (bars, bottom, ime) -> {
             root.setPadding(bars.left, bars.top, bars.right, bottom);
-            // Keyboard open: keep the pill pinned above it, drop the footer.
+            // Keyboard open: the brand row stays, the top space shrinks, the
+            // footer hides and Sign in is scrolled into view above the keyboard.
             footer.setVisibility(ime ? View.GONE : View.VISIBLE);
+            View top = findViewById(R.id.loginTopSpace);
+            ViewGroup.LayoutParams lp = top.getLayoutParams();
+            int want = getResources().getDimensionPixelSize(ime ? R.dimen.space_16 : R.dimen.space_72);
+            if (lp.height != want) {
+                lp.height = want;
+                top.setLayoutParams(lp);
+            }
+            if (ime) {
+                View button = findViewById(R.id.login);
+                button.post(() -> button.requestRectangleOnScreen(
+                        new android.graphics.Rect(0, 0, button.getWidth(), button.getHeight()), true));
+            }
         });
     }
 
@@ -316,7 +325,7 @@ public class LogAct extends AppCompatActivity {
                 | (visible ? InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD
                 : InputType.TYPE_TEXT_VARIATION_PASSWORD));
         // setInputType resets the typeface on some versions; keep the mono face.
-        keyInput.setTypeface(androidx.core.content.res.ResourcesCompat.getFont(this, R.font.jetbrains_mono_regular));
+        keyInput.setTypeface(androidx.core.content.res.ResourcesCompat.getFont(this, R.font.jetbrains_mono_medium));
         keyInput.setSelection(Math.max(0, Math.min(selection, keyInput.getText().length())));
         toggleKey.setImageResource(visible ? R.drawable.ic_eye_off : R.drawable.ic_eye);
         toggleKey.setSelected(visible);
@@ -356,15 +365,11 @@ public class LogAct extends AppCompatActivity {
             keyError.setText(message);
             keyError.setVisibility(View.VISIBLE);
             keyField.setActivated(true);
-            syncKeyIcon();
             Ui.reject(keyField);
         } else {
             keyError.setVisibility(View.GONE);
             keyField.setActivated(false);
-            syncKeyIcon();
             noticeText.setText(message);
-            ((android.widget.ImageView) findViewById(R.id.loginNoticeIcon)).setImageResource(
-                    message.equals(getString(R.string.net_offline)) ? R.drawable.ic_wifi_off : R.drawable.ic_triangle_alert);
             Ui.fade(notice, true);
             Ui.rejectHaptic(notice);
             // Connection problems aren't fixed by typing: drop the keyboard and
@@ -383,22 +388,14 @@ public class LogAct extends AppCompatActivity {
         if (keyError.getVisibility() != View.GONE) keyError.setVisibility(View.GONE);
         if (notice.getVisibility() != View.GONE) Ui.fade(notice, false);
         keyField.setActivated(false);
-        syncKeyIcon();
-    }
-
-    /** The leading key icon follows the field: blue while focused, red on error. */
-    private void syncKeyIcon() {
-        if (keyIcon == null) return;
-        keyIcon.setActivated(keyField.isActivated());
-        keyIcon.setSelected(keyInput.hasFocus());
-        keyIcon.refreshDrawableState();
     }
 
     private void updateVersionFooter() {
         String lib = LibManager.installedVersion(this);
         TextView footer = findViewById(R.id.versionFooter);
+        // While the library check runs and nothing is installed yet: "…".
         footer.setText(getString(R.string.version_footer, BuildConfig.VERSION_NAME,
-                lib != null ? lib : getString(R.string.not_installed_short)));
+                lib != null ? lib : gatePassed ? getString(R.string.not_installed_short) : getString(R.string.ellipsis)));
     }
 
     // --------------------------------------------------------------- sign in
@@ -482,7 +479,9 @@ public class LogAct extends AppCompatActivity {
         keyInput.setEnabled(!busy);
         toggleKey.setEnabled(!busy);
         pasteKey.setEnabled(!busy);
-        Ui.setLoading(loginButton, busy, getString(busy ? R.string.signing_in : R.string.sign_in));
+        // Loading: the label is replaced by the 18 dp spinner; width unchanged.
+        Ui.setLoading(loginButton, busy, busy ? "" : getString(R.string.sign_in));
+        loginButton.setContentDescription(busy ? getString(R.string.signing_in) : null);
         updateLoginEnabled();
     }
 

@@ -19,14 +19,14 @@
     <string name="update_required_message_missing">Library %1$s is required to continue.</string>
     <string name="update_size">Download size %1$s</string>
     <string name="update_now">Update now</string>
-    <string name="update_downloading_title">Updating</string>
+    <string name="update_downloading_title">Updating library</string>
     <string name="update_downloading_message">Keep the app open until the update finishes.</string>
     <string name="update_progress">%1$d%% · %2$s of %3$s</string>
     <string name="update_progress_unknown">%1$s downloaded</string>
     <string name="update_installing_title">Installing</string>
     <string name="update_installing_message">Verifying and installing the library.</string>
     <string name="update_failed_title">Update failed</string>
-    <string name="update_check_failed_title">Can\'t check for updates</string>
+    <string name="update_check_failed_title">Couldn\'t check for updates</string>
     <string name="update_done_title">You\'re up to date</string>
     <string name="update_done_message">Library %1$s</string>
     <string name="try_again">Try again</string>
@@ -109,7 +109,7 @@
     <string name="help_access_title">Files missing or access needed</string>
     <string name="help_access_body">Turn on All files access, Files and Install unknown apps for Anoy, then come back and tap Launch. Settings shows whether anything is still off.</string>
     <string name="help_renew_title">Renewing your licence</string>
-    <string name="help_renew_body">Tap Renew on the licence card, or Help on Telegram, and message support. The new time shows when you come back to Anoy.</string>
+    <string name="help_renew_body">Your time left shows on Home. To renew, add time to your licence on the panel, or message support with Help on Telegram. The new time shows when you come back to Anoy.</string>
     <string name="help_copy_support">Copy support info</string>
     <string name="help_got_it">Got it</string>
     <string name="support_info_title">Support info</string>
@@ -191,8 +191,7 @@
     <string name="splash_status_checking">Checking for updates…</string>
     <string name="splash_status_current">Up to date</string>
     <string name="splash_status_available">Update available (v%1$s)</string>
-    <string name="splash_status_proceeding">Proceeding…</string>
-    <string name="splash_status_failed">Can\'t check for updates</string>
+    <string name="splash_status_failed">Couldn\'t check for updates</string>
     <string name="splash_retry">Retry</string>
 
     <!-- 2.2.0: in-app app update (the APK, not the library). -->
@@ -236,7 +235,7 @@
     <string name="settings_section_device">Device</string>
     <string name="settings_section_state">Access and files</string>
     <string name="settings_section_report">Report a problem</string>
-    <string name="settings_section_app">App</string>
+    <string name="settings_section_app">About</string>
     <string name="settings_section_account">Account</string>
     <string name="settings_model">Model</string>
     <string name="settings_android">Android</string>
@@ -252,11 +251,45 @@
     <string name="settings_obb_hint">Launch copies the game files when they are missing.</string>
     <string name="settings_telegram">Report on Telegram</string>
     <string name="settings_copy_support">Copy support info</string>
-    <string name="settings_version">Version</string>
+    <string name="settings_version">App version</string>
     <string name="settings_version_value">%1$s (%2$d)</string>
     <string name="settings_row_description">%1$s: %2$s</string>
     <string name="game_title_version">BGMI v%1$s</string>
     <string name="game_icon_description">BGMI</string>
+
+    <!-- 2.3.0: premium redesign - new labels only. -->
+    <string name="brand_name">Anoy Hax</string>
+    <string name="ellipsis">…</string>
+    <string name="paste">Paste</string>
+    <string name="get_key_description">Get a licence key on Telegram</string>
+    <string name="progress_bytes">%1$s of %2$s</string>
+    <string name="app_update_headline">A new version is ready</string>
+    <string name="app_update_downloading_percent">Downloading %1$d%%</string>
+    <string name="app_update_error_block">%1$s. %2$s</string>
+    <string name="help_glyph">?</string>
+    <string name="help_kicker_access">Files and access</string>
+    <string name="game_monogram">BG</string>
+    <string name="library_version">Library %1$s</string>
+    <string name="library_not_installed">Library not installed</string>
+    <string name="unit_days">days</string>
+    <string name="unit_hours">hours</string>
+    <string name="unit_minutes">min</string>
+    <string name="unit_seconds">sec</string>
+    <string name="access_label">Access</string>
+    <string name="access_value_needed">Needs attention</string>
+    <string name="sign_out_keep_caption">Your key stays saved on this device.</string>
+    <string name="forget_key_caption">Removes the key from this device. You\'ll need to enter it again.</string>
+    <string name="support_info_no_key">Your licence key isn\'t included.</string>
+    <string name="support_info_copied_short">Copied</string>
+    <!-- Permission sheet: the existing explanations, split into "why" and "how". -->
+    <string name="perm_kicker">Permission</string>
+    <string name="perm_why">Why we ask</string>
+    <string name="perm_how">How to allow</string>
+    <string name="perm_why_all_files">Anoy needs this to prepare game files.</string>
+    <string name="perm_why_install">Anoy needs this to install the library update and prepare game files.</string>
+    <string name="perm_step_settings">You\'ll be taken to Settings.</string>
+    <string name="perm_step_turn_on">Turn it on for Anoy, then come back.</string>
+    <string name="perm_step_number">%1$d</string>
 
     <plurals name="a11y_days">
         <item quantity="one">%d day</item>

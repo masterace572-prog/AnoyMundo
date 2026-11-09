@@ -730,3 +730,53 @@ says "Settings shows whether anything is still off".
     to differ.
 - **Removed:** `qa_first_help`.
 - `qa_frame` / `qa_hold` never touch the network.
+
+## 12. 2.3.0: visual-only premium redesign
+
+Every Android screen was restyled to the designer spec. **No behaviour
+changed:** Launch / Stop, the OBB copy, the three permissions, sign in and
+licensing, /connect, JNI, app updates and library updates all run the same
+code as 2.2.0. The website was not touched.
+
+### Where the design lives (defined once)
+
+| What | Where |
+|---|---|
+| Colours (surfaces 0–3, text, accent, status, notice) | `res/values/colors.xml` |
+| Spacing, radii, type sizes, gutters (24 / 20), sheet max width 560 | `res/values/dimens.xml` |
+| Type scale, buttons, rows, groups, sheets | `res/values/styles.xml` |
+| Motion tokens (press 100, short 180, medium 280, long 450, sheets 320 / 240) | `res/values/motion.xml` + `ui/Ui.java` |
+| Fonts (Inter, JetBrains Mono; OFL) | `res/font/` |
+| Icons (Lucide, ISC) | `scripts/lucide_vectors.mjs` → `res/drawable/ic_*.xml` |
+
+### Rules the code follows
+
+- Status is a **6 dp dot + text**, never a pill or chip; at most three dots on
+  a screen (home: licence, game state, server; Settings: Access).
+- Green only for dots / checks, amber only for the notice, "needs
+  attention" and the last day, red only for errors, "Expired" and destructive
+  actions. The accent is never a card fill.
+- Countdown, versions and download numbers use tabular figures. The countdown
+  numerals follow the font scale up to 1.15× and then hold, so nothing clips at
+  1.3×. TalkBack reads the licence card once a minute, not every second.
+- Animations off → every transition is instant.
+
+### Deliberate deviations / notes
+
+- **Expired:** the spec disables Launch. Behaviour is frozen, so the existing
+  enabled **Sign in again** stays (it is what lets the user renew and continue).
+- **Renew button removed** from the time card. Help's renew sentence now says
+  where time left shows and how to renew (panel licence, or Help on Telegram).
+- **Permission sheet "granted → Allowed" confirmation** (~700 ms) is not
+  shown: the grant happens in Android's Settings page, and the return path is
+  part of the frozen permission logic. The sheet simply isn't reopened.
+- **Game files (OBB)** row: tapping it when files are missing opens an
+  informational sheet ("Launch copies the game files when they are
+  missing."); there is nothing to allow.
+- **Game icon:** `GameIcon` still loads from `GAME_ICON_URL` (empty, so the
+  "BG" monogram shows). The installed launcher icon is not read, to avoid
+  adding package-manager code to a visual release.
+- **Lottie** files and the dependency stay in the project (the quality gate
+  still checks them) but no screen uses them any more.
+- QA's sample "available" app update moved from 2.3.0 to 2.4.0 so it stays
+  newer than the app.

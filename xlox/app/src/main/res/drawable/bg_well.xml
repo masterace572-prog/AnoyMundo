@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Support-info preview block: #0E0E10, hairline, radius 16. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <solid android:color="@color/surface_well" />
+    <stroke android:width="@dimen/hairline" android:color="@color/hairline" />
+    <corners android:radius="@dimen/radius_control" />
+</shape>

@@ -1,5 +1,31 @@
 # Anoy Loader — changelog
 
+## 2.3.0 — a calmer, more premium look (visual only)
+
+Everything works exactly as in 2.2.0: Launch / Stop, game files, permissions,
+sign in and licence, app and library updates. Only the look changed.
+
+- **One design system.** Inter for text, JetBrains Mono for versions, keys
+  and download numbers (tabular figures). Quiet black surfaces, system blue
+  for the main action, and colour only where it means something: green for
+  "fine", amber for "needs attention" or the last day, red for errors,
+  "Expired" and destructive actions. No pills, chips, icon tiles or glows;
+  a status is a small dot plus a word.
+- **Splash and sign in.** Same film and words, tighter type and spacing.
+- **Home.** "ANOY HAX / Welcome back", the panel notice as written, a time
+  card with days / hours / min / sec columns (ticking every second, last
+  day in amber, "Expired" in red), and a game card with the BGMI version,
+  library version, state and server. Launch sits in a pinned bar.
+- **Settings.** An inset grouped list: Device, Access and files, Report a
+  problem, About (App version 2.3.0 (9)), Account. Anything missing is shown
+  in amber with a chevron that opens the explanation.
+- **Sheets.** Help, Support info, Sign out, permissions, the library update
+  and the app update share one sheet style. Copy support info confirms on
+  the button ("Copied"). The permission sheet now says why we ask and how to
+  allow it, step by step.
+- **Renewing.** The Renew button on the time card is gone; Help explains how
+  to renew (time left shows on Home; renew on the panel or via Telegram).
+
 ## 2.2.0 — app updates, splash status, new home and Settings
 
 - **In-app app updates.** At start-up Anoy asks the panel whether a newer app

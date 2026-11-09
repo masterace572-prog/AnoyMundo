@@ -70,8 +70,9 @@ android {
         //        from 2.1.0 (home hierarchy, Loader->Hax dissolve, IST times).
         // 2.2.0: in-app app (APK) update before sign in, splash status line,
         //        new home + Settings, Help no longer opens on its own.
-        versionCode 8
-        versionName '2.2.0'
+        // 2.3.0: visual-only premium redesign of every screen (same behaviour).
+        versionCode 9
+        versionName '2.3.0'
 
         vectorDrawables {
             useSupportLibrary true

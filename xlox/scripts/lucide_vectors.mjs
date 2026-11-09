@@ -14,44 +14,16 @@ const OUT = path.resolve(here, '../app/src/main/res/drawable');
 
 // [lucide name, drawable suffix]
 const ICONS = [
-  // Every glyph is plain white; views tint it (app:tint / iconTint /
-  // drawableTint) so one drawable serves every state colour.
+  // 2.3.0: the complete set from the UI redesign specification (2.4). Every
+  // glyph is plain white; views tint it (app:tint / iconTint / drawableTint).
+  ['chevron-left', 'chevron_left'],
+  ['chevron-right', 'chevron_right'],
+  ['arrow-up-right', 'arrow_up_right'],
   ['eye', 'eye'],
   ['eye-off', 'eye_off'],
-  ['clipboard-paste', 'clipboard_paste'],
-  ['key-round', 'key_round'],
-  ['log-out', 'log_out'],
-  ['shield-check', 'shield_check'],
-  ['shield-x', 'shield_x'],
-  ['calendar', 'calendar'],
-  ['timer', 'timer'],
-  ['gamepad-2', 'gamepad'],
-  ['activity', 'activity'],
-  ['package', 'package'],
-  ['server', 'server'],
-  ['smartphone', 'smartphone'],
-  ['cpu', 'cpu'],
-  ['send', 'send'],
-  ['circle-help', 'help'],
-  ['circle-alert', 'circle_alert'],
-  ['circle-check', 'circle_check'],
-  ['circle-x', 'circle_x'],
-  ['triangle-alert', 'triangle_alert'],
-  ['check', 'check'],
-  ['copy', 'copy'],
-  ['folder-lock', 'folder_lock'],
-  ['download', 'download'],
-  ['wifi-off', 'wifi_off'],
-  ['rotate-cw', 'rotate_cw'],
-  ['play', 'play'],
-  ['square', 'square'],
-  // 2.2.0: Settings screen and the app update screen.
   ['settings', 'settings'],
-  ['chevron-left', 'chevron_left'],
-  ['bug', 'bug'],
-  ['folder-check', 'folder_check'],
   ['info', 'info'],
-  ['arrow-down-to-line', 'arrow_down_to_line'],
+  ['check', 'check'],
 ];
 
 const NUM = /-?(?:\d+\.?\d*|\.\d+)(?:e[-+]?\d+)?/iy;

@@ -1,17 +1,28 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Licence-key sign in.
-  loginRoot is padded by LogAct with the status-bar inset (top) and
-  max(navigation bar, keyboard) (bottom), so the pill button stays pinned just
-  above the keyboard. Content is capped at 440 dp wide on tablets (Ui.maxWidth).
+  Sign in (spec 3.2), 24 dp gutters:
+    brand row (56 dp)  "Anoy Hax", left; nothing on the right
+    ~72 dp space       (shrinks while the keyboard is open)
+    Sign in / subtitle / "Licence key" / field / reserved helper line
+    Sign in (56 dp) and "Get one on Telegram"
+    footer             "App 2.3.0 · Library 1.13", pinned, hidden with the keyboard
 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/loginRoot"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/black"
     android:orientation="vertical">
+
+    <TextView
+        android:id="@+id/loginBrand"
+        style="@style/Text.Brand"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:gravity="center_vertical"
+        android:paddingStart="@dimen/gutter_wide"
+        android:paddingEnd="@dimen/gutter_wide"
+        android:text="@string/brand_name" />
 
     <ScrollView
         android:id="@+id/loginScroll"
@@ -24,34 +35,28 @@
             android:id="@+id/loginContent"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
             android:orientation="vertical"
-            android:paddingStart="@dimen/screen_padding"
-            android:paddingTop="56dp"
-            android:paddingEnd="@dimen/screen_padding"
+            android:paddingStart="@dimen/gutter_wide"
+            android:paddingEnd="@dimen/gutter_wide"
             android:paddingBottom="@dimen/space_24">
 
-            <ImageView
-                android:id="@+id/loginTile"
-                android:layout_width="@dimen/key_mark"
-                android:layout_height="@dimen/key_mark"
-                android:background="@drawable/bg_key_mark"
-                android:importantForAccessibility="no"
-                android:padding="@dimen/key_mark_padding"
-                app:srcCompat="@drawable/ic_key_round"
-                app:tint="@color/text_primary" />
+            <Space
+                android:id="@+id/loginTopSpace"
+                android:layout_width="match_parent"
+                android:layout_height="@dimen/space_72" />
 
             <TextView
                 android:id="@+id/loginTitle"
-                style="@style/Text.LargeTitle"
+                style="@style/Text.TitleL"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="@dimen/space_24"
                 android:accessibilityHeading="true"
                 android:text="@string/login_title" />
 
             <TextView
                 android:id="@+id/loginSubtitle"
-                style="@style/Text.Secondary"
+                style="@style/Text.Body.Secondary"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="@dimen/space_8"
@@ -59,15 +64,14 @@
 
             <TextView
                 android:id="@+id/keyLabel"
-                style="@style/Text.Caption"
+                style="@style/Text.Caption.Medium"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="@dimen/space_32"
-                android:labelFor="@+id/userkey"
-                android:paddingStart="@dimen/space_4"
-                android:paddingEnd="@dimen/space_4"
+                android:labelFor="@id/userkey"
                 android:text="@string/licence_key" />
 
+            <!-- Field: no leading icon; key in Mono; eye, a 1 x 20 dp divider, Paste. -->
             <LinearLayout
                 android:id="@+id/keyField"
                 android:layout_width="match_parent"
@@ -76,167 +80,138 @@
                 android:addStatesFromChildren="true"
                 android:background="@drawable/bg_field"
                 android:gravity="center_vertical"
-                android:orientation="horizontal"
-                android:paddingStart="@dimen/space_16"
-                android:paddingEnd="6dp">
-
-                <ImageView
-                    android:id="@+id/keyIcon"
-                    android:layout_width="@dimen/icon_small"
-                    android:layout_height="@dimen/icon_small"
-                    android:layout_marginEnd="@dimen/space_12"
-                    android:importantForAccessibility="no"
-                    app:srcCompat="@drawable/ic_key_round"
-                    app:tint="@color/field_icon_tint" />
+                android:orientation="horizontal">
 
                 <EditText
                     android:id="@+id/userkey"
+                    style="@style/Text.MonoKey"
                     android:layout_width="0dp"
                     android:layout_height="match_parent"
                     android:layout_weight="1"
                     android:autofillHints="password"
                     android:background="@null"
-                    android:fontFamily="@font/jetbrains_mono_regular"
                     android:hint="@string/licence_key_hint"
                     android:imeOptions="actionDone|flagNoExtractUi"
                     android:importantForAutofill="no"
                     android:inputType="textPassword|textNoSuggestions"
                     android:maxLines="1"
-                    android:minHeight="48dp"
-                    android:paddingStart="0dp"
+                    android:minHeight="@dimen/touch_target"
+                    android:paddingStart="@dimen/space_16"
                     android:paddingEnd="@dimen/space_4"
                     android:textColor="@color/text_primary"
-                    android:textColorHint="@color/text_tertiary"
-                    android:textSize="@dimen/text_body" />
+                    android:textColorHint="@color/text_tertiary" />
 
                 <ImageButton
                     android:id="@+id/toggleKey"
-                    style="@style/IconButton"
+                    style="@style/IconButton.Inline"
                     android:contentDescription="@string/show_key_description"
-                    app:srcCompat="@drawable/ic_eye" />
+                    android:src="@drawable/ic_eye" />
 
-                <ImageButton
+                <View
+                    android:layout_width="@dimen/hairline"
+                    android:layout_height="@dimen/field_divider_height"
+                    android:background="@color/hairline"
+                    android:importantForAccessibility="no" />
+
+                <com.google.android.material.button.MaterialButton
                     android:id="@+id/pasteKey"
-                    style="@style/IconButton"
+                    style="@style/Widget.Anoy.Button.Text.Paste"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
                     android:contentDescription="@string/paste_key_description"
-                    app:srcCompat="@drawable/ic_clipboard_paste" />
+                    android:text="@string/paste" />
             </LinearLayout>
 
-            <TextView
-                android:id="@+id/keyError"
-                style="@style/Text.Error"
+            <!-- Reserved 20 dp helper line, so an error never pushes the layout. -->
+            <FrameLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:minHeight="@dimen/helper_line">
+
+                <TextView
+                    android:id="@+id/keyError"
+                    style="@style/Text.Error"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/space_4"
+                    android:accessibilityLiveRegion="polite"
+                    android:visibility="gone" />
+            </FrameLayout>
+
+            <!-- Connection / VPN problems: inline danger-tint block with Try again. -->
+            <LinearLayout
+                android:id="@+id/loginNotice"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="@dimen/space_8"
-                android:accessibilityLiveRegion="polite"
-                android:drawablePadding="6dp"
-                android:paddingStart="@dimen/space_4"
+                android:background="@drawable/bg_error_block"
+                android:orientation="vertical"
+                android:paddingStart="@dimen/space_12"
+                android:paddingTop="@dimen/space_12"
                 android:paddingEnd="@dimen/space_4"
-                android:visibility="gone"
-                app:drawableStartCompat="@drawable/ic_circle_alert"
-                app:drawableTint="@color/danger" />
+                android:paddingBottom="@dimen/space_4"
+                android:visibility="gone">
 
-            <!-- Network / server / VPN / maintenance problems. -->
-            <com.google.android.material.card.MaterialCardView
-                android:id="@+id/loginNotice"
-                style="@style/Widget.Anoy.Card.Notice"
+                <TextView
+                    android:id="@+id/loginNoticeText"
+                    style="@style/Text.BodyS"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="@dimen/space_8"
+                    android:accessibilityLiveRegion="polite"
+                    android:textColor="@color/danger" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/loginNoticeRetry"
+                    style="@style/Widget.Anoy.Button.Text"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="end"
+                    android:text="@string/try_again" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/loginActions"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="@dimen/space_16"
-                android:accessibilityLiveRegion="polite"
-                android:visibility="gone">
+                android:orientation="vertical"
+                android:tag="snackbar_anchor">
 
-                <LinearLayout
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/login"
+                    style="@style/Widget.Anoy.Button"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:paddingStart="@dimen/space_16"
-                    android:paddingTop="14dp"
-                    android:paddingEnd="@dimen/space_8"
-                    android:paddingBottom="6dp">
+                    android:text="@string/sign_in" />
 
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:paddingEnd="@dimen/space_8">
-
-                        <ImageView
-                            android:id="@+id/loginNoticeIcon"
-                            android:layout_width="@dimen/icon_small"
-                            android:layout_height="@dimen/icon_small"
-                            android:layout_marginTop="1dp"
-                            android:layout_marginEnd="@dimen/space_12"
-                            android:importantForAccessibility="no"
-                            app:srcCompat="@drawable/ic_triangle_alert"
-                            app:tint="@color/warning" />
-
-                        <TextView
-                            android:id="@+id/loginNoticeText"
-                            style="@style/Text.Callout"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1" />
-                    </LinearLayout>
-
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/loginNoticeRetry"
-                        style="@style/Widget.Anoy.Button.Text"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_gravity="end"
-                        android:text="@string/try_again"
-                        app:icon="@drawable/ic_rotate_cw" />
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/getKey"
+                    style="@style/Widget.Anoy.Button.Text"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center_horizontal"
+                    android:layout_marginTop="@dimen/space_12"
+                    android:contentDescription="@string/get_key_description"
+                    android:text="@string/get_key"
+                    app:icon="@drawable/ic_arrow_up_right" />
+            </LinearLayout>
         </LinearLayout>
     </ScrollView>
 
-    <!-- Pinned bottom area: the pill rides above the keyboard. -->
-    <LinearLayout
-        android:id="@+id/loginActions"
+    <!-- Versions: pinned 24 dp above the navigation inset; hidden with the keyboard. -->
+    <FrameLayout
+        android:id="@+id/loginFooter"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:paddingStart="@dimen/screen_padding"
         android:paddingTop="@dimen/space_8"
-        android:paddingEnd="@dimen/screen_padding"
-        android:paddingBottom="@dimen/space_16"
-        android:tag="snackbar_anchor">
+        android:paddingBottom="@dimen/space_24">
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/login"
-            style="@style/Widget.Anoy.Button"
-            android:layout_width="match_parent"
+        <TextView
+            android:id="@+id/versionFooter"
+            style="@style/Text.Mono.Footer"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:enabled="false"
-            android:text="@string/sign_in" />
-
-        <LinearLayout
-            android:id="@+id/loginFooter"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/space_8"
-            android:gravity="center_horizontal"
-            android:orientation="vertical">
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/getKey"
-                style="@style/Widget.Anoy.Button.Text"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/get_key"
-                app:icon="@drawable/ic_send" />
-
-            <TextView
-                android:id="@+id/versionFooter"
-                style="@style/Text.Mono.Footer"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="@dimen/space_8"
-                android:gravity="center"
-                android:paddingStart="@dimen/space_8"
-                android:paddingEnd="@dimen/space_8" />
-        </LinearLayout>
-    </LinearLayout>
+            android:layout_gravity="center_horizontal" />
+    </FrameLayout>
 </LinearLayout>

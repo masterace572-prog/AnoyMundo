@@ -1,16 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Splash film (SplashActivity, ~3 s): real TextViews on true black.
-    splashMark    the static Anoy wordmark exactly where the system splash icon
-                  sits (288 dp, centred in the full window); it cross-fades out
-                  as the film starts, so the hand-off has no jump
-    splashLockup  "Welcome To" / "Anoy Loader", centred as a group
-    splashName    "Anoy" + a slot where "Loader" turns into "Hax"; ends on the
-                  true screen centre
-  2.2.0: the version sits top right (status-bar inset added in code) and a
-  status line at the bottom reports the real app update check:
-  Initializing... / Checking for updates... / Up to date / Update available /
-  Proceeding... / Can't check for updates + reason + Retry.
+  Splash (spec 3.1), true black, 24 dp gutters. The story is unchanged:
+    splashMark    the system-splash wordmark in the same place (window centre);
+                  it cross-fades out as the film starts, so the hand-off is seamless
+    splashLockup  kicker "WELCOME TO", 12 dp, "Anoy Loader" (Wordmark), centred
+                  at ~42 % of the height; "Loader" dissolves into "Hax" in the slot
+    splashVersion "v2.3.0", Mono 12 tertiary, top right, 24 dp from the edges
+    status        bottom left, 32 dp above the navigation inset: a 14 dp spinner
+                  (or a check / amber dot) + 8 dp + Caption; on failure the
+                  existing reason and Retry below it
+  Insets are added in code (SplashActivity).
 -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -28,59 +27,79 @@
         android:importantForAccessibility="no"
         android:src="@drawable/splash_mark" />
 
+    <!-- 42 : 58 split puts the lockup's centre at ~42 % of the height. -->
     <LinearLayout
-        android:id="@+id/splashLockup"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="center"
-        android:alpha="0"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
         android:clipChildren="false"
-        android:gravity="center_horizontal"
         android:orientation="vertical">
 
-        <TextView
-            android:id="@+id/splashGreeting"
-            style="@style/Text.SplashGreeting"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/splash_greeting" />
+        <Space
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="42" />
 
         <LinearLayout
-            android:id="@+id/splashName"
+            android:id="@+id/splashLockup"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/splash_line_gap"
-            android:orientation="horizontal">
+            android:layout_gravity="center_horizontal"
+            android:alpha="0"
+            android:clipChildren="false"
+            android:gravity="center_horizontal"
+            android:orientation="vertical"
+            android:paddingStart="@dimen/gutter_wide"
+            android:paddingEnd="@dimen/gutter_wide">
 
             <TextView
-                android:id="@+id/splashAnoy"
-                style="@style/Text.Splash"
+                android:id="@+id/splashGreeting"
+                style="@style/Text.Kicker.Splash"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="@string/app_name" />
+                android:text="@string/splash_greeting" />
 
-            <FrameLayout
-                android:id="@+id/splashSlot"
+            <LinearLayout
+                android:id="@+id/splashName"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="@dimen/space_8">
+                android:layout_marginTop="@dimen/space_12"
+                android:orientation="horizontal">
 
                 <TextView
-                    android:id="@+id/splashLoader"
-                    style="@style/Text.Splash"
+                    android:id="@+id/splashAnoy"
+                    style="@style/Text.Wordmark"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="@string/splash_loader" />
+                    android:text="@string/app_name" />
 
-                <TextView
-                    android:id="@+id/splashHax"
-                    style="@style/Text.Splash"
+                <FrameLayout
+                    android:id="@+id/splashSlot"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:alpha="0"
-                    android:text="@string/splash_hax" />
-            </FrameLayout>
+                    android:layout_marginStart="@dimen/space_8">
+
+                    <TextView
+                        android:id="@+id/splashLoader"
+                        style="@style/Text.Wordmark"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/splash_loader" />
+
+                    <TextView
+                        android:id="@+id/splashHax"
+                        style="@style/Text.Wordmark"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:alpha="0"
+                        android:text="@string/splash_hax" />
+                </FrameLayout>
+            </LinearLayout>
         </LinearLayout>
+
+        <Space
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="58" />
     </LinearLayout>
 
     <TextView
@@ -89,24 +108,23 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="top|end"
-        android:layout_marginTop="@dimen/space_16"
-        android:layout_marginEnd="@dimen/screen_padding"
+        android:layout_marginTop="@dimen/gutter_wide"
+        android:layout_marginEnd="@dimen/gutter_wide"
         android:alpha="0" />
 
-    <!-- Bottom status: spinner or glyph + one line, then the reason and Retry on failure. -->
     <LinearLayout
         android:id="@+id/splashStatusBar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_gravity="bottom"
-        android:layout_marginBottom="@dimen/space_24"
+        android:layout_marginBottom="@dimen/space_32"
         android:alpha="0"
-        android:gravity="center_horizontal"
         android:orientation="vertical"
-        android:paddingStart="@dimen/screen_padding"
-        android:paddingEnd="@dimen/screen_padding">
+        android:paddingStart="@dimen/gutter_wide"
+        android:paddingEnd="@dimen/gutter_wide">
 
         <LinearLayout
+            android:id="@+id/splashStatusRow"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:gravity="center_vertical"
@@ -115,46 +133,41 @@
 
             <com.google.android.material.progressindicator.CircularProgressIndicator
                 android:id="@+id/splashStatusSpinner"
-                style="@style/Widget.Anoy.ButtonProgress"
+                style="@style/Widget.Anoy.StatusSpinner"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginEnd="@dimen/space_8"
                 android:importantForAccessibility="no"
-                android:indeterminate="true"
-                app:indicatorColor="@color/text_tertiary"
-                app:indicatorSize="12dp"
-                app:trackThickness="1.5dp" />
+                android:indeterminate="true" />
 
             <TextView
                 android:id="@+id/splashStatus"
-                style="@style/Text.Mono.Footer"
+                style="@style/Text.Caption"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:accessibilityLiveRegion="polite"
-                android:drawablePadding="6dp"
+                android:drawablePadding="@dimen/space_8"
                 android:gravity="center_vertical"
                 android:text="@string/splash_status_init" />
         </LinearLayout>
 
         <TextView
             android:id="@+id/splashStatusDetail"
-            style="@style/Text.Caption"
+            style="@style/Text.BodyS"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/space_8"
-            android:gravity="center"
-            android:maxWidth="360dp"
+            android:maxWidth="@dimen/max_content_width"
             android:visibility="gone" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/splashRetry"
-            style="@style/Widget.Anoy.Button.Secondary"
+            style="@style/Widget.Anoy.Button.Tonal.OnBackground"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/space_12"
-            android:minWidth="160dp"
+            android:layout_marginTop="@dimen/space_16"
+            android:minWidth="120dp"
             android:text="@string/splash_retry"
-            android:visibility="gone"
-            app:icon="@drawable/ic_rotate_cw" />
+            android:visibility="gone" />
     </LinearLayout>
 </FrameLayout>

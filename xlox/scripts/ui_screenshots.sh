@@ -269,14 +269,14 @@ else
 fi
 # Installing state, straight from the screen's own preview.
 stop_app
-adb shell am start -W -n $PKG/.AppUpdateActivity --es app_update_name 2.3.0 --ei app_update_code 99 \
+adb shell am start -W -n $PKG/.AppUpdateActivity --es app_update_name 2.4.0 --ei app_update_code 99 \
     --es app_update_url https://github.com/masterace572-prog/AnoyMundo/releases/download/sample/Anoy.apk \
     --ez qa_update_preview true --es qa_update_state installing >> "$LOG" 2>&1 || true
 sleep 1.5
 shot app_update_state_installing
 log "app update installing texts: $(texts)"
 stop_app
-adb shell am start -W -n $PKG/.AppUpdateActivity --es app_update_name 2.3.0 --ei app_update_code 99 \
+adb shell am start -W -n $PKG/.AppUpdateActivity --es app_update_name 2.4.0 --ei app_update_code 99 \
     --es app_update_url https://github.com/masterace572-prog/AnoyMundo/releases/download/sample/Anoy.apk \
     --ez qa_update_preview true --es qa_update_state downloading >> "$LOG" 2>&1 || true
 sleep 1.5
@@ -626,11 +626,11 @@ xml = sys.stdin.read()
 def box(i):
     m = re.search(r"resource-id=\"com\.xlox:id/%s\"[^>]*?bounds=\"\[(\d+),(\d+)\]\[(\d+),(\d+)\]\"" % i, xml)
     return tuple(map(int, m.groups())) if m else None
-card, button = box("gameCard"), box("primaryAction")
-fade = round((24 + 8) * 420 / 160)  # 24 dp fade + 8 dp panel padding above the button
-if card and button:
-    clear = card[3] <= button[1] - fade
-    print("game card bottom %d, launch fade top %d: %s" % (card[3], button[1] - fade, "clear" if clear else "covered"))
+card, bar = box("gameCard"), box("actionBar")
+# 2.3.0: the pinned bar has no fade; its top edge (12 dp above Launch) is the limit.
+if card and bar:
+    clear = card[3] <= bar[1]
+    print("game card bottom %d, launch bar top %d: %s" % (card[3], bar[1], "clear" if clear else "covered"))
 else:
     print("game card bounds missing")
 ' | while read -r line; do log "typical phone: $line"; done
@@ -914,11 +914,12 @@ log "help support info: $(node_text supportInfoText)"
 log "help support texts: $(texts)"
 tap_id supportInfoCopy || true
 sleep 0.4
-# The snackbar lasts ~2.75 s: read the screen first, screenshot after.
+# 2.3.0: the Copy button reads "Copied" (held 4 s under qa_freeze_clock, ~800 ms
+# otherwise), then the sheet closes: read the screen first, screenshot after.
 copied_texts=""
 for i in 1 2 3; do
     copied_texts=$(texts)
-    case "$copied_texts" in *"Support info copied"*) break ;; esac
+    case "$copied_texts" in *'text="Copied"'*) break ;; esac
     sleep 0.3
 done
 log "help copied texts: $copied_texts"

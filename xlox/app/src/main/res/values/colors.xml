@@ -1,45 +1,56 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Design tokens (UI brief). The only file allowed to hold raw hex colours. -->
+<!--
+  2.3.0 design tokens (UI redesign specification, section 2.1). The only file
+  allowed to hold raw hex colours. Names follow the spec's token names.
+-->
 <resources>
     <!-- Surfaces -->
-    <color name="black">#FF000000</color>
-    <color name="white">#FFFFFFFF</color>
-    <color name="surface">#FF141416</color>
-    <color name="surface_raised">#FF1C1C1E</color>
-    <color name="hairline">#FF26262A</color>
-    <color name="separator">#FF2C2C2E</color>
-    <color name="track">#FF2C2C2E</color>
-    <color name="skeleton">#FF26262A</color>
+    <color name="background">#FF000000</color>
+    <color name="surface_1">#FF151517</color>
+    <color name="surface_2">#FF1C1C1F</color>
+    <color name="surface_3">#FF26262A</color>
+    <!-- Support-info preview block: just under surface-2 (spec 3.8). -->
+    <color name="surface_well">#FF0E0E10</color>
+    <color name="hairline">#FF2C2C30</color>
+    <color name="divider">#FF212125</color>
+    <!-- Sheet drag handle (spec 3.9). -->
+    <color name="handle">#FF3A3A3E</color>
+    <color name="progress_track">#FF26262A</color>
 
     <!-- Text -->
-    <color name="text_primary">#FFFFFFFF</color>
-    <color name="text_secondary">#FF8E8E93</color>
-    <color name="text_tertiary">#FF636366</color>
-    <color name="text_disabled">#80FFFFFF</color>
-    <!-- Secondary white on pure black (splash greeting). -->
-    <color name="text_on_black_72">#B8FFFFFF</color>
+    <color name="text_primary">#FFF5F5F7</color>
+    <color name="text_secondary">#FF9A9AA1</color>
+    <!-- Metadata only (footer versions, placeholders, unit labels). -->
+    <color name="text_tertiary">#FF6C6C72</color>
+    <!-- The wordmark itself stays pure white. -->
+    <color name="wordmark">#FFFFFFFF</color>
 
     <!-- Accent -->
-    <color name="blue">#FF0A84FF</color>
-    <color name="blue_pressed">#FF0060DF</color>
-    <color name="blue_disabled">#FF1A3350</color>
-    <color name="blue_tint">#240A84FF</color>
+    <color name="accent">#FF0A84FF</color>
+    <color name="accent_pressed">#FF0974E0</color>
+    <color name="accent_tint">#FF0F2236</color>
+    <color name="on_accent">#FFFFFFFF</color>
 
-    <!-- Status: success / warning / danger, tints 12-16 %, chip outlines 40 % -->
+    <!-- Status -->
     <color name="success">#FF30D158</color>
-    <color name="success_tint">#2430D158</color>
-    <color name="success_border">#6630D158</color>
     <color name="warning">#FFFF9F0A</color>
-    <color name="warning_tint">#1FFF9F0A</color>
-    <color name="warning_border">#3DFF9F0A</color>
-    <color name="warning_chip_border">#66FF9F0A</color>
     <color name="danger">#FFFF453A</color>
-    <color name="danger_tint">#24FF453A</color>
-    <color name="danger_border">#66FF453A</color>
+    <color name="danger_tint">#FF2A1210</color>
+
+    <!-- Panel notice (very low-chroma warm) -->
+    <color name="notice_bg">#FF1A160C</color>
+    <color name="notice_stroke">#FF2D2511</color>
+    <color name="notice_text">#FFEDE6D3</color>
+    <color name="notice_icon">#FFFF9F0A</color>
 
     <!-- Effects -->
-    <color name="ripple_light">#29FFFFFF</color>
-    <color name="ripple_blue">#330A84FF</color>
-    <color name="fade_end">#00000000</color>
+    <color name="scrim">#A3000000</color>
+    <!-- Press feedback is a fill change to surface-3, not a ripple wash. -->
+    <color name="ripple_none">#00000000</color>
     <color name="transparent">#00000000</color>
+
+    <!-- Fixed names the build checks and the white vector glyphs rely on. -->
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+    <color name="blue">#FF0A84FF</color>
 </resources>

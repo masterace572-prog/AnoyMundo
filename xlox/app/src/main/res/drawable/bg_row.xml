@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Row press: fill change over 100 ms (motion "press"), no ripple, no scale. -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:enterFadeDuration="100"
+    android:exitFadeDuration="100">
+    <item android:state_pressed="true" android:drawable="@color/surface_3" />
+    <item android:drawable="@color/transparent" />
+</selector>

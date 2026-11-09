@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Primary pill: blue, darker while pressed, muted navy when disabled. -->
+<!-- Primary button fill: accent, pressed accent-pressed, disabled surface-2. -->
 <selector xmlns:android="http://schemas.android.com/apk/res/android">
-    <item android:color="@color/blue_disabled" android:state_enabled="false" />
-    <item android:color="@color/blue_pressed" android:state_pressed="true" />
+    <item android:color="@color/surface_2" android:state_enabled="false" />
+    <item android:color="@color/accent_pressed" android:state_pressed="true" />
     <item android:color="@color/blue" />
 </selector>
