@@ -214,10 +214,10 @@
     <string name="app_update_bad_release">The update information from the server is incomplete. Try again in a moment.</string>
     <string name="app_update_storage">Not enough free storage to download the update. Free some space and try again.</string>
     <string name="app_update_no_space">Not enough free storage. Free at least %1$s and try again.</string>
-    <string name="app_update_missing_file">The update file isn\'t available on the server right now. Try again later.</string>
     <string name="app_update_invalid">The downloaded file isn\'t a valid Anoy update.</string>
-    <string name="app_update_wrong_app">The downloaded file is a different app, not Anoy.</string>
-    <string name="app_update_wrong_version">The downloaded file isn\'t the announced version.</string>
+    <!-- 2.3.2: a failed download names the real HTTP code; any file that isn't this app at a higher version is refused. -->
+    <string name="app_update_download_http">Couldn\'t download the update (HTTP %1$d). Try again later.</string>
+    <string name="app_update_mismatch">This update file doesn\'t match the app.</string>
     <string name="app_update_cancelled">The download was stopped.</string>
     <string name="app_update_install_failed">Couldn\'t install the update. Try again.</string>
     <string name="app_update_install_cancelled">Install cancelled. Tap Retry to install the update.</string>

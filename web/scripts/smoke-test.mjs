@@ -75,7 +75,7 @@ async function waitForServer(timeoutMs = 15000) {
 
 const server = spawn(process.execPath, ['scripts/dev-server.mjs', '--memory'], {
   cwd: root,
-  env: { ...process.env, PORT: String(PORT), DB_DRIVER: 'memory', NODE_ENV: 'test' },
+  env: { ...process.env, PORT: String(PORT), DB_DRIVER: 'memory', NODE_ENV: 'test', APK_VERIFY_STUB: '1' },
   stdio: ['ignore', 'pipe', 'pipe'],
 });
 let serverLog = '';
@@ -400,8 +400,22 @@ try {
   ok(r.status === 400 && r.body?.errors?.version_name && r.body?.errors?.changelog, 'app update: missing fields reported per field');
   r = await request('/app-update', { method: 'POST', headers: { 'sec-fetch-site': 'cross-site' }, body: appOk });
   ok(r.status === 403, 'app update: cross-site publish blocked');
+  r = await request('/app-update', { method: 'POST', headers: SAME, body: { ...appOk, apk_url: 'https://github.com/o/r/releases/download/bad-504/Anoy.apk' } });
+  ok(r.status === 400 && /isn't a direct APK download \(HTTP 504\)\. Use the GitHub release asset link\./.test(r.body?.errors?.apk_url || ''), 'app update: a link that answers 504 is refused with the code');
+  r = await request('/app-update', { method: 'POST', headers: SAME, body: { ...appOk, apk_url: 'https://anoymundo-panel.vercel.app/api/app/download' } });
+  ok(r.status === 400 && /this panel/.test(r.body?.errors?.apk_url || ''), 'app update: a link to the panel / *.vercel.app is refused');
+  r = await request('/app-update', { method: 'POST', headers: SAME, body: { ...appOk, apk_url: 'https://github.com/o/r/releases/tag/v8' } });
+  ok(r.status === 400 && /web page/.test(r.body?.errors?.apk_url || ''), 'app update: a release web page is refused');
+  r = await request('/api/app/update');
+  ok(r.body?.available === false, 'app update: refused links publish nothing');
+  r = await request('/app-update/latest-build');
+  ok(r.status === 200 && r.body?.ok === true && r.body?.version_name === '2.3.2' && r.body?.version_code === 11 &&
+    /\/releases\/download\/anoy-v2\.3\.2-11\/Anoy-XLOX-loader\.apk$/.test(r.body?.apk_url || ''), 'Use latest build returns name, code and asset link');
   r = await request('/app-update', { method: 'POST', headers: SAME, body: appOk });
   ok(r.body?.ok === true && r.body?.version_code === 8 && r.body?.mandatory === false, 'app update: publishes a normal update');
+  r = await request('/app-update');
+  ok(r.status === 200 && !/Recent app updates/.test(r.body) && /Current update: <span class="mono">2\.2\.0 \(8\)<\/span>/.test(r.body) &&
+    /id="app-remove"/.test(r.body) && /id="app-latest"/.test(r.body), 'App update page: current line + Remove + Use latest build, no history');
   r = await request('/api/app/update?code=7');
   ok(r.body?.available === true && r.body?.version_code === 8 && r.body?.version_name === '2.2.0' && r.body?.mandatory === false &&
     r.body?.apk_url === appOk.apk_url && r.body?.changelog === 'New home\nSettings' && r.body?.update_available === true,
@@ -417,10 +431,46 @@ try {
   ok(r.body?.version_code === 9 && r.body?.mandatory === true, 'app update check: newest current release only');
   r = await request('/api/lib/manifest');
   ok(r.body?.version === '1.4', 'app updates do not touch the library release');
-  r = await request('/app-update', { method: 'POST', headers: SAME, body: { action: 'withdraw' } });
-  ok(r.body?.ok === true, 'app update: withdraw');
+  r = await request('/app-update', { method: 'POST', headers: SAME, body: { action: 'remove' } });
+  ok(r.body?.ok === true && r.body?.removed === true, 'app update: Remove');
   r = await request('/api/app/update');
-  ok(r.body?.ok === true && r.body?.available === false, 'app update check after withdraw: nothing offered');
+  ok(r.body?.ok === true && r.body?.available === false, 'app update check after Remove: nothing offered');
+  r = await request('/app-update', { method: 'POST', headers: SAME, body: { action: 'withdraw' } });
+  ok(r.status === 404, 'app update: Remove with nothing published says so');
+  r = await request('/app-update');
+  ok(r.status === 200 && !/id="app-remove"/.test(r.body) && !/Recent app updates/.test(r.body), 'after Remove: no current line, still no history');
+
+  // 13c. The link check itself (no network: a fake fetch plays the servers).
+  {
+    const { verifyApkLink, pickLatestBuild } = await import('../src/app-release.mjs');
+    const reply = (status, headers = {}, body = null) => new Response(body, { status, headers });
+    const chain = (steps) => { let i = 0; const seen = []; const f = async (u, o) => { seen.push({ url: String(u), range: o.headers.Range, redirect: o.redirect }); return steps[i++](); }; f.seen = seen; return f; };
+    let f = chain([() => reply(302, { location: 'https://release-assets.githubusercontent.com/x?sig=1' }),
+      () => reply(206, { 'content-type': 'application/octet-stream' }, new Uint8Array([0x50, 0x4b, 3, 4]))]);
+    let v = await verifyApkLink('https://github.com/o/r/releases/download/t/a.apk', { fetchImpl: f });
+    ok(v.ok === true && v.status === 206 && f.seen.length === 2 && f.seen.every((x) => x.range === 'bytes=0-3' && x.redirect === 'manual'), 'link check: GitHub 302 -> 206 "PK" accepted (ranged, manual redirects)');
+    v = await verifyApkLink('https://github.com/a.apk', { fetchImpl: chain([() => reply(504)]) });
+    ok(!v.ok && /\(HTTP 504\)/.test(v.error), 'link check: 504 reported with its code');
+    v = await verifyApkLink('https://github.com/a.apk', { fetchImpl: chain([() => reply(302, { location: 'http://evil.example/a.apk' })]) });
+    ok(!v.ok && /non-https/.test(v.error), 'link check: redirect to http:// refused');
+    v = await verifyApkLink('https://github.com/a.apk', { fetchImpl: chain([() => reply(200, { 'content-type': 'text/html; charset=utf-8' }, '<html>')]) });
+    ok(!v.ok && /web page/.test(v.error), 'link check: HTML refused');
+    v = await verifyApkLink('https://github.com/a.apk', { fetchImpl: chain([() => reply(200, { 'content-type': 'application/octet-stream' }, 'hello')]) });
+    ok(!v.ok && /isn't an APK/.test(v.error), 'link check: non-ZIP body refused');
+    f = chain(Array.from({ length: 8 }, () => () => reply(302, { location: 'https://github.com/loop' })));
+    v = await verifyApkLink('https://github.com/a.apk', { fetchImpl: f });
+    ok(!v.ok && /too many redirects/.test(v.error) && f.seen.length === 7, 'link check: at most 6 redirects followed');
+    v = await verifyApkLink('https://github.com/a.apk', { fetchImpl: chain([() => reply(302, { location: 'https://x-git-main.vercel.app/a.apk' })]) });
+    ok(!v.ok && /this panel/.test(v.error), 'link check: redirect into *.vercel.app refused');
+    v = await verifyApkLink('https://panel.example.com/a.apk', { selfHosts: ['panel.example.com'], fetchImpl: chain([]) });
+    ok(!v.ok && /this panel/.test(v.error), 'link check: the panel host itself refused');
+    const latest = pickLatestBuild([
+      { tag_name: 'xlox-v2.0.0-run76', assets: [{ name: 'Anoy-XLOX-loader.apk', browser_download_url: 'https://x/old' }] },
+      { tag_name: 'anoy-v2.4.0-12', draft: true, assets: [{ name: 'Anoy-XLOX-loader.apk', browser_download_url: 'https://x/draft' }] },
+      { tag_name: 'anoy-v2.3.2-11', assets: [{ name: 'other.zip', browser_download_url: 'https://x/z' }, { name: 'Anoy-XLOX-loader.apk', browser_download_url: 'https://x/ok' }] },
+    ]);
+    ok(latest && latest.version_name === '2.3.2' && latest.version_code === 11 && latest.apk_url === 'https://x/ok', 'latest build: first anoy-v<name>-<code> release with the APK');
+  }
 
   // 14. static assets
   r = await request('/assets/css/ui.css');

@@ -173,6 +173,9 @@ public final class AppUpdater {
             if (!json.optBoolean("ok", false)) throw new UpdateException(app.getString(R.string.update_unavailable), true);
             if (!json.optBoolean("available", false)) return null;
             int code = json.optInt("version_code", 0);
+            // 2.3.2: not newer means up to date, whatever else the row holds, so
+            // an old or odd published row can never hold up the splash.
+            if (code > 0 && code <= BuildConfig.VERSION_CODE) return null;
             String url = json.optString("apk_url", "");
             String name = json.optString("version_name", "");
             if (code <= 0 || !url.toLowerCase(Locale.US).startsWith("https://") || name.isEmpty()) {
@@ -256,9 +259,16 @@ public final class AppUpdater {
             int code = connection.getResponseCode();
             if (code != 200) {
                 Log.w(TAG, "APK download answered HTTP " + code);
-                throw new UpdateException(code == 404
-                        ? app.getString(R.string.app_update_missing_file)
-                        : app.getString(R.string.net_http, code), code != 404);
+                // 2.3.2: "Couldn't download the update (HTTP 504). Try again later."
+                // Server-side trouble (5xx, 408, 429) is retried; 4xx is final.
+                throw new UpdateException(app.getString(R.string.app_update_download_http, code),
+                        code >= 500 || code == 408 || code == 429);
+            }
+            String type = connection.getContentType();
+            if (type != null && type.toLowerCase(Locale.US).startsWith("text/html")) {
+                // A web page (release page, Drive, Telegram...) instead of the file.
+                Log.w(TAG, "APK link returned a web page, not an APK");
+                throw new UpdateException(app.getString(R.string.app_update_mismatch), false);
             }
             long total = connection.getContentLength();
             if (total > MAX_APK_BYTES) throw new UpdateException(app.getString(R.string.app_update_invalid), false);
@@ -314,8 +324,11 @@ public final class AppUpdater {
      * to the installer, which refuses any other key.
      */
     static void verify(Context app, File file, Release release) throws UpdateException {
+        // 2.3.2: anything that isn't this app at a higher, announced version code
+        // is refused before PackageInstaller with one message.
         if (file.length() < MIN_APK_BYTES || !isZip(file)) {
-            throw new UpdateException(app.getString(R.string.app_update_invalid), false);
+            Log.w(TAG, "Downloaded file is not an APK");
+            throw new UpdateException(app.getString(R.string.app_update_mismatch), false);
         }
         PackageInfo info = null;
         try {
@@ -323,18 +336,19 @@ public final class AppUpdater {
         } catch (RuntimeException e) {
             Log.w(TAG, "APK could not be parsed", e);
         }
-        if (info == null) throw new UpdateException(app.getString(R.string.app_update_invalid), false);
+        if (info == null) throw new UpdateException(app.getString(R.string.app_update_mismatch), false);
         if (!app.getPackageName().equals(info.packageName)) {
             Log.w(TAG, "APK is for another package");
-            throw new UpdateException(app.getString(R.string.app_update_wrong_app), false);
+            throw new UpdateException(app.getString(R.string.app_update_mismatch), false);
         }
         long code = PackageInfoCompat.getLongVersionCode(info);
         if (code != release.versionCode) {
             Log.w(TAG, "APK version code " + code + " does not match the release " + release.versionCode);
-            throw new UpdateException(app.getString(R.string.app_update_wrong_version), false);
+            throw new UpdateException(app.getString(R.string.app_update_mismatch), false);
         }
         if (code <= BuildConfig.VERSION_CODE) {
-            throw new UpdateException(app.getString(R.string.app_update_wrong_version), false);
+            Log.w(TAG, "APK version code " + code + " is not higher than the installed " + BuildConfig.VERSION_CODE);
+            throw new UpdateException(app.getString(R.string.app_update_mismatch), false);
         }
     }
 

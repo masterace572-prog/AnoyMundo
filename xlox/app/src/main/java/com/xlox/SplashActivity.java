@@ -127,6 +127,14 @@ public class SplashActivity extends AppCompatActivity {
      * checking | up_to_date | available | mandatory | fail.
      */
     public static final String EXTRA_QA_APP_UPDATE = "qa_app_update";
+    /**
+     * Debug builds only (2.3.2 end-to-end test): offer this real release
+     * instead of asking the panel. The download, the APK checks and the
+     * PackageInstaller hand-off on the update screen are all real.
+     */
+    public static final String EXTRA_QA_REAL_URL = "qa_real_update_url";
+    public static final String EXTRA_QA_REAL_CODE = "qa_real_update_code";
+    public static final String EXTRA_QA_REAL_NAME = "qa_real_update_name";
     /** Status line: the check starts once the version and status have faded in. */
     private static final long CHECK_AT_MS = VERSION_AT_MS + VERSION_MS;
     /** "Up to date" (green check) stays on screen at least this long before the hand-off. */
@@ -170,6 +178,7 @@ public class SplashActivity extends AppCompatActivity {
     private boolean filmDone;
     private boolean handingOff;
     private String qaUpdate;
+    private AppUpdater.Release qaReal;
     private ValueAnimator film;
     private ValueAnimator breath;
     private float driftPx;
@@ -197,6 +206,12 @@ public class SplashActivity extends AppCompatActivity {
         }
         hold = BuildConfig.DEBUG && getIntent() != null && getIntent().getBooleanExtra(EXTRA_HOLD, false);
         qaUpdate = BuildConfig.DEBUG && getIntent() != null ? getIntent().getStringExtra(EXTRA_QA_APP_UPDATE) : null;
+        String qaRealUrl = BuildConfig.DEBUG && getIntent() != null ? getIntent().getStringExtra(EXTRA_QA_REAL_URL) : null;
+        if (qaRealUrl != null) {
+            String qaRealName = getIntent().getStringExtra(EXTRA_QA_REAL_NAME);
+            qaReal = new AppUpdater.Release(qaRealName != null ? qaRealName : "e2e",
+                    getIntent().getIntExtra(EXTRA_QA_REAL_CODE, 0), qaRealUrl, "End-to-end update test", false);
+        }
         final float qaFrame = BuildConfig.DEBUG && getIntent() != null
                 ? getIntent().getFloatExtra(EXTRA_FRAME, -1f) : -1f;
         try {
@@ -326,6 +341,11 @@ public class SplashActivity extends AppCompatActivity {
         hideFailure();
         if (qaUpdate != null) {
             simulateCheck(run);
+            return;
+        }
+        if (qaReal != null) {
+            Log.i("SplashActivity", "Debug: offering " + qaReal.versionName + " (" + qaReal.versionCode + ") from the intent");
+            handler.postDelayed(() -> onChecked(run, qaReal), QA_CHECK_MS);
             return;
         }
         Log.i("SplashActivity", "Checking for an app update");

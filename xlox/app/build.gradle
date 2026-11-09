@@ -74,8 +74,10 @@ android {
         // 2.3.1: follow-up - centred splash status, "Login" / "Buy one", compact
         //        expiry card, bundled BGMI icon, announcement banner, Settings
         //        Licence + Updates groups, licence key in support info.
-        versionCode 10
-        versionName '2.3.1'
+        // 2.3.2: fixes app updates and CI (readable download errors, APK checked
+        //        before install, Launch/Stop icons; release tag anoy-v<name>-<code>).
+        versionCode 11
+        versionName '2.3.2'
 
         vectorDrawables {
             useSupportLibrary true
@@ -118,6 +120,18 @@ android {
         }
     }
     ndkVersion '24.0.8215888'
+
+    // Debug QA only (.github/workflows/app-update-e2e.yml): -PanoyQaVersionCode=10
+    // builds the debug APK as an older version so the real in-app update can be
+    // tested end to end. Refused for any release task.
+    if (project.hasProperty('anoyQaVersionCode')) {
+        defaultConfig.versionCode = (project.property('anoyQaVersionCode') as String).toInteger()
+        gradle.taskGraph.whenReady { graph ->
+            if (graph.allTasks.any { it.name.toLowerCase().contains('release') }) {
+                throw new GradleException('anoyQaVersionCode is for debug QA builds only')
+            }
+        }
+    }
 }
 
 dependencies {

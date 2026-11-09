@@ -5,16 +5,16 @@ name: Android UI QA
 # 2.1 redesign (see xlox/scripts/ui_screenshots.sh): live walkthrough, every
 # update-gate / sign-in / home state, animations on + off, font 0.85 / 2.0,
 # 360 dp, tablet and the minified release build.
+#
+# 2.3.2: manual only (Actions > Android UI QA > Run workflow). Pushes run the
+# fast build-xlox.yml, which now carries the static UI gates and the
+# permissions check. Screenshots and logs are uploaded as the "ui-qa"
+# artifact only; nothing is committed to the branch.
 on:
   workflow_dispatch:
-  push:
-    branches: [arena/2e95185a-anoymundo]
-    paths:
-      - 'xlox/**'
-      - '.github/workflows/android-ui-qa.yml'
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: android-ui-qa-${{ github.ref }}
@@ -95,60 +95,10 @@ jobs:
 
       - name: Permissions in the built APKs
         run: |
-          AAPT2=$(ls "$ANDROID_SDK_ROOT"/build-tools/*/aapt2 | sort | tail -1)
-          for v in debug release; do
-            apk=$(ls app/build/outputs/apk/$v/*.apk | head -1)
-            "$AAPT2" dump permissions "$apk" > ../qa-logs/permissions-$v.txt
-            "$AAPT2" dump xmltree --file AndroidManifest.xml "$apk" > ../qa-logs/manifest-$v.txt
-          done
           M=$(find app/build/intermediates -name AndroidManifest.xml -path '*merged_manifest*' -path '*debug*' | head -1)
           [ -n "$M" ] && cp "$M" ../qa-logs/merged-manifest-debug.xml || true
-          python3 - <<'PY'
-          import re, sys, pathlib
-          P = 'android.permission.'
-          requested = ['MANAGE_EXTERNAL_STORAGE', 'READ_EXTERNAL_STORAGE', 'WRITE_EXTERNAL_STORAGE',
-                       'READ_MEDIA_IMAGES', 'READ_MEDIA_VIDEO', 'READ_MEDIA_AUDIO', 'REQUEST_INSTALL_PACKAGES']
-          declared = ['RECORD_AUDIO', 'BLUETOOTH', 'BLUETOOTH_CONNECT', 'BLUETOOTH_SCAN', 'NEARBY_WIFI_DEVICES',
-                      'SYSTEM_ALERT_WINDOW', 'ACCESS_COARSE_LOCATION', 'ACCESS_FINE_LOCATION', 'POST_NOTIFICATIONS',
-                      'INTERNET', 'ACCESS_NETWORK_STATE', 'WAKE_LOCK', 'FOREGROUND_SERVICE', 'QUERY_ALL_PACKAGES']
-          removed = ['READ_CALENDAR', 'WRITE_CALENDAR', 'READ_CALL_LOG', 'WRITE_CALL_LOG', 'PROCESS_OUTGOING_CALLS',
-                     'CAMERA', 'READ_CONTACTS', 'WRITE_CONTACTS', 'GET_ACCOUNTS', 'MANAGE_ACCOUNTS',
-                     'AUTHENTICATE_ACCOUNTS', 'USE_CREDENTIALS', 'READ_PROFILE', 'WRITE_PROFILE',
-                     'BODY_SENSORS', 'BODY_SENSORS_BACKGROUND', 'READ_PHONE_STATE', 'READ_PHONE_NUMBERS',
-                     'CALL_PHONE', 'ANSWER_PHONE_CALLS', 'USE_SIP', 'ACCEPT_HANDOVER', 'ADD_VOICEMAIL',
-                     'ACTIVITY_RECOGNITION', 'SEND_SMS', 'READ_SMS', 'RECEIVE_SMS', 'RECEIVE_MMS',
-                     'RECEIVE_WAP_PUSH', 'READ_CELL_BROADCASTS', 'ACCESS_SUPERUSER', 'ACTION_MANAGE_OVERLAY_PERMISSION']
-          errors = []
-          for v in ('debug', 'release'):
-              text = pathlib.Path('../qa-logs/permissions-%s.txt' % v).read_text()
-              have = set(re.findall(r"name='([^']+)'", text))
-              print(v, len(have), 'permissions')
-              for n in requested + declared:
-                  if P + n not in have:
-                      errors.append('%s: %s missing' % (v, n))
-              for n in removed:
-                  if P + n in have:
-                      errors.append('%s: %s still declared' % (v, n))
-              for n in have:
-                  if 'GOOGLE_AUTH' in n or n.endswith('.READ_STEPS') or n == 'com.google.android.gms.permission.ACTIVITY_RECOGNITION':
-                      errors.append('%s: %s still declared' % (v, n))
-              xml = pathlib.Path('../qa-logs/manifest-%s.txt' % v).read_text()
-              if 'supportsPictureInPicture' not in xml:
-                  errors.append('%s: picture-in-picture not declared' % v)
-              if 'neverForLocation' not in xml and '0x10000' not in xml:
-                  print('note: neverForLocation flag not visible in the xmltree dump')
-          # Anoy must not ask for the declared-only permissions.
-          src = '\n'.join(p.read_text() for p in pathlib.Path('app/src/main/java').rglob('*.java'))
-          for bad in ('RECORD_AUDIO', 'ACCESS_FINE_LOCATION', 'ACCESS_COARSE_LOCATION', 'POST_NOTIFICATIONS',
-                      'BLUETOOTH_CONNECT', 'BLUETOOTH_SCAN', 'NEARBY_WIFI_DEVICES',
-                      'ACTION_MANAGE_OVERLAY_PERMISSION', 'ACTION_PICTURE_IN_PICTURE_SETTINGS',
-                      'enterPictureInPictureMode'):
-              if bad in src:
-                  errors.append('Java code references %s (must not be requested now)' % bad)
-          for e in errors:
-              print('::error::' + e)
-          sys.exit(1 if errors else 0)
-          PY
+          PERMISSIONS_LOG_DIR=../qa-logs python3 scripts/check_apk_permissions.py \
+            "$(ls app/build/outputs/apk/debug/*.apk | head -1)" "$(ls app/build/outputs/apk/release/*.apk | head -1)"
 
       - name: Android Lint (errors fail the job)
         run: |
@@ -529,7 +479,7 @@ jobs:
           for st, want in (('up_to_date', 'Up to date'), ('available', 'Update available (v2.4.0)'),
                            ('fail', 'check for updates')):
               tx = line('splash status %s texts' % st)
-              if want not in tx or 'text="v2.3.1"' not in tx:
+              if want not in tx or 'text="v2.3.2"' not in tx:
                   errors.append('splash status %s: %r / version missing: %s' % (st, want, tx[:300]))
           if 'text="Retry"' not in line('splash status fail texts'):
               errors.append('splash: a failed check has no Retry: ' + line('splash status fail texts')[:300])
@@ -542,7 +492,9 @@ jobs:
               errors.append('app update: no download progress: ' + line('app update downloading texts')[:300])
           uf = line('app update failed texts')
           # 2.3.0: the failure block reads "Update failed. <reason>" and the button Try again.
-          if 'text="Try again"' not in uf or 'valid Anoy update' not in uf or 'Update failed. ' not in uf:
+          # 2.3.2: a failed download names its HTTP code ("Couldn't download the update (HTTP 404)").
+          if ('text="Try again"' not in uf or 'Update failed. ' not in uf
+                  or ('valid Anoy update' not in uf and 'download the update (HTTP' not in uf)):
               errors.append('app update: failure without reason / Retry: ' + uf[:400])
           if 'LogAct' not in line('app update not now focus'):
               errors.append('app update: Not now did not continue to sign in: ' + line('app update not now focus'))
@@ -586,7 +538,7 @@ jobs:
           # Settings (2.3.1): licence, updates, device, report, version, Sign out; no Access group.
           sx = line('settings texts') + ' ' + line('settings bottom texts')
           for want in ('Settings', 'Licence key', 'Check for app updates', 'Re-download library', 'Library version',
-                       'Model', 'Android', 'Report on Telegram', 'Copy support info', 'App version', '2.3.1 (10)',
+                       'Model', 'Android', 'Report on Telegram', 'Copy support info', 'App version', '2.3.2 (11)',
                        'Sign out'):
               if want not in sx:
                   errors.append('Settings: %r missing: %s' % (want, sx[:500]))
@@ -628,25 +580,3 @@ jobs:
             qa-logs/
           if-no-files-found: warn
           retention-days: 30
-
-      - name: Commit screenshots and logs to the branch
-        if: always()
-        working-directory: ${{ github.workspace }}
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          mkdir -p xlox/docs/ui-redesign qa-logs
-          # The build workflow commits the bundled BGMI icon; an untracked copy
-          # fetched here would block the pull below.
-          ICON=xlox/app/src/main/res/drawable-nodpi/ic_game_bgmi.png
-          git ls-files --error-unmatch "$ICON" >/dev/null 2>&1 || rm -f "$ICON"
-          git add -f qa-logs || true
-          git add -f xlox/docs/ui-redesign || true
-          git diff --cached --quiet && { echo "nothing to commit"; exit 0; }
-          git commit -q -m "UI QA screenshots + logs (run ${{ github.run_number }}) [skip ci]"
-          for attempt in 1 2 3 4 5 6 7 8; do
-            git push origin HEAD:arena/2e95185a-anoymundo && exit 0
-            git pull --rebase -q origin arena/2e95185a-anoymundo || { git rebase --abort; git pull --no-rebase --no-edit -q -X ours origin arena/2e95185a-anoymundo || true; }
-            sleep 5
-          done
-          exit 1

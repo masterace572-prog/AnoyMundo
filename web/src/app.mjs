@@ -14,7 +14,7 @@ import {
   iconSvg,
 } from './render.mjs';
 import { requestUrl, pathOf, parseBody, redirect, back } from './http.mjs';
-import { handleAppUpdateCheck, doAppReleasePost, appReleasePageData, validHttpsUrl } from './app-release.mjs';
+import { handleAppUpdateCheck, doAppReleasePost, appReleasePageData, validHttpsUrl, handleLatestBuild } from './app-release.mjs';
 import {
   handleConnect, handleConnectInfo, handleHealth, handleLibVersion,
   handleLibDownload, handleLibInfo, handleLibManifest,
@@ -767,7 +767,7 @@ function isJsonRoute(p, method, req) {
   const accept = String(req.headers?.accept || '');
   const contentType = String(req.headers?.['content-type'] || '');
   return lp.startsWith('/api/') || lp === '/connect' || lp === '/health' ||
-    ((lp === '/lib' || lp === '/app-update') && method === 'POST') ||
+    ((lp === '/lib' || lp === '/app-update') && method === 'POST') || lp === '/app-update/latest-build' ||
     lp.startsWith('/keys/reset') || lp === '/keys/api' ||
     contentType.includes('application/json') || accept.includes('application/json');
 }
@@ -1103,6 +1103,10 @@ export async function handle(req, res) {
     }
 
     // ------------------------- app (APK) update ----------------------------
+    if (lp === '/app-update/latest-build') {
+      if (!user.isAdmin) return sendJson(res, { ok: false, error: 'Only the Owner or an Admin can do that.' }, 403);
+      return handleLatestBuild(res);
+    }
     if (lp === '/app-update') {
       if (!user.isAdmin) return redirect(res, '/dashboard', { msgWarning: 'You do not have access to that page.' });
       if (method === 'POST') return doAppReleasePost(req, res, body, user);

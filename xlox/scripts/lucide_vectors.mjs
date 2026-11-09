@@ -27,6 +27,9 @@ const ICONS = [
   // 2.3.1: Home announcement banner. Drawn at 20 dp with a 1.75 dp line, so its
   // viewport stroke is 1.75 * 24 / 20 = 2.1 (third field: stroke override).
   ['megaphone', 'megaphone', 2.1],
+  // 2.3.2: Launch / Stop on the primary button, 20 dp with the same 1.75 dp line.
+  ['play', 'play', 2.1],
+  ['square', 'stop', 2.1],
 ];
 
 const NUM = /-?(?:\d+\.?\d*|\.\d+)(?:e[-+]?\d+)?/iy;

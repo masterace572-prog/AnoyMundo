@@ -4,6 +4,12 @@ name: Build XLOX loader APK
 # has no Android SDK). Produces a signed release APK + a starter loader ZIP.
 # Signing needs the XLOX_STORE_PASSWORD / XLOX_KEY_PASSWORD repository
 # secrets; without them the APK is built and checked but not published.
+#
+# 2.3.2: this is the only workflow that runs on an app push. It also runs the
+# static UI gates and the permissions-in-APK check (moved from the emulator
+# QA, which is now manual). The release is tagged anoy-v<versionName>-<versionCode>
+# (read from app/build.gradle), marked Latest, and every other release + tag
+# is deleted afterwards, so exactly one release remains.
 on:
   workflow_dispatch:
     inputs:
@@ -42,6 +48,19 @@ jobs:
 
       - name: Bundle the BGMI icon (downloaded once, then committed)
         run: python3 scripts/fetch_game_icon.py
+
+      - name: Static UI gates (no SDK needed)
+        run: python3 scripts/ui_quality_gate.py
+
+      - name: Read the version from app/build.gradle
+        run: |
+          NAME=$(sed -nE "s/^[[:space:]]*versionName[[:space:]]+'([^']+)'.*/\1/p" app/build.gradle | head -1)
+          CODE=$(sed -nE 's/^[[:space:]]*versionCode[[:space:]]+([0-9]+).*/\1/p' app/build.gradle | head -1)
+          [ -n "$NAME" ] && [ -n "$CODE" ] || { echo "::error::Could not read versionName / versionCode from app/build.gradle"; exit 1; }
+          echo "APP_VERSION_NAME=$NAME" >> "$GITHUB_ENV"
+          echo "APP_VERSION_CODE=$CODE" >> "$GITHUB_ENV"
+          echo "RELEASE_TAG=anoy-v$NAME-$CODE" >> "$GITHUB_ENV"
+          echo "App $NAME ($CODE) -> release anoy-v$NAME-$CODE"
 
       - name: JDK 17
         uses: actions/setup-java@v5
@@ -170,6 +189,9 @@ jobs:
           ls -lh ../dist
           echo "APK_SHA256=$(sha256sum ../dist/Anoy-XLOX-loader.apk | cut -d' ' -f1)" >> "$GITHUB_ENV"
 
+      - name: Permissions in the built APK
+        run: PERMISSIONS_LOG_DIR=/tmp/permissions python3 scripts/check_apk_permissions.py ../dist/Anoy-XLOX-loader.apk
+
       - name: Assert the APK really contains the native panel library
         run: |
           unzip -l ../dist/Anoy-XLOX-loader.apk | grep -F 'libXloX.so' || {
@@ -211,18 +233,57 @@ jobs:
 
       # The sandbox cannot reach actions artifact storage, so also publish a
       # durable download link and place the deliverables on this branch.
-      - name: Publish APK as a GitHub release
+      - name: Publish APK as a GitHub release (anoy-v<name>-<code>, Latest)
         if: env.XLOX_SIGNED == 'true'
         working-directory: ${{ github.workspace }}
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          TAG="xlox-v2.0.0-run${{ github.run_number }}"
-          gh release create "$TAG" \
-            dist/Anoy-XLOX-loader.apk dist/xlox-loader.zip \
-            --title "Anoy XLOX loader – build ${{ github.run_number }}" \
-            --notes "Signed arm64-v8a release APK built from ${{ github.sha }}. APK sha256: $APK_SHA256" \
-            || echo "Release $TAG already exists, artifacts remain attached to the workflow run"
+          set -eu
+          TITLE="Anoy $APP_VERSION_NAME ($APP_VERSION_CODE)"
+          printf '%s\n' \
+            "Anoy $APP_VERSION_NAME" "" \
+            "- versionName: $APP_VERSION_NAME" \
+            "- versionCode: $APP_VERSION_CODE" \
+            "- commit: ${{ github.sha }}" \
+            "- APK sha256: $APK_SHA256" "" \
+            "Panel APK link: https://github.com/${{ github.repository }}/releases/download/$RELEASE_TAG/Anoy-XLOX-loader.apk" \
+            > /tmp/release-notes.md
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            # Same version rebuilt: replace the files, keep the tag.
+            gh release upload "$RELEASE_TAG" dist/Anoy-XLOX-loader.apk dist/xlox-loader.zip --clobber
+            gh release edit "$RELEASE_TAG" --title "$TITLE" --notes-file /tmp/release-notes.md --latest
+            echo "::notice title=Release updated::$RELEASE_TAG files replaced (sha256 $APK_SHA256)"
+          else
+            gh release create "$RELEASE_TAG" dist/Anoy-XLOX-loader.apk dist/xlox-loader.zip \
+              --target "${{ github.sha }}" --title "$TITLE" --notes-file /tmp/release-notes.md --latest
+            echo "::notice title=Release created::$RELEASE_TAG (sha256 $APK_SHA256)"
+          fi
+          echo "RELEASE_PUBLISHED=true" >> "$GITHUB_ENV"
+
+      # Exactly one release stays: the one just published. Never touches $RELEASE_TAG.
+      - name: Delete every other release and tag
+        if: env.RELEASE_PUBLISHED == 'true'
+        working-directory: ${{ github.workspace }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -u
+          REPO="${{ github.repository }}"
+          gh release view "$RELEASE_TAG" >/dev/null || { echo "::error::$RELEASE_TAG is missing; nothing deleted"; exit 1; }
+          deleted=0; failed=0
+          for t in $(gh api --paginate "repos/$REPO/releases?per_page=100" --jq '.[].tag_name'); do
+            [ "$t" = "$RELEASE_TAG" ] && continue
+            if gh release delete "$t" --yes --cleanup-tag; then deleted=$((deleted+1)); else failed=$((failed+1)); fi
+          done
+          tags=0
+          for t in $(gh api --paginate "repos/$REPO/git/matching-refs/tags/" --jq '.[].ref | sub("^refs/tags/"; "")'); do
+            [ "$t" = "$RELEASE_TAG" ] && continue
+            if gh api -X DELETE "repos/$REPO/git/refs/tags/$t" --silent; then tags=$((tags+1)); else failed=$((failed+1)); fi
+          done
+          left=$(gh api --paginate "repos/$REPO/releases?per_page=100" --jq '.[].tag_name' | tr '\n' ' ')
+          echo "::notice title=Releases cleaned::deleted $deleted releases and $tags leftover tags; remaining: $left"
+          [ "$failed" -eq 0 ] || echo "::warning::$failed releases/tags could not be deleted"
 
       - name: Commit deliverables to the working branch
         if: env.XLOX_SIGNED == 'true'

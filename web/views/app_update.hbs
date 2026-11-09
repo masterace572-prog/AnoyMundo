@@ -23,8 +23,8 @@
     {{#if appRelease}}
     <div class="card-foot">
         <a href="{{appRelease.apk_url}}" class="btn btn-secondary btn-sm" rel="noopener noreferrer" target="_blank">{{icon "download" "i-sm"}}Test the APK link</a>
-        <button type="button" class="btn btn-danger btn-sm" id="app-withdraw">{{icon "x" "i-sm"}}Withdraw</button>
-        <span class="hint" style="margin:0">Withdraw stops phones from offering this update.</span>
+        <span class="hint" style="margin:0" id="app-current-line">Current update: <span class="mono">{{appRelease.version_name}} ({{appRelease.version_code}})</span> ·</span>
+        <button type="button" class="btn btn-danger btn-sm" id="app-remove">{{icon "x" "i-sm"}}Remove</button>
     </div>
     {{/if}}
 </section>
@@ -35,6 +35,12 @@
         <div><h2 class="card-title">Publish an app update</h2><div class="card-sub">A phone updates when this version code is higher than its own.</div></div>
     </div>
     <form id="app-form" class="form" novalidate>
+        <div class="field">
+            <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+                <button type="button" class="btn btn-secondary btn-sm" id="app-latest">{{icon "download" "i-sm"}}Use latest build</button>
+                <span class="hint" style="margin:0" id="app-latest-result" aria-live="polite">Fills the version and APK link from the newest GitHub release. You can still edit them.</span>
+            </div>
+        </div>
         <div class="field-row">
             <div class="field" data-field="version_name">
                 <label class="label" for="app-version-name">Version name</label>
@@ -54,7 +60,7 @@
             <label class="label" for="app-apk-url">APK link (https)</label>
             <div class="input-wrap">{{icon "link" "lead"}}
             <input type="url" class="input" name="apk_url" id="app-apk-url" placeholder="https://github.com/…/releases/download/…/Anoy.apk" autocomplete="off" spellcheck="false" inputmode="url"></div>
-            <div class="hint">The GitHub release asset link. The APK must be signed with the same key as the installed app.</div>
+            <div class="hint">The GitHub release asset link. It is checked before publishing, and the APK must be signed with the same key as the installed app.</div>
             <div class="error" hidden></div>
         </div>
         <div class="field" data-field="changelog">
@@ -75,29 +81,6 @@
     </form>
 </section>
 
-{{#if appReleases.length}}
-<section class="card card-flush publish-card" style="margin-top:20px">
-    <div class="card-head" style="padding-bottom:16px;margin-bottom:0;border-bottom:1px solid var(--border)">
-        <div class="tile teal">{{icon "history"}}</div>
-        <div><h2 class="card-title">Recent app updates</h2></div>
-    </div>
-    <div class="table-wrap">
-        <table class="responsive">
-            <thead><tr><th>Version</th><th>Code</th><th>Type</th><th>Published</th></tr></thead>
-            <tbody>
-                {{#each appReleases}}
-                <tr>
-                    <td class="primary-cell mono" data-label="Version">{{this.version_name}}{{#if this.is_current}} <span class="status ok">Current</span>{{/if}}</td>
-                    <td data-label="Code" class="num">{{this.version_code}}</td>
-                    <td data-label="Type">{{this.typeLabel}}</td>
-                    <td data-label="Published">{{this.publishedLabel}}</td>
-                </tr>
-                {{/each}}
-            </tbody>
-        </table>
-    </div>
-</section>
-{{/if}}
 
 <script>
 (function () {
@@ -167,7 +150,7 @@
         else if (!httpsUrl(data.apk_url)) { fieldError('apk_url', 'The APK link must be a full https:// address (http:// is not allowed).'); bad = true; }
         if (!data.changelog.trim()) { fieldError('changelog', 'Write a short changelog: it is shown on the update screen.'); bad = true; }
         if (bad) return say('Fix the highlighted fields. Nothing was published.');
-        busy(button, true, 'Publishing…');
+        busy(button, true, 'Checking the link…');
         post(data).then(function (r) {
             say('App ' + r.version_name + ' (' + r.version_code + ') is live. Reloading…', true);
             setTimeout(function () { location.reload(); }, 1200);
@@ -178,15 +161,43 @@
         });
     });
 
-    var withdraw = byId('app-withdraw');
-    if (withdraw) withdraw.addEventListener('click', function () {
-        if (withdraw.disabled) return;
-        if (!window.confirm('Withdraw this app update? Phones will stop offering it.')) return;
-        busy(withdraw, true, 'Withdrawing…');
-        post({ action: 'withdraw' }).then(function () { location.reload(); }).catch(function (err) {
-            say(err.message || 'Could not withdraw.');
-            busy(withdraw, false);
+    var remove = byId('app-remove');
+    if (remove) remove.addEventListener('click', function () {
+        if (remove.disabled) return;
+        if (!window.confirm('Remove the current app update? Phones will stop offering it.')) return;
+        busy(remove, true, 'Removing…');
+        post({ action: 'remove' }).then(function () { location.reload(); }).catch(function (err) {
+            say(err.message || 'Could not remove the update.');
+            busy(remove, false);
         });
+    });
+
+    // "Use latest build": the newest anoy-v<name>-<code> GitHub release fills the fields.
+    var latest = byId('app-latest'), latestResult = byId('app-latest-result');
+    latest.addEventListener('click', function () {
+        if (latest.disabled) return;
+        busy(latest, true, 'Looking up…');
+        fetch('/app-update/latest-build', { credentials: 'same-origin', headers: { Accept: 'application/json' } })
+            .then(function (r) { return r.json().catch(function () { return null; }).then(function (d) { return { r: r, d: d }; }); })
+            .then(function (x) {
+                busy(latest, false);
+                if (!x.r.ok || !x.d || !x.d.ok) {
+                    latestResult.className = 'error';
+                    latestResult.textContent = (x.d && x.d.error) || ('Lookup failed (HTTP ' + x.r.status + ').');
+                    return;
+                }
+                byId('app-version-name').value = x.d.version_name;
+                byId('app-version-code').value = x.d.version_code;
+                byId('app-apk-url').value = x.d.apk_url;
+                ['version_name', 'version_code', 'apk_url'].forEach(function (n) { fieldError(n, ''); });
+                latestResult.className = 'hint';
+                latestResult.textContent = 'Filled from ' + x.d.tag + '. Add a changelog, then publish.';
+            })
+            .catch(function () {
+                busy(latest, false);
+                latestResult.className = 'error';
+                latestResult.textContent = 'Could not look up the latest build. Enter the fields by hand.';
+            });
     });
 })();
 </script>

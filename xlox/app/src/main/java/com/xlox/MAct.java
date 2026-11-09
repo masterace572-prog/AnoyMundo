@@ -1523,6 +1523,16 @@ public class MAct extends AppCompatActivity {
         primaryAction.setBackgroundTintList(ContextCompat.getColorStateList(this,
                 stop ? R.color.tonal_bg_on_black : R.color.button_bg));
         primaryAction.setTextColor(ContextCompat.getColorStateList(this, stop ? R.color.danger_text : R.color.button_text));
+        // 2.3.2: a play / stop glyph before Launch / Stop (Lucide, 20 dp, 8 dp gap,
+        // tinted like the label). The icon and label stay centred as one group
+        // (iconGravity textStart); other labels have none, busy shows the spinner.
+        if (stop || label == R.string.launch) {
+            primaryAction.setIconResource(stop ? R.drawable.ic_stop : R.drawable.ic_play);
+            primaryAction.setIconSize(getResources().getDimensionPixelSize(R.dimen.icon_inline));
+            primaryAction.setIconPadding(Ui.dp(this, 8));
+            primaryAction.setIconTint(ContextCompat.getColorStateList(this,
+                    stop ? R.color.danger_text : R.color.button_text));
+        }
     }
 
     private void setBusy(boolean value, CharSequence label) {
@@ -1530,6 +1540,9 @@ public class MAct extends AppCompatActivity {
         if (value) {
             primaryAction.setBackgroundTintList(ContextCompat.getColorStateList(this, R.color.button_bg));
             primaryAction.setTextColor(ContextCompat.getColorStateList(this, R.color.button_text));
+            // Back to the spinner's own size and tint (Launch / Stop use a 20 dp glyph).
+            primaryAction.setIconSize(getResources().getDimensionPixelSize(R.dimen.button_progress));
+            primaryAction.setIconTint(ContextCompat.getColorStateList(this, R.color.button_text));
             Ui.setLoading(primaryAction, true, label);
         } else {
             refreshPrimary();

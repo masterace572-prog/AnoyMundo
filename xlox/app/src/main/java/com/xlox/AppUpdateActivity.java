@@ -438,7 +438,8 @@ public class AppUpdateActivity extends AppCompatActivity {
                 render(State.INSTALLING, getString(R.string.app_update_confirm));
                 break;
             case "failed":
-                fail(getString(R.string.net_offline));
+                // 2.3.2: preview the readable download error with its HTTP code.
+                fail(getString(R.string.app_update_download_http, 504));
                 break;
             default:
                 break;
