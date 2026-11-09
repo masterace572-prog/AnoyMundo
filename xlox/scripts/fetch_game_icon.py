@@ -63,36 +63,81 @@ def download():
     return b"", notes
 
 
+def load_pillow():
+    try:
+        from PIL import Image
+        return Image
+    except ImportError:
+        pass
+    # Ubuntu 24.04 runners refuse a plain pip install (PEP 668).
+    for extra in (["--user", "--break-system-packages"], ["--break-system-packages"], ["--user"]):
+        r = subprocess.run([sys.executable, "-m", "pip", "install", "--quiet", *extra, "Pillow"],
+                           capture_output=True, text=True)
+        if r.returncode == 0:
+            import importlib
+            import site
+            importlib.invalidate_caches()
+            user_site = site.getusersitepackages()
+            if user_site not in sys.path:
+                sys.path.append(user_site)
+            try:
+                from PIL import Image
+                return Image
+            except ImportError:
+                continue
+    return None
+
+
+def convert(data: bytes) -> str:
+    """Writes OUT from the downloaded bytes; returns how."""
+    Image = load_pillow()
+    if Image is not None:
+        image = Image.open(io.BytesIO(data))
+        print(f"source {image.format} {image.size[0]}x{image.size[1]}")
+        if image.size[0] < 128 or image.size[1] < 128:
+            raise RuntimeError(f"unexpectedly small icon {image.size}")
+        image = image.convert("RGBA")
+        side = min(image.size)
+        left = (image.size[0] - side) // 2
+        top = (image.size[1] - side) // 2
+        image = image.crop((left, top, left + side, top + side)).resize((SIZE, SIZE), Image.LANCZOS)
+        image.save(OUT, "PNG", optimize=True)
+        return "Pillow"
+    # ImageMagick ships on the GitHub runners.
+    src = OUT.with_suffix(".src")
+    src.write_bytes(data)
+    try:
+        for tool in (["magick"], ["convert"]):
+            try:
+                r = subprocess.run([*tool, str(src), "-gravity", "center", "-resize", f"{SIZE}x{SIZE}^",
+                                    "-extent", f"{SIZE}x{SIZE}", "-strip", "PNG32:" + str(OUT)],
+                                   capture_output=True, text=True)
+            except FileNotFoundError:
+                continue
+            if r.returncode == 0 and OUT.is_file():
+                return "ImageMagick"
+        raise RuntimeError("no Pillow and no ImageMagick to convert the WebP")
+    finally:
+        src.unlink(missing_ok=True)
+
+
 def main() -> int:
     if OUT.is_file() and OUT.stat().st_size > 1024:
         print(f"{OUT.relative_to(ROOT)} already bundled ({OUT.stat().st_size} bytes)")
         return 0
-    try:
-        from PIL import Image  # noqa: F401
-    except ImportError:
-        subprocess.check_call([sys.executable, "-m", "pip", "install", "--quiet", "Pillow"])
-    from PIL import Image
-
     data, notes = download()
     if len(data) < 1024:
         # stdout, so GitHub shows it as an annotation on the run.
         print("::error::Could not download the BGMI icon: " + " | ".join(notes))
         return 1
-
-    image = Image.open(io.BytesIO(data))
-    print(f"downloaded {len(data)} bytes, {image.format} {image.size[0]}x{image.size[1]}")
-    if image.size[0] < 128 or image.size[1] < 128:
-        print("::error::The BGMI icon is unexpectedly small", file=sys.stderr)
-        return 1
-    image = image.convert("RGBA")
-    # Square centre crop (the source is already square), then downscale.
-    side = min(image.size)
-    left = (image.size[0] - side) // 2
-    top = (image.size[1] - side) // 2
-    image = image.crop((left, top, left + side, top + side)).resize((SIZE, SIZE), Image.LANCZOS)
     OUT.parent.mkdir(parents=True, exist_ok=True)
-    image.save(OUT, "PNG", optimize=True)
-    print(f"wrote {OUT.relative_to(ROOT)} ({OUT.stat().st_size} bytes, {SIZE}x{SIZE})")
+    try:
+        how = convert(data)
+    except Exception as e:  # noqa: BLE001
+        OUT.unlink(missing_ok=True)
+        print(f"::error::Could not convert the BGMI icon: {type(e).__name__}: {e}")
+        return 1
+    print(f"wrote {OUT.relative_to(ROOT)} ({OUT.stat().st_size} bytes, {SIZE}x{SIZE}, {how})")
     return 0
 
 
