@@ -1,7 +1,7 @@
 <div class="page-head">
     <div>
         <h1 class="page-title">App update</h1>
-        <p class="page-sub">Publish a new Anoy app (APK). Phones check this on the splash screen, before the library update.</p>
+        <p class="page-sub">Publish a new Anoy APK.</p>
     </div>
 </div>
 
@@ -32,13 +32,13 @@
 <section class="card publish-card" id="app-publish">
     <div class="card-head">
         <div class="tile">{{icon "circle-arrow-up"}}</div>
-        <div><h2 class="card-title">Publish an app update</h2><div class="card-sub">A phone updates when this version code is higher than its own.</div></div>
+        <div><h2 class="card-title">Publish an app update</h2><div class="card-sub">Phones update when this code is higher.</div></div>
     </div>
     <form id="app-form" class="form" novalidate>
         <div class="field">
             <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
                 <button type="button" class="btn btn-secondary btn-sm" id="app-latest">{{icon "download" "i-sm"}}Use latest build</button>
-                <span class="hint" style="margin:0" id="app-latest-result" aria-live="polite">Fills the version and APK link from the newest GitHub release. You can still edit them.</span>
+                <span class="hint" style="margin:0" id="app-latest-result" aria-live="polite">Fills in the newest GitHub release.</span>
             </div>
         </div>
         <div class="field-row">
@@ -52,7 +52,7 @@
                 <label class="label" for="app-version-code">Version code</label>
                 <div class="input-wrap">{{icon "hash" "lead"}}
                 <input type="number" class="input mono" name="version_code" id="app-version-code" min="1" step="1" inputmode="numeric" value="{{suggestedCode}}" placeholder="8"></div>
-                <div class="hint">{{#if appRelease}}Current: {{appRelease.version_code}}. Must be higher.{{else}}Whole number, from the APK's build.{{/if}}</div>
+                <div class="hint">{{#if appRelease}}Current: {{appRelease.version_code}}. Must be higher.{{else}}Whole number.{{/if}}</div>
                 <div class="error" hidden></div>
             </div>
         </div>
@@ -60,7 +60,7 @@
             <label class="label" for="app-apk-url">APK link (https)</label>
             <div class="input-wrap">{{icon "link" "lead"}}
             <input type="url" class="input" name="apk_url" id="app-apk-url" placeholder="https://github.com/…/releases/download/…/Anoy.apk" autocomplete="off" spellcheck="false" inputmode="url"></div>
-            <div class="hint">The GitHub release asset link. It is checked before publishing, and the APK must be signed with the same key as the installed app.</div>
+            <div class="hint">GitHub release APK link. Same signing key as the installed app.</div>
             <div class="error" hidden></div>
         </div>
         <div class="field" data-field="changelog">
@@ -77,7 +77,7 @@
             <div class="hint">Normal shows “Not now”. Mandatory has only “Update now”.</div>
         </div>
         <button type="submit" class="btn btn-primary btn-block" id="app-submit">{{icon "upload"}}Publish app update</button>
-        <div class="hint">Phones see changes within about a minute.</div>
+        <div class="hint">Live in about a minute.</div>
         <div id="app-result" aria-live="polite"></div>
     </form>
 </section>

@@ -47,6 +47,8 @@ export const CLIENT_ICONS = [
   'triangle-alert', 'key-round', 'search', 'send',
   // 2.3.4: row "⋯" sheet, bulk select, keys states, offline toast.
   'ellipsis', 'plus', 'wifi-off',
+  // 2.3.6: Ban / Unban.
+  'ban',
 ];
 
 const icons = {};

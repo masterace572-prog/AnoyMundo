@@ -59,7 +59,7 @@
             <label class="label" for="expired_date">Expires (IST)</label>
             <div class="input-wrap">{{icon "calendar" "lead"}}
             <input type="text" class="input mono" name="expired_date" id="expired_date" value="{{form.expired_date}}" placeholder="Starts on first use" autocomplete="off"></div>
-            {{#if errors.expired_date}}<div class="error">{{icon "circle-alert"}}<span>{{errors.expired_date}}</span></div>{{else}}<div class="hint">Format 2026-12-31 23:59:00 (IST). Leave empty if unused.</div>{{/if}}
+            {{#if errors.expired_date}}<div class="error">{{icon "circle-alert"}}<span>{{errors.expired_date}}</span></div>{{else}}<div class="hint">2026-12-31 23:59:00 (IST). Empty if unused.</div>{{/if}}
         </div>
         <div class="field {{#if errors.registrator}}invalid{{/if}}">
             <label class="label" for="registrator">Created by</label>

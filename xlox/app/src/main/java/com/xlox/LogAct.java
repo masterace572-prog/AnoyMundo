@@ -96,6 +96,8 @@ public class LogAct extends AppCompatActivity {
     public static final String EXTRA_QA_RESULT = "qa_result";
     /** Debug builds only (screenshot QA): show an update-gate state. */
     public static final String EXTRA_QA_GATE = "qa_gate";
+    /** Panel reason that signed the user out (e.g. "USER BLOCKED"), shown once. */
+    public static final String EXTRA_SIGNED_OUT = "signed_out";
 
     private final ExecutorService executor = Executors.newSingleThreadExecutor(r -> new Thread(r, "anoy-login"));
     private final Handler main = new Handler(Looper.getMainLooper());
@@ -295,6 +297,12 @@ public class LogAct extends AppCompatActivity {
         }
         String qa = BuildConfig.DEBUG && getIntent() != null ? getIntent().getStringExtra(EXTRA_QA_RESULT) : null;
         if (qa != null) runQaResult(qa);
+        // Signed out by the panel (key banned): say why, once.
+        String out = getIntent() != null ? getIntent().getStringExtra(EXTRA_SIGNED_OUT) : null;
+        if (out != null) {
+            getIntent().removeExtra(EXTRA_SIGNED_OUT);
+            if (out.toUpperCase(Locale.US).contains("BLOCKED")) showError(getString(R.string.error_key_blocked));
+        }
     }
 
     @Override

@@ -4,6 +4,12 @@ Screenshots, design notes (`docs/ui-redesign/…`) and the one-off generator
 scripts mentioned below were removed from the tree in the repo cleanup after
 2.3.2; they remain in git history.
 
+## 2.3.6 — Banned keys sign out (versionCode 15)
+
+- A key banned in the panel (Keys → ⋯ → Ban) signs the phone out on the next
+  licence check and the login page says "This licence key has been blocked."
+- New key lengths from the panel (1H, 12H, 60D) show the right progress.
+
 ## 2.3.4 — UI polish (versionCode 13)
 
 - **Tokens:** tertiary text is lighter (#85858C); the 14 dp spacing and radii

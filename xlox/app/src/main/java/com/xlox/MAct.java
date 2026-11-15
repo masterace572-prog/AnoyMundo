@@ -131,6 +131,8 @@ public class MAct extends AppCompatActivity {
     private static final long QA_LICENCE_REFRESH_MIN_MS = 2000L;
     /** The panel's answer for a key that has run out. */
     private static final String REASON_EXPIRED = "EXPIRED KEY";
+    /** Panel reason for a banned key ("USER BLOCKED"): signs the phone out. */
+    private static final String REASON_BLOCKED = "BLOCKED";
     /** Duration segment of a licence key: ANOY-7D-XXXXX, ANOY-2H-XXXXX. */
     private static final Pattern KEY_DURATION = Pattern.compile("^[A-Z0-9]+-(\\d{1,4})([HD])-", Pattern.CASE_INSENSITIVE);
 
@@ -958,6 +960,11 @@ public class MAct extends AppCompatActivity {
             lastLicenceCheckedAt = now;
             licenceStale = false;
             if (expiryMillis <= 0 || expiryMillis > now) setExpiry(String.valueOf(now));
+        } else if (!preview && result != null && result.toUpperCase(Locale.US).contains(REASON_BLOCKED)) {
+            // Banned in the panel: sign out now and say why on the sign in page.
+            Log.d(TAG, "Licence refreshed: the panel reports the key banned");
+            openLogin(result);
+            return;
         } else {
             Log.d(TAG, "Licence refresh failed, keeping the last known time: " + result);
             licenceStale = true;
@@ -1904,7 +1911,12 @@ public class MAct extends AppCompatActivity {
     }
 
     private void openLogin() {
+        openLogin(null);
+    }
+
+    private void openLogin(String signedOutReason) {
         Intent intent = new Intent(this, LogAct.class);
+        if (signedOutReason != null) intent.putExtra(LogAct.EXTRA_SIGNED_OUT, signedOutReason);
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
         startActivity(intent);
         overridePendingTransition(R.anim.fade_in, R.anim.fade_out);

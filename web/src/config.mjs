@@ -37,16 +37,19 @@ export const config = {
   version: '2.0.0',
   games: { PUBG: 'PUBG Mobile' },
   durations: {
+    1: '1 hour',
     2: '2 hours',
     5: '5 hours',
+    12: '12 hours',
     24: '1 day',
     72: '3 days',
     168: '7 days',
     336: '14 days',
     720: '30 days',
+    1440: '60 days',
   },
   // Short duration token used inside every licence key: USER-7D-AB12C.
-  durationTokens: { 2: '2H', 5: '5H', 24: '1D', 72: '3D', 168: '7D', 336: '14D', 720: '30D' },
+  durationTokens: { 1: '1H', 2: '2H', 5: '5H', 12: '12H', 24: '1D', 72: '3D', 168: '7D', 336: '14D', 720: '30D', 1440: '60D' },
   // Random part of a generated key (A-Z, 0-9). Custom suffixes may be longer.
   keySuffixLength: 5,
   customSuffixMin: 4,
@@ -54,7 +57,7 @@ export const config = {
   // Panel "Custom" keys (2.3.6): the whole key is the seller's text (HELLO).
   customKeyMin: 4,
   customKeyMax: 32,
-  prices: { 2: 10, 5: 20, 24: 80, 72: 150, 168: 250, 336: 350, 720: 500 },
+  prices: { 1: 5, 2: 10, 5: 20, 12: 50, 24: 80, 72: 150, 168: 250, 336: 350, 720: 500, 1440: 900 },
   accExpire: { 1: '1 Day', 7: '7 Days', 15: '15 Days', 30: '30 Days', 60: '60 Days' },
   accLevel: { 1: 'Owner', 2: 'Admin', 3: 'Reseller' },
 };

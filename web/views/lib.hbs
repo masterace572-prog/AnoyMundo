@@ -1,7 +1,7 @@
 <div class="page-head">
     <div>
         <h1 class="page-title">Library</h1>
-        <p class="page-sub">Publishing a new version makes every loader update before sign-in.</p>
+        <p class="page-sub">Every loader updates before sign-in.</p>
     </div>
     <div class="page-actions">
         <a href="/api/lib/download" class="btn btn-secondary">{{icon "download"}}Download current</a>
@@ -30,7 +30,7 @@
 <section class="card" style="margin-bottom:20px" id="game-card">
     <div class="card-head">
         <div class="tile">{{icon "gamepad-2"}}</div>
-        <div><h2 class="card-title">Works with BGMI</h2><div class="card-sub">If a player's BGMI is newer, the app tells them to wait for a new library. Leave empty for no warning.</div></div>
+        <div><h2 class="card-title">Works with BGMI</h2><div class="card-sub">Newer BGMI shows a “wait for update” note. Empty = no note.</div></div>
     </div>
     <div id="game-form" class="form">
         <div class="field">
@@ -46,7 +46,7 @@
 <section class="card publish-card" id="publish-card">
     <div class="card-head">
         <div class="tile">{{icon "upload"}}</div>
-        <div><h2 class="card-title">Publish a release</h2><div class="card-sub">Upload a .so library or a .zip containing it (up to {{maxUploadMb}} MB), or give an https:// link.</div></div>
+        <div><h2 class="card-title">Publish a release</h2><div class="card-sub">A .so or .zip (max {{maxUploadMb}} MB), or an https:// link.</div></div>
     </div>
     <form id="lib-form" class="form" novalidate>
         <div class="field">
@@ -74,7 +74,7 @@
             <label class="label" for="lib-url">External link</label>
             <div class="input-wrap">{{icon "link" "lead"}}
             <input type="url" class="input" name="external_url" id="lib-url" placeholder="https://…" autocomplete="off" spellcheck="false" inputmode="url"></div>
-            <div class="hint" id="lib-url-hint">Must start with https://. If you also choose a file, the file is published and this link is ignored.</div>
+            <div class="hint" id="lib-url-hint">https:// only. A chosen file wins over the link.</div>
         </div>
         <div class="field">
             <label class="label" for="lib-notes">Notes (optional)</label>

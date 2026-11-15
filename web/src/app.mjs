@@ -230,7 +230,7 @@ function keyFormData(key) {
       devices: devices.join('\n'),
     },
     selects: {
-      status: buildSelect('status', 'status', { 1: 'Active', 0: 'Blocked' }, Number(key.status) === 1 ? 1 : 0),
+      status: buildSelect('status', 'status', { 1: 'Active', 0: 'Banned' }, Number(key.status) === 1 ? 1 : 0),
       game: buildSelect('game', 'game', config.games, key.game),
     },
   };
@@ -842,7 +842,7 @@ function isJsonRoute(p, method, req) {
   const contentType = String(req.headers?.['content-type'] || '');
   return lp.startsWith('/api/') || lp === '/connect' || lp === '/health' ||
     ((lp === '/lib' || lp === '/app-update') && method === 'POST') || lp === '/app-update/latest-build' ||
-    lp.startsWith('/keys/reset') || lp === '/keys/api' ||
+    lp.startsWith('/keys/reset') || lp === '/keys/ban' || lp === '/keys/api' ||
     contentType.includes('application/json') || accept.includes('application/json');
 }
 
@@ -1061,6 +1061,20 @@ export async function handle(req, res) {
         refunded: refund.refunded, refund_total: refund.refund_total,
         devices_total: 0, devices_max: max,
       });
+    }
+    // Ban / unban (POST only). Same ownership rule as reset/delete. A banned
+    // key is refused at sign in ("USER BLOCKED"); the app signs it out.
+    if (lp === '/keys/ban' && method === 'POST') {
+      const userKey = str(body.userkey);
+      const key = userKey ? await getKeyByUserKey(userKey) : null;
+      if (!key || (!user.isOwner && key.registrator !== user.username)) {
+        return sendJson(res, { ok: false, error: 'That key no longer exists.' }, 404);
+      }
+      const ban = str(body.ban) !== '0';
+      const { error } = await db().from('keys_code')
+        .update({ status: ban ? 0 : 1, updated_at: nowIso() }).eq('id_keys', key.id_keys);
+      if (error) return sendJson(res, { ok: false, error: 'Could not save. Please try again.' }, 500);
+      return sendJson(res, { ok: true, keys: key.user_key, banned: ban });
     }
     if (lp === '/keys/deleteexp' || lp === '/keys/deleteunused') {
       let query = db().from('keys_code').select('id_keys,expired_date,registrator').limit(500);

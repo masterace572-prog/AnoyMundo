@@ -365,6 +365,23 @@
     });
   }
 
+  // Ban / unban one key (POST /keys/ban). Banning asks first.
+  function banAction(r, btn, done) {
+    var ban = r.state !== 'blocked';
+    var ask = ban
+      ? confirmDialog('Ban ' + r.user_key + '?', 'It stops working on every phone. You can unban it later.', 'Ban', true)
+      : Promise.resolve(true);
+    ask.then(function (ok) {
+      if (!ok) return;
+      setBusy(btn, ban ? 'Banning…' : 'Unbanning…');
+      post('/keys/ban', { userkey: r.user_key, ban: ban ? '1' : '0' }).then(function () {
+        clearBusy(btn);
+        toast(ban ? 'Key banned' : 'Key unbanned');
+        if (done) done();
+      }, function (err) { clearBusy(btn); toast(err.message, true); });
+    });
+  }
+
   /* ---------------------------------------------------------- keys list */
   // Phone: 72 px rows (tap = edit, "⋯" = actions sheet). Desktop: the table
   // with the same actions. "Select" picks keys to copy or delete; each delete
@@ -429,7 +446,7 @@
     var delSel = document.getElementById('keys-delete-selected');
     var cleanExp = document.getElementById('keys-cleanup-expired');
     var cleanUnused = document.getElementById('keys-cleanup-unused');
-    var labels = { active: 'Active', unused: 'Unused', expired: 'Expired', blocked: 'Blocked' };
+    var labels = { active: 'Active', unused: 'Unused', expired: 'Expired', blocked: 'Banned' };
     var table = document.getElementById('keys-table');
     var cols = table ? table.querySelectorAll('thead th').length : 8;
 
@@ -490,7 +507,7 @@
       if (r.state === 'expired') {
         lines.push((r.duration ? 'Duration: ' + r.duration + '. ' : '') + 'This key expired' + (r.expires ? ' on ' + r.expires : '') + '. Ask me to renew it.');
       } else if (r.state === 'blocked') {
-        lines.push('This key is blocked. Message me before using it.');
+        lines.push('This key is banned. Message me before using it.');
       } else if (r.expires) {
         lines.push((r.duration ? 'Duration: ' + r.duration + '. ' : '') + 'Expires ' + r.expires + '.');
         lines.push('Renew before it runs out to keep playing.');
@@ -510,6 +527,7 @@
         { icon: 'copy', label: 'Copy key', run: function () { copyKey(r, null); } },
         { icon: 'rotate-ccw', label: 'Reset devices', run: function () { keyAction('reset', r.user_key, origin, afterChange); } },
         { icon: 'pencil', label: 'Edit', run: function () { location.href = editUrl(r); } },
+        { icon: 'ban', label: r.state === 'blocked' ? 'Unban' : 'Ban', run: function () { banAction(r, origin, afterChange); } },
         { icon: 'trash-2', label: 'Delete key', danger: true, run: function () { keyAction('delete', r.user_key, origin, afterChange); } }
       ]);
     }
@@ -613,9 +631,11 @@
       edit.appendChild(icon('pencil'));
       var reset = iconButton('rotate-ccw', 'Reset devices');
       reset.addEventListener('click', function () { keyAction('reset', r.user_key, reset, afterChange); });
+      var banBtn = iconButton('ban', r.state === 'blocked' ? 'Unban' : 'Ban', r.state === 'blocked' ? 'accent' : '');
+      banBtn.addEventListener('click', function () { banAction(r, banBtn, afterChange); });
       var del = iconButton('trash-2', 'Delete key', 'danger');
       del.addEventListener('click', function () { keyAction('delete', r.user_key, del, afterChange); });
-      group.appendChild(share); group.appendChild(edit); group.appendChild(reset); group.appendChild(del);
+      group.appendChild(share); group.appendChild(edit); group.appendChild(reset); group.appendChild(banBtn); group.appendChild(del);
       act.appendChild(group);
       tr.appendChild(act);
       tr.addEventListener('click', function (e) {

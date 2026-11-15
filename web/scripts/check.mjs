@@ -110,8 +110,8 @@ if (!/floating_form/.test(src('views/server.hbs'))) errors.push('server view mus
 try {
   const ks = await import('../src/key-service.mjs');
   const samples = [];
-  for (const h of [2, 5, 24, 72, 168, 336, 720]) samples.push(ks.keyPrefix('Anoy', h) + ks.randomKeyPart());
-  const bad = samples.filter((k) => !/^ANOY-(2H|5H|1D|3D|7D|14D|30D)-[A-Z0-9]{5}$/.test(k));
+  for (const h of [1, 2, 5, 12, 24, 72, 168, 336, 720, 1440]) samples.push(ks.keyPrefix('Anoy', h) + ks.randomKeyPart());
+  const bad = samples.filter((k) => !/^ANOY-(1H|2H|5H|12H|1D|3D|7D|14D|30D|60D)-[A-Z0-9]{5}$/.test(k));
   if (bad.length) errors.push(`key format wrong: ${bad.join(', ')}`);
   if (ks.parseCustomSuffix('anoy-7d-vip1', 'ANOY-7D-').suffix !== 'VIP1') errors.push('custom key prefix stripping failed');
   if (!ks.parseCustomSuffix('ab', 'ANOY-7D-').error) errors.push('too-short custom key accepted');

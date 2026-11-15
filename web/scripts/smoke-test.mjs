@@ -242,6 +242,20 @@ try {
   ok(r.body?.data?.ESP === 'off' && r.body?.data?.AIM === 'on', 'feature toggles reach the licensing API');
   await request('/server', { method: 'POST', headers: SAME, body: form({ feature_form: '1', ESP: 'on', Item: 'on', AIM: 'on', SilentAim: 'on', BulletTrack: 'on', Memory: 'on', Floating: 'on', Setting: 'on' }) });
 
+  // 9b. ban / unban (2.3.6)
+  r = await request('/keys/ban', { method: 'POST', headers: SAME, body: form({ userkey: ownerKey, ban: '1' }) });
+  ok(r.body?.ok === true && r.body?.banned === true, 'POST /keys/ban bans a key');
+  r = await request('/connect', { method: 'POST', body: form({ game: 'PUBG', user_key: ownerKey, serial: 'TESTDEVICE001' }) });
+  ok(r.body?.status === false && /BLOCKED/.test(r.body?.reason || ''), 'a banned key is refused at sign in');
+  r = await request('/keys/api?status=blocked');
+  ok(r.body?.rows?.some((k) => k.user_key === ownerKey && k.state === 'blocked'), 'the Banned filter lists it');
+  r = await request('/keys/ban', { method: 'POST', headers: SAME, body: form({ userkey: ownerKey, ban: '0' }) });
+  ok(r.body?.ok === true && r.body?.banned === false, 'unban works');
+  r = await request('/connect', { method: 'POST', body: form({ game: 'PUBG', user_key: ownerKey, serial: 'TESTDEVICE001' }) });
+  ok(r.body?.status === true, 'an unbanned key signs in again');
+  r = await request('/keys/ban', { method: 'POST', body: form({ userkey: ownerKey, ban: '1' }), headers: { Origin: 'https://evil.example', 'Sec-Fetch-Site': 'cross-site' } });
+  ok(r.status === 403, 'a foreign site cannot ban a key');
+
   // 10. reset / delete (POST from the panel, legacy GET still works)
   r = await request('/keys/reset', { method: 'POST', headers: SAME, body: form({ userkey: ownerKey }) });
   ok(r.body?.ok === true && r.body?.reset === true && r.body?.devices_total === 0, 'POST /keys/reset clears devices');
@@ -286,6 +300,8 @@ try {
   ok(r.body?.total === 0, 'a reseller sees only their own keys');
   r = await request('/keys/reset', { method: 'POST', headers: SAME, body: form({ userkey: ownerKey }) });
   ok(r.status === 404 && !('devices_max' in (r.body || {})), "a reseller cannot reset (or even probe) someone else's key");
+  r = await request('/keys/ban', { method: 'POST', headers: SAME, body: form({ userkey: ownerKey, ban: '1' }) });
+  ok(r.status === 404, "a reseller cannot ban someone else's key");
   r = await request('/keys/1');
   ok(r.status === 302 && r.location === '/keys', "a reseller cannot open someone else's key");
   r = await request('/keys/generate', { method: 'POST', headers: SAME, body: form({ game: 'PUBG', duration: '24', max_devices: '1', count: '1', custom: '', request_id: 'req-res-0001' }) });
@@ -312,7 +328,7 @@ try {
   r = await request('/api/v1/me', { headers: H });
   ok(r.body?.account?.username === 'reseller1' && r.body?.account?.saldo === 340, 'GET /api/v1/me authenticates the API key');
   r = await request('/api/v1/pricing', { headers: H });
-  ok(r.body?.durations?.length === 7 && r.body.durations.find((d) => d.hours === 168)?.label === '7 days', 'GET /api/v1/pricing lists durations');
+  ok(r.body?.durations?.length === 10 && r.body.durations.find((d) => d.hours === 168)?.label === '7 days', 'GET /api/v1/pricing lists durations');
   r = await request('/api/v1/keys', { method: 'POST', headers: H, body: { game: 'PUBG', duration: 2, max_devices: 1, count: 3 } });
   ok(r.status === 201 && r.body?.keys?.length === 3 && r.body?.price === 30 && r.body?.saldo_after === 310, 'bulk API order charges per key (3 × ₹10)');
   ok((r.body?.keys || []).every((k) => /^RESELLER1-2H-[A-Z0-9]{5}$/.test(k.user_key)), 'API keys use the same format');

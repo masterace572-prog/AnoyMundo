@@ -40,7 +40,7 @@ New resellers register with a referral code that the Owner creates under
 
 - Always **upper case** (input is upper-cased everywhere: panel, API, loader).
 - `USERNAME` = the creator's username, letters and digits only.
-- `DURATION` = `2H`, `5H`, `1D`, `3D`, `7D`, `14D` or `30D`.
+- `DURATION` = `1H`, `2H`, `5H`, `12H`, `1D`, `3D`, `7D`, `14D`, `30D` or `60D`.
 - `RANDOM` = 5 random characters from `A-Z0-9` (cryptographically random; 6 if
   a collision is ever hit). A **custom** ending replaces it: 4–6 characters
   `A-Z0-9`, exactly one key per request. Pasting a whole key (`ANOY-1D-VIP01`)

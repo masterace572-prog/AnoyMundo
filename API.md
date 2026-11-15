@@ -62,7 +62,7 @@ login page.
 | `id` | number | internal key id |
 | `user_key` | string | the licence key string (use as `{user_key}` in paths) |
 | `game` | string | `PUBG` by default |
-| `duration` | number | validity in hours (2, 5, 24, 72, 168, 336, 720) |
+| `duration` | number | validity in hours (1, 2, 5, 12, 24, 72, 168, 336, 720, 1440) |
 | `max_devices` | number | device slot limit |
 | `status` | number | `1` active, `2` blocked, `3` expired |
 | `devices` | string[] | bound serials |
@@ -119,13 +119,16 @@ Call this first in your site to display the current balance before a create.
   "rule": "price = price_per_device_for_duration × max_devices × count",
   "games": ["PUBG"],
   "durations": [
+    { "duration": 1,   "hours": 1,   "label": "1 hour",   "price_per_device": 5 },
     { "duration": 2,   "hours": 2,   "label": "2 hours",  "price_per_device": 10 },
     { "duration": 5,   "hours": 5,   "label": "5 hours",  "price_per_device": 20 },
+    { "duration": 12,  "hours": 12,  "label": "12 hours", "price_per_device": 50 },
     { "duration": 24,  "hours": 24,  "label": "1 day",   "price_per_device": 80 },
     { "duration": 72,  "hours": 72,  "label": "3 days",  "price_per_device": 150 },
     { "duration": 168, "hours": 168, "label": "7 days",  "price_per_device": 250 },
     { "duration": 336, "hours": 336, "label": "14 days", "price_per_device": 350 },
-    { "duration": 720, "hours": 720, "label": "30 days", "price_per_device": 500 }
+    { "duration": 720, "hours": 720, "label": "30 days", "price_per_device": 500 },
+    { "duration": 1440, "hours": 1440, "label": "60 days", "price_per_device": 900 }
   ]
 }
 ```
@@ -164,7 +167,7 @@ curl -sS 'https://anoymundo-panel.vercel.app/api/v1/keys?limit=20&offset=0&game=
 | Field | Required | Rules |
 |---|---|---|
 | `game` | no | default `PUBG`; must be one of `/api/v1/pricing` → `games` |
-| `duration` | **yes** | one of `2, 5, 24, 72, 168, 336, 720` (hours) |
+| `duration` | **yes** | one of `1, 2, 5, 12, 24, 72, 168, 336, 720, 1440` (hours) |
 | `max_devices` | **yes** | integer 1–100 |
 | `count` | no | 1–100, default `1`. Every key is charged. |
 | `custom_key` | no | custom ending, 4–6 chars `A-Z0-9` (upper-cased; a full `USER-1D-XXXX` key is accepted and its prefix stripped). Creates exactly one key. |
@@ -200,7 +203,7 @@ HTTP `201 Created`.
 <USERNAME>-<DURATION>-<RANDOM>        e.g.  ANOY-7D-GKFHJ
 ```
 
-Always upper case. `DURATION` is `2H`, `5H`, `1D`, `3D`, `7D`, `14D` or `30D`;
+Always upper case. `DURATION` is `1H`, `2H`, `5H`, `12H`, `1D`, `3D`, `7D`, `14D`, `30D` or `60D`;
 `RANDOM` is 5 characters `A-Z0-9` (or your 4–6 character `custom_key`).
 `expired_date` is `null` until the first `/connect` from the loader. Key
 look-ups in the path are case-insensitive.

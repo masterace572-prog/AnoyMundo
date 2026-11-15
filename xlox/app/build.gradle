@@ -80,8 +80,9 @@ android {
         //        remembered for 10 minutes); panel moved next to its database.
         // 2.3.4: UI polish - calmer waiting states, token clean-up, Settings tidy.
         // 2.3.5: "BGMI updated" notice, lint clean-up, newer GitHub build tools.
-        versionCode 14
-        versionName '2.3.5'
+        // 2.3.6: a key banned in the panel signs the phone out with the reason.
+        versionCode 15
+        versionName '2.3.6'
 
         vectorDrawables {
             useSupportLibrary true
