@@ -4,20 +4,17 @@ and re-run, never edit the JSON by hand.
 
     python3 scripts/lottie_art.py
 
-2.3.7 set - quiet status motion, stroke only, no fills, no overshoot:
+Splash status only (2.3.8) - quiet motion, stroke only, no fills, no overshoot:
 
   anoy_arc.json    24 x 24, 2.4 s loop. One white arc (r 7.5, 70 % opacity)
                    turning once per loop while its length breathes 25-38 %.
-                   Splash status, home "Preparing", library sheet.
+                   Splash "Checking for updates…".
   anoy_check.json  24 x 24, 0.7 s one-shot. Blue #0A84FF ring (same r 7.5 as
                    the arc, so arc -> check reads as one motion) draws from
                    12 o'clock, the tick follows; done by 0.57 s, then holds.
-  anoy_key.json    40 x 40, 0.8 s one-shot. White key outline: the bow draws
-                   from where the shaft meets it, then the shaft, then the
-                   two teeth. Flush left so it lines up with the login title.
+                   Splash "Up to date".
 
-Strokes are 1.75 units: 1.75 dp at the design size. Other sizes set the
-stroke in dp at runtime (com.xlox.ui.Motion.stroke).
+Strokes are 1.75 units: 1.75 dp at the 24 dp design size.
 """
 from __future__ import annotations
 
@@ -145,44 +142,9 @@ def check():
     return comp("anoy_check", 24, op, [layer("check", [tick, ring], op, pos=[12, 12])])
 
 
-def key():
-    op = 48  # 0.8 s
-    size = 40
-    angle = -45.0
-    # Local (unrotated) key: bow on the left, shaft to the right, teeth down.
-    bow_c, bow_r = (-9.5, 0.0), 6.5
-    shaft = [(-3.0, 0.0), (13.0, 0.0)]
-    tooth_end = [(13.0, 0.0), (13.0, 5.0)]
-    tooth_mid = [(8.5, 0.0), (8.5, 3.5)]
-
-    # Bounding box after rotation (+ half the stroke) -> flush left, centred vertically.
-    a = math.radians(angle)
-
-    def rot(p):
-        return (p[0] * math.cos(a) - p[1] * math.sin(a), p[0] * math.sin(a) + p[1] * math.cos(a))
-
-    pts = [rot((bow_c[0] + bow_r * math.cos(t / 36 * math.tau), bow_c[1] + bow_r * math.sin(t / 36 * math.tau)))
-           for t in range(36)]
-    pts += [rot(p) for p in shaft + tooth_end + tooth_mid]
-    half = STROKE / 2
-    min_x = min(p[0] for p in pts) - half
-    min_y = min(p[1] for p in pts) - half
-    max_y = max(p[1] for p in pts) + half
-    pos = [r(1.0 - min_x), r(size / 2 - (min_y + max_y) / 2)]
-
-    shapes = [
-        group("tooth mid", [polyline(tooth_mid), stroke(WHITE), trim(static(0), anim([(32, 0), (46, 100)]))]),
-        group("tooth end", [polyline(tooth_end), stroke(WHITE), trim(static(0), anim([(28, 0), (42, 100)]))]),
-        group("shaft", [polyline(shaft), stroke(WHITE), trim(static(0), anim([(12, 0), (36, 100)]))]),
-        # The bow starts at 3 o'clock, where the shaft joins it.
-        group("bow", [ellipse(*bow_c, bow_r, 90), stroke(WHITE), trim(static(0), anim([(0, 0), (26, 100)]))]),
-    ]
-    return comp("anoy_key", size, op, [layer("key", shapes, op, pos=pos, rot=static(angle))])
-
-
 def main() -> None:
     RAW.mkdir(parents=True, exist_ok=True)
-    for name, data in (("anoy_arc", arc()), ("anoy_check", check()), ("anoy_key", key())):
+    for name, data in (("anoy_arc", arc()), ("anoy_check", check())):
         f = RAW / f"{name}.json"
         f.write_text(json.dumps(data, separators=(",", ":")) + "\n")
         print(f"{f.name}: {f.stat().st_size} bytes, {data['op']} frames @ {FR} fps")

@@ -436,35 +436,15 @@
             android:paddingEnd="@dimen/screen_padding"
             android:paddingBottom="@dimen/space_16">
 
-            <!-- 2.3.7: the line and, only while game files are being prepared, a
-                 20 dp quiet arc beside it (Lottie). The arc carries the same 12 dp
-                 bottom margin so both centre on the text; with both gone the row
-                 is 0 dp, exactly as before. -->
-            <LinearLayout
+            <TextView
+                android:id="@+id/statusMessage"
+                style="@style/Text.Caption"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:layout_marginBottom="@dimen/space_12"
+                android:accessibilityLiveRegion="polite"
                 android:gravity="center"
-                android:orientation="horizontal">
-
-                <com.airbnb.lottie.LottieAnimationView
-                    android:id="@+id/prepArc"
-                    android:layout_width="@dimen/lottie_inline"
-                    android:layout_height="@dimen/lottie_inline"
-                    android:layout_marginEnd="@dimen/space_4"
-                    android:layout_marginBottom="@dimen/space_12"
-                    android:importantForAccessibility="no"
-                    android:visibility="gone" />
-
-                <TextView
-                    android:id="@+id/statusMessage"
-                    style="@style/Text.Caption"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginBottom="@dimen/space_12"
-                    android:accessibilityLiveRegion="polite"
-                    android:gravity="center"
-                    android:visibility="gone" />
-            </LinearLayout>
+                android:visibility="gone" />
 
             <com.google.android.material.progressindicator.LinearProgressIndicator
                 android:id="@+id/taskProgress"

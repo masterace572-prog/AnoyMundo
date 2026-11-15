@@ -4,6 +4,13 @@ Screenshots, design notes (`docs/ui-redesign/…`) and the one-off generator
 scripts mentioned below were removed from the tree in the repo cleanup after
 2.3.2; they remain in git history.
 
+## 2.3.8 — Splash motion only (versionCode 17)
+
+- The Lottie animations stay only on the splash update check (quiet arc while
+  checking, blue check for "Up to date").
+- Login (key outline), home ("Preparing" arc) and the library update sheet
+  are back to exactly 2.3.6: no key, plain line, the 20 dp green title check.
+
 ## 2.3.7 — Quiet status motion (versionCode 16)
 
 Small Lottie animations (stroke only, white / blue #0A84FF), nothing else

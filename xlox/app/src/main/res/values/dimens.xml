@@ -70,13 +70,10 @@
     <!-- 2.3.4: values that used to be raw dp in layouts and styles. -->
     <dimen name="brand_row_height">56dp</dimen>
     <dimen name="status_row_min_height">20dp</dimen>
-    <!-- 2.3.7 quiet Lotties (dp, never scaled by font) -->
+    <!-- 2.3.7 splash status Lottie (dp, never scaled by font) -->
     <dimen name="lottie_status">24dp</dimen>
-    <dimen name="lottie_inline">20dp</dimen>
-    <dimen name="lottie_mark">40dp</dimen>
-    <!-- The arc / ring sits 6 dp inside the 40 dp frame: pull it to the text edge. -->
-    <dimen name="lottie_mark_align">-6dp</dimen>
     <dimen name="retry_min_width">120dp</dimen>
+    <dimen name="icon_title">20dp</dimen>
     <dimen name="icon_text_button">14dp</dimen>
     <!-- 48 dp target minus a 24 / 20 dp glyph, halved. -->
     <dimen name="icon_button_padding">12dp</dimen>

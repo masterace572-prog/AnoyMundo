@@ -82,8 +82,9 @@ android {
         // 2.3.5: "BGMI updated" notice, lint clean-up, newer GitHub build tools.
         // 2.3.6: a key banned in the panel signs the phone out with the reason.
         // 2.3.7: quiet Lottie status on splash, login key, preparing, library sheet.
-        versionCode 16
-        versionName '2.3.7'
+        // 2.3.8: Lottie on the splash update check only (login, home, library sheet reverted).
+        versionCode 17
+        versionName '2.3.8'
 
         vectorDrawables {
             useSupportLibrary true

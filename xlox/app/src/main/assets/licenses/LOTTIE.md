@@ -1,13 +1,12 @@
 # Lottie animations — provenance
 
-The app ships three small Lottie animations in `res/raw/` (2.3.7), played by
-`com.xlox.ui.Motion`:
+The app ships two small Lottie animations in `res/raw/`, both on the splash
+status line (2.3.7; splash only since 2.3.8), played by `com.xlox.ui.Motion`:
 
 | File | Use | Length | Size |
 |---|---|---|---|
-| `anoy_arc.json` | Quiet white arc: splash status, home "Preparing", library sheet (loop) | 2.4 s (144 frames) | ~1 KB |
-| `anoy_check.json` | Blue #0A84FF ring + tick that draw in, then hold (one-shot) | 0.7 s (42 frames) | ~2 KB |
-| `anoy_key.json` | White key outline above the login title, drawn once (one-shot) | 0.8 s (48 frames) | ~3 KB |
+| `anoy_arc.json` | Quiet white arc: splash "Checking for updates…" (loop) | 2.4 s (144 frames) | ~1 KB |
+| `anoy_check.json` | Blue #0A84FF ring + tick that draw in, then hold: splash "Up to date" (one-shot) | 0.7 s (42 frames) | ~2 KB |
 
 All are **original work authored in this repository** for Anoy Loader. They
 are not derived from LottieFiles or any third-party animation. They are

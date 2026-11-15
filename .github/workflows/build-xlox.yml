@@ -268,8 +268,8 @@ jobs:
           echo "RELEASE_PUBLISHED=true" >> "$GITHUB_ENV"
 
       # Only the release just published stays, plus any release with a file the
-      # owner uploaded by hand (its download link must keep working). Never
-      # touches $RELEASE_TAG.
+      # owner uploaded by hand and the one the panel's app update serves (their
+      # download links must keep working). Never touches $RELEASE_TAG.
       - name: Delete every other release and tag
         if: env.RELEASE_PUBLISHED == 'true'
         working-directory: ${{ github.workspace }}
@@ -284,6 +284,18 @@ jobs:
           keep=" $(gh api --paginate "repos/$REPO/releases?per_page=100" \
             --jq '.[] | select([.assets[].uploader.login] | any(. != "github-actions[bot]")) | .tag_name' | tr '\n' ' ') "
           [ "$keep" = "  " ] || echo "::notice title=Releases kept::with files you uploaded:$keep"
+          # 2.3.8: the release phones are told to download (the panel's current
+          # app update) stays too, so its link never breaks before the owner
+          # publishes the new build. Panel unreachable: delete nothing.
+          if ! update=$(curl -fsS --max-time 20 https://anoymundo-panel.vercel.app/api/app/update); then
+            echo "::warning title=Releases kept::could not read the panel's current app update; nothing deleted"
+            exit 0
+          fi
+          live=$(printf '%s' "$update" | jq -r '.apk_url // empty' | sed -n 's#.*/releases/download/\([^/]*\)/.*#\1#p')
+          if [ -n "$live" ]; then
+            keep="$keep$live "
+            echo "::notice title=Releases kept::served by the panel's app update: $live"
+          fi
           for t in $(gh api --paginate "repos/$REPO/releases?per_page=100" --jq '.[].tag_name'); do
             [ "$t" = "$RELEASE_TAG" ] && continue
             case "$keep" in *" $t "*) continue ;; esac
