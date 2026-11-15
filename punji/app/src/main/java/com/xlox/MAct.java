@@ -184,6 +184,12 @@ public class MAct extends AppCompatActivity {
         final int titleVersionRes;
         final int installRes;
         final int obbMissingRes;
+        /**
+         * BGMI: copy the OBB into the container before every launch. PUBG
+         * Mobile is installed as split APKs with the game data built in, so it
+         * has no OBB to copy and launches straight away.
+         */
+        final boolean copiesObb;
         TextView title;
         TextView version;
         TextView library;
@@ -199,7 +205,7 @@ public class MAct extends AppCompatActivity {
         boolean seenRunningSinceLaunch;
 
         Game(String pkg, String libName, String obbPref, String fixedVersion,
-             int nameRes, int titleVersionRes, int installRes, int obbMissingRes) {
+             int nameRes, int titleVersionRes, int installRes, int obbMissingRes, boolean copiesObb) {
             this.pkg = pkg;
             this.libName = libName;
             this.obbPref = obbPref;
@@ -208,14 +214,16 @@ public class MAct extends AppCompatActivity {
             this.titleVersionRes = titleVersionRes;
             this.installRes = installRes;
             this.obbMissingRes = obbMissingRes;
+            this.copiesObb = copiesObb;
         }
     }
 
     private final Game bgmi = new Game(PKG_BGMI, LibManager.LIB_NAME, "obb_prepared_once", null,
-            R.string.game_name, R.string.game_title_version, R.string.install_game, R.string.error_obb_missing);
+            R.string.game_name, R.string.game_title_version, R.string.install_game, R.string.error_obb_missing,
+            true);
     private final Game pubgm = new Game(PKG_PUBGM, LibManager.LIB_NAME_PUBGM, "obb_prepared_once_pubgm",
             PUBGM_VERSION, R.string.game_name_pubgm, R.string.game_title_version_pubgm,
-            R.string.install_game_pubgm, R.string.error_obb_missing_pubgm);
+            R.string.install_game_pubgm, R.string.error_obb_missing_pubgm, false);
     private final Game[] games = {bgmi, pubgm};
     /** The game whose button started the current (or the last) action. */
     private Game active = bgmi;
@@ -1531,7 +1539,8 @@ public class MAct extends AppCompatActivity {
     /** Library installed, the three permissions granted and the container activated. */
     private boolean readyToLaunch(Game g) {
         if (LibManager.installedVersion(this) == null || !LibManager.isUsableLib(this, g.libName)) return false;
-        if (StorageAccess.firstMissing(this) != null) return false;
+        // The three access items are only for the OBB copy (BGMI).
+        if (g.copiesObb && StorageAccess.firstMissing(this) != null) return false;
         if (preview) return true; // Sample screen: the emulator has no activated container.
         try {
             return MetaActivationManager.getActivationStatus();
@@ -1707,6 +1716,14 @@ public class MAct extends AppCompatActivity {
         if (!LibManager.isUsableLib(this, active.libName)) {
             // Punji: the release is installed, but its ZIP has no library for this game.
             showMessage(getString(R.string.error_game_lib_missing, getString(active.nameRes)), true);
+            return;
+        }
+        if (!active.copiesObb) {
+            // PUBG Mobile (split APKs, game data built in): no game-files copy,
+            // no files-access prompt - launch right away.
+            Log.d(TAG, "Launch: " + active.pkg + " has no OBB to copy, launching now");
+            setBusy(true, getString(R.string.launching));
+            main.post(this::launchGame);
             return;
         }
         if (!StorageAccess.has(this)) {
