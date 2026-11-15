@@ -154,6 +154,9 @@ jobs:
           if [ -n "$R" ]; then
             grep -E ": Error:" "$R" | head -40 | while IFS= read -r line; do echo "::error::$(echo "$line" | cut -c1-400)"; done
             grep -E ": Warning:" "$R" | head -20 | while IFS= read -r line; do echo "::warning::$(echo "$line" | cut -c1-400)"; done
+            # GitHub shows at most 10 warnings per step: one notice lists them all.
+            S=$(grep -E ": Warning:" "$R" | sed -E 's#^.*/app/(src/main/)?##; s#: Warning: .*\[([A-Za-z0-9]+)\]$# \1#' | sort | tr '\n' ';')
+            echo "::notice title=Lint warnings ($(grep -cE ': Warning:' "$R"))::${S:-none}"
           fi
           [ $rc -ne 0 ] && grep -E "What went wrong|Lint found" /tmp/lint.log | head -5 | sed 's/^/::error::/'
           exit $rc
