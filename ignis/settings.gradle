@@ -1,0 +1,4 @@
+
+rootProject.name = "Ignis"
+include ':app'
+project(':app').projectDir = file('app')

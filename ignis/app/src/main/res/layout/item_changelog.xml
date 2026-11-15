@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- One "What's new" item: a 4 dp tertiary dot centred on the first line in a
+     16 dp gutter, then Body text with a hanging indent. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal">
+
+    <FrameLayout
+        android:layout_width="@dimen/space_16"
+        android:layout_height="22sp"
+        android:importantForAccessibility="no">
+
+        <View
+            android:layout_width="@dimen/bullet"
+            android:layout_height="@dimen/bullet"
+            android:layout_gravity="start|center_vertical"
+            android:background="@drawable/bullet" />
+    </FrameLayout>
+
+    <TextView
+        android:id="@+id/changelogText"
+        style="@style/Text.Body"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1" />
+</LinearLayout>
