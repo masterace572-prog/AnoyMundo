@@ -15,6 +15,7 @@ import android.widget.TextView;
 
 import androidx.core.content.ContextCompat;
 
+import com.airbnb.lottie.LottieAnimationView;
 import com.google.android.material.bottomsheet.BottomSheetDialog;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.progressindicator.LinearProgressIndicator;
@@ -73,7 +74,8 @@ public final class UpdateGate {
     private final AtomicBoolean cancelled = new AtomicBoolean(false);
 
     private BottomSheetDialog dialog;
-    private View icon;
+    /** 2.3.7: arc while working, check when done (Lottie); replaces the 20 dp title check. */
+    private LottieAnimationView mark;
     private volatile long lastUnknownPost;
     private TextView title;
     private TextView message;
@@ -212,7 +214,8 @@ public final class UpdateGate {
         if (dialog != null) return true;
         try {
             View root = LayoutInflater.from(activity).inflate(R.layout.dialog_update, null, false);
-            icon = root.findViewById(R.id.gateIcon);
+            mark = root.findViewById(R.id.gateMark);
+            Motion.stroke(mark, 2f);
             title = root.findViewById(R.id.gateTitle);
             message = root.findViewById(R.id.gateMessage);
             detail = root.findViewById(R.id.gateDetail);
@@ -293,7 +296,6 @@ public final class UpdateGate {
         // Close only after a failed re-download; the action carries the rest.
         close.setVisibility(optional && error ? View.VISIBLE : View.GONE);
         message.setTextColor(ContextCompat.getColor(activity, error ? R.color.danger : R.color.text_secondary));
-        icon.setVisibility(View.GONE);
         detail.setVisibility(View.GONE);
         progress.setVisibility(View.GONE);
         progressText.setVisibility(View.GONE);
@@ -315,6 +317,7 @@ public final class UpdateGate {
 
     private void renderChecking() {
         render(R.string.update_checking_title, activity.getString(R.string.update_checking_message), false, null);
+        Motion.arc(mark);
         showIndeterminateBar();
         armSlow();
     }
@@ -330,6 +333,7 @@ public final class UpdateGate {
                 ? activity.getString(R.string.update_required_message, version, localVersion)
                 : activity.getString(R.string.update_required_message_missing, version);
         render(R.string.update_required_title, body, false, activity.getString(R.string.update_now));
+        Motion.hide(mark);
         if (size > 0) {
             detail.setText(activity.getString(R.string.update_size, Ui.bytes(size)));
             detail.setVisibility(View.VISIBLE);
@@ -343,18 +347,21 @@ public final class UpdateGate {
     private void renderDownloading() {
         render(R.string.update_downloading_title, activity.getString(R.string.update_downloading_message),
                 false, null);
+        Motion.arc(mark);
         armSlow();
     }
 
     private void renderInstalling() {
         render(R.string.update_installing_title, activity.getString(R.string.update_installing_message),
                 false, null);
+        Motion.arc(mark);
         showIndeterminateBar();
         armSlow();
     }
 
     private void renderCheckFailed(String reason) {
         render(R.string.update_check_failed_title, Ui.dropTryAgain(reason), true, activity.getString(R.string.try_again));
+        Motion.hide(mark);
         action.setOnClickListener(v -> {
             Ui.tap(v);
             if (optional) runRedownload();
@@ -364,6 +371,7 @@ public final class UpdateGate {
 
     private void renderDownloadFailed(String reason) {
         render(R.string.update_failed_title, Ui.dropTryAgain(reason), true, activity.getString(R.string.try_again));
+        Motion.hide(mark);
         action.setOnClickListener(v -> {
             Ui.tap(v);
             startDownload();
@@ -469,7 +477,7 @@ public final class UpdateGate {
             title.setText(activity.getString(R.string.redownload_done, version));
             message.setVisibility(View.GONE);
         }
-        icon.setVisibility(View.VISIBLE);
+        Motion.arcToCheck(mark);
         if (hadBar) {
             progress.setVisibility(View.VISIBLE);
             setIndeterminate(false);

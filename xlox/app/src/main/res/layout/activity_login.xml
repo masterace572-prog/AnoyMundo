@@ -2,7 +2,8 @@
 <!--
   Login (spec 3.2), 24 dp gutters:
     brand row (56 dp)  "Anoy Hax", left; nothing on the right
-    ~72 dp space       (shrinks while the keyboard is open)
+    24 dp space + 40 dp key outline (Lottie, drawn once) + 8 dp; with the
+                       keyboard open: 16 dp, no key
     Login / subtitle / "Licence key" / field / reserved helper line
     connection notice  neutral surface-2 block (wifi-off / info glyph) + Try again
     Login (56 dp) and "Don't have a licence? Buy one" (only "Buy one" is a link)
@@ -42,10 +43,20 @@
             android:paddingEnd="@dimen/gutter_wide"
             android:paddingBottom="@dimen/space_24">
 
+            <!-- 2.3.7: 24 + 40 dp key + 8 = the old 72 dp, so the title stays put.
+                 The key hides with the keyboard (like the footer). -->
             <Space
                 android:id="@+id/loginTopSpace"
                 android:layout_width="match_parent"
-                android:layout_height="@dimen/space_72" />
+                android:layout_height="@dimen/space_24" />
+
+            <!-- Key outline (anoy_key), drawn once when sign in opens, then static. -->
+            <com.airbnb.lottie.LottieAnimationView
+                android:id="@+id/loginMark"
+                android:layout_width="@dimen/lottie_mark"
+                android:layout_height="@dimen/lottie_mark"
+                android:layout_marginBottom="@dimen/space_8"
+                android:importantForAccessibility="no" />
 
             <TextView
                 android:id="@+id/loginTitle"

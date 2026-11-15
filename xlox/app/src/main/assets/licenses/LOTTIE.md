@@ -1,14 +1,15 @@
 # Lottie animations — provenance
 
-The app ships two Lottie animations in `res/raw/`, both in the update-check
-sheet:
+The app ships three small Lottie animations in `res/raw/` (2.3.7), played by
+`com.xlox.ui.Motion`:
 
 | File | Use | Length | Size |
 |---|---|---|---|
-| `anoy_sync.json` | Update gate "Checking for updates" loop | 1.2 s (72 frames) | ~2 KB |
-| `anoy_success.json` | Update gate "You're up to date" one-shot | 0.7 s (42 frames) | ~3 KB |
+| `anoy_arc.json` | Quiet white arc: splash status, home "Preparing", library sheet (loop) | 2.4 s (144 frames) | ~1 KB |
+| `anoy_check.json` | Blue #0A84FF ring + tick that draw in, then hold (one-shot) | 0.7 s (42 frames) | ~2 KB |
+| `anoy_key.json` | White key outline above the login title, drawn once (one-shot) | 0.8 s (48 frames) | ~3 KB |
 
-Both are **original work authored in this repository** for Anoy Loader. They
+All are **original work authored in this repository** for Anoy Loader. They
 are not derived from LottieFiles or any third-party animation. They are
 generated as plain JSON by `xlox/scripts/lottie_art.py` (Python, no After
 Effects), which is the source of truth: edit the script and re-run it rather
@@ -20,9 +21,10 @@ the system splash is drawn from Inter outlines by
 `xlox/scripts/brand_wordmark.py` (Inter is SIL OFL 1.1, see `OFL-Inter.txt`;
 the 5 KB A/n/o/y subset it reads is `xlox/scripts/fonts/InterVariable-Anoy.ttf`).
 
-Art direction: monochrome white on black, blue `#0A84FF` used once as an
-accent (the outward pulse in `anoy_success`), 60 fps, simple shapes and trim
-paths only. No images, no masks, no expressions, so they render identically in
+Art direction: stroke only (1.75–2 dp), white on black, blue `#0A84FF` only
+for the done check; no fills, glow, bounce or overshoot; 60 fps, simple paths
+and trim paths only. Under reduced motion (animator scale 0) nothing moves:
+the arc is one still frame and the one-shots show their last frame. No images, no masks, no expressions, so they render identically in
 hardware mode on API 21–37.
 
 Licence: same terms as the rest of this repository.

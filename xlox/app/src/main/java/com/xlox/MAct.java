@@ -28,6 +28,8 @@ import com.google.android.material.button.MaterialButton;
 import com.google.android.material.progressindicator.LinearProgressIndicator;
 import com.google.android.material.snackbar.Snackbar;
 
+import com.airbnb.lottie.LottieAnimationView;
+import com.xlox.ui.Motion;
 import com.xlox.ui.Ui;
 import com.xlox.ui.PermissionSheet;
 import com.xlox.ui.UpdateGate;
@@ -220,6 +222,10 @@ public class MAct extends AppCompatActivity {
     private TextView serverValue;
     private TextView statusMessage;
     private LinearProgressIndicator taskProgress;
+    /** 2.3.7: quiet arc beside the line, only while game files are prepared. */
+    private LottieAnimationView prepArc;
+    /** True from "Preparing…" until the OBB copy reports back (or the task ends). */
+    private boolean preparingObb;
     private MaterialButton primaryAction;
 
     private long expiryMillis = -1L;
@@ -365,6 +371,8 @@ public class MAct extends AppCompatActivity {
         serverValue = findViewById(R.id.serverValue);
         statusMessage = findViewById(R.id.statusMessage);
         taskProgress = findViewById(R.id.taskProgress);
+        prepArc = findViewById(R.id.prepArc);
+        Motion.stroke(prepArc, 1.75f);
         primaryAction = findViewById(R.id.primaryAction);
         setupInsets();
 
@@ -1223,6 +1231,7 @@ public class MAct extends AppCompatActivity {
         switch (a) {
             case "preparing":
                 setBusy(true, getString(R.string.action_preparing_progress, 42));
+                preparingObb = true;
                 showProgress(42, false);
                 showMessage(getString(R.string.preparing), false);
                 break;
@@ -1619,6 +1628,7 @@ public class MAct extends AppCompatActivity {
         busy = value;
         if (!value) {
             cancelPrepTimers();
+            setPreparing(false);
             // Idle: a hidden status line gives its reserved space back.
             if (statusMessage.getVisibility() == View.INVISIBLE) statusMessage.setVisibility(View.GONE);
         }
@@ -1683,6 +1693,7 @@ public class MAct extends AppCompatActivity {
     private void prepareObbThenLaunch() {
         Log.d(TAG, "Launch: preparing game files");
         setBusy(true, getString(R.string.action_preparing));
+        preparingObb = true; // the arc comes with the line (after 400 ms)
         showProgress(0, true);
         // 2.3.4 (text only; the copy itself is unchanged): nothing new for the
         // first 400 ms, then the line. The very first copy explains itself;
@@ -1714,6 +1725,7 @@ public class MAct extends AppCompatActivity {
             public void onCopyCompleted(boolean success, String error) {
                 if (!Ui.alive(MAct.this)) return;
                 cancelPrepTimers();
+                setPreparing(false);
                 if (success) new Prefs(MAct.this).setSt(PREF_OBB_PREPARED, OBB_PREPARED_YES);
                 hideProgress();
                 if (!success && getString(R.string.obb_folder_blocked).equals(error)
@@ -1739,6 +1751,12 @@ public class MAct extends AppCompatActivity {
                 main.postDelayed(MAct.this::launchGame, LAUNCH_DELAY_MS);
             }
         });
+    }
+
+    /** Preparing ends: the arc stops and goes at once (the line follows its own rules). */
+    private void setPreparing(boolean value) {
+        preparingObb = value;
+        if (!value) Motion.hide(prepArc);
     }
 
     /** Stops the "Preparing" line's 400 ms and 15 s timers. */
@@ -1969,12 +1987,16 @@ public class MAct extends AppCompatActivity {
         statusMessage.setTextColor(ContextCompat.getColor(this, error ? R.color.danger : R.color.text_secondary));
         if (error) Ui.rejectHaptic(statusMessage);
         Ui.fade(statusMessage, true);
+        // 2.3.7: the arc only beside a "Preparing" line, never an error.
+        if (preparingObb && !error) Motion.arc(prepArc);
+        else Motion.hide(prepArc);
     }
 
     /** While a task runs the line keeps its space (INVISIBLE), so nothing jumps. */
     private void hideMessage() {
         launchErrorShown = false;
         cancelPrepTimers();
+        Motion.hide(prepArc);
         if (busy) {
             Ui.fadeReserved(statusMessage, false);
         } else {

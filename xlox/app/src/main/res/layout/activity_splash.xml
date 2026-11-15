@@ -6,8 +6,8 @@
     splashLockup  kicker "WELCOME TO", 12 dp, "Anoy Loader" (Wordmark), centred
                   at ~42 % of the height; "Loader" dissolves into "Hax" in the slot
     splashVersion "v2.3.4", Mono 12 tertiary, top right, 24 dp from the edges
-    status        bottom centre, 32 dp above the navigation inset: a 14 dp spinner
-                  (or a check / amber dot) + 8 dp + Caption; below it a reserved
+    status        bottom centre, 32 dp above the navigation inset: a 24 dp Lottie
+                  (2.3.7: quiet arc, or the check drawing in; amber dot) + Caption; below it a reserved
                   detail line (slow connection, or the failure reason) and, only
                   after a failure, Try again
   Insets are added in code (SplashActivity).
@@ -135,14 +135,15 @@
             android:minHeight="@dimen/status_row_min_height"
             android:orientation="horizontal">
 
-            <com.google.android.material.progressindicator.CircularProgressIndicator
-                android:id="@+id/splashStatusSpinner"
-                style="@style/Widget.Anoy.StatusSpinner"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginEnd="@dimen/space_8"
-                android:importantForAccessibility="no"
-                android:indeterminate="true" />
+            <!-- 2.3.7: quiet Lottie (anoy_arc loop / anoy_check one-shot), 24 dp.
+                 The arc is 15 dp across inside it, like the old 14 dp spinner;
+                 4 dp + its inset keep the old ~8 dp gap to the text. -->
+            <com.airbnb.lottie.LottieAnimationView
+                android:id="@+id/splashStatusMark"
+                android:layout_width="@dimen/lottie_status"
+                android:layout_height="@dimen/lottie_status"
+                android:layout_marginEnd="@dimen/space_4"
+                android:importantForAccessibility="no" />
 
             <TextView
                 android:id="@+id/splashStatus"

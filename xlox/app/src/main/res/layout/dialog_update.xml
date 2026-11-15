@@ -1,14 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
   Library update sheet (spec 3.3): the shared sheet, non-dismissible, so no
-  handle. Kicker LIBRARY, Title M (+ a 20 dp green check when up to date),
-  Body S, then a 3 dp bar, the Mono byte count and one action when needed.
+  handle. 2.3.7: a 40 dp Lottie on top (quiet arc while checking /
+  downloading / installing, crossfading to the check when done; gone when an
+  action is needed). Kicker LIBRARY, Title M, Body S, then a 3 dp bar, the
+  Mono byte count and one action when needed.
   Settings > Re-download library reuses it (optional: Close after a failure).
 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/gateRoot"
     style="@style/Sheet">
+
+    <com.airbnb.lottie.LottieAnimationView
+        android:id="@+id/gateMark"
+        android:layout_width="@dimen/lottie_mark"
+        android:layout_height="@dimen/lottie_mark"
+        android:layout_marginStart="@dimen/lottie_mark_align"
+        android:layout_marginBottom="@dimen/space_8"
+        android:importantForAccessibility="no"
+        android:visibility="gone" />
 
     <TextView
         android:id="@+id/gateKicker"
@@ -17,31 +27,14 @@
         android:layout_height="wrap_content"
         android:text="@string/row_library" />
 
-    <LinearLayout
+    <TextView
+        android:id="@+id/gateTitle"
+        style="@style/Text.TitleM"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="@dimen/kicker_gap"
-        android:gravity="center_vertical"
-        android:orientation="horizontal">
-
-        <TextView
-            android:id="@+id/gateTitle"
-            style="@style/Text.TitleM"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:accessibilityHeading="true"
-            android:accessibilityLiveRegion="polite" />
-
-        <ImageView
-            android:id="@+id/gateIcon"
-            android:layout_width="@dimen/icon_title"
-            android:layout_height="@dimen/icon_title"
-            android:layout_marginStart="@dimen/space_8"
-            android:importantForAccessibility="no"
-            android:visibility="gone"
-            app:srcCompat="@drawable/ic_check"
-            app:tint="@color/success" />
-    </LinearLayout>
+        android:accessibilityHeading="true"
+        android:accessibilityLiveRegion="polite" />
 
     <TextView
         android:id="@+id/gateMessage"

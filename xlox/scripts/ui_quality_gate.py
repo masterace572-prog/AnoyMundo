@@ -351,7 +351,7 @@ gate("Brief rules: palette, no emoji / spinner / Toast / dynamic colour; deps pi
 import json as _json
 lottie = []
 raw_dir = RES / "raw"
-for name in ("anoy_sync", "anoy_success"):
+for name in ("anoy_arc", "anoy_check", "anoy_key"):
     f = raw_dir / f"{name}.json"
     if not f.exists():
         lottie.append(f"missing res/raw/{name}.json")

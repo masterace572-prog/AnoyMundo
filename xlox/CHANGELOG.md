@@ -4,6 +4,25 @@ Screenshots, design notes (`docs/ui-redesign/…`) and the one-off generator
 scripts mentioned below were removed from the tree in the repo cleanup after
 2.3.2; they remain in git history.
 
+## 2.3.7 — Quiet status motion (versionCode 16)
+
+Small Lottie animations (stroke only, white / blue #0A84FF), nothing else
+changes; the splash film, launch flow and licensing are untouched:
+
+- **Splash status:** the 14 dp spinner is a quiet 24 dp arc (2.4 s loop);
+  "Up to date" draws a blue check once (0.7 s) instead of the green glyph.
+- **Login:** a 40 dp key outline above the title draws itself once when sign
+  in opens; the title keeps its position (24 + 40 + 8 = the old 72 dp) and the
+  key hides with the keyboard.
+- **Home:** a 20 dp arc beside the "Preparing game files" line only while the
+  game files are copied; it stops the moment the copy reports back.
+- **Library sheet:** a 40 dp arc on top while checking / downloading /
+  installing, crossfading to the check when done (replaces the 20 dp title
+  check); gone when an action is needed.
+- Reduced motion: no movement (still arc, final frames). Old unused
+  `anoy_sync` / `anoy_success` replaced by `anoy_arc` / `anoy_check` /
+  `anoy_key` from `scripts/lottie_art.py`.
+
 ## 2.3.6 — Banned keys sign out (versionCode 15)
 
 - A key banned in the panel (Keys → ⋯ → Ban) signs the phone out on the next

@@ -22,6 +22,9 @@ import androidx.core.content.ContextCompat;
 import androidx.core.splashscreen.SplashScreen;
 import androidx.core.splashscreen.SplashScreenViewProvider;
 
+import com.airbnb.lottie.LottieAnimationView;
+
+import com.xlox.ui.Motion;
 import com.xlox.ui.Ui;
 import com.xlox.utils.AppUpdater;
 import com.xlox.utils.UpdateException;
@@ -171,7 +174,7 @@ public class SplashActivity extends AppCompatActivity {
     private TextView version;
     private View statusBar;
     private View statusRow;
-    private View statusSpinner;
+    private LottieAnimationView statusMark;
     /** Uptime when the current status text appeared (for the "Up to date" hold). */
     private long statusShownAt;
     private TextView statusLine;
@@ -234,7 +237,8 @@ public class SplashActivity extends AppCompatActivity {
             version.setText(getString(R.string.splash_version, BuildConfig.VERSION_NAME));
             statusBar = findViewById(R.id.splashStatusBar);
             statusRow = findViewById(R.id.splashStatusRow);
-            statusSpinner = findViewById(R.id.splashStatusSpinner);
+            statusMark = findViewById(R.id.splashStatusMark);
+            Motion.arc(statusMark); // as the old spinner: waiting from the first frame
             statusLine = findViewById(R.id.splashStatus);
             statusDetail = findViewById(R.id.splashStatusDetail);
             retry = findViewById(R.id.splashRetry);
@@ -445,8 +449,8 @@ public class SplashActivity extends AppCompatActivity {
     }
 
     /**
-     * Status line: Caption text with a 14 dp spinner, a tinted glyph (green
-     * check, amber dot) or nothing. With durations it crossfades (opacity
+     * Status line: Caption text with the quiet arc, the check (2.3.7: Lottie,
+     * one-shot), a tinted glyph (amber dot) or nothing. With durations it crossfades (opacity
      * only); before the line is visible, or with animations off, it is instant.
      */
     private void setStatus(String text, int iconRes, int colourRes, boolean spinner, long outMs, long inMs) {
@@ -473,8 +477,10 @@ public class SplashActivity extends AppCompatActivity {
         statusLine.setTag(R.id.tag_swap_text, null);
         statusLine.setText(text);
         int colour = ContextCompat.getColor(this, colourRes != 0 ? colourRes : R.color.text_secondary);
+        // 2.3.7: "Up to date" is the Lottie check drawing in, not a glyph.
+        boolean done = iconRes == R.drawable.ic_check;
         Drawable glyph = null;
-        if (iconRes != 0) {
+        if (iconRes != 0 && !done) {
             glyph = ContextCompat.getDrawable(this, iconRes);
             if (glyph != null) {
                 int size = getResources().getDimensionPixelSize(R.dimen.icon_chip);
@@ -484,7 +490,9 @@ public class SplashActivity extends AppCompatActivity {
         }
         statusLine.setCompoundDrawablesRelative(glyph, null, null, null);
         androidx.core.widget.TextViewCompat.setCompoundDrawableTintList(statusLine, ColorStateList.valueOf(colour));
-        statusSpinner.setVisibility(spinner ? View.VISIBLE : View.GONE);
+        if (spinner) Motion.arc(statusMark);
+        else if (done) Motion.check(statusMark);
+        else Motion.hide(statusMark);
     }
 
     /** The detail line keeps its space (INVISIBLE), so the status never jumps. */

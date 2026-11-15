@@ -81,8 +81,9 @@ android {
         // 2.3.4: UI polish - calmer waiting states, token clean-up, Settings tidy.
         // 2.3.5: "BGMI updated" notice, lint clean-up, newer GitHub build tools.
         // 2.3.6: a key banned in the panel signs the phone out with the reason.
-        versionCode 15
-        versionName '2.3.6'
+        // 2.3.7: quiet Lottie status on splash, login key, preparing, library sheet.
+        versionCode 16
+        versionName '2.3.7'
 
         vectorDrawables {
             useSupportLibrary true

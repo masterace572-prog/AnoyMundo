@@ -27,6 +27,8 @@ import androidx.appcompat.app.AppCompatActivity;
 import com.google.android.material.bottomsheet.BottomSheetDialog;
 import com.google.android.material.button.MaterialButton;
 
+import com.airbnb.lottie.LottieAnimationView;
+import com.xlox.ui.Motion;
 import com.xlox.ui.PermissionSheet;
 import com.xlox.ui.Ui;
 import com.xlox.ui.UpdateGate;
@@ -119,6 +121,8 @@ public class LogAct extends AppCompatActivity {
     private View notice;
     private TextView noticeText;
     private View footer;
+    /** 2.3.7: key outline above the title (Lottie, one-shot). */
+    private LottieAnimationView loginMark;
     /** Messages that belong to the key itself (shown under the field). */
     private final Set<String> fieldErrors = new HashSet<>();
 
@@ -147,6 +151,7 @@ public class LogAct extends AppCompatActivity {
         notice = findViewById(R.id.loginNotice);
         noticeText = findViewById(R.id.loginNoticeText);
         footer = findViewById(R.id.loginFooter);
+        loginMark = findViewById(R.id.loginMark);
         for (int id : new int[]{R.string.error_key_empty, R.string.error_key_format, R.string.error_key_unknown,
                 R.string.error_key_blocked, R.string.error_key_expired, R.string.error_key_devices,
                 R.string.clipboard_empty}) {
@@ -227,9 +232,12 @@ public class LogAct extends AppCompatActivity {
             // Keyboard open: the brand row stays, the top space shrinks, the
             // footer hides and Sign in is scrolled into view above the keyboard.
             footer.setVisibility(ime ? View.GONE : View.VISIBLE);
+            // 2.3.7: the key outline goes with the keyboard too; the title
+            // keeps its 72 dp (24 + 40 + 8) / 16 dp positions.
+            loginMark.setVisibility(ime ? View.GONE : View.VISIBLE);
             View top = findViewById(R.id.loginTopSpace);
             ViewGroup.LayoutParams lp = top.getLayoutParams();
-            int want = getResources().getDimensionPixelSize(ime ? R.dimen.space_16 : R.dimen.space_72);
+            int want = getResources().getDimensionPixelSize(ime ? R.dimen.space_16 : R.dimen.space_24);
             if (lp.height != want) {
                 lp.height = want;
                 top.setLayoutParams(lp);
@@ -289,6 +297,8 @@ public class LogAct extends AppCompatActivity {
 
     private void onGatePassed() {
         gatePassed = true;
+        // 2.3.7: the key outline draws itself once as sign in opens, then stays.
+        Motion.drawOnce(loginMark, R.raw.anoy_key);
         updateVersionFooter();
         setFormEnabled(true);
         requestPermissionsIfNeeded();
