@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!-- Ignis launcher icon (API 26+): the word "Ignis" in white on black, drawn as
-     Inter outlines (xlox/scripts/brand_wordmark.py). The word sits 2 dp inside
-     the 66 dp safe zone, so circle / squircle / rounded-square / teardrop masks
-     never clip a letter. -->
-<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
-    <background android:drawable="@color/black" />
-    <foreground android:drawable="@drawable/ic_launcher_glyph" />
-</adaptive-icon>
