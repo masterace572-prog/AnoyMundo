@@ -1,65 +1,61 @@
-# Easy guide: library and app updates from GitHub
+# Easy setup: updates from GitHub
 
-Your panel does the login. GitHub does the updates.
+## 1. Make the version file
 
-In this guide, replace **YOU** with your GitHub username.
+On GitHub, make a **Public** repo. Click **Add file → Create new file**.
 
----
+- Name: `api/lib/version`
+- Text inside: `1.0`
 
-## Step 1: Make an update repo
+⚠️ Don't name it `version.txt`. It must be exactly `api/lib/version`.
 
-1. On GitHub, click **New repository**.
-2. Name it `anoy-updates`, choose **Public**, then click **Create**.
+## 2. Upload the lib ZIP
 
-## Step 2: Add 2 files
+In the same repo, go to **Releases → New release**.
 
-Click **Add file → Create new file**. Type the name exactly as shown, with **no `.txt`**.
+- Tag: `lib`
+- Upload your ZIP and name it `lib.zip`
+- Click **Publish**
 
-**File name:** `api/lib/version`
+## 3. Copy the 2 links
+
+Version link:
 ```
-1.0
+https://raw.githubusercontent.com/YOU/REPO/main/api/lib/version
 ```
 
-**File name:** `api/app/update`
-```json
-{ "ok": true, "available": false }
+ZIP link:
+```
+https://github.com/YOU/REPO/releases/download/lib/lib.zip
 ```
 
-## Step 3: Upload the library ZIP
+Replace `YOU` with your GitHub username and `REPO` with the repo name.
 
-1. Open **Releases → Create a new release**.
-2. Type `lib` as the tag.
-3. Upload your ZIP and name it **`lib.zip`**. The ZIP must have `libbgmi.so` inside.
-4. Click **Publish**.
+## 4. Paste them in the app
 
-## Step 4: Put the links in the app (one time only)
-
-1. Open `xlox/app/src/main/jni/panel_config.h` in your copy of the project.
-2. Change these lines:
+In `xlox/app/src/main/jni/panel_config.h`:
 
 ```c
-#define ANOY_VERSION_URL  "https://raw.githubusercontent.com/YOU/anoy-updates/main/api/lib/version"
-#define ANOY_DOWNLOAD_URL "https://github.com/YOU/anoy-updates/releases/download/lib/lib.zip"
-#define ANOY_CONNECT_URL  "https://YOUR-PANEL/connect"
+#define ANOY_VERSION_URL  "PASTE VERSION LINK"
+#define ANOY_DOWNLOAD_URL "PASTE ZIP LINK"
 ```
 
-3. Build the APK. GitHub Actions does it when you push.
-4. Install it on the phones.
+Build the APK once and install it.
 
 ---
 
-## Push a library update
+## To push a lib update
 
-1. Open the `lib` release, click **Edit**, delete the old `lib.zip` and upload the new `lib.zip`.
-2. Open `api/lib/version`, click ✏️, change the number (for example `1.0` to `1.1`), then click **Commit**.
+1. Replace `lib.zip` in the `lib` release with the new ZIP.
+2. Change the version text, for example `1.0` → `1.1`.
 
-Done. Phones update within 5 minutes.
+Phones update within 5 minutes.
 
-## Push an app update
+---
 
-1. Raise `versionCode` in `xlox/app/build.gradle` and push. GitHub builds the new APK.
-2. Copy the APK link. It must end with **`.apk`**.
-3. Open `api/app/update`, click ✏️, paste this, then click **Commit**:
+## For APK updates (optional)
+
+Make one more file named `api/app/update`:
 
 ```json
 {
@@ -67,20 +63,10 @@ Done. Phones update within 5 minutes.
   "available": true,
   "version_name": "2.3.5",
   "version_code": 14,
-  "apk_url": "PASTE-APK-LINK-HERE",
+  "apk_url": "PASTE APK LINK",
   "changelog": "What is new",
   "mandatory": false
 }
 ```
 
-Done. Phones are offered the update within 5 minutes.
-
----
-
-## Remember
-
-- The update repo must be **Public**.
-- File names have **no `.txt`**.
-- For an app update, `version_code` must be **bigger** than the last one.
-- Always sign the APK with the **same key**.
-- More details are in `GITHUB_DEPLOY.md`.
+To push a new APK, paste its link and make `version_code` bigger.
