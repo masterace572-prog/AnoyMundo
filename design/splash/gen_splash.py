@@ -19,6 +19,7 @@ Changes from the first draft, to match the app exactly:
   * Waiting loop: the app breathes the whole "Anoy Hax" line (splashName), not
     just "Hax"; the return half is the reversed curve (ValueAnimator REVERSE).
   * system_mark is the real res/drawable/splash_mark.xml outline, not a square.
+  * Held layers end at op + 1 (safety for players that park exactly on op).
 """
 import sys, json, os, re
 from fontTools.svgLib.path import parse_path
@@ -204,6 +205,11 @@ def build(fontpath, mode, bg=True):
                     "sc": "#000000", "ip": 0, "op": N, "st": 0, "bm": 0,
                     "ks": {"o": prop(100), "r": prop(0), "p": {"a": 0, "k": [W/2, H/2, 0]},
                            "a": {"a": 0, "k": [W/2, H/2, 0]}, "s": {"a": 0, "k": [100,100,100]}}})
+    # Layers that hold to the end run one frame past the comp (common export
+    # practice): the film is frames 0-170, and a player that parks exactly on
+    # op still draws the final "Anoy Hax". lottie-android stops at op - 0.01.
+    for l in out:
+        if l["op"] == N: l["op"] = N + 1
     return {"v": "5.7.0", "fr": FPS, "ip": 0, "op": N, "w": W, "h": H,
             "nm": f"Anoy splash ({mode})", "ddd": 0, "assets": [], "layers": out}
 
