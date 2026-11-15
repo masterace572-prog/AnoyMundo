@@ -89,6 +89,9 @@
     });
   }
 
+  // Page scripts (e.g. the Library page) reuse the same dialog.
+  window.anoyConfirm = confirmDialog;
+
   /* ---------------------------------------------------------- busy state */
   // Spinner + label; after 6 s the label becomes "Still working…" so a slow
   // server never looks frozen.
@@ -742,6 +745,8 @@
     var unlimited = form.getAttribute('data-unlimited') === '1';
     var saldo = Number(form.getAttribute('data-saldo') || 0);
     var min = Number(form.getAttribute('data-min') || 4), max = Number(form.getAttribute('data-max') || 10);
+    // 2.3.6: a custom key is the whole key (HELLO), no USER-7D- prefix.
+    var fullCustom = form.getAttribute('data-full-custom') === '1';
     // Duration is a group of radio cards; fall back to a <select> if present.
     var duration = {
       get value() {
@@ -772,7 +777,7 @@
     function suffix() {
       var prefix = prefixes[duration.value] || '';
       var v = (customInput.value || '').toUpperCase().replace(/\s+/g, '');
-      if (prefix && v.indexOf(prefix) === 0) v = v.slice(prefix.length);
+      if (!fullCustom && prefix && v.indexOf(prefix) === 0) v = v.slice(prefix.length);
       return v;
     }
     function update() {
@@ -780,19 +785,21 @@
       countField.hidden = custom;
       customField.hidden = !custom;
       var prefix = prefixes[duration.value] || '';
-      prefixEl.textContent = prefix;
+      if (prefixEl) prefixEl.textContent = prefix;
       var n = custom ? 1 : Math.max(0, int(count, 1));
       var d = Math.max(0, int(devices, 1));
       var unit = Number(prices[duration.value] || 0) * d;
       var total = unit * n;
       var s = custom ? suffix() : '';
-      example.textContent = prefix + (custom ? (s || '…') : 'XXXXX');
+      example.textContent = custom && fullCustom ? (s || '…') : prefix + (custom ? (s || '…') : 'XXXXX');
       unitEl.textContent = unlimited ? 'Free' : inr(unit);
       totalEl.textContent = unlimited ? 'Free · ' + n + ' key' + (n === 1 ? '' : 's') : inr(total);
       if (barTotal) barTotal.textContent = totalEl.textContent;
       var short = !unlimited && total > saldo;
       balanceErr.hidden = !short;
-      var validCustom = !custom || new RegExp('^[A-Z0-9]{' + min + ',' + max + '}$').test(s);
+      var validCustom = !custom || (fullCustom
+        ? s.length >= min && s.length <= max && /^[A-Z0-9](?:[A-Z0-9-]*[A-Z0-9])?$/.test(s)
+        : new RegExp('^[A-Z0-9]{' + min + ',' + max + '}$').test(s));
       var validCount = custom || (n >= 1 && n <= 100);
       submit.disabled = short || !validCustom || !validCount || d < 1 || d > 100;
       if (barSubmit && barSubmit.dataset.busy !== '1') barSubmit.disabled = submit.disabled;

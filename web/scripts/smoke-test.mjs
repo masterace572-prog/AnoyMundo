@@ -168,24 +168,24 @@ try {
   const ownerKey = out.keys[0];
 
   // 5. custom keys (the reported bug): no count field posted at all
-  r = await request('/keys/generate', { method: 'POST', headers: SAME, body: form({ game: 'PUBG', duration: '24', max_devices: '2', custom: '1', custom_key: 'vip01', request_id: 'req-owner-custom-0001' }) });
+  r = await request('/keys/generate', { method: 'POST', headers: SAME, body: form({ game: 'PUBG', duration: '24', max_devices: '2', custom: '1', custom_key: 'anoy-1d-vip01', request_id: 'req-owner-custom-0001' }) });
   out = await generatedKeys();
-  ok(out.keys.length === 1 && out.keys[0] === 'ANOY-1D-VIP01', `custom key is created in upper case (${out.keys.join(',')})`);
+  ok(out.keys.length === 1 && out.keys[0] === 'ANOY-1D-VIP01', `a custom key is exactly the typed text, upper case (${out.keys.join(',')})`);
   r = await request('/keys/generate', { method: 'POST', headers: SAME, body: form({ game: 'PUBG', duration: '24', max_devices: '1', custom: '1', custom_key: 'ANOY-1D-VIP01', request_id: 'req-owner-custom-0002' }) });
   r = await request('/keys/generate');
-  ok(/ANOY-1D-VIP01 already exists/.test(r.body), 'a taken custom key (even pasted with its prefix) is reported clearly');
-  r = await request('/keys/generate', { method: 'POST', headers: SAME, body: form({ game: 'PUBG', duration: '72', max_devices: '1', custom: '1', custom_key: 'anoy-3d-gold7', count: '5', request_id: 'req-owner-custom-0003' }) });
+  ok(/ANOY-1D-VIP01 already exists/.test(r.body), 'a taken custom key is reported clearly');
+  r = await request('/keys/generate', { method: 'POST', headers: SAME, body: form({ game: 'PUBG', duration: '72', max_devices: '1', custom: '1', custom_key: 'iloveyou', count: '5', request_id: 'req-owner-custom-0003' }) });
   out = await generatedKeys();
-  ok(out.keys.length === 1 && out.keys[0] === 'ANOY-3D-GOLD7', 'a pasted full key keeps only its custom ending, and a custom key is always one key');
+  ok(out.keys.length === 1 && out.keys[0] === 'ILOVEYOU', 'a custom key needs no ANOY- prefix (ILOVEYOU), and is always one key');
   r = await request('/keys/generate', { method: 'POST', headers: SAME, body: form({ game: 'PUBG', duration: '24', max_devices: '1', custom: '1', custom_key: 'ab!', request_id: 'req-owner-custom-0004' }) });
   r = await request('/keys/generate');
-  ok(/Custom part must be 4-6 letters or numbers/.test(r.body) && /value="ab!"/.test(r.body), 'an invalid custom key shows a field error and keeps the input');
-  r = await request('/keys/generate', { method: 'POST', headers: SAME, body: form({ game: 'PUBG', duration: '24', max_devices: '1', custom: '1', custom_key: 'ABCDEFG', request_id: 'req-owner-custom-0007' }) });
+  ok(/Custom key must be 4-32 letters or numbers/.test(r.body) && /value="ab!"/.test(r.body), 'an invalid custom key shows a field error and keeps the input');
+  r = await request('/keys/generate', { method: 'POST', headers: SAME, body: form({ game: 'PUBG', duration: '24', max_devices: '1', custom: '1', custom_key: 'A'.repeat(33), request_id: 'req-owner-custom-0007' }) });
   r = await request('/keys/generate');
-  ok(/Custom part must be 4-6 letters or numbers/.test(r.body), 'a 7-character custom ending is rejected (format allows 4-6)');
+  ok(/Custom key must be 4-32 letters or numbers/.test(r.body), 'a 33-character custom key is rejected (format allows 4-32)');
   r = await request('/keys/generate', { method: 'POST', headers: SAME, body: form({ game: 'PUBG', duration: '24', max_devices: '1', custom: '1', custom_key: '', request_id: 'req-owner-custom-0005' }) });
   r = await request('/keys/generate');
-  ok(/Enter the custom part of the key/.test(r.body), 'an empty custom key is rejected');
+  ok(/Enter the custom key/.test(r.body), 'an empty custom key is rejected');
   r = await request('/keys/generate', { method: 'POST', headers: SAME, body: form({ game: 'PUBG', duration: '24', max_devices: '1', custom: '1', custom_key: 'vip01', request_id: 'req-owner-custom-0001' }) });
   out = await generatedKeys();
   ok(out.keys[0] === 'ANOY-1D-VIP01', 'a double-submitted custom key returns the original result instead of an error');
@@ -292,7 +292,7 @@ try {
   out = await generatedKeys();
   ok(out.keys.length === 1 && /^RESELLER1-1D-[A-Z0-9]{5}$/.test(out.keys[0]), `reseller key uses their name (${out.keys[0]})`);
   ok(/Charged ₹80/.test(out.page.body) && /Balance: ₹420/.test(out.page.body), 'reseller is charged ₹80 (1 day × 1 device)');
-  r = await request('/keys/generate', { method: 'POST', headers: SAME, body: form({ game: 'PUBG', duration: '24', max_devices: '1', custom: '1', custom_key: 'shop1', request_id: 'req-res-0002' }) });
+  r = await request('/keys/generate', { method: 'POST', headers: SAME, body: form({ game: 'PUBG', duration: '24', max_devices: '1', custom: '1', custom_key: 'reseller1-1d-shop1', request_id: 'req-res-0002' }) });
   out = await generatedKeys();
   ok(out.keys[0] === 'RESELLER1-1D-SHOP1' && /Balance: ₹340/.test(out.page.body), 'reseller custom key works and is charged once');
   r = await request('/keys/generate', { method: 'POST', headers: SAME, body: form({ game: 'PUBG', duration: '168', max_devices: '3', count: '100', custom: '', request_id: 'req-res-lowbal-0001' }) });
@@ -452,6 +452,17 @@ try {
   ok(r.body?.version_code === 9 && r.body?.mandatory === true, 'app update check: newest current release only');
   r = await request('/api/lib/manifest');
   ok(r.body?.version === '1.4', 'app updates do not touch the library release');
+  // 2.3.6: library version reset + 0.1 steps.
+  r = await request('/lib');
+  ok(/id="lib-version"[^>]*value="1\.5"/.test(r.body), 'next version is suggested in 0.1 steps (1.4 -> 1.5)');
+  r = await request('/lib', { method: 'POST', headers: SAME, body: { action: 'reset' } });
+  ok(r.body?.ok === true && r.body?.version === '0.1' && r.body?.previous === '1.4', 'POST /lib reset renames the current release to 0.1');
+  r = await request('/api/lib/manifest');
+  ok(r.body?.version === '0.1' && r.body?.source === 'file' && r.body?.available === true, 'after a reset the same file is served as 0.1');
+  r = await request('/api/lib/version');
+  ok(r.body.trim() === '0.1', 'the plain version endpoint says 0.1 too');
+  r = await request('/lib');
+  ok(/id="lib-version"[^>]*value="0\.2"/.test(r.body) && /id="lib-reset"/.test(r.body), 'after a reset the next version is 0.2');
   r = await request('/app-update', { method: 'POST', headers: SAME, body: { action: 'remove' } });
   ok(r.body?.ok === true && r.body?.removed === true, 'app update: Remove');
   r = await request('/api/app/update');

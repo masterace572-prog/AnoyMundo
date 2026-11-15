@@ -51,6 +51,9 @@ export const config = {
   keySuffixLength: 5,
   customSuffixMin: 4,
   customSuffixMax: 6,
+  // Panel "Custom" keys (2.3.6): the whole key is the seller's text (HELLO).
+  customKeyMin: 4,
+  customKeyMax: 32,
   prices: { 2: 10, 5: 20, 24: 80, 72: 150, 168: 250, 336: 350, 720: 500 },
   accExpire: { 1: '1 Day', 7: '7 Days', 15: '15 Days', 30: '30 Days', 60: '60 Days' },
   accLevel: { 1: 'Owner', 2: 'Admin', 3: 'Reseller' },

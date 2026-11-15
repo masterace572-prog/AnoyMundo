@@ -28,7 +28,7 @@
 
 <form method="post" action="/keys/generate" class="grid-main" id="generate-form" novalidate data-busy-form
       data-prices="{{priceJson}}" data-prefixes="{{prefixJson}}" data-unlimited="{{#if unlimited}}1{{/if}}"
-      data-saldo="{{user.saldo}}" data-min="{{customMin}}" data-max="{{customMax}}">
+      data-saldo="{{user.saldo}}" data-min="{{customMin}}" data-max="{{customMax}}" data-full-custom="1">
     <input type="hidden" name="request_id" id="request_id" value="">
     <input type="hidden" name="game" value="PUBG">
 
@@ -78,14 +78,13 @@
             </div>
 
             <div class="field {{#if errors.custom_key}}invalid{{/if}}" id="custom-field" hidden>
-                <label class="label" for="custom_key">{{icon "pencil" "i-sm"}}Custom ending</label>
-                <div class="affix">
+                <label class="label" for="custom_key">{{icon "pencil" "i-sm"}}Custom key</label>
+                <div class="input-wrap">
                     {{icon "key-round" "lead"}}
-                    <span class="affix-text" id="custom-prefix">PREFIX-</span>
                     <input type="text" class="input mono upper" name="custom_key" id="custom_key" value="{{form.custom_key}}"
-                           maxlength="64" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="VIP01">
+                           maxlength="{{customMax}}" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="HELLO">
                 </div>
-                {{#if errors.custom_key}}<div class="error">{{icon "circle-alert"}}<span>{{errors.custom_key}}</span></div>{{else}}<div class="hint">{{customMin}}–{{customMax}} letters or numbers. Creates exactly one key.</div>{{/if}}
+                {{#if errors.custom_key}}<div class="error">{{icon "circle-alert"}}<span>{{errors.custom_key}}</span></div>{{else}}<div class="hint">The whole key, e.g. HELLO. {{customMin}}–{{customMax}} letters or numbers. Creates one key.</div>{{/if}}
             </div>
         </div>
     </section>

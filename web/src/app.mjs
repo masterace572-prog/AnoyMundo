@@ -236,10 +236,26 @@ function keyFormData(key) {
   };
 }
 
-function bumpVersion(value) {
-  const m = String(value || '').match(/^(.*?)(\d+)$/);
-  return m ? `${m[1]}${Number(m[2]) + 1}` : '1.1';
+/**
+ * Next library version (2.3.6): one decimal place, 0.1 steps - 1.8 -> 1.9 ->
+ * 2.0 (never 1.10). An older two-digit value moves to the next tenth
+ * (1.27 -> 1.3). Anything else keeps the old "last number + 1" rule.
+ * Kept identical to bump() in views/lib.hbs.
+ */
+export function bumpVersion(value) {
+  const v = String(value || '').trim();
+  const d = v.match(/^(\d+)\.(\d+)$/);
+  if (d) {
+    const tenths = Number(d[1]) * 10 + Number(d[2][0]) + 1;
+    return `${Math.floor(tenths / 10)}.${tenths % 10}`;
+  }
+  if (/^\d+$/.test(v)) return `${v}.1`;
+  const m = v.match(/^(.*?)(\d+)$/);
+  return m ? `${m[1]}${Number(m[2]) + 1}` : '0.1';
 }
+
+/** Version a reset starts again from (e.g. for a new BGMI version). */
+const RESET_VERSION = '0.1';
 
 function serverData(settings) {
   const release = settings.release || null;
@@ -370,11 +386,12 @@ async function doGenerate(req, res, body, user) {
     count: String(count), custom: custom ? '1' : '', custom_key: customKey,
   };
   if (custom && !customKey) {
-    return fail(req, res, '/keys/generate', 'Enter the custom part of the key.', { custom_key: 'Required.' }, old);
+    return fail(req, res, '/keys/generate', 'Enter the custom key.', { custom_key: 'Required.' }, old);
   }
+  // Panel custom keys are the whole key (HELLO), no USER-7D- prefix.
   const result = await createKeysForUser(user, {
     game: body.game, duration: body.duration, max_devices: body.max_devices,
-    count, custom_key: customKey, request_id: body.request_id,
+    count, custom_key: customKey, full_custom: custom, request_id: body.request_id,
   });
   if (!result.ok) {
     const errors = result.errors || {};
@@ -631,7 +648,9 @@ function urlFileName(url, fallback) {
 }
 
 /**
- * Publishes a loader release. Three actions:
+ * Publishes a loader release. Four actions:
+ *   reset  -> (2.3.6) rename the current release to 0.1, same file. Phones
+ *             notice the new number and download the library once more.
  *   game   -> (v2.3.5) only set the BGMI version the current release works
  *             with (empty turns the app's BGMI warning off)
  *   upload -> new file OR external https link becomes the current release.
@@ -648,12 +667,24 @@ function urlFileName(url, fallback) {
 async function doLibUpload(req, res, body, user) {
   if (!user.isOwner) return sendJson(res, { ok: false, error: 'Only the Owner can publish releases.' }, 403);
   const rawAction = str(body.action);
-  const action = rawAction === 'link' || rawAction === 'game' ? rawAction : 'upload';
+  const action = ['link', 'game', 'reset'].includes(rawAction) ? rawAction : 'upload';
   // Optional everywhere: a request without the field keeps the current value.
   const hasGame = Object.prototype.hasOwnProperty.call(body || {}, 'game_version');
   const gameVersion = str(body.game_version).slice(0, 32);
   if (hasGame && !validGameVersion(gameVersion)) {
     return sendJson(res, { ok: false, error: 'Enter the BGMI version as numbers, like 3.9.0 (or leave it empty).' }, 400);
+  }
+
+  if (action === 'reset') {
+    const { data: current, error: readError } = await db().from('client_release')
+      .select('id,version').eq('is_current', true).maybeSingle();
+    if (readError) return sendJson(res, { ok: false, error: 'Could not read the current release.' }, 500);
+    if (!current) return sendJson(res, { ok: false, error: 'Publish a release first.' }, 404);
+    if (current.version === RESET_VERSION) return sendJson(res, { ok: true, version: RESET_VERSION, mode: 'reset' });
+    const { error } = await db().from('client_release')
+      .update({ version: RESET_VERSION, uploaded_by: user.username }).eq('id', current.id);
+    if (error) return sendJson(res, { ok: false, error: `Could not reset the version: ${error.message}` }, 500);
+    return sendJson(res, { ok: true, version: RESET_VERSION, previous: current.version, mode: 'reset' });
   }
 
   if (action === 'game') {
@@ -996,8 +1027,8 @@ export async function handle(req, res) {
         form: { max_devices: 1, duration: 24, game: 'PUBG', count: 1 },
         prefixJson: JSON.stringify(Object.fromEntries(Object.keys(config.prices)
           .map((h) => [h, keyPrefix(user.username, h)]))),
-        customMin: config.customSuffixMin,
-        customMax: config.customSuffixMax,
+        customMin: config.customKeyMin,
+        customMax: config.customKeyMax,
         // Duration cards: label, key token and price per device.
         durations: Object.entries(config.durations).map(([h, label]) => ({
           hours: String(h), label, token: config.durationTokens[h] || '', price: inr(config.prices[h]),

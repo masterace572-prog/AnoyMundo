@@ -60,6 +60,22 @@ export function parseCustomSuffix(value, prefix) {
   return { suffix };
 }
 
+/**
+ * Panel custom key (2.3.6): the typed text IS the whole key - no USER-7D-
+ * prefix (HELLO, ILOVEYOU). Letters, numbers and inner dashes, upper case.
+ * Returns { key } or { error }.
+ */
+export function parseCustomKey(value) {
+  const key = normalizeKey(value);
+  if (!key) return { key: '' };
+  const min = config.customKeyMin;
+  const max = config.customKeyMax;
+  if (key.length < min || key.length > max || !/^[A-Z0-9](?:[A-Z0-9-]*[A-Z0-9])?$/.test(key)) {
+    return { error: `Custom key must be ${min}-${max} letters or numbers (A-Z, 0-9; a dash only in the middle).` };
+  }
+  return { key };
+}
+
 export const MAX_BULK_KEYS = 100;
 
 /** Total price for one generation request. `price` is the FULL amount due. */
@@ -88,12 +104,17 @@ function buildPlan(opts) {
   if (!Number.isInteger(maxDevices) || maxDevices < 1 || maxDevices > 100) errors.max_devices = 'Devices must be 1-100.';
   if (!Number.isInteger(count) || count < 1 || count > MAX_BULK_KEYS) errors.count = `Keys per request must be 1-${MAX_BULK_KEYS}.`;
   // The custom part replaces the random part, so it always describes ONE key.
+  // full_custom (panel form): the text is the whole key. Otherwise (API) it
+  // replaces only the random ending.
+  const fullCustom = !!opts.full_custom;
   let customKey = '';
   if (customRaw) {
     if (count !== 1) errors.custom_key = 'A custom key creates exactly one key. Set the quantity to 1.';
-    const parsed = parseCustomSuffix(customRaw, opts.username ? keyPrefix(opts.username, duration) : '');
+    const parsed = fullCustom
+      ? parseCustomKey(customRaw)
+      : parseCustomSuffix(customRaw, opts.username ? keyPrefix(opts.username, duration) : '');
     if (parsed.error) errors.custom_key = parsed.error;
-    else customKey = parsed.suffix;
+    else customKey = fullCustom ? parsed.key : parsed.suffix;
   }
   if (requestId && !/^[A-Za-z0-9_-]{8,80}$/.test(requestId)) errors.request_id = 'Invalid request id.';
 
@@ -104,7 +125,7 @@ function buildPlan(opts) {
     errors.duration = 'Invalid price for these options.';
   }
   return {
-    errors, game, duration, maxDevices, count, customKey,
+    errors, game, duration, maxDevices, count, customKey, fullCustom: fullCustom && !!customKey,
     requestId: requestId || `auto-${crypto.randomUUID()}`,
     unitPrice: Number.isSafeInteger(unitPrice) ? unitPrice : 0,
     total: Number.isSafeInteger(total) ? total : 0,
@@ -127,7 +148,7 @@ async function existingKeys(candidates) {
 async function makeLicenses(fresh, plan) {
   const prefix = keyPrefix(fresh.username, plan.duration);
   if (plan.customKey) {
-    const key = `${prefix}${plan.customKey}`;
+    const key = plan.fullCustom ? plan.customKey : `${prefix}${plan.customKey}`;
     if ((await existingKeys([key])).has(key)) return null;
     return [key];
   }
@@ -239,9 +260,9 @@ export async function createKeysForUser(user, opts = {}) {
     return { ok: false, code: 'service_unavailable', message: 'Cannot verify key availability. Nothing was charged.', price: plan.total };
   }
   if (!licenses || !licenses.length) {
-    const taken = `${keyPrefix(fresh.username, plan.duration)}${plan.customKey}`;
+    const taken = plan.fullCustom ? plan.customKey : `${keyPrefix(fresh.username, plan.duration)}${plan.customKey}`;
     return {
-      ok: false, code: 'key_exists', message: `${taken} already exists. Choose a different custom part.`,
+      ok: false, code: 'key_exists', message: `${taken} already exists. Choose a different ${plan.fullCustom ? 'key' : 'custom part'}.`,
       errors: { custom_key: 'Already taken.' }, price: plan.total,
     };
   }
