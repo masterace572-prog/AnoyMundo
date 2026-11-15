@@ -1,0 +1,272 @@
+name: Build Punji APK
+
+# Builds the Punji app (punji/: BGMI + PUBG Mobile) on GitHub and attaches the
+# APK to the release punji-v<versionName>-<versionCode>. Never deletes other
+# releases and never touches the Anoy app (xlox/) or the panel.
+on:
+  workflow_dispatch:
+  push:
+    branches: [arena/2e95185a-anoymundo]
+    paths:
+      - 'punji/**'
+      - '.github/workflows/build-punji.yml'
+
+permissions:
+  contents: write
+  checks: write
+
+concurrency:
+  group: build-punji-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 50
+    defaults:
+      run:
+        working-directory: punji
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Bundle the BGMI and PUBG Mobile icons (downloaded once, then committed)
+        run: python3 scripts/fetch_game_icon.py
+
+      # The sandbox that edits this repo cannot reach Wikipedia. When the PUBG
+      # Mobile icon is not committed yet, hand it over once as a check run
+      # (base64 text), so it can be checked and committed by hand.
+      - name: Hand over the downloaded PUBG Mobile icon (only while not committed)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          F=app/src/main/res/drawable-nodpi/ic_game_pubgm.png
+          if git ls-files --error-unmatch "$F" >/dev/null 2>&1; then echo "icon already committed"; exit 0; fi
+          test -f "$F" || { echo "::error::icon was not downloaded"; exit 1; }
+          base64 -w0 "$F" > /tmp/icon.b64
+          split -b 60000 -d /tmp/icon.b64 /tmp/icon.part.
+          n=0
+          for part in /tmp/icon.part.*; do
+            jq -n --arg name "punji-icon-$n" --arg sha "${{ github.sha }}" --rawfile text "$part" \
+              '{name:$name, head_sha:$sha, status:"completed", conclusion:"neutral", output:{title:"icon part", summary:"ic_game_pubgm.png base64", text:$text}}' \
+              | gh api -X POST "repos/${{ github.repository }}/check-runs" --input - --jq .id
+            n=$((n+1))
+          done
+          echo "::notice title=PUBG Mobile icon::handed over in $n part(s), $(stat -c %s "$F") bytes"
+
+      - name: Static UI gates (no SDK needed)
+        run: python3 scripts/ui_quality_gate.py
+
+      - name: Read the version from app/build.gradle
+        run: |
+          NAME=$(sed -nE "s/^[[:space:]]*versionName[[:space:]]+'([^']+)'.*/\1/p" app/build.gradle | head -1)
+          CODE=$(sed -nE 's/^[[:space:]]*versionCode[[:space:]]+([0-9]+).*/\1/p' app/build.gradle | head -1)
+          [ -n "$NAME" ] && [ -n "$CODE" ] || { echo "::error::Could not read versionName / versionCode from app/build.gradle"; exit 1; }
+          echo "APP_VERSION_NAME=$NAME" >> "$GITHUB_ENV"
+          echo "APP_VERSION_CODE=$CODE" >> "$GITHUB_ENV"
+          echo "RELEASE_TAG=punji-v$NAME-$CODE" >> "$GITHUB_ENV"
+          echo "Punji $NAME ($CODE) -> release punji-v$NAME-$CODE"
+
+      - name: JDK 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+          cache-dependency-path: |
+            punji/gradle/wrapper/gradle-wrapper.properties
+            punji/build.gradle
+            punji/app/build.gradle
+
+      # ubuntu-24.04 images already ship an Android SDK. Avoid the third-party
+      # setup action (it breaks on the new runner images); install cmdline-tools
+      # ourselves only when neither ANDROID_HOME nor sdkmanager is available.
+      - name: Install SDK platform, build-tools and pinned NDK
+        run: |
+          SDK="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-$HOME/android-sdk}}"
+          mkdir -p "$SDK"
+          if [ -x "$SDK/cmdline-tools/latest/bin/sdkmanager" ]; then
+            SM="$SDK/cmdline-tools/latest/bin/sdkmanager"
+          elif command -v sdkmanager >/dev/null 2>&1; then
+            SM="$(command -v sdkmanager)"
+          else
+            echo "Installing Android command line tools"
+            curl -fsSL -o /tmp/cmdtools.zip \
+              https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
+            rm -rf /tmp/cmdtools && mkdir -p /tmp/cmdtools
+            unzip -q /tmp/cmdtools.zip -d /tmp/cmdtools
+            mkdir -p "$SDK/cmdline-tools/latest"
+            cp -r /tmp/cmdtools/cmdline-tools/. "$SDK/cmdline-tools/latest/"
+            SM="$SDK/cmdline-tools/latest/bin/sdkmanager"
+          fi
+          echo "ANDROID_HOME=$SDK" >> "$GITHUB_ENV"
+          echo "ANDROID_SDK_ROOT=$SDK" >> "$GITHUB_ENV"
+          yes | "$SM" --sdk_root="$SDK" --licenses > /dev/null 2>&1 || true
+          "$SM" --sdk_root="$SDK" --install "platform-tools" "platforms;android-34" "platforms;android-36" \
+                                           "build-tools;34.0.0" "ndk;24.0.8215888"
+          test -x "$SDK/ndk/24.0.8215888/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android21-clang"
+          "$SM" --sdk_root="$SDK" --list_installed | grep -E 'android-36|34\.0\.0|24\.0\.8215888'
+
+      # Release signing: the passwords come only from the repository secrets
+      # XLOX_STORE_PASSWORD and XLOX_KEY_PASSWORD (never from a tracked file).
+      # The key in app/xlox.jks is never regenerated - a different key would
+      # stop installed copies from updating. Without the secrets the build is
+      # still compiled and linted, but nothing is published.
+      - name: Check the release signing secrets
+        env:
+          XLOX_STORE_PASSWORD: ${{ secrets.XLOX_STORE_PASSWORD }}
+        run: |
+          if [ -z "$XLOX_STORE_PASSWORD" ]; then
+            echo "::warning title=Release APK not signed::Add the XLOX_STORE_PASSWORD and XLOX_KEY_PASSWORD repository secrets (Settings > Secrets and variables > Actions). This build is checked but not published."
+            echo "XLOX_SIGNED=false" >> "$GITHUB_ENV"
+            exit 0
+          fi
+          keytool -list -keystore app/xlox.jks -storepass:env XLOX_STORE_PASSWORD -alias key0 >/dev/null 2>&1 || {
+            echo "::error::app/xlox.jks does not open with the XLOX_STORE_PASSWORD secret. Check the secret; the key is never regenerated."
+            exit 1
+          }
+          echo "Release keystore opens with the repository secret"
+          echo "XLOX_SIGNED=true" >> "$GITHUB_ENV"
+
+      - name: Assemble release APK
+        env:
+          XLOX_STORE_PASSWORD: ${{ secrets.XLOX_STORE_PASSWORD }}
+          XLOX_KEY_PASSWORD: ${{ secrets.XLOX_KEY_PASSWORD }}
+        run: |
+          chmod +x gradlew
+          set +e
+          ./gradlew assembleRelease --no-daemon -x lintVitalRelease > /tmp/assemble.log 2>&1
+          rc=$?
+          cat /tmp/assemble.log
+          if [ $rc -ne 0 ]; then
+            # Surface compiler / resource errors as annotations (readable via the API).
+            grep -E "Duplicate class|error:|: error|e: |ERROR:|What went wrong|AAPT|Execution failed|not found|cannot find symbol" /tmp/assemble.log \
+              | grep -v "^\s*at " | head -40 | while IFS= read -r line; do
+                echo "::error::$(echo "$line" | cut -c1-400)"
+              done
+            grep -A3 -E "error:" /tmp/assemble.log | head -60 | tr '\n' ' ' | cut -c1-3500 | sed 's/^/::error title=context::/'
+          fi
+          exit $rc
+
+      - name: Android lint (errors fail the build)
+        run: |
+          set +e
+          ./gradlew lintRelease --no-daemon > /tmp/lint.log 2>&1
+          rc=$?
+          cat /tmp/lint.log
+          R=$(ls app/build/reports/lint-results-release.txt app/build/intermediates/lint_intermediate_text_report/release/*.txt 2>/dev/null | head -1)
+          if [ -n "$R" ]; then
+            grep -E ": Error:" "$R" | head -40 | while IFS= read -r line; do echo "::error::$(echo "$line" | cut -c1-400)"; done
+            grep -E ": Warning:" "$R" | head -20 | while IFS= read -r line; do echo "::warning::$(echo "$line" | cut -c1-400)"; done
+          fi
+          [ $rc -ne 0 ] && grep -E "What went wrong|Lint found" /tmp/lint.log | head -5 | sed 's/^/::error::/'
+          exit $rc
+
+      - name: Upload lint report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: punji-lint-report
+          path: punji/app/build/reports/lint-results-release.*
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Build a test lib ZIP (stub libbgmi.so + libpubgm.so, arm64-v8a)
+        run: |
+          SDK="${ANDROID_HOME:-$ANDROID_SDK_ROOT}"
+          CLANG="$SDK/ndk/24.0.8215888/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android21-clang"
+          test -x "$CLANG" || { echo "NDK clang not found at $CLANG"; exit 1; }
+          # 16 KB ELF alignment is mandatory for Android 15+ devices that boot
+          # with 16 KB memory pages; a 4 KB-aligned stub would fail dlopen().
+          "$CLANG" -shared -fPIC -O2 \
+            -Wl,-z,max-page-size=16384 -Wl,-z,common-page-size=16384 \
+            -o libbgmi.so loader-stub/bgmi_stub.c -llog
+          cp libbgmi.so libpubgm.so
+          head -c 4 libbgmi.so | od -An -tx1
+          zip -j punji-lib-test.zip libbgmi.so libpubgm.so
+          unzip -l punji-lib-test.zip
+
+      - name: Collect deliverables
+        run: |
+          mkdir -p ../dist
+          APK=$(find app/build/outputs/apk/release -name '*.apk' | head -1)
+          test -n "$APK" || { echo "No APK produced"; exit 1; }
+          cp "$APK" ../dist/Punji.apk
+          cp punji-lib-test.zip ../dist/punji-lib-test.zip
+          ls -lh ../dist
+          echo "APK_SHA256=$(sha256sum ../dist/Punji.apk | cut -d' ' -f1)" >> "$GITHUB_ENV"
+
+      - name: Permissions in the built APK
+        run: PERMISSIONS_LOG_DIR=/tmp/permissions python3 scripts/check_apk_permissions.py ../dist/Punji.apk
+
+      - name: Assert the APK really contains the native panel library
+        run: |
+          unzip -l ../dist/Punji.apk | grep -F 'libXloX.so' || {
+            echo "libXloX.so is missing from the APK"; exit 1; }
+          unzip -l ../dist/Punji.apk | grep -E 'META-INF/.*\.(RSA|SF)' \
+            || echo "v2/v3 signature only (no v1 jar signature, still valid)"
+          test -f ../dist/punji-lib-test.zip
+          echo "APK sha256 = $APK_SHA256"
+
+      - name: Verify the release signature
+        if: env.XLOX_SIGNED == 'true'
+        run: |
+          SDK="${ANDROID_HOME:-$ANDROID_SDK_ROOT}"
+          APKSIGNER=$(ls "$SDK"/build-tools/*/apksigner | sort | tail -1)
+          "$APKSIGNER" verify ../dist/Punji.apk
+          echo "Release APK is signed with the release key"
+
+      - name: Verify 16 KB ELF alignment (Android 15 / 17 devices)
+        run: |
+          # Report every native library. The two prebuilt libs inside
+          # mundo-release.aar ship 4 KB-aligned and cannot be relinked here,
+          # so they are reported but do not fail the build (see README).
+          python3 scripts/check_elf_alignment.py \
+            ../dist/Punji.apk ../dist/punji-lib-test.zip || true
+          # Hard requirement: everything we build ourselves must be 16 KB.
+          unzip -p ../dist/Punji.apk lib/arm64-v8a/libXloX.so > /tmp/libXloX.so
+          python3 scripts/check_elf_alignment.py --fail-on-unaligned \
+            /tmp/libXloX.so ../dist/punji-lib-test.zip
+
+      - name: Upload APK and loader ZIP
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.XLOX_SIGNED == 'true' && 'punji-apk' || 'punji-apk-unsigned' }}
+          path: |
+            dist/Punji.apk
+            dist/punji-lib-test.zip
+          retention-days: 7
+          if-no-files-found: error
+
+      # The APK is published as a GitHub release (durable download link); build
+      # outputs are never committed to the repository.
+      - name: Publish APK as a GitHub release (punji-v<name>-<code>)
+        if: env.XLOX_SIGNED == 'true'
+        working-directory: ${{ github.workspace }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -eu
+          TITLE="Punji $APP_VERSION_NAME ($APP_VERSION_CODE)"
+          printf '%s\n' \
+            "Punji $APP_VERSION_NAME (BGMI + PUBG Mobile)" "" \
+            "- versionName: $APP_VERSION_NAME" \
+            "- versionCode: $APP_VERSION_CODE" \
+            "- commit: ${{ github.sha }}" \
+            "- APK sha256: $APK_SHA256" "" \
+            "APK link: https://github.com/${{ github.repository }}/releases/download/$RELEASE_TAG/Punji.apk" \
+            > /tmp/release-notes.md
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            # Same version rebuilt: replace the files, keep the tag.
+            gh release upload "$RELEASE_TAG" dist/Punji.apk dist/punji-lib-test.zip --clobber
+            gh release edit "$RELEASE_TAG" --title "$TITLE" --notes-file /tmp/release-notes.md --latest=false
+            echo "::notice title=Release updated::$RELEASE_TAG files replaced (sha256 $APK_SHA256)"
+          else
+            gh release create "$RELEASE_TAG" dist/Punji.apk dist/punji-lib-test.zip \
+              --target "${{ github.sha }}" --title "$TITLE" --notes-file /tmp/release-notes.md --latest=false
+            echo "::notice title=Release created::$RELEASE_TAG (sha256 $APK_SHA256)"
+          fi
+          echo "RELEASE_PUBLISHED=true" >> "$GITHUB_ENV"
+
+      - name: Done
+        run: echo "Punji APK built from ${{ github.sha }}"

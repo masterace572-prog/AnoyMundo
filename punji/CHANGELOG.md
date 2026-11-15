@@ -1,0 +1,368 @@
+# Anoy Loader — changelog
+
+Screenshots, design notes (`docs/ui-redesign/…`) and the one-off generator
+scripts mentioned below were removed from the tree in the repo cleanup after
+2.3.2; they remain in git history.
+
+## 2.3.4 — UI polish (versionCode 13)
+
+- **Tokens:** tertiary text is lighter (#85858C); the 14 dp spacing and radii
+  are gone (16); every home card is r20 with 16 dp padding, controls r16; the
+  game icon keeps its own corners; Mono blocks 13 sp; raw dp values in layouts
+  moved to `dimens.xml`; home's task bar uses the default 4 dp progress style.
+- **Words:** "Login" everywhere on the login side ("Log in with a new key",
+  "Couldn't log in", "Log in again"); "Sign out" stays. Retry buttons read
+  **Try again**, and a message next to that button no longer ends in its own
+  "Try again.". "Welcome to", "Tap Continue to open Settings.", "Open Anoy
+  again to continue.".
+- **Waiting states:** nothing new appears in the first 400 ms; text swaps are
+  100 ms out / 180 ms in; status lines keep their space so nothing jumps.
+  - Splash: after 6 s "Taking longer than usual…", after 15 s "Still trying.
+    Your connection may be slow."; Try again only after a failure.
+  - Login: "Still logging in…" after 8 s; connection / VPN problems are a
+    neutral grey block with a wifi-off glyph (key problems stay red).
+  - Home: "Offline · last checked 12 min ago"; the first game-files copy says
+    "First launch copies the game files. Keep Anoy open until it finishes.";
+    15 s without progress says "Still preparing. Large game files take a while."
+  - App update: a 4 dp bar above Update now, **Cancel download** while
+    downloading, "Download is slow. Keep Anoy open." after 8 s without data,
+    and "Update failed" over the reason.
+  - Library sheet: "Taking longer than usual. Keep Anoy open." after 6 s.
+  - Settings › Check for app updates: "Last checked today, 14:32" (IST) under
+    the label, "Still checking…" after 6 s, "Couldn't check" keeps the last
+    good time.
+- **Settings:** App version moved into Updates (no About group); Sign out is a
+  normal row (Forget this key stays red in its sheet); Cancel is tonal in every
+  sheet.
+- **Motion:** one set of tokens — 100 press / 180 fades / 280 screens / 320–240
+  sheets / 450 splash only.
+
+## 2.3.3 — speed and reliability (versionCode 12)
+
+- **Splash update check:** one attempt with 8 s connect / 10 s read (was up
+  to two attempts of 15 s / 30 s). Settings › Check for app updates keeps the
+  patient check. The failure state (amber dot, reason, Try again) is unchanged.
+- **"Up to date" remembered for 10 minutes:** after a successful check that
+  found no newer version, the splash skips the network for 10 minutes. A found
+  update is never remembered away and a failed check never counts as up to
+  date. The time of the last successful check is stored (UTC) for Settings.
+- **Panel:** the server now runs in Mumbai (Vercel `bom1`), next to its
+  database (Supabase `ap-south-1`), instead of the US. The app update answer
+  is cached by Vercel for up to a minute; signed-in pages read the account
+  from a 15-second cache; client icons come from a cached sprite.
+
+## 2.3.2 — app updates and CI (versionCode 11)
+
+- **App update download:** a failed download says "Couldn't download the
+  update (HTTP <code>). Try again later." with **Try again**; server errors
+  (5xx, 408, 429) are retried, a web page instead of a file is refused.
+- **APK check:** before PackageInstaller the downloaded APK must be
+  `com.xlox` with the announced, higher version code, otherwise "This update
+  file doesn't match the app." Nothing is installed.
+- **Splash:** a published release that is not newer counts as up to date.
+- **Launch / Stop:** Lucide play / stop glyph before the label (20 dp, tinted
+  like the label); the busy state still shows the spinner.
+- **Panel `/app-update`:** "Use latest build" (newest GitHub release), the
+  APK link is fetched and must be a real APK before publishing, the version
+  code must be higher than the current update, Remove, no history card.
+- **CI:** releases are tagged `anoy-v<versionName>-<versionCode>`; older
+  releases and tags are deleted after each publish. UI QA is manual; the
+  build runs the static UI gates and the APK permissions check.
+
+## 2.3.1 — post-redesign follow-up
+
+Launch / Stop, game files, permissions, sign in, licensing and the library
+and app update rules work exactly as in 2.3.0.
+
+- **Splash.** The status line (spinner + text, every state) sits centred at
+  the bottom, 32 dp above the navigation bar, and grows from the centre.
+- **Sign in.** The button reads "Login" (also "Logging in…" / "Logged in").
+  Under it: "Don't have a licence? Buy one" — only "Buy one" is tappable and
+  opens the same Telegram link as before.
+- **Home.** A compact expiry card: EXPIRES IN + status dot, one ticking line
+  ("29d 23h 59m 58s", under a day "23h 59m 58s"), then the IST date. Expired
+  shows "Expired" in red and Launch stays disabled as before. The game card
+  now shows the real BGMI icon (bundled in the app, never downloaded at
+  runtime).
+- **Announcement.** The panel notice gets a megaphone and an ANNOUNCEMENT
+  kicker above the text (still verbatim; no text = no banner).
+- **Settings.** New *Licence* group (key masked as ANOY••••••A7K2, the eye
+  reveals it, tap the row to copy it; status; expiry in IST) and *Updates*
+  group (Check for app updates — the same check as the splash, with
+  "Checking…", "Up to date" or "Couldn't check"; Re-download library with a
+  confirmation and the usual progress sheet — a failure keeps the current
+  library; Library version). The *Access and files* group is gone; Launch
+  still asks for anything missing exactly as before.
+- **Support info.** Now includes the licence key, licence status and expiry
+  (IST), and says so: "Includes your licence key. Only share it with Anoy
+  support."
+
+## 2.3.0 — a calmer, more premium look (visual only)
+
+Everything works exactly as in 2.2.0: Launch / Stop, game files, permissions,
+sign in and licence, app and library updates. Only the look changed.
+
+- **One design system.** Inter for text, JetBrains Mono for versions, keys
+  and download numbers (tabular figures). Quiet black surfaces, system blue
+  for the main action, and colour only where it means something: green for
+  "fine", amber for "needs attention" or the last day, red for errors,
+  "Expired" and destructive actions. No pills, chips, icon tiles or glows;
+  a status is a small dot plus a word.
+- **Splash and sign in.** Same film and words, tighter type and spacing.
+- **Home.** "ANOY HAX / Welcome back", the panel notice as written, a time
+  card with days / hours / min / sec columns (ticking every second, last
+  day in amber, "Expired" in red), and a game card with the BGMI version,
+  library version, state and server. Launch sits in a pinned bar.
+- **Settings.** An inset grouped list: Device, Access and files, Report a
+  problem, About (App version 2.3.0 (9)), Account. Anything missing is shown
+  in amber with a chevron that opens the explanation.
+- **Sheets.** Help, Support info, Sign out, permissions, the library update
+  and the app update share one sheet style. Copy support info confirms on
+  the button ("Copied"). The permission sheet now says why we ask and how to
+  allow it, step by step.
+- **Renewing.** The Renew button on the time card is gone; Help explains how
+  to renew (time left shows on Home; renew on the panel or via Telegram).
+
+## 2.2.0 — app updates, splash status, new home and Settings
+
+- **In-app app updates.** At start-up Anoy asks the panel whether a newer app
+  version is published. Versions are compared by version code.
+  - **Mandatory** updates show the changelog and Update now only.
+  - **Normal** updates also offer Not now.
+  - The update downloads inside the app with progress, then Android's own
+    installer opens. No browser.
+  - Every failure shows its reason and Retry.
+  - Library updates work exactly as before and run afterwards, at sign in.
+- **Splash status line.** The version is now top right. A line at the bottom
+  shows Checking for updates… → Up to date / Update available → Proceeding….
+  Offline, it shows "Can't check for updates" and Retry, and never continues
+  silently. The film itself is unchanged.
+- **New home.** "Welcome back" header with ? and a Settings button. The panel's
+  notice is shown as written; "Play fairly…" is no longer swapped in. A game
+  card shows the icon, "BGMI v…", the library version and the honest state.
+  Time left is smaller and ticks every second ("29d 23h 59m 12s").
+- **Settings.**
+  - Device model and Android version.
+  - Whether All files access, Files and Install unknown apps are allowed. Tap
+    a missing one to fix it.
+  - Whether the game files (OBB) are copied.
+  - Report on Telegram, Copy support info.
+  - App version.
+  - Sign out.
+- **Help** no longer opens by itself; tap ? when you want it.
+- **Panel:**
+  - One Library publish card (file or https link; the file wins if both are
+    given).
+  - New App update page for the owner and admins.
+  - Phone layout fixes for the dashboard expiry, the docs callouts and the
+    Referral codes / API keys cards.
+- **Version 2.2.0 (build code 8).**
+
+## 2.1.1 — polish
+
+- **Version 2.1.1 (build code 7)** so this release is easy to tell apart from
+  2.1.0.
+- **"Last checked" has more room** under the expiry line on the home card.
+- **Panel: Copy for customer** now shows a clear "✓ Copied" on the button
+  itself, as well as the usual message.
+- **Plain-HTTP setting left on, on purpose.** All of Anoy's own connections use
+  HTTPS, but the game container requires this setting and the game runs under
+  Anoy's network rules. Turning it off could break the game after launch.
+
+## 2.1.0 follow-up — home, splash and Indian time
+
+- **Clearer home.** Time left and Launch lead. Launch carries a play, download
+  or stop glyph. Device details are one quiet line, so short phones keep
+  everything above the Launch bar. Every status and message stays visible.
+- **Smoother splash.** "Loader" now cross-dissolves into "Hax": the two words
+  overlap for a moment instead of popping, over a calmer 0.7 s. No clipping or
+  squashing. Same words, same ~3 s, same hand-off.
+- **Expiry in Indian time (IST).** The loader shows the expiry as
+  "15 Nov 2026, 10:30 PM IST" whatever time zone the phone uses. That is
+  exactly what the panel shows for the same key. Licence length is unchanged.
+
+## 2.1.0 follow-up — help and access
+
+- **Help on home.** A ? button opens three short tips (launching, files and
+  access, renewing) plus Help on Telegram. It shows once by itself on the
+  first visit to home, never over a launch or a permission ask.
+- **Copy support info.** It previews first, then copies the app, library and
+  Android versions, the device model and the current home status. Never the
+  licence key, the username or file paths. Nothing is sent automatically.
+- **Access chip.** "Access ready" or "Access needs attention" next to Game.
+  Tapping it when something is off opens the usual explanation, then Settings.
+- **Panel: Copy for customer.** One tap on a key row copies the key with its
+  duration and expiry reminder, with a "Copied for customer" toast.
+
+## 2.1.0 follow-up — polish
+
+- **Release signing passwords are out of the repository files.** They come from
+  GitHub secrets or a private local file; the signing key is unchanged and CI
+  never makes a new one.
+- **A short explanation before Settings.** Before opening All files access or
+  Install unknown apps, Anoy explains why and what to do, with Continue to
+  Settings and Not now.
+- **Sign out or Forget this key.** Sign out keeps your key saved for a one-tap
+  sign in; Forget this key removes it from the phone.
+- **Honest game state.** "Ready" only when everything Launch needs is in place,
+  otherwise "Installed". Closing the game outside Anoy brings Launch back, with
+  no error.
+- **Licence time stays current.** Coming back to home refreshes the time left
+  (changes made on the panel show up). An "Expires soon" nudge with Renew
+  appears near the end. Offline, the last known time stays with a quiet "Last
+  checked".
+
+## 2.1.0 follow-up — permissions
+
+- **Anoy asks for the three permissions the game-files copy needs**: All
+  files access, Files, and Install unknown apps - one after another, opening
+  the system page or dialog each time. With all three granted, Launch
+  continues into the copy; refusing one shows a clear message and nothing
+  launches. After Install unknown apps, Anoy restarts once (Android only
+  opens the game folder to a fresh start) and Launch carries on after sign in.
+- **Declared but never asked**: microphone, nearby devices, appear on top,
+  picture-in-picture, location, notifications.
+- **Removed**: calendar, call logs, camera, contacts and accounts, health,
+  phone, physical activity and SMS no longer appear in App permissions.
+
+## 2.1.0 follow-up — game files are copied before launch again
+
+- **First install copies the game's OBB, then launches.** Launch shows
+  "Preparing… N%" while the newest main OBB (and the newest patch, if any) is
+  copied from `Android/obb/com.pubg.imobile` into the container's own OBB
+  folder; every file is checked (same name and size, a different file) before
+  "Launching…". Previously the copy could report success without copying.
+- **Second launch skips the copy only when it is truly current** (the device
+  file was found and the container holds a separate copy with the same name
+  and size).
+- **No launch on any failure.** No game files: "Game files not found…".
+  Android blocking the game files folder: "Couldn't prepare game files: Android
+  is blocking access to the game files folder on this phone." Container
+  storage not ready (same folder as the device): retried, then a clear
+  message.
+- **Files access is requested by the app.** Launch (and home, once) opens the
+  system "All files access" page (storage dialog on Android 5–10); after
+  Allow, Launch continues by itself. Deny shows the storage message.
+- Sign-in, splash, icon, update check and the launch-error fix are unchanged.
+
+## 2.1.0 follow-up — smoother splash text
+
+- "Welcome To" now dissolves upward (fade + 10 dp drift) instead of being
+  sliced; "Loader" cross-dissolves into "Hax" instead of squashing, and the
+  re-centre rides the same 400 ms motion. Same words, order and length.
+- Cold start no longer dims the system "Anoy", flashes an empty black frame
+  and fades the app in: the identical wordmark hands over instantly.
+
+## 2.1.0 follow-up — Anoy wordmark and splash film
+
+- **App icon**: just the word "Anoy", white on black, drawn as Inter outlines
+  with icon-specific weight, spacing and a shortened y; inside the adaptive
+  safe zone on every mask. Replaces the A monogram (and the earlier key).
+- **Splash**: a ~3 s typography film: "Welcome To / Anoy Loader" arrives, the
+  greeting is cut away, the name moves to centre and "Loader" becomes "Hax".
+  The system splash shows the same static wordmark. Reduced motion skips the
+  choreography. Sign-in, the update check and game launch are unchanged.
+
+Details, timings and screenshots: `docs/ui-redesign/FOLLOW-UP.md` (git history).
+
+## 2.1.0 follow-up — launch error, home tidy (splash/icon since replaced)
+
+- **Splash**: new Anoy "A" monogram animation (white A, blue crossbar draws
+  through it, mark lifts, "Anoy / LOADER" fades in, ~1.9 s). Replaces the ring /
+  notch / dot. The system splash shows the same A, so the handoff is seamless.
+  Slow start-ups get a gentle opacity breath, never a spinner.
+- **App icon**: the blue square with a key is replaced by the monogram on near
+  black. Adaptive and legacy icons, the splash and the Lottie share one geometry
+  (`scripts/brand_mark.py`).
+- **Launch**: no more false "Couldn't launch the game" after BGMI starts. A
+  launch is a success once Android accepts it; a missing intent waits for the
+  game to start before reporting; the after-launch UI can't raise the error.
+- **Home**: DEVICE fits above the Launch bar on a typical phone; the notice no
+  longer leaves an orphan word; long model names stay on one tidy line.
+
+Details and screenshots: `docs/ui-redesign/FOLLOW-UP.md` (git history).
+
+## 2.1.0 (versionCode 6) — UI redesign
+
+Presentation only. Sign-in and licensing logic, the `/connect` contract, JNI,
+`Net`, `Downtwo`, `LibManager`, `AppManager`, download / verify / install, the
+virtual container, permissions and game features are unchanged. targetSdk 28,
+minSdk 21.
+
+### Look and feel
+- One token set (`res/values/colors.xml`, `dimens.xml`, `styles.xml`): black
+  background, #141416 cards with a #26262A hairline, #1C1C1E tiles, white /
+  #8E8E93 / #636366 text, a single blue (#0A84FF) and success / warning / danger
+  only for status. The purple and teal tiles are gone, and so is every
+  per-colour `bg_tile_*`.
+- Type: Inter Regular and Semibold only (Inter Medium removed), with a fixed
+  scale (32 / 22 / 17 / 16 / 13). JetBrains Mono is used for the key field,
+  versions, sizes and the library name. The countdown uses 40sp tabular figures.
+- Icons: Lucide, regenerated as white vectors and tinted in XML. No emoji
+  anywhere in the UI. Panel notes have emoji stripped and ALL-CAPS notes are
+  converted to sentence case.
+- Edge-to-edge on API 21–37 with inset-aware padding. Dark only.
+- Motion: 150 / 220 / 320 ms, FastOutSlowIn for enters and LinearOutSlowIn for
+  sheets. Spring only on the success check. With animations off (reduced
+  motion), Lottie jumps to its last frame and fades are instant.
+- Haptics: CONFIRM / REJECT on API 30+, with fallbacks to standard taps.
+- Snackbar (raised, 14dp corners, blue action) replaces every Toast.
+
+### Screens
+- **Splash:** the core-splashscreen icon is the static first frame of the new
+  `anoy_mark` Lottie (ring draws, key notch, collapse to a dot, one blue glint),
+  so the handoff is seamless. Then the "Anoy" / "LOADER" wordmark, a 200ms hold
+  and a 320ms crossfade with an 8dp drift. No spinner. The version footer sits
+  24dp above the nav bar.
+- **Sign in:** a 64dp key tile, large title, 56dp field with 44dp show / paste
+  icon buttons and a 1.5dp blue focus ring. Errors show a red border, an alert
+  icon, a shake and REJECT. The pill button is pinned above the keyboard and
+  shows "Signing in…" with an 18dp indicator, then a check with CONFIRM.
+  Offline, server, VPN and maintenance errors appear in an inline notice card
+  with "Try again". Telegram is a quiet text button.
+- **Update gate:** a non-dismissable bottom sheet (28dp corners, no handle, 60%
+  scrim) using the same callbacks.
+  - Checking: `anoy_sync`.
+  - Update required: download tile and a mono size chip.
+  - Downloading: 6dp bar with mono progress text; indeterminate when the size
+    is unknown. Installing is indeterminate.
+  - Done: `anoy_success` with CONFIRM, then auto-dismiss.
+  - Failures: a red tile, the reason and "Try again".
+- **Home:**
+  - Header and panel notice: "Welcome back / Anoy" with a 44dp sign-out button
+    and a confirm sheet. The panel note is an amber notice card with a
+    fallback message, hidden when there is no note.
+  - Licence card: status chip, countdown, "Expires 7 Dec 2026, 11:15 pm", and a
+    4dp bar when the key's duration is known. The expired state shows a red
+    chip and "Sign in again". TalkBack reads the card as one sentence.
+  - Rows and actions: neutral GAME / DEVICE rows with State / Server chips,
+    skeletons while loading and a staggered reveal. The pinned action pill
+    sits over a fade with a 0.98 press scale and shows
+    "Preparing… 42%" / "Launching…".
+
+### Dependencies
+| Library | Version | Why this version |
+|---|---|---|
+| com.google.android.material | 1.13.0 | Newest release with minSdk 21 (1.14 requires 23) |
+| com.airbnb.android:lottie | 6.7.1 | minSdk 16; animations use `renderMode=hardware`, stored in `res/raw` |
+| androidx.core:core-splashscreen | 1.0.1 | 1.2.x requires minSdk 23 |
+| androidx.appcompat | 1.7.0 | Matches Material 1.13 |
+| androidx.core | 1.13.1 | core 1.16+ requires AGP 8.6 |
+
+Lottie art is original and authored in-repo by `scripts/lottie_art.py`. Each
+file is 60fps and under 60KB (provenance: `app/src/main/assets/licenses/LOTTIE.md`).
+Licences for Lucide (ISC), Inter and JetBrains Mono (OFL 1.1) and lottie-android
+(Apache 2.0) ship in `app/src/main/assets/licenses/`.
+
+### Copy
+Functional strings are unchanged except for the panel-note emoji warning and
+ALL-CAPS labels, which are now sentence case (section headers are still shown
+in small caps via the style).
+
+### QA
+`scripts/ui_quality_gate.py` enforces the brief statically: tokens only, no
+purple, emoji, Toast, default spinner or plain Button, ≥ 44dp targets, every
+referenced resource exists, and the Lottie budget. The `android-ui-qa` workflow
+builds debug and minified release, runs lint and captures every screen and
+state on an emulator (now uploaded as a workflow artifact; the old committed
+screenshots and `docs/ui-redesign/README.md` are in git history).

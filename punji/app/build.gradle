@@ -1,0 +1,160 @@
+plugins {
+    id 'com.android.application'
+}
+
+def signingProps = new Properties()
+def signingPropsFile = rootProject.file('local.properties')
+if (signingPropsFile.isFile()) {
+    signingPropsFile.withInputStream { signingProps.load(it) }
+}
+def signingValue = { String env, String prop ->
+    def v = System.getenv(env)
+    if (v == null || v.trim().isEmpty()) v = signingProps.getProperty(prop)
+    return (v == null || v.trim().isEmpty()) ? null : v
+}
+ext.releaseSigning = [
+        storeFile    : signingValue('XLOX_STORE_FILE', 'xlox.storeFile') ?: 'xlox.jks',
+        storePassword: signingValue('XLOX_STORE_PASSWORD', 'xlox.storePassword'),
+        keyAlias     : signingValue('XLOX_KEY_ALIAS', 'xlox.keyAlias') ?: 'key0',
+        keyPassword  : signingValue('XLOX_KEY_PASSWORD', 'xlox.keyPassword')
+                ?: signingValue('XLOX_STORE_PASSWORD', 'xlox.storePassword'),
+]
+releaseSigning.ready = releaseSigning.storePassword != null
+if (!releaseSigning.ready) {
+    logger.warn('Release signing is not configured (XLOX_STORE_PASSWORD / xlox.storePassword): ' +
+            'the release APK will be unsigned.')
+}
+
+android {
+    namespace 'com.xlox'
+    // API 36 is needed for android:pageSizeCompat (added in API 36).
+    compileSdk 36
+
+    // Release signing. No password lives in a tracked file: the values come
+    // from environment variables (GitHub Actions secrets) or from the
+    // gitignored xlox/local.properties - see README "Release signing".
+    // Without them the release APK is built unsigned (CI then refuses to
+    // publish it); the key itself (xlox.jks) is unchanged.
+    signingConfigs {
+        release {
+            if (releaseSigning.ready) {
+                storeFile file(releaseSigning.storeFile)
+                storePassword releaseSigning.storePassword
+                keyPassword releaseSigning.keyPassword
+                keyAlias releaseSigning.keyAlias
+            }
+        }
+    }
+
+    lint {
+        baseline = file('lint-baseline.xml')
+        // Real errors fail the build; warnings are reported in CI.
+        abortOnError true
+        warningsAsErrors false
+    }
+
+    defaultConfig {
+        applicationId 'com.xlox'
+        minSdk 21
+        // The virtual-container SDK used by this loader relies on legacy
+        // behaviour; raising targetSdk breaks its hidden-API bypass.
+        //noinspection OldTargetApi,EditedTargetSdkVersion,ExpiredTargetSdkVersion
+        targetSdk 28
+        // 2.1.0: UI redesign - Material 3 dark (token-mapped), Lottie splash,
+        //        bottom-sheet update gate, status chips, edge-to-edge.
+        // 2.0.0: black iOS-style UI, text-only splash, mandatory library update
+        //        gate before sign in, licence-key login, verified downloads.
+        // 1.1.0: light/dark UI. 1.0.1: 16 KB page-size support (Android 15+/17)
+        //        + read-only System.load() for API 37 devices.
+        // 2.1.1: polish pass - home "Last checked" spacing; distinguishable
+        //        from 2.1.0 (home hierarchy, Loader->Hax dissolve, IST times).
+        // 2.2.0: in-app app (APK) update before sign in, splash status line,
+        //        new home + Settings, Help no longer opens on its own.
+        // 2.3.0: visual-only premium redesign of every screen (same behaviour).
+        // 2.3.1: follow-up - centred splash status, "Login" / "Buy one", compact
+        //        expiry card, bundled BGMI icon, announcement banner, Settings
+        //        Licence + Updates groups, licence key in support info.
+        // 2.3.2: fixes app updates and CI (readable download errors, APK checked
+        //        before install, Launch/Stop icons; release tag anoy-v<name>-<code>).
+        // 2.3.3: faster splash update check (one 8 s / 10 s attempt, "up to date"
+        //        remembered for 10 minutes); panel moved next to its database.
+        // 2.3.4: UI polish - calmer waiting states, token clean-up, Settings tidy.
+        versionCode 13
+        versionName '2.3.4'
+
+        vectorDrawables {
+            useSupportLibrary true
+        }
+
+        ndk {
+            abiFilters 'arm64-v8a'
+        }
+
+        multiDexEnabled true
+    }
+
+    buildTypes {
+        release {
+            signingConfig releaseSigning.ready ? signingConfigs.release : null
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            ndk {
+                debugSymbolLevel 'FULL'
+            }
+        }
+        debug {
+            minifyEnabled false
+        }
+    }
+
+    buildFeatures {
+        buildConfig true
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+
+    externalNativeBuild {
+        ndkBuild {
+            path file('src/main/jni/Android.mk')
+        }
+    }
+    ndkVersion '24.0.8215888'
+
+    // Debug QA only (.github/workflows/app-update-e2e.yml): -PanoyQaVersionCode=10
+    // builds the debug APK as an older version so the real in-app update can be
+    // tested end to end. Refused for any release task.
+    if (project.hasProperty('anoyQaVersionCode')) {
+        defaultConfig.versionCode = (project.property('anoyQaVersionCode') as String).toInteger()
+        gradle.taskGraph.whenReady { graph ->
+            if (graph.allTasks.any { it.name.toLowerCase().contains('release') }) {
+                throw new GradleException('anoyQaVersionCode is for debug QA builds only')
+            }
+        }
+    }
+}
+
+dependencies {
+    implementation 'androidx.multidex:multidex:2.0.1'
+    implementation fileTree(dir: 'libs', includes: ['*.aar'])
+    // Material 1.13.0 is the newest release that still supports minSdk 21
+    // (1.14 needs 23). It requires appcompat 1.7.0.
+    implementation 'androidx.appcompat:appcompat:1.7.0'
+    implementation 'com.google.android.material:material:1.13.0'
+    // Lottie 6.7.1 (minSdk 16) for the three in-house animations in res/raw.
+    implementation 'com.airbnb.android:lottie:6.7.1'
+    // core-splashscreen 1.0.1: the newest stable that supports minSdk 21
+    // (1.2.0 follows the androidx-wide bump to minSdk 23).
+    implementation 'androidx.core:core-splashscreen:1.0.1'
+    // Already a transitive dependency; pinned so the compat insets API
+    // (WindowInsetsControllerCompat / WindowCompat) is guaranteed.
+    implementation 'androidx.core:core:1.13.1'
+    implementation 'net.lingala.zip4j:zip4j:2.9.0'
+    // core 1.13 ships kotlin-stdlib 1.8 (which absorbed -jdk7/-jdk8) while
+    // older androidx artifacts still pull the 1.6 -jdk7/-jdk8 jars. Align them
+    // to avoid duplicate kotlin.* classes.
+    implementation platform('org.jetbrains.kotlin:kotlin-bom:1.8.22')
+}

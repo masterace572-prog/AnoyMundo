@@ -1,0 +1,335 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- All user-facing copy. Sentence case, plain and direct. -->
+<resources>
+    <string name="app_name">Anoy</string>
+    <string name="splash_greeting">Welcome to</string>
+    <string name="splash_loader">Loader</string>
+    <string name="splash_hax">Hax</string>
+    <string name="telegram_url">https://t.me/libAkAudioVisiual</string>
+    <string name="version_footer">App %1$s · Library %2$s</string>
+    <string name="version_footer_app">Version %1$s</string>
+    <string name="not_installed_short">not installed</string>
+    <string name="dash">—</string>
+
+    <!-- Update gate -->
+    <string name="update_checking_title">Checking for updates</string>
+    <string name="update_checking_message">Making sure you have the latest library.</string>
+    <string name="update_required_title">Update required</string>
+    <string name="update_required_message">Library %1$s is available. You have %2$s. Update to continue.</string>
+    <string name="update_required_message_missing">Library %1$s is required to continue.</string>
+    <string name="update_size">Download size %1$s</string>
+    <string name="update_now">Update now</string>
+    <string name="update_downloading_title">Updating library</string>
+    <string name="update_downloading_message">Keep the app open until the update finishes.</string>
+    <string name="update_progress">%1$d%% · %2$s of %3$s</string>
+    <string name="update_progress_unknown">%1$s downloaded</string>
+    <string name="update_installing_title">Installing</string>
+    <string name="update_installing_message">Verifying and installing the library.</string>
+    <string name="update_failed_title">Update failed</string>
+    <string name="update_check_failed_title">Couldn\'t check for updates</string>
+    <string name="update_done_title">You\'re up to date</string>
+    <string name="update_done_message">Library %1$s</string>
+    <string name="update_slow">Taking longer than usual. Keep Anoy open.</string>
+    <string name="try_again">Try again</string>
+
+    <!-- Login -->
+    <string name="login_title">Login</string>
+    <string name="login_subtitle">Enter the licence key you received to continue.</string>
+    <string name="licence_key">Licence key</string>
+    <string name="licence_key_hint">ANOY-7D-XXXXX</string>
+    <string name="paste_key_description">Paste licence key</string>
+    <string name="show_key_description">Show licence key</string>
+    <string name="hide_key_description">Hide licence key</string>
+    <string name="sign_in">Login</string>
+    <string name="signing_in">Logging in…</string>
+    <string name="still_logging_in">Still logging in…</string>
+    <string name="signed_in">Logged in</string>
+    <string name="need_key">Need a licence key?</string>
+    <string name="get_key">Buy one</string>
+    <string name="get_key_lead">Don\'t have a licence?</string>
+    <string name="clipboard_empty">Clipboard has no licence key.</string>
+    <string name="error_key_empty">Enter your licence key.</string>
+    <string name="error_key_format">Licence keys use letters, numbers and dashes, like ANOY-7D-AB3DE.</string>
+    <string name="error_vpn">Turn off your VPN, then try again.</string>
+    <string name="error_native_missing">This app build is damaged. Reinstall the latest version.</string>
+    <string name="error_key_unknown">This licence key doesn\'t exist. Check it and try again.</string>
+    <string name="error_key_blocked">This licence key has been blocked.</string>
+    <string name="error_key_expired">This licence key has expired.</string>
+    <string name="error_key_devices">This licence key is already used on the maximum number of devices.</string>
+    <string name="error_clock">Your phone\'s date and time look wrong. Turn on automatic date and time, then try again.</string>
+    <string name="error_token">Verification failed. Update the app and try again.</string>
+    <string name="error_server_busy">The server is busy. Try again in a moment.</string>
+    <string name="error_bad_response">Unexpected response from the server. Try again.</string>
+    <string name="error_sign_in_generic">Couldn\'t log in. Try again.</string>
+
+    <!-- Network -->
+    <string name="net_offline">You\'re offline. Connect to Wi-Fi or mobile data and try again.</string>
+    <string name="net_no_host">Can\'t reach the server. Check your internet connection and try again.</string>
+    <string name="net_timeout">The connection timed out. Check your network and try again.</string>
+    <string name="net_refused">The server can\'t be reached right now. Try again in a moment.</string>
+    <string name="net_ssl">Secure connection failed. Make sure your date and time are correct.</string>
+    <string name="net_interrupted">The download was interrupted. Try again.</string>
+    <string name="net_generic">Network error. Try again.</string>
+    <string name="net_http">The server returned an error (HTTP %1$d). Try again in a moment.</string>
+    <string name="update_unavailable">The update service is temporarily unavailable. Try again in a moment.</string>
+    <string name="update_no_release">No library has been published yet. Try again later.</string>
+    <string name="update_corrupt">The downloaded file was damaged. Try again.</string>
+    <string name="update_invalid_file">The server sent a file that isn\'t a valid library package.</string>
+    <string name="update_no_library">The library package doesn\'t contain a usable library.</string>
+    <string name="update_install_failed">Couldn\'t install the library. Free some storage and try again.</string>
+    <string name="update_no_space">Not enough free storage. Free at least %1$s and try again.</string>
+
+    <!-- Home -->
+    <string name="home_title">Welcome back</string>
+    <string name="sign_out">Sign out</string>
+    <string name="section_licence">Licence</string>
+    <string name="section_game">Game</string>
+    <string name="section_device">Device</string>
+    <string name="row_status">Status</string>
+    <string name="row_expires">Expires</string>
+    <string name="licence_expires_in">Expires in</string>
+    <string name="announcement">Announcement</string>
+    <string name="row_game">Game</string>
+    <string name="row_state">State</string>
+    <string name="row_library">Library</string>
+    <string name="row_server">Server</string>
+    <string name="game_name">BGMI</string>
+    <string name="active">Active</string>
+    <string name="expired">Expired</string>
+    <string name="time_left_value">%1$dd %2$02dh %3$02dm %4$02ds</string>
+    <string name="state_ready">Ready</string>
+    <!-- BGMI is installed, but the library, a permission or the container is not ready yet. -->
+    <string name="state_installed">Installed</string>
+    <!-- Access row: the three permissions the game-files copy needs. -->
+    <!-- Help sheet -->
+    <string name="help_open">Help and tips</string>
+    <string name="help_title">Help</string>
+    <string name="help_launch_title">Launching the game</string>
+    <string name="help_launch_body">Log in, allow the three access items if Anoy asks (All files access, Files, Install unknown apps), then tap Launch. The first time, Anoy copies the game files before the game opens.</string>
+    <string name="help_access_title">Files missing or access needed</string>
+    <string name="help_access_body">Turn on All files access, Files and Install unknown apps for Anoy, then come back and tap Launch.</string>
+    <string name="help_renew_title">Renewing your licence</string>
+    <string name="help_renew_body">Your time left shows on Home. To renew, add time to your licence on the panel, or message support with Help on Telegram. The new time shows when you come back to Anoy.</string>
+    <string name="help_copy_support">Copy support info</string>
+    <string name="help_got_it">Got it</string>
+    <string name="support_info_title">Support info</string>
+    <string name="support_info_copy">Copy</string>
+    <string name="support_info_copied">Support info copied</string>
+    <string name="state_not_installed">Not installed</string>
+    <string name="state_running">Running</string>
+    <string name="launch">Launch</string>
+    <string name="install_game">Install BGMI</string>
+    <string name="stop">Stop</string>
+    <string name="sign_in_again">Log in again</string>
+    <string name="help">Help on Telegram</string>
+    <string name="preparing">Preparing game files</string>
+    <string name="preparing_progress">Preparing game files · %1$d%%</string>
+    <string name="preparing_first">First launch copies the game files. Keep Anoy open until it finishes.</string>
+    <string name="preparing_slow">Still preparing. Large game files take a while.</string>
+    <string name="launching">Launching…</string>
+    <string name="game_stopped">Game stopped.</string>
+    <string name="licence_expired_message">Your licence has expired. Log in with a new key.</string>
+    <string name="error_activation">The game container isn\'t ready. Restart the app and try again.</string>
+    <string name="error_launch">Couldn\'t launch the game. Try again.</string>
+    <string name="error_stop">Couldn\'t stop the game.</string>
+    <string name="error_store">Couldn\'t open the Play Store.</string>
+    <string name="error_obb_missing">Game files not found. Open BGMI once from the Play Store to download them.</string>
+    <string name="error_obb_copy">Couldn\'t prepare game files: %1$s</string>
+    <string name="error_library">Library problem: %1$s</string>
+    <string name="error_link">No app can open this link.</string>
+    <string name="android_version">Android %1$s (API %2$d)</string>
+
+    <!-- AppManager -->
+    <string name="sandbox_install_failed">Couldn\'t install the game into the container.</string>
+    <string name="package_not_found">BGMI is not installed.</string>
+    <string name="obb_folder_not_found">Game files folder not found.</string>
+    <string name="main_obb_not_found">Main game file not found.</string>
+    <!-- Reasons shown inside error_obb_copy ("Couldn't prepare game files: …"). -->
+    <string name="obb_folder_blocked">Android is blocking access to the game files folder on this phone.</string>
+    <string name="obb_container_not_ready">game storage isn\'t ready yet. Wait a moment and tap Launch again.</string>
+    <string name="obb_copy_write_failed">couldn\'t write to the game storage. Free some storage and try again.</string>
+    <string name="obb_copy_incomplete">the copy didn\'t finish. Try again.</string>
+    <string name="obb_copy_verify_failed">the copied file didn\'t match. Try again.</string>
+    <string name="obb_copy_failed">something went wrong. Try again.</string>
+    <string name="storage_permission_needed">Allow All files access so game files can be prepared.</string>
+    <string name="permission_files_needed">Allow Files access so game files can be prepared.</string>
+    <string name="restarting_for_game_files">Restarting Anoy to finish setting up game files…</string>
+    <string name="permission_install_needed">Allow Install unknown apps for Anoy so game files can be prepared.</string>
+    <!-- Shown before Anoy opens the All files access / Install unknown apps settings page. -->
+    <string name="perm_explain_all_files_title">Allow All files access</string>
+    <string name="perm_explain_all_files_message">Anoy needs this to prepare game files. You\'ll be taken to Settings. Turn it on for Anoy, then come back.</string>
+    <string name="perm_explain_install_title">Allow Install unknown apps</string>
+    <string name="perm_explain_install_message">Anoy needs this to install the library update and prepare game files. You\'ll be taken to Settings. Turn it on for Anoy, then come back.</string>
+    <string name="perm_explain_continue">Continue to Settings</string>
+    <string name="not_now">Not now</string>
+    <string name="home_kicker">Welcome back</string>
+    <!-- UI redesign (2.1) -->
+    <string name="action_preparing">Preparing…</string>
+    <string name="action_preparing_progress">Preparing… %1$d%%</string>
+        <string name="notice_description">Announcement: %1$s</string>
+    <string name="sign_out_title">Sign out of this device?</string>
+    <string name="sign_out_message">Your licence key stays saved on this phone, so signing back in takes one tap.</string>
+    <string name="forget_key">Forget this key</string>
+    <string name="forget_key_description">Sign out and remove the saved licence key from this phone</string>
+    <string name="cancel">Cancel</string>
+    <string name="close">Close</string>
+    <string name="loading">Loading</string>
+    <string name="licence_a11y_active">Licence active, %1$s left, expires %2$s</string>
+    <string name="licence_a11y_expired">Licence expired on %1$s</string>
+    <string name="licence_a11y_unknown">Licence status unknown</string>
+    <string name="licence_a11y_soon">Licence expires soon, %1$s left, expires %2$s</string>
+    <string name="expires_soon">Expires soon</string>
+    <string name="licence_soon_message">Renew now to keep playing without a break.</string>
+    <string name="renew">Renew</string>
+    <string name="renew_description">Renew your licence on Telegram</string>
+    <!-- Quiet line when the latest licence refresh could not reach the server. -->
+    <string name="licence_last_checked">Last checked %1$s</string>
+    <!-- 2.3.4: Home licence caption when the latest refresh could not reach the panel. -->
+    <string name="licence_offline_checked">Offline · last checked %1$s</string>
+    <string name="status_chip_description">%1$s: %2$s</string>
+    <!-- 2.2.0: splash status line (real state of the app update check). -->
+    <string name="splash_version">v%1$s</string>
+    <string name="splash_status_init">Initializing…</string>
+    <string name="splash_status_checking">Checking for updates…</string>
+    <string name="splash_status_current">Up to date</string>
+    <string name="splash_status_available">Update available (v%1$s)</string>
+    <string name="splash_status_failed">Couldn\'t check for updates</string>
+    <string name="splash_retry">Try again</string>
+    <!-- 2.3.4: calm waiting states. -->
+    <string name="splash_status_slow">Taking longer than usual…</string>
+    <string name="splash_status_slow_detail">Still trying. Your connection may be slow.</string>
+
+    <!-- 2.2.0: in-app app update (the APK, not the library). -->
+    <string name="app_update_title">Update available</string>
+    <string name="app_update_title_required">Update required</string>
+    <string name="app_update_subtitle">Anoy %1$s is ready. You have %2$s.</string>
+    <string name="app_update_subtitle_required">Anoy %1$s is required to keep using the app. You have %2$s.</string>
+    <string name="app_update_whats_new">What\'s new</string>
+    <string name="app_update_no_changelog">Fixes and improvements.</string>
+    <string name="app_update_now">Update now</string>
+    <string name="app_update_not_now">Not now</string>
+    <string name="app_update_retry">Try again</string>
+    <string name="app_update_cancel_download">Cancel download</string>
+    <string name="app_update_slow">Download is slow. Keep Anoy open.</string>
+    <string name="app_update_downloading">Downloading…</string>
+    <string name="app_update_progress">%1$d%% · %2$s of %3$s</string>
+    <string name="app_update_progress_unknown">%1$s downloaded</string>
+    <string name="app_update_verifying">Checking the download…</string>
+    <string name="app_update_installing">Installing…</string>
+    <string name="app_update_confirm">Confirm the install on the next screen.</string>
+    <string name="app_update_keep_open">Keep Anoy open until the update finishes.</string>
+    <string name="app_update_done">Installed</string>
+    <string name="app_update_installed">Open Anoy again to continue.</string>
+    <string name="app_update_failed_title">Update failed</string>
+    <string name="app_update_required_back">This update is required to continue.</string>
+    <string name="app_update_bad_release">The update information from the server is incomplete. Try again in a moment.</string>
+    <string name="app_update_storage">Not enough free storage to download the update. Free some space and try again.</string>
+    <string name="app_update_no_space">Not enough free storage. Free at least %1$s and try again.</string>
+    <string name="app_update_invalid">The downloaded file isn\'t a valid Anoy update.</string>
+    <!-- 2.3.2: a failed download names the real HTTP code; any file that isn't this app at a higher version is refused. -->
+    <string name="app_update_download_http">Couldn\'t download the update (HTTP %1$d). Try again later.</string>
+    <string name="app_update_mismatch">This update file doesn\'t match the app.</string>
+    <string name="app_update_cancelled">The download was stopped.</string>
+    <string name="app_update_install_failed">Couldn\'t install the update. Try again.</string>
+    <string name="app_update_install_cancelled">Install cancelled. Tap Try again to install the update.</string>
+    <string name="app_update_signature">This update isn\'t signed like the installed app, so Android refused it.</string>
+    <string name="app_update_blocked">Android blocked the install. Allow Install unknown apps for Anoy and try again.</string>
+
+    <!-- 2.2.0: home + Settings. -->
+    <string name="settings">Settings</string>
+    <string name="settings_open">Open settings</string>
+    <string name="settings_back">Back</string>
+    <string name="settings_section_device">Device</string>
+    <string name="settings_section_licence">Licence</string>
+    <string name="settings_section_updates">Updates</string>
+    <string name="settings_licence_status">Status</string>
+    <string name="settings_licence_expires">Expires</string>
+    <string name="licence_key_show">Show licence key</string>
+    <string name="licence_key_hide">Hide licence key</string>
+    <string name="licence_key_copied">Copied</string>
+    <string name="licence_key_hidden_description">Licence key, hidden. Double-tap to copy.</string>
+    <string name="licence_key_shown_description">Licence key %1$s. Double-tap to copy.</string>
+    <string name="settings_check_updates">Check for app updates</string>
+    <string name="settings_checking">Checking…</string>
+    <string name="settings_still_checking">Still checking…</string>
+    <string name="settings_not_checked">Not checked yet</string>
+    <!-- "Last checked …" times, always in IST. -->
+    <string name="time_just_now">just now</string>
+    <string name="time_minutes_ago">%1$d min ago</string>
+    <string name="time_today">today, %1$s</string>
+    <string name="time_yesterday">yesterday, %1$s</string>
+    <string name="settings_up_to_date">Up to date</string>
+    <string name="settings_check_failed">Couldn\'t check</string>
+    <string name="settings_redownload">Re-download library</string>
+    <string name="settings_library_version">Library version</string>
+    <string name="settings_library_none">Not installed</string>
+    <string name="redownload_title">Re-download library?</string>
+    <string name="redownload_message">This downloads the current library again. Use it if the game won\'t launch properly.</string>
+    <string name="redownload_action">Re-download</string>
+    <string name="redownload_done">Library %1$s installed</string>
+    <string name="settings_section_report">Report a problem</string>
+    <string name="settings_section_account">Account</string>
+    <string name="settings_model">Model</string>
+    <string name="settings_android">Android</string>
+    <string name="settings_all_files">All files access</string>
+    <string name="settings_install">Install unknown apps</string>
+    <string name="settings_telegram">Report on Telegram</string>
+    <string name="settings_copy_support">Copy support info</string>
+    <string name="settings_version">App version</string>
+    <string name="settings_version_value">%1$s (%2$d)</string>
+    <string name="settings_row_description">%1$s: %2$s</string>
+    <string name="game_title_version">BGMI v%1$s</string>
+    <string name="game_icon_description">BGMI</string>
+
+    <!-- Punji: the second game, PUBG Mobile (com.tencent.ig, libpubgm.so). -->
+    <string name="game_name_pubgm">PUBG Mobile</string>
+    <string name="game_title_version_pubgm">PUBG Mobile v%1$s</string>
+    <string name="game_icon_description_pubgm">PUBG Mobile</string>
+    <string name="install_game_pubgm">Install PUBG Mobile</string>
+    <string name="error_obb_missing_pubgm">Game files not found. Open PUBG Mobile once from the Play Store to download them.</string>
+    <string name="launch_bgmi_description">Launch BGMI</string>
+    <string name="launch_pubgm_description">Launch PUBG Mobile</string>
+    <!-- The release ZIP has no libpubgm.so (or no libbgmi.so) yet. -->
+    <string name="error_game_lib_missing">%1$s isn\'t in the current library yet. Try again after the next library update.</string>
+
+    <!-- 2.3.0: premium redesign - new labels only. -->
+    <string name="brand_name">Anoy Hax</string>
+    <string name="ellipsis">…</string>
+    <string name="paste">Paste</string>
+    <string name="get_key_description">Buy a licence on Telegram</string>
+    <string name="progress_bytes">%1$s of %2$s</string>
+    <string name="app_update_headline">A new version is ready</string>
+    <string name="app_update_downloading_percent">Downloading %1$d%%</string>
+    <string name="app_update_error_block">%1$s. %2$s</string>
+    <string name="help_glyph">?</string>
+    <string name="help_kicker_access">Files and access</string>
+    <string name="library_version">Library %1$s</string>
+    <string name="library_not_installed">Library not installed</string>
+    <string name="sign_out_keep_caption">Your key stays saved on this device.</string>
+    <string name="forget_key_caption">Removes the key from this device. You\'ll need to enter it again.</string>
+    <string name="support_info_includes_key">Includes your licence key. Only share it with Anoy support.</string>
+    <string name="support_unknown">Unknown</string>
+    <string name="support_info_copied_short">Copied</string>
+    <!-- Permission sheet: the existing explanations, split into "why" and "how". -->
+    <string name="perm_kicker">Permission</string>
+    <string name="perm_why">Why we ask</string>
+    <string name="perm_how">How to allow</string>
+    <string name="perm_why_all_files">Anoy needs this to prepare game files.</string>
+    <string name="perm_why_install">Anoy needs this to install the library update and prepare game files.</string>
+    <string name="perm_step_settings">Tap Continue to open Settings.</string>
+    <string name="perm_step_turn_on">Turn it on for Anoy, then come back.</string>
+    <string name="perm_step_number">%1$d</string>
+
+    <plurals name="a11y_days">
+        <item quantity="one">%d day</item>
+        <item quantity="other">%d days</item>
+    </plurals>
+    <plurals name="a11y_hours">
+        <item quantity="one">%d hour</item>
+        <item quantity="other">%d hours</item>
+    </plurals>
+    <plurals name="a11y_minutes">
+        <item quantity="one">%d minute</item>
+        <item quantity="other">%d minutes</item>
+    </plurals>
+</resources>
