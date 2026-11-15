@@ -167,6 +167,8 @@
     <string name="action_preparing">Preparing…</string>
     <string name="action_preparing_progress">Preparing… %1$d%%</string>
         <string name="notice_description">Announcement: %1$s</string>
+    <string name="game_update_kicker">BGMI updated</string>
+    <string name="game_update_text">BGMI %1$s is newer than the library supports (%2$s). Wait for a library update before playing.</string>
     <string name="sign_out_title">Sign out of this device?</string>
     <string name="sign_out_message">Your licence key stays saved on this phone, so signing back in takes one tap.</string>
     <string name="forget_key">Forget this key</string>

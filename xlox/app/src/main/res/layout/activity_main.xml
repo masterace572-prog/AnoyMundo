@@ -21,6 +21,7 @@
 -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/mainRoot"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
@@ -144,6 +145,56 @@
 
                         <TextView
                             android:id="@+id/panelNote"
+                            style="@style/Text.Notice"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="@dimen/space_4"
+                            android:importantForAccessibility="no" />
+                    </LinearLayout>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- ============================================ BGMI updated (2.3.5)
+                 Shown when the installed BGMI is newer than the version the
+                 panel says the library works with. Only a notice. -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/gameUpdateCard"
+                style="@style/Widget.Anoy.Card.Notice"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="@dimen/space_12"
+                android:focusable="true"
+                android:visibility="gone">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:padding="@dimen/space_16">
+
+                    <ImageView
+                        android:layout_width="@dimen/icon_inline"
+                        android:layout_height="@dimen/icon_inline"
+                        android:importantForAccessibility="no"
+                        app:srcCompat="@drawable/ic_triangle_alert"
+                        app:tint="@color/notice_icon" />
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="@dimen/space_12"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            style="@style/Text.Kicker.Notice"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:importantForAccessibility="no"
+                            android:text="@string/game_update_kicker" />
+
+                        <TextView
+                            android:id="@+id/gameUpdateText"
                             style="@style/Text.Notice"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
@@ -645,11 +696,13 @@
 
                         <View style="@style/RowDivider" />
 
+                        <!-- Same label + glyph structure as the sibling rows (shared Row/RowGlyph styles). -->
                         <LinearLayout
                             android:id="@+id/redownloadRow"
                             style="@style/Row"
                             android:clickable="true"
-                            android:focusable="true">
+                            android:focusable="true"
+                            tools:ignore="UseCompoundDrawables">
 
                             <TextView
                                 style="@style/Text.RowLabel"
@@ -790,11 +843,13 @@
                         android:layout_height="wrap_content"
                         android:orientation="vertical">
 
+                        <!-- Same label + glyph structure as the sibling rows (shared Row/RowGlyph styles). -->
                         <LinearLayout
                             android:id="@+id/settingsTelegram"
                             style="@style/Row"
                             android:clickable="true"
-                            android:focusable="true">
+                            android:focusable="true"
+                            tools:ignore="UseCompoundDrawables">
 
                             <TextView
                                 style="@style/Text.RowLabel"

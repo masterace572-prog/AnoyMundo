@@ -1,5 +1,6 @@
 package com.xlox.utils;
 
+import android.annotation.SuppressLint;
 import android.Manifest;
 import android.app.Activity;
 import android.content.ActivityNotFoundException;
@@ -127,6 +128,7 @@ public final class StorageAccess {
     }
 
     /** Remember that Launch should continue once home opens after the restart. */
+    @SuppressLint("ApplySharedPref") // commit(): the process restarts right after, apply() could be lost
     public static void markLaunchAfterRestart(Context context) {
         prefs(context).edit().putLong(KEY_LAUNCH_AFTER_RESTART, System.currentTimeMillis()).commit();
     }

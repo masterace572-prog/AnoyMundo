@@ -26,7 +26,7 @@ const seed = () => ({
   credit: [{ id: 1, name: '' }],
   lib: [{ id: 1, file: 'lib.so', file_type: 'Onlinelib/lib.so', file_size: '555 KB', time: '2022-06-04T23:43:38Z' }],
   _ftext: [{ id: 1, _status: 'Safe', _ftext: 'MOD STATUS :- 100% SAFE' }],
-  client_release: [{ id: 1, version: '1.0', file_name: 'no-release.zip', file_size: 0, sha256: '', content_base64: null, external_url: null, notes: 'Placeholder', is_current: true, uploaded_by: 'admin', created_at: new Date().toISOString() }],
+  client_release: [{ id: 1, version: '1.0', file_name: 'no-release.zip', file_size: 0, sha256: '', content_base64: null, external_url: null, notes: 'Placeholder', game_version: null, is_current: true, uploaded_by: 'admin', created_at: new Date().toISOString() }],
   app_release: [],
   auth_attempt: [],
   api_keys: [],

@@ -73,7 +73,7 @@ export async function getSettings() {
     db().from('modname').select('*').eq('id', 1).maybeSingle(),
     db().from('credit').select('*').eq('id', 1).maybeSingle(),
     db().from('lib').select('*').order('id', { ascending: false }).limit(1),
-    db().from('client_release').select('id,version,file_name,file_size,sha256,external_url,notes,is_current,uploaded_by,created_at').eq('is_current', true).maybeSingle(),
+    db().from('client_release').select('id,version,file_name,file_size,sha256,external_url,notes,game_version,is_current,uploaded_by,created_at').eq('is_current', true).maybeSingle(),
   ]);
   for (const r of [onoff, ftext, feature, modname, credit, libRows, release]) {
     if (r.error) throw new Error(r.error.message);

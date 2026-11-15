@@ -9,7 +9,8 @@ name: Build XLOX loader APK
 # static UI gates and the permissions-in-APK check (moved from the emulator
 # QA, which is now manual). The release is tagged anoy-v<versionName>-<versionCode>
 # (read from app/build.gradle), marked Latest, and every other release + tag
-# is deleted afterwards, so exactly one release remains.
+# is deleted afterwards - except (2.3.5) a release holding a file the owner
+# uploaded by hand (e.g. a library zip the panel links to): it and its tag stay.
 on:
   workflow_dispatch:
     inputs:
@@ -44,7 +45,7 @@ jobs:
         working-directory: xlox
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Bundle the BGMI icon (downloaded once, then committed)
         run: python3 scripts/fetch_game_icon.py
@@ -63,7 +64,7 @@ jobs:
           echo "App $NAME ($CODE) -> release anoy-v$NAME-$CODE"
 
       - name: JDK 17
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: '17'
@@ -159,7 +160,7 @@ jobs:
 
       - name: Upload lint report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: lint-report
           path: xlox/app/build/reports/lint-results-release.*
@@ -223,7 +224,7 @@ jobs:
             /tmp/libXloX.so ../dist/xlox-loader.zip
 
       - name: Upload APK and loader ZIP
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ env.XLOX_SIGNED == 'true' && 'xlox-apk' || 'xlox-apk-unsigned' }}
           path: |
@@ -262,7 +263,9 @@ jobs:
           fi
           echo "RELEASE_PUBLISHED=true" >> "$GITHUB_ENV"
 
-      # Exactly one release stays: the one just published. Never touches $RELEASE_TAG.
+      # Only the release just published stays, plus any release with a file the
+      # owner uploaded by hand (its download link must keep working). Never
+      # touches $RELEASE_TAG.
       - name: Delete every other release and tag
         if: env.RELEASE_PUBLISHED == 'true'
         working-directory: ${{ github.workspace }}
@@ -273,13 +276,19 @@ jobs:
           REPO="${{ github.repository }}"
           gh release view "$RELEASE_TAG" >/dev/null || { echo "::error::$RELEASE_TAG is missing; nothing deleted"; exit 1; }
           deleted=0; failed=0
+          # Releases with an asset not uploaded by this workflow's bot.
+          keep=" $(gh api --paginate "repos/$REPO/releases?per_page=100" \
+            --jq '.[] | select([.assets[].uploader.login] | any(. != "github-actions[bot]")) | .tag_name' | tr '\n' ' ') "
+          [ "$keep" = "  " ] || echo "::notice title=Releases kept::with files you uploaded:$keep"
           for t in $(gh api --paginate "repos/$REPO/releases?per_page=100" --jq '.[].tag_name'); do
             [ "$t" = "$RELEASE_TAG" ] && continue
+            case "$keep" in *" $t "*) continue ;; esac
             if gh release delete "$t" --yes --cleanup-tag; then deleted=$((deleted+1)); else failed=$((failed+1)); fi
           done
           tags=0
           for t in $(gh api --paginate "repos/$REPO/git/matching-refs/tags/" --jq '.[].ref | sub("^refs/tags/"; "")'); do
             [ "$t" = "$RELEASE_TAG" ] && continue
+            case "$keep" in *" $t "*) continue ;; esac
             if gh api -X DELETE "repos/$REPO/git/refs/tags/$t" --silent; then tags=$((tags+1)); else failed=$((failed+1)); fi
           done
           left=$(gh api --paginate "repos/$REPO/releases?per_page=100" --jq '.[].tag_name' | tr '\n' ' ')

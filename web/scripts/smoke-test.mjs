@@ -385,6 +385,26 @@ try {
   ok(r.status === 200 && r.response.headers.get('x-content-sha256') === md5Sha(Buffer.from(zip, 'base64')), 'the stored file is served, the link ignored');
   r = await request('/lib');
   ok(r.status === 200 && (r.body.match(/<form\b/g) || []).length === 1 && !/link-form/.test(r.body), 'library page has one publish form');
+  // v2.3.5: the BGMI version the library works with.
+  r = await request('/api/lib/manifest');
+  ok(r.body?.game_version === '', 'manifest: no BGMI version set yet');
+  r = await request('/lib', { method: 'POST', headers: SAME, body: { action: 'game', game_version: '3.9.0' } });
+  ok(r.body?.ok === true && r.body?.game_version === '3.9.0', 'POST /lib game action saves the BGMI version');
+  r = await request('/api/lib/manifest');
+  ok(r.body?.game_version === '3.9.0' && r.body?.version === '1.4', 'manifest reports the BGMI version, release unchanged');
+  r = await request('/lib', { method: 'POST', headers: SAME, body: { action: 'game', game_version: '3.9 beta' } });
+  ok(r.status === 400, 'a non-numeric BGMI version is rejected');
+  r = await request('/lib', { method: 'POST', headers: SAME, body: { action: 'link', version: '1.4', external_url: 'https://example.com/keep.so' } });
+  r = await request('/api/lib/manifest');
+  ok(r.body?.version === '1.4' && r.body?.game_version === '3.9.0', 'a link update keeps the BGMI version');
+  r = await request('/lib', { method: 'POST', headers: SAME, body: { action: 'upload', version: '1.4', file_name: 'both.zip', content_base64: zip } });
+  r = await request('/api/lib/manifest');
+  ok(r.body?.source === 'file' && r.body?.game_version === '3.9.0', 'a new release keeps the BGMI version');
+  r = await request('/lib');
+  ok(/id="game-version"[^>]*value="3\.9\.0"/.test(r.body), 'library page shows the BGMI version');
+  r = await request('/lib', { method: 'POST', headers: SAME, body: { action: 'game', game_version: '' } });
+  r = await request('/api/lib/manifest');
+  ok(r.body?.game_version === '', 'an empty BGMI version turns the warning off');
 
   // 13b. App (APK) update: separate from the library.
   r = await request('/api/app/update');

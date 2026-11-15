@@ -617,6 +617,12 @@ function validVersion(value) {
   return /^[A-Za-z0-9][A-Za-z0-9._+-]{0,31}$/.test(str(value));
 }
 
+/** BGMI version the library works with: empty (no warning) or digits like 3.9.0. */
+function validGameVersion(value) {
+  const v = str(value);
+  return v === '' || /^\d{1,4}(\.\d{1,6}){0,3}$/.test(v);
+}
+
 function urlFileName(url, fallback) {
   try {
     const last = new URL(url).pathname.split('/').filter(Boolean).pop();
@@ -625,7 +631,9 @@ function urlFileName(url, fallback) {
 }
 
 /**
- * Publishes a loader release. Two actions:
+ * Publishes a loader release. Three actions:
+ *   game   -> (v2.3.5) only set the BGMI version the current release works
+ *             with (empty turns the app's BGMI warning off)
  *   upload -> new file OR external https link becomes the current release.
  *             One rule when both arrive: the file wins and the link is
  *             ignored (never stored, never validated), so exactly one release
@@ -639,7 +647,25 @@ function urlFileName(url, fallback) {
  */
 async function doLibUpload(req, res, body, user) {
   if (!user.isOwner) return sendJson(res, { ok: false, error: 'Only the Owner can publish releases.' }, 403);
-  const action = str(body.action) === 'link' ? 'link' : 'upload';
+  const rawAction = str(body.action);
+  const action = rawAction === 'link' || rawAction === 'game' ? rawAction : 'upload';
+  // Optional everywhere: a request without the field keeps the current value.
+  const hasGame = Object.prototype.hasOwnProperty.call(body || {}, 'game_version');
+  const gameVersion = str(body.game_version).slice(0, 32);
+  if (hasGame && !validGameVersion(gameVersion)) {
+    return sendJson(res, { ok: false, error: 'Enter the BGMI version as numbers, like 3.9.0 (or leave it empty).' }, 400);
+  }
+
+  if (action === 'game') {
+    const { data: current, error: readError } = await db().from('client_release')
+      .select('id,version').eq('is_current', true).maybeSingle();
+    if (readError) return sendJson(res, { ok: false, error: 'Could not read the current release.' }, 500);
+    if (!current) return sendJson(res, { ok: false, error: 'Publish a release first.' }, 404);
+    const { error } = await db().from('client_release').update({ game_version: gameVersion || null }).eq('id', current.id);
+    if (error) return sendJson(res, { ok: false, error: `Could not save the BGMI version: ${error.message}` }, 500);
+    return sendJson(res, { ok: true, version: current.version, game_version: gameVersion, mode: 'game' });
+  }
+
   const version = str(body.version).slice(0, 32);
   const base64 = action === 'upload' ? str(body.content_base64) : '';
   // File wins: with a file the link is dropped before anything looks at it.
@@ -665,6 +691,7 @@ async function doLibUpload(req, res, body, user) {
       file_name: urlFileName(externalUrl, current.file_name || 'release.zip'),
       file_size: 0, sha256: '', notes, uploaded_by: user.username,
     };
+    if (hasGame) patch.game_version = gameVersion || null;
     const { error } = await db().from('client_release').update(patch).eq('id', current.id);
     if (error) return sendJson(res, { ok: false, error: `Could not update the link: ${error.message}` }, 500);
     return sendJson(res, { ok: true, version, external_url: externalUrl, file_name: patch.file_name, mode: 'link' });
@@ -696,6 +723,8 @@ async function doLibUpload(req, res, body, user) {
     version, file_name: name, file_size: bytes.length, sha256,
     content_base64: base64 ? bytes.toString('base64') : null,
     external_url: externalUrl || null, notes,
+    // Not sent: carry the previous release's BGMI version over.
+    game_version: hasGame ? (gameVersion || null) : (current?.game_version || null),
     is_current: true, uploaded_by: user.username, created_at: nowIso(),
   }).select('id').single();
   if (insertError) {

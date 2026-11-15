@@ -195,13 +195,15 @@ export async function handleLibVersion(res) {
 /**
  * JSON description of the current loader library, read by the app's
  * mandatory update check before sign-in:
- *   { ok, version, available, size, sha256, source, notes, updated_at }
+ *   { ok, version, available, size, sha256, source, notes, game_version, updated_at }
  * `available` is false when nothing downloadable has been published yet.
+ * `game_version` (v2.3.5) is the newest BGMI version the library works with;
+ * empty means the app shows no BGMI warning.
  */
 export async function handleLibManifest(res) {
   try {
     const { data, error } = await db().from('client_release')
-      .select('version,file_name,file_size,sha256,external_url,notes,created_at')
+      .select('version,file_name,file_size,sha256,external_url,notes,game_version,created_at')
       .eq('is_current', true).maybeSingle();
     if (error) throw new Error(error.message);
     // An uploaded file always stores its size and sha256; a pushed link clears
@@ -217,6 +219,7 @@ export async function handleLibManifest(res) {
       source: hasFile ? 'file' : hasLink ? 'link' : 'none',
       file_name: data?.file_name || '',
       notes: data?.notes || '',
+      game_version: data?.game_version || '',
       updated_at: data?.created_at || null,
     });
   } catch (e) {

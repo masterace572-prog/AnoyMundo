@@ -25,6 +25,22 @@
     </div>
 </section>
 
+<section class="card" style="margin-bottom:20px" id="game-card">
+    <div class="card-head">
+        <div class="tile">{{icon "gamepad-2"}}</div>
+        <div><h2 class="card-title">Works with BGMI</h2><div class="card-sub">If a player's BGMI is newer, the app tells them to wait for a new library. Leave empty for no warning.</div></div>
+    </div>
+    <div id="game-form" class="form">
+        <div class="field">
+            <label class="label" for="game-version">BGMI version</label>
+            <div class="input-wrap">{{icon "tag" "lead"}}
+            <input type="text" class="input mono" name="game_version" id="game-version" value="{{release.game_version}}" placeholder="3.9.0" maxlength="32" autocomplete="off" spellcheck="false" inputmode="decimal"></div>
+        </div>
+        <button type="button" class="btn btn-secondary btn-block" id="game-submit">{{icon "check"}}Save</button>
+        <div id="game-result" aria-live="polite"></div>
+    </div>
+</section>
+
 <section class="card publish-card" id="publish-card">
     <div class="card-head">
         <div class="tile">{{icon "upload"}}</div>
@@ -165,6 +181,26 @@
         var el = byId('lib-version'); var m = el.value.trim().match(/^(.*?)(\d+)$/);
         el.value = m ? m[1] + (Number(m[2]) + 1) : '1.1';
     });
+
+    var gameButton = byId('game-submit'), gameResult = byId('game-result');
+    byId('game-version').addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') { e.preventDefault(); saveGame(); }
+    });
+    gameButton.addEventListener('click', saveGame);
+    function saveGame() {
+        if (gameButton.disabled) return;
+        var value = byId('game-version').value.trim();
+        gameResult.textContent = '';
+        if (value && !/^\d{1,4}(\.\d{1,6}){0,3}$/.test(value)) return say(gameResult, 'Use numbers like 3.9.0, or leave it empty.');
+        busy(gameButton, true, 'Saving…');
+        send({ action: 'game', game_version: value }, function () {}).then(function (data) {
+            say(gameResult, data.game_version ? 'Saved. Works with BGMI ' + data.game_version + '.' : 'Saved. BGMI warning is off.', true);
+            busy(gameButton, false);
+        }).catch(function (err) {
+            say(gameResult, (err && err.message) || 'Could not save.');
+            busy(gameButton, false);
+        });
+    }
 
     var form = byId('lib-form'), button = byId('lib-submit'), result = byId('lib-result');
     form.addEventListener('submit', function (e) {

@@ -1,5 +1,6 @@
 package com.xlox;
 
+import android.annotation.SuppressLint;
 import android.content.ActivityNotFoundException;
 import android.content.ClipData;
 import android.content.ClipboardManager;
@@ -32,6 +33,7 @@ import com.xlox.ui.PermissionSheet;
 import com.xlox.ui.UpdateGate;
 import com.xlox.utils.AppManager;
 import com.xlox.utils.AppUpdater;
+import com.xlox.utils.GameSupport;
 import com.xlox.utils.LibManager;
 import com.xlox.utils.Net;
 import com.xlox.utils.Prefs;
@@ -165,6 +167,11 @@ public class MAct extends AppCompatActivity {
 
     private TextView panelNote;
     private View panelNoteCard;
+    /** 2.3.5: "BGMI updated" warning (installed BGMI newer than the library supports). */
+    private View gameUpdateCard;
+    private TextView gameUpdateText;
+    private long gameSupportCheckedAt;
+    private boolean gameSupportChecking;
     private View licenceCard;
     private int statusLook = -1;
     private TextView statusValue;
@@ -342,6 +349,8 @@ public class MAct extends AppCompatActivity {
             panelNote.setBreakStrategy(android.text.Layout.BREAK_STRATEGY_BALANCED);
         }
         panelNoteCard = findViewById(R.id.panelNoteCard);
+        gameUpdateCard = findViewById(R.id.gameUpdateCard);
+        gameUpdateText = findViewById(R.id.gameUpdateText);
         licenceCard = findViewById(R.id.licenceCard);
         statusValue = findViewById(R.id.statusValue);
         expiresValue = findViewById(R.id.expiresValue);
@@ -526,6 +535,7 @@ public class MAct extends AppCompatActivity {
         if (launchErrorShown && containerRunning()) onGameLaunched(false);
         refreshLibrary();
         if (!preview) applyPanelStatus();
+        maybeCheckGameSupport();
         reportLoaderError();
         maybeRecheckLibrary();
         maybeRefreshLicence(false);
@@ -1310,12 +1320,53 @@ public class MAct extends AppCompatActivity {
             // Installed, but the library, a permission or the container isn't ready.
             setDot(gameStateValue, getString(R.string.state_installed), R.color.warning, R.color.text_primary);
         }
+        showGameSupport(gameVersion);
         refreshPrimary();
+    }
+
+    // ---------------------------------------- BGMI newer than the library
+
+    private static final long GAME_SUPPORT_MIN_MS = 10L * 60L * 1000L;
+
+    /** 2.3.5: ask the panel which BGMI the library works with (at most every 10 minutes). */
+    private void maybeCheckGameSupport() {
+        if (preview || gameSupportChecking) return;
+        long now = SystemClock.elapsedRealtime();
+        if (gameSupportCheckedAt != 0L && now - gameSupportCheckedAt < GAME_SUPPORT_MIN_MS) return;
+        gameSupportChecking = true;
+        gameSupportCheckedAt = now;
+        final Context app = getApplicationContext();
+        try {
+            ioExecutor.execute(() -> {
+                GameSupport.refresh(app);
+                main.post(() -> {
+                    gameSupportChecking = false;
+                    if (Ui.alive(this)) showGameSupport(installedVersionName(PKG_BGMI));
+                });
+            });
+        } catch (RejectedExecutionException e) {
+            gameSupportChecking = false;
+        }
+    }
+
+    /** Shows the warning card when BGMI is newer than the library supports. Only a notice: Launch is unchanged. */
+    private void showGameSupport(String installed) {
+        if (gameUpdateCard == null) return;
+        String supported = preview ? null : GameSupport.cached(this);
+        if (installed == null || !GameSupport.isNewer(installed, supported)) {
+            gameUpdateCard.setVisibility(View.GONE);
+            return;
+        }
+        String text = getString(R.string.game_update_text, installed, supported);
+        gameUpdateText.setText(keepLastWordsTogether(text));
+        gameUpdateCard.setContentDescription(getString(R.string.game_update_kicker) + ". " + text);
+        gameUpdateCard.setVisibility(View.VISIBLE);
     }
 
     // ------------------------------------------------------------------ help
 
     /** Help sheet: three short tips, Copy support info (preview first) and the Telegram link. */
+    @SuppressLint("InflateParams") // a sheet has no parent view until it is shown
     private void showHelp() {
         if (helpSheet != null && helpSheet.isShowing()) return;
         View sheetView = LayoutInflater.from(this).inflate(R.layout.sheet_help, null, false);

@@ -145,6 +145,9 @@ create table if not exists public.client_release (
   uploaded_by  varchar(66)  not null default 'admin',
   created_at   timestamptz  not null default now()
 );
+-- v2.3.5: newest BGMI version this library works with (e.g. 3.9.0). The app
+-- warns when the installed BGMI is newer. Empty/null = no warning.
+alter table public.client_release add column if not exists game_version varchar(32);
 create unique index if not exists client_release_one_current
   on public.client_release (is_current) where is_current = true;
 
