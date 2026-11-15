@@ -11,7 +11,7 @@
                 (gone when empty)
     time card   EXPIRES IN + status dot; one countdown line (Title M numerals);
                 the IST expiry date; "Offline · last checked …" when stale
-    game cards  Punji: BGMI, then PUBG Mobile. Each: 56 dp bundled icon, name +
+    game cards  Punji: BGMI, then PUBG KR. Each: 56 dp bundled icon, name +
                 version, library; divider; State and Server; its own Launch /
                 Stop button (56 dp)
     action bar  pinned; status line (its space is kept while a task runs) and
@@ -370,7 +370,7 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- ===================================== game card 2: PUBG Mobile (Punji) -->
+            <!-- ========================================= game card 2: PUBG KR (Punji) -->
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/gameCardPubg"
                 style="@style/Widget.Anoy.Card"
@@ -391,7 +391,7 @@
                         android:gravity="center_vertical"
                         android:orientation="horizontal">
 
-                        <!-- The PUBG Mobile icon (Wikipedia), bundled; never loaded at runtime. -->
+                        <!-- The PUBG Mobile icon (Wikipedia), used for PUBG KR; bundled, never loaded at runtime. -->
                         <com.google.android.material.imageview.ShapeableImageView
                             android:id="@+id/gameTilePubg"
                             android:layout_width="@dimen/game_tile"

@@ -18,8 +18,8 @@ public class BoxApplication extends Application
     private static final String TAG = "BoxApplication";
     private static final String LOAD_TAG = "Load";
     private static final String GAME_PROCESS = "com.pubg.imobile";
-    /** Punji: PUBG Mobile (global). Loads libpubgm.so instead of libbgmi.so. */
-    private static final String GAME_PROCESS_PUBGM = "com.tencent.ig";
+    /** Punji: PUBG KR. Loads libpubgm.so instead of libbgmi.so. */
+    private static final String GAME_PROCESS_PUBGM = "com.pubg.krmobile";
 
     static {
         try {
@@ -132,7 +132,7 @@ public class BoxApplication extends Application
         }
     }
 
-    /** PUBG Mobile (com.tencent.ig): the same steps as BGMI, with libpubgm.so. */
+    /** PUBG KR (com.pubg.krmobile): the same steps as BGMI, with libpubgm.so. */
     private void loadPubgmLib(Context ctx) {
         File lib = LibManager.libFile(ctx, LibManager.LIB_NAME_PUBGM);
         String name = LibManager.LIB_NAME_PUBGM;
@@ -171,7 +171,7 @@ public class BoxApplication extends Application
         }
     }
 
-    /** com.tencent.ig, or one of its sub-processes (com.tencent.ig:xyz). */
+    /** com.pubg.krmobile, or one of its sub-processes (com.pubg.krmobile:xyz). */
     private static boolean isPubgmProcess(String name) {
         if (name == null) return false;
         return name.equals(GAME_PROCESS_PUBGM) || name.startsWith(GAME_PROCESS_PUBGM + ":");

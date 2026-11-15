@@ -369,7 +369,7 @@ public final class Downtwo {
         } else {
             throw new UpdateException(app.getString(R.string.update_invalid_file), false);
         }
-        // Punji: the ZIP may hold libbgmi.so (BGMI), libpubgm.so (PUBG Mobile) or both.
+        // Punji: the ZIP may hold libbgmi.so (BGMI), libpubgm.so (PUBG KR) or both.
         if (LibManager.findLib(staging) == null
                 && LibManager.findNamed(staging, LibManager.LIB_NAME_PUBGM) == null) {
             throw new UpdateException(app.getString(R.string.update_no_library), false);

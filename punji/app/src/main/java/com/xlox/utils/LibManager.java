@@ -43,7 +43,7 @@ public final class LibManager {
     public static final String LOADER_DIR_NAME = "loader";
     public static final String STAGING_DIR_NAME = "loader_staging";
     public static final String LIB_NAME = "libbgmi.so";
-    /** Punji: PUBG Mobile (com.tencent.ig) uses its own library, in the same ZIP. */
+    /** Punji: PUBG KR (com.pubg.krmobile) uses its own library, in the same ZIP. */
     public static final String LIB_NAME_PUBGM = "libpubgm.so";
 
     // A plain file, not SharedPreferences: the virtual game process writes the
@@ -201,7 +201,7 @@ public final class LibManager {
 
     /**
      * Installs an extracted release ZIP. libbgmi.so (BGMI) and libpubgm.so
-     * (PUBG Mobile) are each installed when the ZIP has them; a library the new
+     * (PUBG KR) are each installed when the ZIP has them; a library the new
      * ZIP no longer has is removed, so an old one never stays behind. True when
      * at least one of the two is installed.
      */

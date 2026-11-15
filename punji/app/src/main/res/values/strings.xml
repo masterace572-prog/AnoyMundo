@@ -281,14 +281,14 @@
     <string name="game_title_version">BGMI v%1$s</string>
     <string name="game_icon_description">BGMI</string>
 
-    <!-- Punji: the second game, PUBG Mobile (com.tencent.ig, libpubgm.so). -->
-    <string name="game_name_pubgm">PUBG Mobile</string>
-    <string name="game_title_version_pubgm">PUBG Mobile v%1$s</string>
-    <string name="game_icon_description_pubgm">PUBG Mobile</string>
-    <string name="install_game_pubgm">Install PUBG Mobile</string>
-    <string name="error_obb_missing_pubgm">Game files not found. Open PUBG Mobile once from the Play Store to download them.</string>
+    <!-- Punji: the second game, PUBG KR (com.pubg.krmobile, libpubgm.so). -->
+    <string name="game_name_pubgm">PUBG KR</string>
+    <string name="game_title_version_pubgm">PUBG KR v%1$s</string>
+    <string name="game_icon_description_pubgm">PUBG KR</string>
+    <string name="install_game_pubgm">Install PUBG KR</string>
+    <string name="error_obb_missing_pubgm">Game files not found. Open PUBG KR once from the Play Store to download them.</string>
     <string name="launch_bgmi_description">Launch BGMI</string>
-    <string name="launch_pubgm_description">Launch PUBG Mobile</string>
+    <string name="launch_pubgm_description">Launch PUBG KR</string>
     <!-- The release ZIP has no libpubgm.so (or no libbgmi.so) yet. -->
     <string name="error_game_lib_missing">%1$s isn\'t in the current library yet. Try again after the next library update.</string>
 

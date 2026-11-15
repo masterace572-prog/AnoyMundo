@@ -76,9 +76,9 @@ public class MAct extends AppCompatActivity {
 
     private static final String TAG = "MAct";
     private static final String PKG_BGMI = "com.pubg.imobile";
-    /** Punji: the second game, PUBG Mobile (global). Uses libpubgm.so. */
-    private static final String PKG_PUBGM = "com.tencent.ig";
-    /** Punji: the PUBG Mobile card always shows this game version. */
+    /** Punji: the second game, PUBG KR. Uses libpubgm.so. */
+    private static final String PKG_PUBGM = "com.pubg.krmobile";
+    /** Punji: the PUBG KR card always shows this game version. */
     private static final String PUBGM_VERSION = "4.7.0";
     /** Punji: which game a restart-for-game-files Launch belongs to. */
     private static final String PREF_RESTART_GAME = "restart_launch_game";
@@ -170,7 +170,7 @@ public class MAct extends AppCompatActivity {
     private final Handler main = new Handler(Looper.getMainLooper());
 
     /**
-     * Punji: one game card (BGMI or PUBG Mobile) with its own Launch / Stop
+     * Punji: one game card (BGMI or PUBG KR) with its own Launch / Stop
      * button, library and running state. Everything a launch does (OBB copy,
      * container launch, stop) uses the game's package.
      */
@@ -185,9 +185,8 @@ public class MAct extends AppCompatActivity {
         final int installRes;
         final int obbMissingRes;
         /**
-         * BGMI: copy the OBB into the container before every launch. PUBG
-         * Mobile is installed as split APKs with the game data built in, so it
-         * has no OBB to copy and launches straight away.
+         * Copy the OBB into the container before the launch (both games do;
+         * false would launch straight away, for a game without an OBB).
          */
         final boolean copiesObb;
         TextView title;
@@ -223,7 +222,7 @@ public class MAct extends AppCompatActivity {
             true);
     private final Game pubgm = new Game(PKG_PUBGM, LibManager.LIB_NAME_PUBGM, "obb_prepared_once_pubgm",
             PUBGM_VERSION, R.string.game_name_pubgm, R.string.game_title_version_pubgm,
-            R.string.install_game_pubgm, R.string.error_obb_missing_pubgm, false);
+            R.string.install_game_pubgm, R.string.error_obb_missing_pubgm, true);
     private final Game[] games = {bgmi, pubgm};
     /** The game whose button started the current (or the last) action. */
     private Game active = bgmi;
@@ -1502,7 +1501,7 @@ public class MAct extends AppCompatActivity {
         b.append("Android: ").append(Build.VERSION.RELEASE).append(" (API ").append(Build.VERSION.SDK_INT).append(")\n");
         b.append("Device: ").append(deviceName()).append('\n');
         b.append("BGMI: ").append(bgmi.state.getText()).append('\n');
-        b.append("PUBG Mobile: ").append(pubgm.state.getText()).append('\n');
+        b.append("PUBG KR: ").append(pubgm.state.getText()).append('\n');
         StringBuilder missing = new StringBuilder();
         for (StorageAccess.Need need : StorageAccess.Need.values()) {
             if (StorageAccess.has(this, need)) continue;
@@ -1539,7 +1538,7 @@ public class MAct extends AppCompatActivity {
     /** Library installed, the three permissions granted and the container activated. */
     private boolean readyToLaunch(Game g) {
         if (LibManager.installedVersion(this) == null || !LibManager.isUsableLib(this, g.libName)) return false;
-        // The three access items are only for the OBB copy (BGMI).
+        // The three access items are only needed for the OBB copy.
         if (g.copiesObb && StorageAccess.firstMissing(this) != null) return false;
         if (preview) return true; // Sample screen: the emulator has no activated container.
         try {
@@ -1719,8 +1718,8 @@ public class MAct extends AppCompatActivity {
             return;
         }
         if (!active.copiesObb) {
-            // PUBG Mobile (split APKs, game data built in): no game-files copy,
-            // no files-access prompt - launch right away.
+            // A game without an OBB: no game-files copy, no files-access
+            // prompt - launch right away.
             Log.d(TAG, "Launch: " + active.pkg + " has no OBB to copy, launching now");
             setBusy(true, getString(R.string.launching));
             main.post(this::launchGame);
