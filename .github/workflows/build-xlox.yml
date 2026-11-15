@@ -141,6 +141,7 @@ jobs:
                 echo "::error::$(echo "$line" | cut -c1-400)"
               done
             grep -A3 -E "error:" /tmp/assemble.log | head -60 | tr '\n' ' ' | cut -c1-3500 | sed 's/^/::error title=context::/'
+            grep -A8 "What went wrong" /tmp/assemble.log | head -30 | tr '\n' ' ' | cut -c1-3500 | sed 's/^/::error title=gradle::/'
           fi
           exit $rc
 

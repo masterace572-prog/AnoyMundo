@@ -160,7 +160,7 @@ try {
         await more.click();
         await page.waitForSelector('.sheet.show', { timeout: 3000 }).catch(() => {});
         const items = await page.$$eval('.sheet.show .sheet-item', (b) => b.map((x) => x.textContent.trim()));
-        if (items.join('|') !== 'Copy key|Reset devices|Edit|Delete key') problem0(`keys: sheet items are ${JSON.stringify(items)}`);
+        if (items.join('|') !== 'Copy key|Reset devices|Edit|Ban|Delete key') problem0(`keys: sheet items are ${JSON.stringify(items)}`);
         await shot(page, `${size.name}_keys_sheet`, { fullPage: false });
         await page.click('.sheet.show .sheet-item.danger');
         await page.waitForSelector('.modal-backdrop.show', { timeout: 3000 }).catch(() => {});
@@ -278,4 +278,6 @@ try {
 }
 writeFileSync(path.join(out, 'report.txt'), report.length ? `${report.join('\n')}\n` : 'ok\n');
 console.log(failures ? `${failures} problem(s)` : 'all screenshots saved');
+// CI: failures as annotations (readable without the log archive).
+if (failures && process.env.GITHUB_ACTIONS) report.filter((l) => !/expiry row:/.test(l)).slice(0, 20).forEach((l) => console.log(`::error::${l.slice(0, 400)}`));
 process.exit(failures ? 1 : 0);
