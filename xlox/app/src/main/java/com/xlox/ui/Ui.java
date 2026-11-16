@@ -6,6 +6,10 @@ import android.content.ActivityNotFoundException;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.Color;
+import android.graphics.ColorFilter;
+import android.graphics.PorterDuff;
+import android.graphics.PorterDuffColorFilter;
+import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.Build;
 import android.provider.Settings;
@@ -20,13 +24,22 @@ import android.view.animation.Interpolator;
 import android.view.animation.LinearInterpolator;
 import android.view.animation.PathInterpolator;
 
+import androidx.core.content.ContextCompat;
 import androidx.core.graphics.Insets;
+import androidx.core.graphics.drawable.DrawableCompat;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.core.view.WindowInsetsControllerCompat;
 
 import com.google.android.material.bottomsheet.BottomSheetBehavior;
+import com.airbnb.lottie.LottieComposition;
+import com.airbnb.lottie.LottieCompositionFactory;
+import com.airbnb.lottie.LottieDrawable;
+import com.airbnb.lottie.LottieProperty;
+import com.airbnb.lottie.LottieResult;
+import com.airbnb.lottie.LottieValueCallback;
+import com.airbnb.lottie.model.KeyPath;
 import com.google.android.material.bottomsheet.BottomSheetDialog;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.progressindicator.CircularProgressIndicatorSpec;
@@ -333,17 +346,36 @@ public final class Ui {
 
     // ---------------------------------------------------------------- buttons
 
-    /** 18 dp inline indeterminate indicator for a MaterialButton icon. */
-    public static IndeterminateDrawable<CircularProgressIndicatorSpec> buttonProgress(Context context) {
+    /** 18 dp inline Lottie arc for a MaterialButton, or the original fallback. */
+    public static Drawable buttonProgress(Context context) {
+        try {
+            LottieResult<LottieComposition> result =
+                    LottieCompositionFactory.fromRawResSync(context, R.raw.anoy_arc);
+            LottieComposition composition = result == null ? null : result.getValue();
+            if (composition != null) {
+                LottieDrawable drawable = new LottieDrawable();
+                if (drawable.setComposition(composition)) {
+                    drawable.setRepeatCount(LottieDrawable.INFINITE);
+                    int size = context.getResources().getDimensionPixelSize(R.dimen.button_progress);
+                    drawable.setBounds(0, 0, size, size);
+                    int tintColor = ContextCompat.getColorStateList(context, R.color.button_text).getDefaultColor();
+                    ColorFilter tint = new PorterDuffColorFilter(tintColor, PorterDuff.Mode.SRC_ATOP);
+                    drawable.addValueCallback(new KeyPath("**"), LottieProperty.COLOR_FILTER,
+                            new LottieValueCallback<>(tint));
+                    return drawable;
+                }
+            }
+        } catch (RuntimeException e) {
+            Log.w(TAG, "Button loading arc unavailable; using the spinner fallback", e);
+        }
         CircularProgressIndicatorSpec spec = new CircularProgressIndicatorSpec(context, null, 0,
                 R.style.Widget_Anoy_ButtonProgress);
         return IndeterminateDrawable.createCircularDrawable(context, spec);
     }
 
     /**
-     * Loading button: inline 18 dp indicator (+ label, or the indicator alone
-     * when the label is empty); the button keeps its colour and size and
-     * ignores taps while loading.
+     * Loading button: inline 18 dp arc (+ label, or the arc alone when the
+     * label is empty); the button keeps its colour and size and ignores taps.
      */
     public static void setLoading(MaterialButton button, boolean loading, CharSequence label) {
         if (button == null) return;
@@ -351,11 +383,21 @@ public final class Ui {
         button.setIconPadding(loading && (label == null || label.length() == 0)
                 ? 0 : dp(button.getContext(), 8));
         if (loading) {
-            if (!(button.getIcon() instanceof IndeterminateDrawable)) {
-                button.setIcon(buttonProgress(button.getContext()));
+            Drawable icon = DrawableCompat.unwrap(button.getIcon());
+            if (!(icon instanceof LottieDrawable) && !(icon instanceof IndeterminateDrawable)) {
+                Drawable progress = buttonProgress(button.getContext());
+                button.setIcon(progress);
+                if (progress instanceof LottieDrawable) {
+                    LottieDrawable arc = (LottieDrawable) progress;
+                    arc.setProgress(0f);
+                    if (!reducedMotion(button.getContext())) arc.playAnimation();
+                }
             }
             button.setClickable(false);
         } else {
+            Drawable icon = DrawableCompat.unwrap(button.getIcon());
+            if (icon instanceof LottieDrawable) ((LottieDrawable) icon).stop();
+            else if (icon instanceof IndeterminateDrawable) icon.setVisible(false, false);
             button.setIcon(null);
             button.setClickable(true);
         }

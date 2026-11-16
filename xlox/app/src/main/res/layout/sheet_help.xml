@@ -146,6 +146,7 @@
 
                     <ImageView
                         style="@style/RowGlyph"
+                        android:importantForAccessibility="no"
                         app:srcCompat="@drawable/ic_arrow_up_right" />
                 </LinearLayout>
 
@@ -166,6 +167,7 @@
 
                     <ImageView
                         style="@style/RowGlyph"
+                        android:importantForAccessibility="no"
                         app:srcCompat="@drawable/ic_chevron_right" />
                 </LinearLayout>
             </LinearLayout>

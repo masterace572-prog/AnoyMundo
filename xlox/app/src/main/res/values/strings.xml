@@ -197,6 +197,7 @@
     <string name="splash_status_available">Update available (v%1$s)</string>
     <string name="splash_status_failed">Couldn\'t check for updates</string>
     <string name="splash_retry">Try again</string>
+    <string name="update_check_server_failed">The update server isn\'t responding. Try again in a moment.</string>
     <!-- 2.3.4: calm waiting states. -->
     <string name="splash_status_slow">Taking longer than usual…</string>
     <string name="splash_status_slow_detail">Still trying. Your connection may be slow.</string>

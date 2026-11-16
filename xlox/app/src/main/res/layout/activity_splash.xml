@@ -145,6 +145,14 @@
                 android:layout_marginEnd="@dimen/space_4"
                 android:importantForAccessibility="no" />
 
+            <ImageView
+                android:id="@+id/splashStatusIcon"
+                android:layout_width="@dimen/lottie_status"
+                android:layout_height="@dimen/lottie_status"
+                android:layout_marginEnd="@dimen/space_4"
+                android:importantForAccessibility="no"
+                android:visibility="gone" />
+
             <TextView
                 android:id="@+id/splashStatus"
                 style="@style/Text.BodyS"

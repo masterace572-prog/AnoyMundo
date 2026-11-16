@@ -266,6 +266,10 @@
         <item name="fontFamily">@font/inter_medium</item>
     </style>
 
+    <style name="Widget.Anoy.StatusPill" parent="@style/Text.Caption.Medium">
+        <item name="android:background">@drawable/bg_status_pill</item>
+    </style>
+
     <style name="Text.Error">
         <item name="android:textSize">@dimen/text_caption</item>
         <item name="lineHeight">18sp</item>

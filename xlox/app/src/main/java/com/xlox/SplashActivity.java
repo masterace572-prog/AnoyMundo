@@ -15,6 +15,7 @@ import android.view.animation.LinearInterpolator;
 import android.view.animation.PathInterpolator;
 import android.content.res.ColorStateList;
 import android.graphics.drawable.Drawable;
+import android.widget.ImageView;
 import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
@@ -157,6 +158,8 @@ public class SplashActivity extends AppCompatActivity {
     private static final long SLOW_DETAIL_MS = 15_000L;
     /** Debug simulation: how long the fake check takes. */
     private static final long QA_CHECK_MS = 900L;
+    /** A retried check keeps its arc visible long enough not to flash. */
+    private static final long RETRY_ARC_HOLD_MS = 600L;
 
     private enum Check { PENDING, CHECKING, CURRENT, AVAILABLE, FAILED }
 
@@ -175,8 +178,11 @@ public class SplashActivity extends AppCompatActivity {
     private View statusBar;
     private View statusRow;
     private LottieAnimationView statusMark;
+    private ImageView statusIcon;
     /** Uptime when the current status text appeared (for the "Up to date" hold). */
     private long statusShownAt;
+    /** Uptime when a retry's status arc started; zero when no hold is pending. */
+    private long retryArcStartedAt;
     private TextView statusLine;
     private TextView statusDetail;
     private View retry;
@@ -244,12 +250,17 @@ public class SplashActivity extends AppCompatActivity {
             statusBar = findViewById(R.id.splashStatusBar);
             statusRow = findViewById(R.id.splashStatusRow);
             statusMark = findViewById(R.id.splashStatusMark);
+            statusIcon = findViewById(R.id.splashStatusIcon);
             Motion.arc(statusMark); // as the old spinner: waiting from the first frame
             statusLine = findViewById(R.id.splashStatus);
             statusDetail = findViewById(R.id.splashStatusDetail);
             retry = findViewById(R.id.splashRetry);
             retry.setOnClickListener(v -> {
                 Ui.tap(v);
+                statusIcon.setAlpha(1f);
+                statusIcon.setVisibility(View.GONE);
+                retryArcStartedAt = android.os.SystemClock.uptimeMillis();
+                Motion.arc(statusMark);
                 startCheck();
             });
             driftPx = Ui.dp(this, CUT_DRIFT_DP);
@@ -395,8 +406,25 @@ public class SplashActivity extends AppCompatActivity {
         });
     }
 
+    private boolean deferForRetryArc(int run, Runnable result) {
+        if (retryArcStartedAt == 0L) return false;
+        long remaining = RETRY_ARC_HOLD_MS
+                - (android.os.SystemClock.uptimeMillis() - retryArcStartedAt);
+        if (remaining <= 0L) {
+            retryArcStartedAt = 0L;
+            return false;
+        }
+        handler.postDelayed(() -> {
+            if (run != checkRun || !Ui.alive(this)) return;
+            retryArcStartedAt = 0L;
+            result.run();
+        }, remaining);
+        return true;
+    }
+
     private void onChecked(int run, AppUpdater.Release found) {
         if (run != checkRun || !Ui.alive(this)) return;
+        if (deferForRetryArc(run, () -> onChecked(run, found))) return;
         Breadcrumbs.add(found == null ? "app update check: result current" : "app update check: result available");
         release = found;
         if (found == null) {
@@ -420,12 +448,20 @@ public class SplashActivity extends AppCompatActivity {
 
     private void onCheckFailed(int run, String reason) {
         if (run != checkRun || !Ui.alive(this)) return;
+        if (deferForRetryArc(run, () -> onCheckFailed(run, reason))) return;
         Breadcrumbs.add("app update check: result failed");
         check = Check.FAILED;
-        setStatus(getString(R.string.splash_status_failed), R.drawable.dot_status, R.color.warning, false,
+        boolean offline = getString(R.string.net_offline).equals(reason);
+        Motion.hide(statusMark);
+        setStatus(getString(R.string.splash_status_failed), 0, R.color.warning, false,
                 SWAP_OUT_MS, SWAP_IN_MS);
-        // Try again sits right below, so the reason drops its own "Try again."
-        String detail = Ui.dropTryAgain(reason);
+        statusIcon.setImageResource(offline ? R.drawable.ic_wifi_off : R.drawable.ic_triangle_alert);
+        statusIcon.setColorFilter(ContextCompat.getColor(this,
+                offline ? R.color.text_secondary : R.color.warning));
+        Ui.fade(statusIcon, true);
+        // Prefer a concise service explanation for the server's unavailable response.
+        String detail = getString(R.string.update_unavailable).equals(reason)
+                ? getString(R.string.update_check_server_failed) : Ui.dropTryAgain(reason);
         statusDetail.animate().cancel();
         statusDetail.setAlpha(1f);
         statusDetail.setText(detail);
@@ -510,6 +546,9 @@ public class SplashActivity extends AppCompatActivity {
         statusDetail.setAlpha(1f);
         statusDetail.setVisibility(View.INVISIBLE);
         statusDetail.setText("");
+        statusIcon.animate().cancel();
+        statusIcon.setAlpha(1f);
+        statusIcon.setVisibility(View.GONE);
         retry.setVisibility(View.GONE);
     }
 
