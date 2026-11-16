@@ -132,6 +132,7 @@ public class AppUpdateActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        Breadcrumbs.add("screen open: app update");
         release = AppUpdater.Release.from(getIntent());
         preview = BuildConfig.DEBUG && getIntent().getBooleanExtra(EXTRA_QA_PREVIEW, false);
         if (release == null) {

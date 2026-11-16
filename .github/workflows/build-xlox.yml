@@ -145,6 +145,16 @@ jobs:
           fi
           exit $rc
 
+      - name: Upload release retrace symbols
+        uses: actions/upload-artifact@v7
+        with:
+          name: xlox-symbols-${{ env.APP_VERSION_NAME }}-${{ env.APP_VERSION_CODE }}
+          path: |
+            xlox/app/build/outputs/mapping/release/mapping.txt
+            xlox/app/build/outputs/native-debug-symbols/release/native-debug-symbols.zip
+          if-no-files-found: error
+          retention-days: 90
+
       - name: Android lint (errors fail the build)
         run: |
           set +e

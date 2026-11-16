@@ -18,6 +18,7 @@ import androidx.core.content.ContextCompat;
 import com.google.android.material.bottomsheet.BottomSheetDialog;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.progressindicator.LinearProgressIndicator;
+import com.xlox.Breadcrumbs;
 import com.xlox.BuildConfig;
 import com.xlox.R;
 import com.xlox.utils.Downtwo;
@@ -130,17 +131,21 @@ public final class UpdateGate {
      */
     public static UpdateGate recheck(Activity activity, Listener listener) {
         UpdateGate gate = new UpdateGate(activity, listener);
+        Breadcrumbs.add("library update check: start");
         EXECUTOR.execute(() -> {
             try {
                 Downtwo.Status status = Downtwo.check(activity);
+                recordCheckResult(status);
                 if (status.updateRequired) {
                     gate.post(() -> {
                         if (gate.ensureDialog()) gate.showUpdate(status);
                     });
                 }
             } catch (UpdateException e) {
+                Breadcrumbs.add("library update check: result failed");
                 Log.i(TAG, "Silent re-check skipped: " + e.getMessage());
             } catch (Throwable t) {
+                Breadcrumbs.add("library update check: result failed");
                 Log.w(TAG, "Silent re-check failed", t);
             }
         });
@@ -382,18 +387,22 @@ public final class UpdateGate {
     // ---------------------------------------------------------------- states
 
     private void runCheck() {
+        Breadcrumbs.add("library update check: start");
         renderChecking();
         final long started = SystemClock.elapsedRealtime();
         EXECUTOR.execute(() -> {
             try {
                 Downtwo.Status status = Downtwo.check(activity);
+                recordCheckResult(status);
                 long wait = Math.max(0L, MIN_CHECKING_MS - (SystemClock.elapsedRealtime() - started));
                 main.postDelayed(() -> {
                     if (!cancelled.get() && Ui.alive(activity)) onChecked(status);
                 }, wait);
             } catch (UpdateException e) {
+                Breadcrumbs.add("library update check: result failed");
                 post(() -> showCheckFailed(e.getMessage()));
             } catch (Throwable t) {
+                Breadcrumbs.add("library update check: result failed");
                 Log.e(TAG, "Update check crashed", t);
                 post(() -> showCheckFailed(activity.getString(R.string.net_generic)));
             }
@@ -402,12 +411,14 @@ public final class UpdateGate {
 
     /** Re-download: the panel's current release, then the usual download + install. */
     private void runRedownload() {
+        Breadcrumbs.add("library update check: start");
         working = true;
         renderChecking();
         final long started = SystemClock.elapsedRealtime();
         EXECUTOR.execute(() -> {
             try {
                 Downtwo.Status status = Downtwo.check(activity);
+                recordCheckResult(status);
                 long wait = Math.max(0L, MIN_CHECKING_MS - (SystemClock.elapsedRealtime() - started));
                 main.postDelayed(() -> {
                     if (cancelled.get() || !Ui.alive(activity)) return;
@@ -421,12 +432,26 @@ public final class UpdateGate {
                     startDownload();
                 }, wait);
             } catch (UpdateException e) {
+                Breadcrumbs.add("library update check: result failed");
                 post(() -> showCheckFailed(e.getMessage()));
             } catch (Throwable t) {
+                Breadcrumbs.add("library update check: result failed");
                 Log.e(TAG, "Re-download check crashed", t);
                 post(() -> showCheckFailed(activity.getString(R.string.net_generic)));
             }
         });
+    }
+
+    private static void recordCheckResult(Downtwo.Status status) {
+        if (status == null) {
+            Breadcrumbs.add("library update check: result unavailable");
+        } else if (status.updateRequired) {
+            Breadcrumbs.add("library update check: result update required");
+        } else if (status.libUsable) {
+            Breadcrumbs.add("library update check: result current");
+        } else {
+            Breadcrumbs.add("library update check: result unavailable");
+        }
     }
 
     private void onChecked(Downtwo.Status status) {

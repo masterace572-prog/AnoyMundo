@@ -9,6 +9,7 @@ import android.os.SystemClock;
 import android.text.TextUtils;
 import android.util.Log;
 
+import com.xlox.Breadcrumbs;
 import com.xlox.R;
 import com.xlox.ui.Ui;
 
@@ -79,6 +80,7 @@ public final class AppManager {
      * real, verified copy or a correct "already current" check.
      */
     public void copyObbAsync(String pkg, CopyCallback callback) {
+        Breadcrumbs.add("OBB copy: start");
         EXECUTOR.execute(() -> {
             String[] error = {null};
             boolean ok;
@@ -89,6 +91,7 @@ public final class AppManager {
                 ok = false;
             }
             if (!ok && TextUtils.isEmpty(error[0])) error[0] = ctx.getString(R.string.obb_copy_failed);
+            Breadcrumbs.add(ok ? "OBB copy: success" : "OBB copy: failure");
             final boolean success = ok;
             final String message = error[0];
             main.post(() -> {

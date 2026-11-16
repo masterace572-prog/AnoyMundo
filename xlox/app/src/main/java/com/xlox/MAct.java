@@ -341,6 +341,7 @@ public class MAct extends AppCompatActivity {
             return;
         }
 
+        Breadcrumbs.add("screen open: home");
         Ui.edgeToEdge(this);
         setContentView(R.layout.activity_main);
         panelNote = findViewById(R.id.panelNote);
@@ -1376,6 +1377,7 @@ public class MAct extends AppCompatActivity {
     @SuppressLint("InflateParams") // a sheet has no parent view until it is shown
     private void showHelp() {
         if (helpSheet != null && helpSheet.isShowing()) return;
+        Breadcrumbs.add("screen open: help");
         View sheetView = LayoutInflater.from(this).inflate(R.layout.sheet_help, null, false);
         BottomSheetDialog sheet = Ui.sheet(this, sheetView, true);
         helpSheet = sheet;
@@ -1402,6 +1404,7 @@ public class MAct extends AppCompatActivity {
 
     /** Shows exactly what "Copy support info" copies; nothing leaves the phone unless the user pastes it. */
     private void showSupportInfo() {
+        Breadcrumbs.add("screen open: support info");
         String info = supportInfo();
         View sheetView = LayoutInflater.from(this).inflate(R.layout.sheet_support_info, null, false);
         ((TextView) sheetView.findViewById(R.id.supportInfoText)).setText(dimKeys(info));
@@ -1646,6 +1649,7 @@ public class MAct extends AppCompatActivity {
         } else if (gameRunning) {
             stopGame();
         } else {
+            Breadcrumbs.add("launch: tapped");
             startLaunch();
         }
     }
@@ -2191,6 +2195,7 @@ public class MAct extends AppCompatActivity {
     private void checkAppUpdate() {
         if (appCheckRunning) return;
         appCheckRunning = true;
+        Breadcrumbs.add("app update check: start");
         final int run = ++appCheckRun;
         main.removeCallbacks(clearAppCheck);
         showAppCheck(APP_CHECK_CHECKING, null);
@@ -2229,6 +2234,7 @@ public class MAct extends AppCompatActivity {
                 main.post(() -> onAppChecked(run, release, failure));
             });
         } catch (RejectedExecutionException e) {
+            Breadcrumbs.add("app update check: result failed");
             appCheckRunning = false;
             showAppCheck(APP_CHECK_IDLE, null);
         }
@@ -2246,16 +2252,19 @@ public class MAct extends AppCompatActivity {
         // The caption keeps the last good time; a failure doesn't change it.
         renderAppCheckCaption();
         if (failure != null) {
+            Breadcrumbs.add("app update check: result failed");
             showAppCheck(APP_CHECK_FAILED, failure);
             main.postDelayed(clearAppCheck, qaHold(APP_CHECK_FAILED_MS));
             return;
         }
         if (release == null) {
+            Breadcrumbs.add("app update check: result current");
             Log.i(TAG, "Settings: app is up to date (" + BuildConfig.VERSION_CODE + ")");
             showAppCheck(APP_CHECK_CURRENT, null);
             main.postDelayed(clearAppCheck, qaHold(APP_CHECK_CURRENT_MS));
             return;
         }
+        Breadcrumbs.add("app update check: result available");
         Log.i(TAG, "Settings: app update available: " + release.versionName + " (" + release.versionCode + ")");
         showAppCheck(APP_CHECK_IDLE, null);
         Intent intent = new Intent(this, AppUpdateActivity.class);
@@ -2333,6 +2342,7 @@ public class MAct extends AppCompatActivity {
 
     private void openSettings() {
         if (settingsPage == null || settingsPage.getVisibility() == View.VISIBLE) return;
+        Breadcrumbs.add("screen open: settings");
         Log.d(TAG, "Settings: open");
         // The key is always masked again when Settings opens.
         keyRevealed = false;

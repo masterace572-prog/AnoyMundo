@@ -2,11 +2,14 @@ package com.xlox;
 
 import android.app.Application;
 import android.content.Context;
+import android.os.Build;
 import android.util.Log;
 
 import com.xlox.utils.LibManager;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.nio.charset.StandardCharsets;
 
 import net_62v.external.IMundoProcessCallback;
 import net_62v.external.MetaActivationManager;
@@ -50,6 +53,10 @@ public class BoxApplication extends Application
     public void onCreate() {
         super.onCreate();
         gApp = this;
+        if (isMainProcess()) {
+            CrashReporter.install(this);
+            CrashReporter.logExistingReports(this);
+        }
         Log.i(TAG, "Loader diagnostics: " + LibManager.diagnostics(this));
         try {
             MetaActivationManager.activateSdk(getSdkKey());
@@ -135,6 +142,31 @@ public class BoxApplication extends Application
         return name.equals(GAME_PROCESS)
                 || name.startsWith(GAME_PROCESS + ":")
                 || name.contains("pubg.imobile");
+    }
+
+    private boolean isMainProcess() {
+        try {
+            String processName = Build.VERSION.SDK_INT >= Build.VERSION_CODES.P
+                    ? Application.getProcessName() : readProcessName();
+            return getPackageName().equals(processName);
+        } catch (Throwable ignored) {
+            return false;
+        }
+    }
+
+    /** API 21-27 do not have Application.getProcessName(). */
+    private static String readProcessName() {
+        byte[] bytes = new byte[256];
+        int length = 0;
+        try (FileInputStream input = new FileInputStream("/proc/self/cmdline")) {
+            int value;
+            while (length < bytes.length && (value = input.read()) != -1 && value != 0) {
+                bytes[length++] = (byte) value;
+            }
+        } catch (Throwable ignored) {
+            return null;
+        }
+        return length == 0 ? null : new String(bytes, 0, length, StandardCharsets.UTF_8).trim();
     }
 
     /** Turn the raw linker error into an actionable, user-facing reason. */

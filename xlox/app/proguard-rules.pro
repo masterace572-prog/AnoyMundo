@@ -19,3 +19,6 @@
 # Lottie parses res/raw JSON reflectively-free, but keep its model enums
 # stable across shrinking (recommended by lottie-android).
 -dontwarn com.airbnb.lottie.**
+
+-keepattributes SourceFile,LineNumberTable
+-renamesourcefileattribute SourceFile

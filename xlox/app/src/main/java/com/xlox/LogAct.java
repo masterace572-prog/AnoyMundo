@@ -132,6 +132,7 @@ public class LogAct extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        Breadcrumbs.add("screen open: login");
         Ui.edgeToEdge(this);
         setContentView(R.layout.activity_login);
         prefs = new Prefs(this);

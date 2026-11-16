@@ -207,6 +207,12 @@ public class SplashActivity extends AppCompatActivity {
         // then this activity fading in.
         splash.setOnExitAnimationListener(SplashScreenViewProvider::remove);
         super.onCreate(savedInstanceState);
+        Breadcrumbs.add("screen open: splash");
+        if (BuildConfig.DEBUG && getIntent() != null
+                && getIntent().getBooleanExtra("debug_crash_capture", false)) {
+            throw new IllegalStateException("Debug-only crash capture test",
+                    new IllegalArgumentException("Debug-only root cause"));
+        }
         // Re-launch from the launcher while a task already exists: just finish.
         if (!isTaskRoot() && getIntent() != null && Intent.ACTION_MAIN.equals(getIntent().getAction())
                 && getIntent().hasCategory(Intent.CATEGORY_LAUNCHER)) {
@@ -347,6 +353,7 @@ public class SplashActivity extends AppCompatActivity {
         final int run = ++checkRun;
         check = Check.CHECKING;
         release = null;
+        Breadcrumbs.add("app update check: start");
         setStatus(getString(R.string.splash_status_checking), 0, 0, true, 0, 0);
         hideFailure();
         handler.postDelayed(() -> {
@@ -390,6 +397,7 @@ public class SplashActivity extends AppCompatActivity {
 
     private void onChecked(int run, AppUpdater.Release found) {
         if (run != checkRun || !Ui.alive(this)) return;
+        Breadcrumbs.add(found == null ? "app update check: result current" : "app update check: result available");
         release = found;
         if (found == null) {
             check = Check.CURRENT;
@@ -412,6 +420,7 @@ public class SplashActivity extends AppCompatActivity {
 
     private void onCheckFailed(int run, String reason) {
         if (run != checkRun || !Ui.alive(this)) return;
+        Breadcrumbs.add("app update check: result failed");
         check = Check.FAILED;
         setStatus(getString(R.string.splash_status_failed), R.drawable.dot_status, R.color.warning, false,
                 SWAP_OUT_MS, SWAP_IN_MS);

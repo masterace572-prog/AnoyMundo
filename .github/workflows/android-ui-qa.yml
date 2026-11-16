@@ -73,6 +73,14 @@ jobs:
             "build-tools;34.0.0" "ndk;24.0.8215888" \
             "system-images;android-33;google_apis;x86_64" "emulator"
 
+      - name: Read the version from app/build.gradle
+        run: |
+          NAME=$(sed -nE "s/^[[:space:]]*versionName[[:space:]]+'([^']+)'.*/\1/p" app/build.gradle | head -1)
+          CODE=$(sed -nE 's/^[[:space:]]*versionCode[[:space:]]+([0-9]+).*/\1/p' app/build.gradle | head -1)
+          [ -n "$NAME" ] && [ -n "$CODE" ] || { echo "::error::Could not read versionName / versionCode from app/build.gradle"; exit 1; }
+          echo "APP_VERSION_NAME=$NAME" >> "$GITHUB_ENV"
+          echo "APP_VERSION_CODE=$CODE" >> "$GITHUB_ENV"
+
       - name: Build debug + release APKs
         # Signed with the release key when the repository secrets exist;
         # otherwise the release APK is unsigned (the QA install re-signs it).
@@ -92,6 +100,16 @@ jobs:
               | grep -v "^\s*at " | head -40 | while IFS= read -r line; do echo "::error::$(echo "$line" | cut -c1-400)"; done
           fi
           exit $rc
+
+      - name: Upload release retrace symbols
+        uses: actions/upload-artifact@v7
+        with:
+          name: xlox-ui-qa-symbols-${{ env.APP_VERSION_NAME }}-${{ env.APP_VERSION_CODE }}
+          path: |
+            xlox/app/build/outputs/mapping/release/mapping.txt
+            xlox/app/build/outputs/native-debug-symbols/release/native-debug-symbols.zip
+          if-no-files-found: error
+          retention-days: 90
 
       - name: Permissions in the built APKs
         run: |
