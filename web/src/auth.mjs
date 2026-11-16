@@ -1,4 +1,5 @@
 import crypto from 'node:crypto';
+import { isIP } from 'node:net';
 import bcrypt from 'bcryptjs';
 import { config } from './config.mjs';
 import { getUserById, getUserByUsername } from './db.mjs';
@@ -154,10 +155,34 @@ export function readFlash(req, res) {
   }
 }
 
+function validatedIp(value) {
+  const values = Array.isArray(value) ? value : [value];
+  for (const candidate of values) {
+    if (typeof candidate !== 'string') continue;
+    const ip = candidate.trim();
+    if (isIP(ip)) return ip;
+  }
+  return '';
+}
+
 export function getClientIp(req) {
-  const fwd = req.headers?.['x-forwarded-for'];
-  if (fwd) return String(fwd).split(',')[0].trim();
-  return req.headers?.['x-real-ip'] || req.socket?.remoteAddress || '0.0.0.0';
+  const headers = req?.headers || {};
+  for (const value of [
+    headers['x-vercel-forwarded-for'],
+    headers['x-real-ip'],
+    req?.socket?.remoteAddress,
+  ]) {
+    const ip = validatedIp(value);
+    if (ip) return ip;
+  }
+
+  const forwardedFor = headers['x-forwarded-for'];
+  const leftmost = Array.isArray(forwardedFor) ? forwardedFor[0] : forwardedFor;
+  if (typeof leftmost === 'string') {
+    const ip = validatedIp(leftmost.split(',')[0]);
+    if (ip) return ip;
+  }
+  return '0.0.0.0';
 }
 
 export function levelName(level) {

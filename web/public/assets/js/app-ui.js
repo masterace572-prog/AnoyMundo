@@ -118,10 +118,10 @@
       box.appendChild(el('p', { className: 'session-expired-unsaved' }, "Your entries on this page weren't saved."));
     }
     var actions = el('div', { className: 'actions' });
-    var signIn = el('button', { type: 'button', className: 'btn btn-primary' }, 'Sign in');
     var cancel = el('button', { type: 'button', className: 'btn btn-secondary' }, 'Cancel');
-    actions.appendChild(signIn);
+    var signIn = el('button', { type: 'button', className: 'btn btn-primary' }, 'Sign in');
     actions.appendChild(cancel);
+    actions.appendChild(signIn);
     box.appendChild(actions);
     back.appendChild(box);
     var last = document.activeElement;

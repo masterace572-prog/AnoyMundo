@@ -208,6 +208,20 @@ export async function handleOwnerHealth(res, deep = false) {
     checks.schema = { ok: false, detail: e.message };
     ok = false;
   }
+  try {
+    const { data, error } = await db().from('connect_rate_limit')
+      .select('updated_at').order('updated_at', { ascending: false }).limit(1);
+    if (error) throw new Error(error.message);
+    const lastActivity = Array.isArray(data) ? data[0]?.updated_at : null;
+    checks.connect_rate_limit = {
+      ok: true,
+      detail: lastActivity
+        ? `installed · last activity ${sqlDateTime(lastActivity)} IST`
+        : 'installed · no activity',
+    };
+  } catch {
+    checks.connect_rate_limit = { ok: false, detail: 'not installed' };
+  }
   // Optional deep probe (?rpc=1): prove the billing RPC is reachable from the
   // serverless function through PostgREST. The deliberately invalid price makes
   // the function reject the order and remove its own idempotency row, so this

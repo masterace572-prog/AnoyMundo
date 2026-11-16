@@ -1,6 +1,7 @@
 // End-to-end smoke test against the real HTTP handler with the offline
 // in-memory database driver. Run with: npm test
 import { spawn } from 'node:child_process';
+import { readFile } from 'node:fs/promises';
 import { createServer } from 'node:http';
 import crypto from 'node:crypto';
 import path from 'node:path';
@@ -83,8 +84,8 @@ async function testConnectRateLimitRpcBehavior() {
   let originalRpc;
   let server;
   try {
-    const [{ db }, { handle }] = await Promise.all([
-      import('../src/db.mjs'), import('../src/app.mjs'),
+    const [{ db }, { handle }, { config }] = await Promise.all([
+      import('../src/db.mjs'), import('../src/app.mjs'), import('../src/config.mjs'),
     ]);
     client = db();
     originalRpc = client.rpc;
@@ -93,6 +94,7 @@ async function testConnectRateLimitRpcBehavior() {
     const expiredKey = 'ANOY-2H-F7VWE';
     const bannedKey = 'ANOY-2H-BANNED';
     const clientIp = '198.51.100.77';
+    const forgedIp = '203.0.113.99';
     const validRow = client._store.keys_code.find((row) => row.user_key === validKey);
     const expiredRow = client._store.keys_code.find((row) => row.user_key === expiredKey);
     validRow.status = 1; validRow.expired_date = null; validRow.devices = null;
@@ -111,16 +113,23 @@ async function testConnectRateLimitRpcBehavior() {
         method: 'POST', signal: AbortSignal.timeout(5000),
         headers: {
           'content-type': 'application/x-www-form-urlencoded',
-          'x-forwarded-for': clientIp,
+          'x-vercel-forwarded-for': clientIp,
+          'x-forwarded-for': forgedIp,
         },
         body: new URLSearchParams({ game: 'PUBG', user_key: userKey, serial }),
       });
       return { status: response.status, body: await response.json() };
     };
 
-    console.error = (...args) => logs.push(args.map(String).join(' '));
+    console.error = (...args) => {
+      const line = args.map(String).join(' ');
+      if (line.startsWith('[connect-rate-limit]')) logs.push(line);
+      else originalConsoleError(...args);
+    };
     let includeRawContext = true;
-    client.rpc = async () => {
+    let observedRpc = null;
+    client.rpc = async (name, args) => {
+      observedRpc = { name, args };
       throw new Error(`simulated timeout${includeRawContext ? ` for ${validKey} from ${clientIp}` : ''}`);
     };
     let r = await connect(validKey, 'FAILOPEN-VALID');
@@ -128,6 +137,11 @@ async function testConnectRateLimitRpcBehavior() {
       && Object.keys(r.body).join(',') === 'status,data'
       && Object.keys(r.body.data).join(',') === 'real,token,modname,mod_status,credit,ESP,Item,AIM,SilentAim,BulletTrack,Floating,Memory,Setting,expired_date,EXP,exdate,device,rng',
     'a thrown rate-limit RPC failure still allows a valid key with the normal response');
+    const ipHash = (ip) => crypto.createHmac('sha256', config.authSecret).update(`ip\0${ip}`).digest('hex');
+    ok(observedRpc?.name === 'check_connect_rate_limit'
+      && observedRpc.args.p_ip_hash === ipHash(clientIp)
+      && observedRpc.args.p_ip_hash !== ipHash(forgedIp),
+    'the Vercel client IP, not forged X-Forwarded-For, drives /connect per-IP throttling');
     ok(logs.length === 1 && logs[0].startsWith('[connect-rate-limit] check failed, allowing request:')
       && logs[0].includes('simulated timeout') && !logs[0].includes(validKey) && !logs[0].includes(clientIp),
     'rate-limit RPC failure logs once without exposing the raw key or IP');
@@ -179,6 +193,106 @@ async function testConnectRateLimitRpcBehavior() {
   }
 }
 
+async function testOwnerHealthConnectRateLimit() {
+  const previousDriver = process.env.DB_DRIVER;
+  process.env.DB_DRIVER = 'memory';
+  let client;
+  let originalFrom;
+  let originalRpc;
+  let previousRows;
+  const queryCalls = [];
+  const rpcCalls = [];
+  let queryMode = 'read';
+  try {
+    const [{ db }, { handleOwnerHealth }] = await Promise.all([
+      import('../src/db.mjs'), import('../src/licensing.mjs'),
+    ]);
+    client = db();
+    originalFrom = client.from;
+    originalRpc = client.rpc;
+    previousRows = client._store.connect_rate_limit;
+    client.from = function (table) {
+      const query = originalFrom.call(this, table);
+      if (table !== 'connect_rate_limit') return query;
+      const probe = {};
+      queryCalls.push(probe);
+      for (const method of ['select', 'order', 'limit']) {
+        const originalMethod = query[method].bind(query);
+        query[method] = (...args) => {
+          probe[method] = args;
+          return originalMethod(...args);
+        };
+      }
+      if (queryMode === 'missing') {
+        query.then = (resolve, reject) => Promise.resolve({
+          data: null,
+          error: { message: 'relation "public.connect_rate_limit" does not exist' },
+        }).then(resolve, reject);
+      }
+      return query;
+    };
+    client.rpc = async (...args) => {
+      rpcCalls.push(args);
+      return { data: null, error: { message: 'unexpected RPC' } };
+    };
+    const inspect = async () => {
+      let body;
+      const response = {
+        setHeader() {},
+        end(value) { body = JSON.parse(value); },
+      };
+      await handleOwnerHealth(response);
+      return { statusCode: response.statusCode, body };
+    };
+    const queryIsReadOnlyLatest = (probe) => probe?.select?.[0] === 'updated_at'
+      && probe.order?.[0] === 'updated_at' && probe.order[1]?.ascending === false
+      && probe.limit?.[0] === 1;
+
+    client._store.connect_rate_limit = [
+      { dimension: 'ip', subject_hash: 'a'.repeat(64), window_started_at: '2026-11-16T12:00:00.000Z', hit_count: 2, updated_at: '2026-11-16T12:30:00.000Z' },
+      { dimension: 'key', subject_hash: 'b'.repeat(64), window_started_at: '2026-11-16T12:00:00.000Z', hit_count: 4, updated_at: '2026-11-16T13:04:56.000Z' },
+    ];
+    const installedRows = JSON.stringify(client._store.connect_rate_limit);
+    let report = await inspect();
+    ok(report.statusCode === 200 && report.body.checks.connect_rate_limit?.ok === true
+      && report.body.checks.connect_rate_limit.detail === 'installed · last activity 2026-11-16 18:34:56 IST'
+      && queryIsReadOnlyLatest(queryCalls.at(-1)),
+    'owner health reports the newest connect-rate timestamp from a one-row read');
+    ok(JSON.stringify(client._store.connect_rate_limit) === installedRows && rpcCalls.length === 0,
+      'owner health reads rate-limit rows without changing them or calling an RPC');
+
+    queryMode = 'read';
+    client._store.connect_rate_limit = [];
+    const emptyRows = JSON.stringify(client._store.connect_rate_limit);
+    report = await inspect();
+    ok(report.body.checks.connect_rate_limit?.ok === true
+      && report.body.checks.connect_rate_limit.detail === 'installed · no activity'
+      && queryIsReadOnlyLatest(queryCalls.at(-1))
+      && JSON.stringify(client._store.connect_rate_limit) === emptyRows,
+    'an empty connect-rate table is installed with no activity');
+
+    queryMode = 'missing';
+    delete client._store.connect_rate_limit;
+    report = await inspect();
+    ok(report.statusCode === 200 && report.body.ok === true
+      && report.body.checks.connect_rate_limit?.ok === false
+      && report.body.checks.connect_rate_limit.detail === 'not installed'
+      && ['database', 'lib_channel', 'schema'].every((name) => report.body.checks[name]?.ok === true),
+    'a missing connect-rate table is reported without failing other health diagnostics');
+    ok(queryIsReadOnlyLatest(queryCalls.at(-1)) && rpcCalls.length === 0,
+      'missing-table detection also uses the limited read and does not call an RPC');
+  } finally {
+    if (client && originalFrom) client.from = originalFrom;
+    if (client && originalRpc) client.rpc = originalRpc;
+    if (client?._store) {
+      if (previousRows === undefined) delete client._store.connect_rate_limit;
+      else client._store.connect_rate_limit = previousRows;
+    }
+    if (previousDriver === undefined) delete process.env.DB_DRIVER;
+    else process.env.DB_DRIVER = previousDriver;
+  }
+}
+
 const server = spawn(process.execPath, ['scripts/dev-server.mjs', '--memory'], {
   cwd: root,
   env: {
@@ -194,6 +308,59 @@ server.stderr.on('data', (d) => { serverLog += d.toString(); });
 try {
   if (!await waitForServer()) throw new Error(`server did not start:\n${serverLog}`);
   await testConnectRateLimitRpcBehavior();
+  await testOwnerHealthConnectRateLimit();
+
+  {
+    const { getClientIp } = await import('../src/auth.mjs');
+    ok(getClientIp({
+      headers: {
+        'x-vercel-forwarded-for': ' 198.51.100.77 ',
+        'x-real-ip': '192.0.2.45',
+        'x-forwarded-for': '203.0.113.99, 203.0.113.100',
+      },
+      socket: { remoteAddress: '127.0.0.1' },
+    }) === '198.51.100.77', 'the validated Vercel client IP takes priority over X-Real-IP and forged X-Forwarded-For');
+    ok(getClientIp({ headers: { 'x-real-ip': ' 2001:db8::77 ' } }) === '2001:db8::77',
+      'a trimmed IPv6 X-Real-IP is accepted when it is the only client-IP candidate');
+    ok(getClientIp({
+      headers: { 'x-real-ip': '192.0.2.77', 'x-forwarded-for': '203.0.113.15' },
+      socket: { remoteAddress: '198.51.100.8' },
+    }) === '192.0.2.77', 'X-Real-IP takes priority over the socket address');
+    ok(getClientIp({
+      headers: { 'x-forwarded-for': '203.0.113.15' },
+      socket: { remoteAddress: '192.0.2.10' },
+    }) === '192.0.2.10', 'the socket address takes priority over X-Forwarded-For');
+    ok(getClientIp({
+      headers: {
+        'x-vercel-forwarded-for': 'not an IP',
+        'x-real-ip': 'also garbage',
+        'x-forwarded-for': ' 198.51.100.20, 203.0.113.4',
+      },
+      socket: { remoteAddress: 'garbage' },
+    }) === '198.51.100.20', 'invalid trusted candidates are ignored before the leftmost X-Forwarded-For fallback');
+    ok(getClientIp({
+      headers: {
+        'x-vercel-forwarded-for': 'garbage',
+        'x-real-ip': 'https://not-an-ip',
+        'x-forwarded-for': 'not-an-ip, still-not-an-ip',
+      },
+      socket: { remoteAddress: 'not-an-ip' },
+    }) === '0.0.0.0', 'invalid IPv4/IPv6 candidates never become a client IP');
+  }
+  {
+    const uiSource = await readFile(path.join(root, 'public/assets/js/app-ui.js'), 'utf8');
+    const start = uiSource.indexOf('function showSessionExpiredDialog()');
+    const end = uiSource.indexOf('function showPostError', start);
+    const dialog = uiSource.slice(start, end);
+    const cancelIndex = dialog.indexOf('actions.appendChild(cancel);');
+    const signInIndex = dialog.indexOf('actions.appendChild(signIn);');
+    ok(cancelIndex >= 0 && signInIndex > cancelIndex
+      && dialog.includes('className: \'btn btn-secondary\'')
+      && dialog.includes('className: \'btn btn-primary\'')
+      && dialog.includes('signIn.focus()') && dialog.includes("e.key === 'Escape'")
+      && dialog.includes('You were signed out after 30 minutes of inactivity. Nothing was changed. Sign in again, then repeat the action.'),
+    'the session-expired dialog lists Cancel before Sign in and preserves its styling, copy, and behavior');
+  }
 
   {
     const { longDate, humanDate, sqlDateTime, parseIstDateTime } = await import('../src/render.mjs');
