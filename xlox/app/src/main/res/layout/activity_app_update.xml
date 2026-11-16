@@ -58,7 +58,7 @@
                 android:fontFeatureSettings="tnum"
                 android:textColor="@color/text_primary"
                 android:textSize="@dimen/text_mono_15"
-                app:lineHeight="22sp" />
+                app:lineHeight="@dimen/line_body" />
 
             <TextView
                 android:id="@+id/appUpdateNotesTitle"

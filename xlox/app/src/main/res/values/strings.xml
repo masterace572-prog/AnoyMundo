@@ -33,7 +33,7 @@
     <string name="try_again">Try again</string>
 
     <!-- Login -->
-    <string name="login_title">Login</string>
+    <string name="login_title">Sign in</string>
     <string name="login_subtitle">Enter the licence key you received to continue.</string>
     <string name="licence_key">Licence key</string>
     <string name="licence_key_hint">ANOY-7D-XXXXX</string>

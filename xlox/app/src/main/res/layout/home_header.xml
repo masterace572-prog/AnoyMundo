@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Header: brand kicker and Welcome back title; Java-visible IDs stay intact. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/mainHeader"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginBottom="@dimen/space_20"
+    android:gravity="center_vertical"
+    android:minHeight="@dimen/space_56"
+    android:orientation="horizontal">
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/homeKicker"
+            style="@style/Text.Kicker.Tertiary"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/brand_name" />
+
+        <TextView
+            android:id="@+id/homeTitle"
+            style="@style/Text.TitleL"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/space_4"
+            android:accessibilityHeading="true"
+            android:text="@string/home_title" />
+    </LinearLayout>
+
+    <FrameLayout
+        android:id="@+id/helpButton"
+        android:layout_width="@dimen/touch_target"
+        android:layout_height="@dimen/touch_target"
+        android:clickable="true"
+        android:contentDescription="@string/help_open"
+        android:focusable="true">
+
+        <FrameLayout
+            android:layout_width="@dimen/help_circle"
+            android:layout_height="@dimen/help_circle"
+            android:layout_gravity="center"
+            android:background="@drawable/bg_help_circle"
+            android:duplicateParentState="true"
+            android:importantForAccessibility="no">
+
+            <ImageView
+                android:layout_width="@dimen/icon_inline"
+                android:layout_height="@dimen/icon_inline"
+                android:layout_gravity="center"
+                android:importantForAccessibility="no"
+                android:src="@drawable/ic_help" />
+        </FrameLayout>
+    </FrameLayout>
+
+    <ImageButton
+        android:id="@+id/settingsButton"
+        style="@style/IconButton"
+        android:layout_marginStart="@dimen/icon_button_pair"
+        android:layout_marginEnd="@dimen/icon_button_edge"
+        android:contentDescription="@string/settings_open"
+        android:src="@drawable/ic_settings" />
+</LinearLayout>

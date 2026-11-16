@@ -12,6 +12,7 @@
     <!-- Support-info preview block: just under surface-2 (spec 3.8). -->
     <color name="surface_well">#FF0E0E10</color>
     <color name="hairline">#FF2C2C30</color>
+    <color name="card_stroke">#FF1F1F23</color>
     <color name="divider">#FF212125</color>
     <!-- Sheet drag handle (spec 3.9). -->
     <color name="handle">#FF3A3A3E</color>

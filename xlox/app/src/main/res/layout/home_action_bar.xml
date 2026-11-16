@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- ===================================================== pinned action bar -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/actionBar"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_gravity="bottom"
+    android:background="@color/black"
+    android:orientation="vertical"
+    android:tag="snackbar_anchor">
+
+    <View
+        android:id="@+id/actionDivider"
+        style="@style/Divider"
+        android:visibility="invisible" />
+
+    <LinearLayout
+        android:id="@+id/actionPanel"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingStart="@dimen/screen_padding"
+        android:paddingTop="@dimen/space_12"
+        android:paddingEnd="@dimen/screen_padding"
+        android:paddingBottom="@dimen/space_16">
+
+        <TextView
+            android:id="@+id/statusMessage"
+            style="@style/Text.Caption"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="@dimen/space_12"
+            android:accessibilityLiveRegion="polite"
+            android:gravity="center"
+            android:visibility="gone" />
+
+        <com.google.android.material.progressindicator.LinearProgressIndicator
+            android:id="@+id/taskProgress"
+            style="@style/Widget.Anoy.Progress"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="@dimen/space_12"
+            android:importantForAccessibility="no"
+            android:visibility="gone" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/primaryAction"
+            style="@style/Widget.Anoy.Button"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/launch" />
+    </LinearLayout>
+</LinearLayout>

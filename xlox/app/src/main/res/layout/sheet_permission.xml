@@ -3,8 +3,8 @@
   Permission sheet (spec 3.9): the shared sheet with a handle. Kicker
   PERMISSION, the permission's name (Title M), WHY WE ASK + the existing
   explanation, HOW TO ALLOW + numbered steps (Mono 12 tertiary numbers in a
-  24 dp gutter; rows built by PermissionSheet), then Continue to Settings (48)
-  and Not now. The Game files (OBB) variant is informational: no steps, one
+  24 dp gutter; rows built by PermissionSheet), then Not now and Continue to
+  Settings (48). The Game files (OBB) variant is informational: no steps, one
   "Got it".
 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
@@ -61,18 +61,18 @@
         android:orientation="vertical" />
 
     <com.google.android.material.button.MaterialButton
-        android:id="@+id/permExplainContinue"
-        style="@style/Widget.Anoy.Button.Sheet"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="@dimen/space_24"
-        android:text="@string/perm_explain_continue" />
-
-    <com.google.android.material.button.MaterialButton
         android:id="@+id/permExplainNotNow"
         style="@style/Widget.Anoy.Button.Text.Secondary"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="@dimen/space_4"
+        android:layout_marginTop="@dimen/space_24"
         android:text="@string/not_now" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/permExplainContinue"
+        style="@style/Widget.Anoy.Button.Sheet"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/space_4"
+        android:text="@string/perm_explain_continue" />
 </LinearLayout>

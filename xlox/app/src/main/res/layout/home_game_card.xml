@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- ==================================================== game card -->
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android" xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/gameCard"
+    style="@style/Widget.Anoy.Card"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginTop="@dimen/space_12">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="@dimen/space_16">
+
+        <LinearLayout
+            android:id="@+id/gameHeader"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <!-- The BGMI icon, bundled (res/drawable-nodpi); never loaded at runtime. -->
+            <com.google.android.material.imageview.ShapeableImageView
+                android:id="@+id/gameTile"
+                android:layout_width="@dimen/game_tile"
+                android:layout_height="@dimen/game_tile"
+                android:contentDescription="@string/game_icon_description"
+                android:padding="@dimen/game_icon_inset"
+                android:scaleType="centerCrop"
+                app:shapeAppearanceOverlay="@style/ShapeAppearance.Anoy.GameTile"
+                app:srcCompat="@drawable/ic_game_bgmi"
+                app:strokeColor="@color/hairline"
+                app:strokeWidth="@dimen/hairline" />
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="@dimen/space_16"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:baselineAligned="true"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:id="@+id/gameValue"
+                        style="@style/Text.TitleM"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:maxLines="1"
+                        android:text="@string/game_name" />
+
+                    <TextView
+                        android:id="@+id/gameVersion"
+                        style="@style/Text.Mono"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="@dimen/space_8"
+                        android:fontFeatureSettings="tnum"
+                        android:maxLines="1"
+                        android:visibility="gone" />
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/libraryValue"
+                    style="@style/Text.Mono"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/space_4"
+                    android:fontFeatureSettings="tnum"
+                    android:textColor="@color/text_tertiary" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <View
+            style="@style/Divider"
+            android:layout_marginTop="@dimen/space_20" />
+
+        <LinearLayout
+            android:id="@+id/stateCard"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/space_16"
+            android:baselineAligned="false"
+            android:orientation="horizontal">
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    style="@style/Text.Micro"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/row_state" />
+
+                <TextView
+                    android:id="@+id/gameStateValue"
+                    style="@style/Text.BodyL.Medium"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/space_4"
+                    android:drawablePadding="@dimen/space_8"
+                    android:gravity="center_vertical"
+                    android:text="@string/dash" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="@dimen/space_16"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    style="@style/Text.Micro"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/row_server" />
+
+                <TextView
+                    android:id="@+id/serverValue"
+                    style="@style/Text.BodyL.Medium"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/space_4"
+                    android:drawablePadding="@dimen/space_8"
+                    android:gravity="center_vertical"
+                    android:text="@string/dash" />
+            </LinearLayout>
+        </LinearLayout>
+    </LinearLayout>
+</com.google.android.material.card.MaterialCardView>

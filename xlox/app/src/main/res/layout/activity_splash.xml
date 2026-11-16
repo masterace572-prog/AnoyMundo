@@ -147,7 +147,7 @@
 
             <TextView
                 android:id="@+id/splashStatus"
-                style="@style/Text.Caption"
+                style="@style/Text.BodyS"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:accessibilityLiveRegion="polite"
@@ -158,13 +158,15 @@
 
         <TextView
             android:id="@+id/splashStatusDetail"
-            style="@style/Text.BodyS"
+            style="@style/Text.Caption"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/space_8"
             android:gravity="center_horizontal"
+            android:maxLines="2"
             android:maxWidth="@dimen/max_content_width"
             android:textAlignment="center"
+            android:textColor="@color/text_tertiary"
             android:visibility="invisible" />
 
         <com.google.android.material.button.MaterialButton

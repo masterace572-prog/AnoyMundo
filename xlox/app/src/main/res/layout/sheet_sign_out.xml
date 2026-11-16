@@ -2,8 +2,8 @@
 <!--
   Sign out (spec 3.9): the shared sheet with a handle. Kicker ACCOUNT, the
   question, the existing explanation, then a surface-3 list with the two
-  choices (each with a Caption saying what it does) and a tonal Cancel.
-  "Sign out" keeps the saved key; "Forget this key" also removes it.
+  choices (each with a Caption saying what it does), with a text Cancel before
+  the group. Sign out keeps the saved key; Forget this key removes it.
 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/signOutRoot"
@@ -33,9 +33,17 @@
         android:layout_marginTop="@dimen/space_8"
         android:text="@string/sign_out_message" />
 
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/signOutCancel"
+        style="@style/Widget.Anoy.Button.Text.Secondary"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/space_16"
+        android:text="@string/cancel" />
+
     <com.google.android.material.card.MaterialCardView
         style="@style/Widget.Anoy.Group.InSheet"
-        android:layout_marginTop="@dimen/space_20">
+        android:layout_marginTop="@dimen/space_12">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -91,12 +99,4 @@
             </LinearLayout>
         </LinearLayout>
     </com.google.android.material.card.MaterialCardView>
-
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/signOutCancel"
-        style="@style/Widget.Anoy.Button.Tonal"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="@dimen/space_12"
-        android:text="@string/cancel" />
 </LinearLayout>

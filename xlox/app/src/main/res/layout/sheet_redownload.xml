@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
   Re-download library (2.3.1, Settings > Updates): the shared sheet with a
-  handle. Kicker LIBRARY, the question, one line on when to use it, then the
-  primary Re-download and a tonal Cancel. Re-download hands over to the
+  handle. Kicker LIBRARY, the question, one line on when to use it, then a
+  quiet Cancel followed by primary Re-download. Re-download hands over to the
   existing library sheet (dialog_update) with its determinate progress.
   The button drops the buttons' tabular figures: Inter's tabular hyphen would
   read "Re - download".
@@ -36,19 +36,19 @@
         android:text="@string/redownload_message" />
 
     <com.google.android.material.button.MaterialButton
+        android:id="@+id/redownloadCancel"
+        style="@style/Widget.Anoy.Button.Text.Secondary"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/space_20"
+        android:text="@string/cancel" />
+
+    <com.google.android.material.button.MaterialButton
         android:id="@+id/redownloadConfirm"
         style="@style/Widget.Anoy.Button.Sheet"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="@dimen/space_24"
+        android:layout_marginTop="@dimen/space_4"
         android:fontFeatureSettings="kern"
         android:text="@string/redownload_action" />
-
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/redownloadCancel"
-        style="@style/Widget.Anoy.Button.Tonal"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="@dimen/space_12"
-        android:text="@string/cancel" />
 </LinearLayout>

@@ -13,7 +13,7 @@
         android:layout_height="wrap_content"
         android:fontFeatureSettings="tnum"
         android:importantForAccessibility="no"
-        app:lineHeight="22sp" />
+        app:lineHeight="@dimen/line_body" />
 
     <TextView
         android:id="@+id/stepText"

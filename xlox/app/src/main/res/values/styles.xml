@@ -217,6 +217,13 @@
         <item name="android:maxLines">1</item>
     </style>
 
+    <!-- Home countdown hero: the Title L type scale with tabular figures. -->
+    <style name="Text.Countdown.Hero" parent="Text.TitleL">
+        <item name="android:fontFeatureSettings">tnum</item>
+        <item name="android:textColor">@color/text_primary</item>
+        <item name="android:maxLines">1</item>
+    </style>
+
     <!-- Body L: 16 / 22 (Settings rows, field text). -->
     <style name="Text.BodyL" />
 
@@ -532,10 +539,11 @@
     </style>
 
     <!-- ===================================================== Surfaces -->
-    <!-- Home cards: surface-1, radius 20, fill only (no stroke on black). -->
+    <!-- Home cards: surface-1, radius 20, quiet card-stroke outline. -->
     <style name="Widget.Anoy.Card" parent="Widget.Material3.CardView.Filled">
         <item name="cardBackgroundColor">@color/surface_1</item>
-        <item name="strokeWidth">0dp</item>
+        <item name="strokeColor">@color/card_stroke</item>
+        <item name="strokeWidth">@dimen/hairline</item>
         <item name="cardCornerRadius">@dimen/radius_card</item>
         <item name="cardElevation">0dp</item>
         <item name="rippleColor">@color/ripple_none</item>
@@ -548,12 +556,13 @@
         <item name="cornerSize">@dimen/radius_card</item>
     </style>
 
-    <!-- Inset grouped list: surface-1, radius 16, no stroke; clips its rows. -->
+    <!-- Inset grouped list: surface-1, radius 16, quiet card-stroke outline. -->
     <style name="Widget.Anoy.Group" parent="Widget.Material3.CardView.Filled">
         <item name="android:layout_width">match_parent</item>
         <item name="android:layout_height">wrap_content</item>
         <item name="cardBackgroundColor">@color/surface_1</item>
-        <item name="strokeWidth">0dp</item>
+        <item name="strokeColor">@color/card_stroke</item>
+        <item name="strokeWidth">@dimen/hairline</item>
         <item name="cardCornerRadius">@dimen/radius_control</item>
         <item name="cardElevation">0dp</item>
         <item name="rippleColor">@color/ripple_none</item>

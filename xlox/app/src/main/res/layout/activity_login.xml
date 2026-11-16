@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Login (spec 3.2), 24 dp gutters:
-    brand row (56 dp)  "Anoy Hax", left; nothing on the right
+  Sign in (spec 3.2), 24 dp gutters:
+    brand row (56 dp)  "ANOY HAX", left; nothing on the right
     ~72 dp space       (shrinks while the keyboard is open)
-    Login / subtitle / "Licence key" / field / reserved helper line
-    connection notice  neutral surface-2 block (wifi-off / info glyph) + Try again
-    Login (56 dp) and "Don't have a licence? Buy one" (only "Buy one" is a link)
+    Sign in / subtitle / "Licence key" / field / reserved helper line
+    connection notice  neutral surface-1 card (wifi-off / 20 dp glyph) + Try again
+    Sign in (56 dp) and "Don't have a licence? Buy one" (only "Buy one" is a link)
     footer             "App 2.3.4 · Library 1.14", pinned, hidden with the keyboard
 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
@@ -139,8 +139,8 @@
                     android:visibility="gone" />
             </FrameLayout>
 
-            <!-- 2.3.4: connection / VPN / server problems: a neutral block
-                 (surface-2, secondary text, 16 dp Lucide glyph) with Try again.
+            <!-- Connection / VPN / server problems: a surface-1 card with
+                 secondary text and a 20 dp Lucide glyph. Try again is neutral.
                  Problems with the key itself stay red under the field. -->
             <LinearLayout
                 android:id="@+id/loginNotice"
@@ -162,8 +162,8 @@
 
                     <ImageView
                         android:id="@+id/loginNoticeIcon"
-                        android:layout_width="@dimen/icon_small"
-                        android:layout_height="@dimen/icon_small"
+                        android:layout_width="@dimen/icon_inline"
+                        android:layout_height="@dimen/icon_inline"
                         android:layout_marginTop="@dimen/space_2"
                         android:importantForAccessibility="no"
                         app:srcCompat="@drawable/ic_wifi_off"
