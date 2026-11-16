@@ -1,6 +1,7 @@
 // End-to-end smoke test against the real HTTP handler with the offline
 // in-memory database driver. Run with: npm test
 import { spawn } from 'node:child_process';
+import { createServer } from 'node:http';
 import crypto from 'node:crypto';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -73,6 +74,111 @@ async function waitForServer(timeoutMs = 15000) {
   return false;
 }
 
+async function testConnectRateLimitRpcBehavior() {
+  const previousDriver = process.env.DB_DRIVER;
+  process.env.DB_DRIVER = 'memory';
+  const originalConsoleError = console.error;
+  const logs = [];
+  let client;
+  let originalRpc;
+  let server;
+  try {
+    const [{ db }, { handle }] = await Promise.all([
+      import('../src/db.mjs'), import('../src/app.mjs'),
+    ]);
+    client = db();
+    originalRpc = client.rpc;
+
+    const validKey = 'ANOY-2H-LYK0Y';
+    const expiredKey = 'ANOY-2H-F7VWE';
+    const bannedKey = 'ANOY-2H-BANNED';
+    const clientIp = '198.51.100.77';
+    const validRow = client._store.keys_code.find((row) => row.user_key === validKey);
+    const expiredRow = client._store.keys_code.find((row) => row.user_key === expiredKey);
+    validRow.status = 1; validRow.expired_date = null; validRow.devices = null;
+    expiredRow.status = 1; expiredRow.expired_date = '2000-01-01T00:00:00.000Z'; expiredRow.devices = null;
+    client._store.keys_code.push({
+      id_keys: 3, game: 'PUBG', user_key: bannedKey, duration: 2,
+      expired_date: '2099-01-01T00:00:00.000Z', max_devices: 1, devices: null,
+      status: 0, registrator: 'Anoy',
+    });
+
+    server = createServer((req, res) => handle(req, res));
+    await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+    const base = `http://127.0.0.1:${server.address().port}`;
+    const connect = async (userKey, serial) => {
+      const response = await fetch(`${base}/connect`, {
+        method: 'POST', signal: AbortSignal.timeout(5000),
+        headers: {
+          'content-type': 'application/x-www-form-urlencoded',
+          'x-forwarded-for': clientIp,
+        },
+        body: new URLSearchParams({ game: 'PUBG', user_key: userKey, serial }),
+      });
+      return { status: response.status, body: await response.json() };
+    };
+
+    console.error = (...args) => logs.push(args.map(String).join(' '));
+    let includeRawContext = true;
+    client.rpc = async () => {
+      throw new Error(`simulated timeout${includeRawContext ? ` for ${validKey} from ${clientIp}` : ''}`);
+    };
+    let r = await connect(validKey, 'FAILOPEN-VALID');
+    ok(r.status === 200 && r.body?.status === true
+      && Object.keys(r.body).join(',') === 'status,data'
+      && Object.keys(r.body.data).join(',') === 'real,token,modname,mod_status,credit,ESP,Item,AIM,SilentAim,BulletTrack,Floating,Memory,Setting,expired_date,EXP,exdate,device,rng',
+    'a thrown rate-limit RPC failure still allows a valid key with the normal response');
+    ok(logs.length === 1 && logs[0].startsWith('[connect-rate-limit] check failed, allowing request:')
+      && logs[0].includes('simulated timeout') && !logs[0].includes(validKey) && !logs[0].includes(clientIp),
+    'rate-limit RPC failure logs once without exposing the raw key or IP');
+
+    includeRawContext = false;
+    r = await connect('DOES-NOT-EXIST', 'FAILOPEN-UNKNOWN');
+    ok(r.status === 200 && JSON.stringify(r.body) === '{"status":false,"reason":"USER OR GAME NOT REGISTERED"}',
+      'a thrown rate-limit RPC failure preserves the normal unknown-key reply');
+    r = await connect(bannedKey, 'FAILOPEN-BANNED');
+    ok(r.status === 200 && JSON.stringify(r.body) === '{"status":false,"reason":"USER BLOCKED"}',
+      'a thrown rate-limit RPC failure preserves the normal banned-key reply');
+    r = await connect(expiredKey, 'FAILOPEN-EXPIRED');
+    ok(r.status === 200 && JSON.stringify(r.body) === '{"status":false,"reason":"EXPIRED KEY"}',
+      'a thrown rate-limit RPC failure preserves the normal expired-key reply');
+    ok(logs.length === 4 && logs.every((line) => line.startsWith('[connect-rate-limit] check failed, allowing request:')),
+      'each thrown rate-limit RPC failure emits one tagged log line');
+
+    const logsBeforeMissingFunction = logs.length;
+    client.rpc = async () => ({ data: null, error: { message: 'function check_connect_rate_limit not found' } });
+    r = await connect(validKey, 'FAILOPEN-VALID');
+    ok(r.status === 200 && r.body?.status === true && logs.length === logsBeforeMissingFunction + 1
+      && logs.at(-1).startsWith('[connect-rate-limit] check failed, allowing request:')
+      && logs.at(-1).includes('function check_connect_rate_limit not found'),
+    'a missing rate-limit function fails open for valid keys and logs its error once');
+
+    const logsBeforeLimiterResults = logs.length;
+    client.rpc = async () => ({ data: false, error: null });
+    r = await connect(validKey, 'OVERLIMIT-DEVICE');
+    ok(r.status === 503 && JSON.stringify(r.body) === '{"status":false,"reason":"SERVER UNAVAILABLE"}',
+      'a working RPC over-limit result keeps the existing 503 reply');
+    ok(logs.length === logsBeforeLimiterResults, 'a working over-limit result is not logged as an RPC failure');
+
+    client.rpc = async () => ({ data: true, error: null });
+    r = await connect(validKey, 'FAILOPEN-VALID');
+    ok(r.status === 200 && r.body?.status === true && r.body?.data?.real.startsWith(`PUBG-${validKey}-FAILOPEN-VALID-`),
+      'a working RPC allowed result preserves normal valid-key behavior');
+
+    client.rpc = async () => ({ data: null, error: null });
+    r = await connect(validKey, 'FAILOPEN-VALID');
+    ok(r.status === 200 && r.body?.status === true && logs.length === logsBeforeLimiterResults + 1
+      && logs.at(-1).startsWith('[connect-rate-limit] check failed, allowing request:'),
+    'an unexpected RPC response fails open instead of returning 503');
+  } finally {
+    console.error = originalConsoleError;
+    if (client && originalRpc) client.rpc = originalRpc;
+    if (server?.listening) await new Promise((resolve) => server.close(resolve));
+    if (previousDriver === undefined) delete process.env.DB_DRIVER;
+    else process.env.DB_DRIVER = previousDriver;
+  }
+}
+
 const server = spawn(process.execPath, ['scripts/dev-server.mjs', '--memory'], {
   cwd: root,
   env: {
@@ -87,6 +193,7 @@ server.stderr.on('data', (d) => { serverLog += d.toString(); });
 
 try {
   if (!await waitForServer()) throw new Error(`server did not start:\n${serverLog}`);
+  await testConnectRateLimitRpcBehavior();
 
   {
     const { longDate, humanDate, sqlDateTime, parseIstDateTime } = await import('../src/render.mjs');

@@ -23,17 +23,36 @@ function connectRateHash(scope, value) {
     .update(`${scope}\0${value}`).digest('hex');
 }
 
+function connectRateLimitErrorMessage(error, userKey, ip) {
+  let message = String(error?.message || error || 'unknown error').replace(/\s+/g, ' ').trim();
+  for (const sensitive of [String(userKey || ''), String(userKey || '').toUpperCase(), String(ip || '')]) {
+    if (!sensitive) continue;
+    const escaped = sensitive.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    message = message.replace(new RegExp(escaped, 'gi'), '[redacted]');
+  }
+  return message.slice(0, 240) || 'unknown error';
+}
+
 async function connectAllowed(req, userKey) {
-  const ip = String(getClientIp(req) || '0.0.0.0').trim().toLowerCase();
-  const { data, error } = await db().rpc('check_connect_rate_limit', {
-    p_key_hash: connectRateHash('key', String(userKey).trim().toUpperCase()),
-    p_ip_hash: connectRateHash('ip', ip),
-    p_key_limit: connectRateLimits.perKey,
-    p_ip_limit: connectRateLimits.perIp,
-    p_window_seconds: connectRateLimits.windowSeconds,
-  });
-  if (error) throw new Error(error.message);
-  return data === true;
+  let ip = '';
+  try {
+    ip = String(getClientIp(req) || '0.0.0.0').trim().toLowerCase();
+    const { data, error } = await db().rpc('check_connect_rate_limit', {
+      p_key_hash: connectRateHash('key', String(userKey).trim().toUpperCase()),
+      p_ip_hash: connectRateHash('ip', ip),
+      p_key_limit: connectRateLimits.perKey,
+      p_ip_limit: connectRateLimits.perIp,
+      p_window_seconds: connectRateLimits.windowSeconds,
+    });
+    if (error) throw new Error(String(error.message || error));
+    if (data === true) return true;
+    if (data === false) return false;
+    throw new Error('Unexpected rate-limit response');
+  } catch (error) {
+    const message = connectRateLimitErrorMessage(error, userKey, ip);
+    console.error(`[connect-rate-limit] check failed, allowing request: ${message}`);
+    return true;
+  }
 }
 
 /**
