@@ -656,11 +656,16 @@ tr.skeleton td { padding-top: 16px; padding-bottom: 16px; }
   display: flex; align-items: center; justify-content: center; padding: 20px; opacity: 0; transition: opacity .18s;
 }
 .modal-backdrop.show { opacity: 1; }
+.modal-backdrop.session-expired-backdrop {
+  -webkit-backdrop-filter: none; backdrop-filter: none;
+}
 .modal {
   width: 100%; max-width: 400px; background: var(--surface); border: 1px solid var(--border-strong);
   border-radius: var(--r-xl); padding: 24px;
 }
 .modal .tile { margin-bottom: 16px; }
+.session-expired-warning { color: var(--orange); margin-bottom: 16px; }
+.session-expired-warning .i { width: 22px; height: 22px; }
 .modal h3 { font-size: 18px; margin-bottom: 8px; letter-spacing: -0.015em; }
 .modal p { color: var(--dim); font-size: 14.5px; }
 .modal .actions { margin-top: 22px; }

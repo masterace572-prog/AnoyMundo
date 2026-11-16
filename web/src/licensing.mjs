@@ -3,8 +3,38 @@ import { config } from './config.mjs';
 import { db, getSettings, getKeyForGame, deviceList, countRows } from './db.mjs';
 import { envStatus } from './config.mjs';
 import { sendJson, sendText, sqlDateTime } from './render.mjs';
+import { getClientIp } from './auth.mjs';
 
 const md5 = (value) => crypto.createHash('md5').update(String(value)).digest('hex');
+
+function positiveLimit(name, fallback, maximum) {
+  const value = Number(process.env[name]);
+  return Number.isSafeInteger(value) && value > 0 && value <= maximum ? value : fallback;
+}
+
+const connectRateLimits = {
+  perKey: positiveLimit('CONNECT_RATE_LIMIT_PER_KEY', 30, 100_000),
+  perIp: positiveLimit('CONNECT_RATE_LIMIT_PER_IP', 120, 100_000),
+  windowSeconds: positiveLimit('CONNECT_RATE_LIMIT_WINDOW_SECONDS', 60, 86_400),
+};
+
+function connectRateHash(scope, value) {
+  return crypto.createHmac('sha256', config.authSecret)
+    .update(`${scope}\0${value}`).digest('hex');
+}
+
+async function connectAllowed(req, userKey) {
+  const ip = String(getClientIp(req) || '0.0.0.0').trim().toLowerCase();
+  const { data, error } = await db().rpc('check_connect_rate_limit', {
+    p_key_hash: connectRateHash('key', String(userKey).trim().toUpperCase()),
+    p_ip_hash: connectRateHash('ip', ip),
+    p_key_limit: connectRateLimits.perKey,
+    p_ip_limit: connectRateLimits.perIp,
+    p_window_seconds: connectRateLimits.windowSeconds,
+  });
+  if (error) throw new Error(error.message);
+  return data === true;
+}
 
 /**
  * Port of app/Controllers/Connect.php::index_post().
@@ -30,6 +60,10 @@ async function connect(req, res, body) {
   if (!/^[A-Za-z0-9_-]{1,32}$/.test(game) || !/^[A-Za-z0-9_-]{1,128}$/.test(serial) ||
       !/^[A-Za-z0-9_-]{1,64}$/.test(userKey)) {
     return sendJson(res, { status: false, reason: 'Bad Parameter' });
+  }
+
+  if (!await connectAllowed(req, userKey)) {
+    return sendJson(res, { status: false, reason: 'SERVER UNAVAILABLE' }, 503);
   }
 
   const settings = await getSettings();
@@ -107,8 +141,13 @@ export function handleConnectInfo(res) {
   });
 }
 
-/** GET /api/health - used by Vercel / the deployment checklist. */
-export async function handleHealth(res, deep = false) {
+/** Cheap public liveness probe. It deliberately never touches Supabase. */
+export function handleHealth(res) {
+  return sendJson(res, { ok: true });
+}
+
+/** Full deployment diagnostics, exposed only through the Owner route. */
+export async function handleOwnerHealth(res, deep = false) {
   const started = Date.now();
   const env = envStatus();
   const memory = process.env.DB_DRIVER === 'memory';

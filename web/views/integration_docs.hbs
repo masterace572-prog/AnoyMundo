@@ -221,7 +221,8 @@ void apply(const std::string&amp; json) {
                 <table class="responsive">
                     <thead><tr><th>Method / path</th><th>Returns</th></tr></thead>
                     <tbody>
-                        <tr><td><span class="doc-inline">GET /api/health</span></td><td><span class="doc-inline">ok</span>, DB + lib channel, <span class="doc-inline">13/13</span> schema check</td></tr>
+                        <tr><td><span class="doc-inline">GET /api/health</span></td><td>Public liveness probe; no database calls</td></tr>
+                        <tr><td><span class="doc-inline">GET /api/owner/health</span></td><td>Owner-only full database, release-channel and schema diagnostics (add <span class="doc-inline">?rpc=1</span> for the billing RPC probe)</td></tr>
                         <tr><td><span class="doc-inline">GET /api/lib/version</span></td><td>plain text version, e.g. <span class="doc-inline">1.0</span> — first line read by the loader</td></tr>
                         <tr><td><span class="doc-inline">GET /api/lib/download</span></td><td>current loader ZIP (or 302 to an external URL)</td></tr>
                         <tr><td><span class="doc-inline">GET /api/lib/manifest</span></td><td>JSON <span class="doc-inline">{ ok, version, available, size, sha256, source }</span> — read by the loader's mandatory update check before sign-in</td></tr>

@@ -89,6 +89,66 @@
     });
   }
 
+  function isSessionExpired(err) { return !!(err && err.sessionExpired); }
+
+  function loginReturnPath() {
+    var path = (location.pathname || '/') + location.search + location.hash;
+    return path.charAt(0) === '/' && path.slice(0, 2) !== '//' ? path : '/dashboard';
+  }
+
+  function sessionHasUnsavedEntries() {
+    var path = (location.pathname || '/').replace(/\/+$/, '').toLowerCase() || '/';
+    return path === '/keys/generate' || /^\/keys\/\d+$/.test(path);
+  }
+
+  function showSessionExpiredDialog() {
+    if ($('.session-expired-backdrop')) return;
+    var back = el('div', { className: 'modal-backdrop session-expired-backdrop', role: 'presentation' });
+    var box = el('div', {
+      className: 'modal session-expired-modal', role: 'dialog', 'aria-modal': 'true',
+      'aria-labelledby': 'session-expired-title', 'aria-describedby': 'session-expired-message'
+    });
+    var warning = el('div', { className: 'session-expired-warning' });
+    warning.appendChild(icon('triangle-alert'));
+    box.appendChild(warning);
+    box.appendChild(el('h3', { id: 'session-expired-title' }, 'Your session has expired.'));
+    box.appendChild(el('p', { id: 'session-expired-message' },
+      'You were signed out after 30 minutes of inactivity. Nothing was changed. Sign in again, then repeat the action.'));
+    if (sessionHasUnsavedEntries()) {
+      box.appendChild(el('p', { className: 'session-expired-unsaved' }, "Your entries on this page weren't saved."));
+    }
+    var actions = el('div', { className: 'actions' });
+    var signIn = el('button', { type: 'button', className: 'btn btn-primary' }, 'Sign in');
+    var cancel = el('button', { type: 'button', className: 'btn btn-secondary' }, 'Cancel');
+    actions.appendChild(signIn);
+    actions.appendChild(cancel);
+    box.appendChild(actions);
+    back.appendChild(box);
+    var last = document.activeElement;
+    function close() {
+      document.removeEventListener('keydown', onKey);
+      back.classList.remove('show');
+      setTimeout(function () {
+        if (back.parentNode) back.parentNode.removeChild(back);
+        if (last && last.focus) last.focus();
+      }, 180);
+    }
+    function onKey(e) { if (e.key === 'Escape') close(); }
+    cancel.addEventListener('click', close);
+    signIn.addEventListener('click', function () {
+      location.href = '/login?next=' + encodeURIComponent(loginReturnPath());
+    });
+    back.addEventListener('click', function (e) { if (e.target === back) close(); });
+    document.addEventListener('keydown', onKey);
+    document.body.appendChild(back);
+    requestAnimationFrame(function () { back.classList.add('show'); signIn.focus(); });
+  }
+
+  function showPostError(err) {
+    if (isSessionExpired(err)) showSessionExpiredDialog();
+    else toast(err.message, true);
+  }
+
   // Page scripts (e.g. the Library page) reuse the same dialog.
   window.anoyConfirm = confirmDialog;
 
@@ -119,20 +179,75 @@
   // Back/forward cache restores a page with the spinner still showing.
   window.addEventListener('pageshow', function () { $$('[data-busy="1"]').forEach(clearBusy); });
 
-  /* ---------------------------------------------------------- JSON fetch */
-  function post(url, data) {
-    var body = new URLSearchParams();
-    Object.keys(data || {}).forEach(function (k) { body.append(k, data[k]); });
+  /* ---------------------------------------------------------- POST fetch */
+  function isLoginUrl(value) {
+    try {
+      var url = new URL(value, location.href);
+      return url.origin === location.origin && url.pathname.replace(/\/+$/, '').toLowerCase() === '/login';
+    } catch (e) { return false; }
+  }
+
+  function isLoginRedirect(res) {
+    if (res.redirected && isLoginUrl(res.url)) return true;
+    if (res.status >= 300 && res.status < 400) {
+      var target = res.headers.get('location');
+      if (target) {
+        try { return isLoginUrl(new URL(target, res.url || location.href).href); }
+        catch (e) { return false; }
+      }
+    }
+    return false;
+  }
+
+  function isLoginPageResponse(contentType, html) {
+    return /text\/html/i.test(contentType) &&
+      /<body\b[^>]*\bclass=["'][^"']*\bauth\b[^"']*["']/i.test(html) &&
+      /<form\b[^>]*\baction=["']\/login["']/i.test(html);
+  }
+
+  function sessionExpiredError() {
+    var error = new Error('Session expired.');
+    error.sessionExpired = true;
+    return error;
+  }
+
+  function readPostJson(res) {
+    return res.json().catch(function () { return {}; }).then(function (json) {
+      if (!res.ok || json.ok === false) throw new Error(json.error || ('Request failed (' + res.status + ').'));
+      return json;
+    });
+  }
+
+  function post(url, data, options) {
+    options = options || {};
+    var body = data instanceof URLSearchParams ? data : new URLSearchParams();
+    if (!(data instanceof URLSearchParams)) {
+      if (data && typeof data.forEach === 'function') {
+        data.forEach(function (value, key) { body.append(key, value); });
+      } else {
+        Object.keys(data || {}).forEach(function (key) { body.append(key, data[key]); });
+      }
+    }
     var ctrl = window.AbortController ? new AbortController() : null;
     var timer = setTimeout(function () { if (ctrl) ctrl.abort(); }, 25000);
     return fetch(url, {
       method: 'POST', body: body, credentials: 'same-origin',
-      headers: { Accept: 'application/json' }, signal: ctrl ? ctrl.signal : undefined
+      headers: { Accept: options.pageResponse ? 'text/html' : 'application/json' },
+      signal: ctrl ? ctrl.signal : undefined
     }).then(function (res) {
-      return res.json().catch(function () { return {}; }).then(function (json) {
-        if (!res.ok || json.ok === false) throw new Error(json.error || ('Request failed (' + res.status + ').'));
-        return json;
-      });
+      if (isLoginRedirect(res)) throw sessionExpiredError();
+      var contentType = String(res.headers.get('content-type') || '');
+      if (/text\/html/i.test(contentType)) {
+        return res.clone().text().then(function (html) {
+          if (isLoginPageResponse(contentType, html)) throw sessionExpiredError();
+          if (options.pageResponse) return { page: html, url: res.url };
+          return readPostJson(res);
+        }, function () {
+          if (options.pageResponse) throw new Error('Network error. Check your connection.');
+          return readPostJson(res);
+        });
+      }
+      return readPostJson(res);
     }, function (err) {
       throw new Error(err && err.name === 'AbortError' ? 'The server took too long. Please try again.' : 'Network error. Check your connection.');
     }).then(function (v) { clearTimeout(timer); return v; }, function (e) { clearTimeout(timer); throw e; });
@@ -287,6 +402,40 @@
       if (handed) { sessionStorage.removeItem('anoy.toast'); toast(handed); }
     } catch (e) { /* storage off */ }
 
+    // Generate / Edit key use the shared POST helper so an expired session can
+    // be identified without replacing the current form with the login page.
+    $$('form#generate-form, form[action="/keys/edit"]').forEach(function (form) {
+      form.addEventListener('submit', function (e) {
+        if (e.defaultPrevented) return;
+        e.preventDefault();
+        if (form.dataset.submitting === '1') return;
+        form.dataset.submitting = '1';
+        var btn = e.submitter || form.querySelector('[type=submit]');
+        setBusy(btn, btn && btn.getAttribute('data-busy-label'));
+        post(form.action, new FormData(form), { pageResponse: true }).then(function (response) {
+          if (!response || typeof response.page !== 'string') {
+            form.dataset.submitting = '';
+            clearBusy(btn);
+            location.reload();
+            return;
+          }
+          try {
+            var target = new URL(response.url, location.href);
+            if (target.origin === location.origin) {
+              history.replaceState(null, '', target.pathname + target.search + target.hash);
+            }
+          } catch (err) { /* keep the current URL */ }
+          document.open();
+          document.write(response.page);
+          document.close();
+        }).catch(function (err) {
+          form.dataset.submitting = '';
+          clearBusy(btn);
+          showPostError(err);
+        });
+      });
+    });
+
     // One submit per click: spinner + disabled button, no double charges.
     $$('form[data-busy-form]').forEach(function (form) {
       form.addEventListener('submit', function (e) {
@@ -361,7 +510,7 @@
           if (after) setTimeout(function () { location.href = after; }, 600);
         } else toast('Devices reset');
         if (done) done();
-      }, function (err) { clearBusy(btn); toast(err.message, true); });
+      }, function (err) { clearBusy(btn); showPostError(err); });
     });
   }
 
@@ -378,7 +527,7 @@
         clearBusy(btn);
         toast(ban ? 'Key banned' : 'Key unbanned');
         if (done) done();
-      }, function (err) { clearBusy(btn); toast(err.message, true); });
+      }, function (err) { clearBusy(btn); showPostError(err); });
     });
   }
 
@@ -723,7 +872,7 @@
         'They stop working immediately. Never-used keys are refunded. This cannot be undone.', 'Delete', true).then(function (ok) {
         if (!ok) return;
         setBusy(delSel, 'Deleting…');
-        var done = 0, failed = 0, refund = 0, lastError = '';
+        var done = 0, failed = 0, refund = 0, lastError = '', sessionExpired = false;
         // One at a time, through the same per-key delete as the row action.
         (function nextKey(i) {
           if (i >= keys.length) {
@@ -736,7 +885,17 @@
           }
           post('/keys/resetall', { userkey: keys[i] }).then(function (res) {
             done += 1; refund += Number(res.refund_total) || 0;
-          }, function (err) { failed += 1; lastError = err.message; }).then(function () { nextKey(i + 1); });
+          }, function (err) {
+            if (isSessionExpired(err)) sessionExpired = true;
+            else { failed += 1; lastError = err.message; }
+          }).then(function () {
+            if (sessionExpired) {
+              clearBusy(delSel);
+              showSessionExpiredDialog();
+              return;
+            }
+            nextKey(i + 1);
+          });
         })(0);
       });
     });

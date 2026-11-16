@@ -197,8 +197,35 @@ class Query {
 
 export function createMemoryDb() {
   const store = seed();
+  const rateLimits = new Map();
   return {
     from(table) { return new Query(store, table); },
+    rpc(name, args = {}) {
+      if (name !== 'check_connect_rate_limit') {
+        return Promise.resolve({ data: null, error: { message: `function ${name} not found` } });
+      }
+      const now = Date.now();
+      const windowMs = Number(args.p_window_seconds) * 1000;
+      if (!Number.isSafeInteger(windowMs) || windowMs < 1000) {
+        return Promise.resolve({ data: null, error: { message: 'Invalid /connect rate-limit parameters' } });
+      }
+      const windowStartedAt = Math.floor(now / windowMs) * windowMs;
+      const increment = (dimension, hash, limit) => {
+        const key = `${dimension}:${hash}`;
+        const previous = rateLimits.get(key);
+        const hitCount = previous && previous.windowStartedAt === windowStartedAt ? previous.hitCount + 1 : 1;
+        rateLimits.set(key, { windowStartedAt, hitCount });
+        return hitCount <= Number(limit);
+      };
+      if (rateLimits.size > 1000) {
+        for (const [key, row] of rateLimits) {
+          if (row.windowStartedAt < windowStartedAt - windowMs * 2) rateLimits.delete(key);
+        }
+      }
+      const keyAllowed = increment('key', args.p_key_hash, args.p_key_limit);
+      const ipAllowed = increment('ip', args.p_ip_hash, args.p_ip_limit);
+      return Promise.resolve({ data: keyAllowed && ipAllowed, error: null });
+    },
     _store: store,
   };
 }

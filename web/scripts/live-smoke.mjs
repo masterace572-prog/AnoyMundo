@@ -119,7 +119,10 @@ async function main() {
 
   // 1. health + public surface
   let r = await request('/api/health');
-  ok(r.status === 200 && r.body?.ok === true, 'GET /api/health: Supabase reachable, schema complete', JSON.stringify(r.body).slice(0, 300));
+  ok(r.status === 200 && r.body?.ok === true && Object.keys(r.body).length === 1,
+    'GET /api/health: public DB-free liveness', JSON.stringify(r.body).slice(0, 300));
+  r = await request('/api/owner/health');
+  ok(r.status === 302 && r.location === '/login', 'GET /api/owner/health is protected by Owner authentication');
   r = await request('/');
   ok(r.status === 200 && /Login/.test(r.body) && /ui\.css/.test(r.body), 'GET / renders the sign-in page with ui.css');
   ok(!/ic_anoy|tailwind|bootstrap/i.test(r.body), 'login page uses no logo image and no old CSS frameworks');
@@ -197,6 +200,11 @@ async function main() {
   const isOwner = /Unlimited/.test(r.body) && /Owner/.test(r.body);
   console.log(`  (signed in as ${isOwner ? 'Owner' : 'non-owner'})`);
   if (OWNER.toLowerCase() === 'anoy') ok(isOwner, 'Anoy is the Owner with an unlimited balance');
+  if (isOwner) {
+    r = await request('/api/owner/health');
+    ok(r.status === 200 && r.body?.checks?.database?.ok === true && r.body?.checks?.schema?.ok === true,
+      'GET /api/owner/health: full database and schema diagnostics', JSON.stringify(r.body).slice(0, 300));
+  }
   await timing('GET /dashboard (signed in)', '/dashboard');
   r = await request('/dashboard');
   ok(/no-store/.test(r.response.headers.get('cache-control') || '') && r.response.headers.get('x-vercel-cache') !== 'HIT',

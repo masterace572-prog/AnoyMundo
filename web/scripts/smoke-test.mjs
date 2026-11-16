@@ -75,7 +75,10 @@ async function waitForServer(timeoutMs = 15000) {
 
 const server = spawn(process.execPath, ['scripts/dev-server.mjs', '--memory'], {
   cwd: root,
-  env: { ...process.env, PORT: String(PORT), DB_DRIVER: 'memory', NODE_ENV: 'test', APK_VERIFY_STUB: '1' },
+  env: {
+    ...process.env, PORT: String(PORT), DB_DRIVER: 'memory', NODE_ENV: 'test', APK_VERIFY_STUB: '1',
+    CONNECT_RATE_LIMIT_PER_KEY: '30', CONNECT_RATE_LIMIT_PER_IP: '120', CONNECT_RATE_LIMIT_WINDOW_SECONDS: '60',
+  },
   stdio: ['ignore', 'pipe', 'pipe'],
 });
 let serverLog = '';
@@ -107,17 +110,25 @@ try {
     const m = String(page.body).match(/<textarea class="input" id="generated-keys"[^>]*>([^<]*)<\/textarea>/);
     return { page, keys: (m?.[1] || '').split('\n').map((k) => k.trim()).filter(Boolean) };
   };
-  const login = (username, password) => request('/login', { method: 'POST', body: form({ username, password }) });
+  const login = (username, password, next = '/dashboard') => request('/login', {
+    method: 'POST', body: form({ username, password, next }),
+  });
 
   // 1. health + public pages
   let r = await request('/api/health');
-  ok(r.status === 200 && r.body.ok === true, 'GET /api/health reports all checks OK', JSON.stringify(r.body));
-  ok(r.body.checks?.schema?.ok === true, 'schema check sees all tables');
+  ok(r.status === 200 && r.body.ok === true && Object.keys(r.body).length === 1,
+    'GET /api/health is a cheap liveness response');
+  r = await request('/api/owner/health');
+  ok(r.status === 302 && r.location === '/login', 'owner diagnostics refuse a signed-out visitor');
   r = await request('/');
   ok(r.status === 200 && />Login</.test(r.body) && /name="username"/.test(r.body) && /name="password"/.test(r.body), 'GET / renders the sign-in page');
   ok(/\/assets\/css\/ui\.css/.test(r.body) && !/cdn\.|jquery|bootstrap|tailwind/i.test(r.body), 'sign-in page uses only the local stylesheet (no CDN)');
   ok(!/ic_anoy|logo/i.test(r.body), 'sign-in page shows no logo');
   ok(/https:\/\/t\.me\/libAkAudioVisiual/.test(r.body), 'sign-in page links the Telegram handle');
+  r = await request('/login?next=https%3A%2F%2Fevil.example%2Fsteal');
+  ok(/name="next" value="\/dashboard"/.test(r.body), 'login next rejects an absolute cross-origin URL');
+  r = await request('/login?next=%2F%2Fevil.example%2Fsteal');
+  ok(/name="next" value="\/dashboard"/.test(r.body), 'login next rejects a protocol-relative URL');
   r = await request('/register');
   ok(r.status === 200 && /Create account/.test(r.body) && /name="referral"/.test(r.body), 'GET /register renders');
   r = await request('/connect');
@@ -128,15 +139,22 @@ try {
   ok(r.status === 302 && r.location === '/login', 'unknown page asks anonymous visitors to sign in');
 
   // 2. sign in
-  r = await login('Anoy', 'wrongpass');
+  r = await login('Anoy', 'wrongpass', '/keys/generate');
   ok(r.status === 302 && r.location === '/login', 'wrong password redirects back to login');
   r = await request('/login');
-  ok(/Wrong password/.test(r.body) && /class="alert alert-danger"/.test(r.body), 'bad login shows an inline error');
+  ok(/Wrong password/.test(r.body) && /class="alert alert-danger"/.test(r.body)
+    && /name="next" value="\/keys\/generate"/.test(r.body), 'bad login keeps the safe next path in the form');
   r = await request('/login', { method: 'POST', body: form({ username: 'Anoy', password: 'Anoy1764' }), headers: { 'sec-fetch-site': 'cross-site' } });
   ok(r.status === 302 && r.location === '/login' && !cookies.has('am_session'), 'a cross-site login POST is refused');
-  r = await login('anoy', 'Anoy1764');
-  ok(r.status === 302 && r.location === '/dashboard', 'Owner signs in (username is case-insensitive)');
+  r = await login('Anoy', 'Anoy1764', 'https://evil.example/steal');
+  ok(r.status === 302 && r.location === '/dashboard', 'successful login falls back to dashboard for an absolute next URL');
+  await request('/logout');
+  r = await login('anoy', 'Anoy1764', '/keys/generate');
+  ok(r.status === 302 && r.location === '/keys/generate', 'Owner sign-in returns to a same-origin next path');
   ok(cookies.has('am_session'), 'signed session cookie is issued');
+  r = await request('/api/owner/health');
+  ok(r.status === 200 && r.body?.checks?.schema?.ok === true && r.body?.checks?.database?.ok === true,
+    'owner diagnostics run the full health check');
 
   // 3. every page renders in the new design
   for (const route of ['/dashboard', '/keys', '/keys/generate', '/keys/1', '/settings', '/server',
@@ -208,10 +226,18 @@ try {
   r = await request('/keys/api?q=LYK0Y');
   ok(r.body?.rows?.[0]?.duration === '5 Hours' && r.body?.rows?.[0]?.devices === 2 && r.body?.rows?.[0]?.user_key === 'ANOY-2H-LYK0Y',
     'key edit persists (and keeps the key upper case)', JSON.stringify(r.body?.rows?.[0]));
+  r = await request('/keys/edit', { method: 'POST', headers: SAME, body: form({
+    id_keys: '2', game: 'PUBG', user_key: 'ANOY-2H-F7VWE', duration: '2', max_devices: '1', status: '1',
+    registrator: 'Anoy', devices: '', expired_date: '2000-01-01 00:00:00',
+  }) });
+  ok(r.status === 302, 'the licence fixture can be marked expired');
 
   // 8. licensing API
   r = await request('/connect', { method: 'POST', body: form({ game: 'PUBG', user_key: ownerKey, serial: 'TESTDEVICE001' }) });
   ok(r.status === 200 && r.body?.status === true, 'POST /connect accepts a valid key');
+  ok(Object.keys(r.body).join(',') === 'status,data' && Object.keys(r.body.data).join(',') ===
+    'real,token,modname,mod_status,credit,ESP,Item,AIM,SilentAim,BulletTrack,Floating,Memory,Setting,expired_date,EXP,exdate,device,rng',
+    'valid /connect response fields keep their original order');
   ok(r.body?.data?.token === md5(r.body?.data?.real || ''), '/connect token = md5(real)');
   ok(r.body?.data?.modname === 'VIP MOD' && r.body?.data?.ESP === 'on', '/connect returns mod metadata + feature flags');
   ok(!!r.body?.data?.EXP, '/connect returns the expiry');
@@ -219,11 +245,13 @@ try {
   ok(r.body?.status === true && r.body?.data?.token === md5(`PUBG-${ownerKey.toLowerCase()}-TESTDEVICE001-${r.body?.data?.real?.split('-').pop()}`),
     'a lower-case key still signs in and the token matches what the loader sent');
   r = await request('/connect', { method: 'POST', body: form({ game: 'PUBG', user_key: ownerKey, serial: 'OTHERDEVICE' }) });
-  ok(r.body?.status === false && /device/i.test(r.body?.reason || ''), 'a second device is refused when the key allows one');
+  ok(r.status === 200 && JSON.stringify(r.body) === '{"status":false,"reason":"MAX DEVICE REACHED"}', 'max-device reply stays byte-for-byte identical');
+  r = await request('/connect', { method: 'POST', body: form({ game: 'PUBG', user_key: 'ANOY-2H-F7VWE', serial: 'EXPIREDDEVICE' }) });
+  ok(r.status === 200 && JSON.stringify(r.body) === '{"status":false,"reason":"EXPIRED KEY"}', 'expired-key reply stays byte-for-byte identical');
   r = await request('/connect', { method: 'POST', body: form({ game: 'PUBG', user_key: 'DOES-NOT-EXIST', serial: 'TESTDEVICE002' }) });
-  ok(r.body?.status === false && r.body?.reason === 'USER OR GAME NOT REGISTERED', 'unknown key is rejected');
+  ok(r.status === 200 && JSON.stringify(r.body) === '{"status":false,"reason":"USER OR GAME NOT REGISTERED"}', 'unknown-key reply stays byte-for-byte identical');
   r = await request('/connect', { method: 'POST', body: form({ game: 'PUBG', user_key: ownerKey, serial: 'BAD|SERIAL' }) });
-  ok(r.body?.status === false && r.body?.reason === 'Bad Parameter', 'malformed serial is rejected');
+  ok(r.status === 200 && JSON.stringify(r.body) === '{"status":false,"reason":"Bad Parameter"}', 'malformed serial reply is unchanged');
 
   // 9. server settings
   r = await request('/server', { method: 'POST', headers: SAME, body: form({ status_form: '1', radios: 'on', myInput: 'Under maintenance' }) });
@@ -246,7 +274,7 @@ try {
   r = await request('/keys/ban', { method: 'POST', headers: SAME, body: form({ userkey: ownerKey, ban: '1' }) });
   ok(r.body?.ok === true && r.body?.banned === true, 'POST /keys/ban bans a key');
   r = await request('/connect', { method: 'POST', body: form({ game: 'PUBG', user_key: ownerKey, serial: 'TESTDEVICE001' }) });
-  ok(r.body?.status === false && /BLOCKED/.test(r.body?.reason || ''), 'a banned key is refused at sign in');
+  ok(r.status === 200 && JSON.stringify(r.body) === '{"status":false,"reason":"USER BLOCKED"}', 'banned-key reply stays byte-for-byte identical');
   r = await request('/keys/api?status=blocked');
   ok(r.body?.rows?.some((k) => k.user_key === ownerKey && k.state === 'blocked'), 'the Banned filter lists it');
   r = await request('/keys/ban', { method: 'POST', headers: SAME, body: form({ userkey: ownerKey, ban: '0' }) });
@@ -255,6 +283,26 @@ try {
   ok(r.body?.status === true, 'an unbanned key signs in again');
   r = await request('/keys/ban', { method: 'POST', body: form({ userkey: ownerKey, ban: '1' }), headers: { Origin: 'https://evil.example', 'Sec-Fetch-Site': 'cross-site' } });
   ok(r.status === 403, 'a foreign site cannot ban a key');
+
+  // The limiter reuses the endpoint's existing temporary/server-failure reply.
+  const keyThrottleIp = '198.51.100.41';
+  for (let i = 0; i < 31; i += 1) {
+    r = await request('/connect', {
+      method: 'POST', body: form({ game: 'PUBG', user_key: 'RATE-LIMIT-KEY', serial: `KEYTEST${i}` }),
+      headers: { 'x-forwarded-for': keyThrottleIp },
+    });
+  }
+  ok(r.status === 503 && JSON.stringify(r.body) === '{"status":false,"reason":"SERVER UNAVAILABLE"}',
+    'repeated calls for one licence key are throttled with the existing reply');
+  const ipThrottleIp = '198.51.100.42';
+  for (let i = 0; i < 121; i += 1) {
+    r = await request('/connect', {
+      method: 'POST', body: form({ game: 'PUBG', user_key: `RATE-IP-${i}`, serial: `IPTEST${i}` }),
+      headers: { 'x-forwarded-for': ipThrottleIp },
+    });
+  }
+  ok(r.status === 503 && JSON.stringify(r.body) === '{"status":false,"reason":"SERVER UNAVAILABLE"}',
+    'repeated calls from one client IP are throttled with the existing reply');
 
   // 10. reset / delete (POST from the panel, legacy GET still works)
   r = await request('/keys/reset', { method: 'POST', headers: SAME, body: form({ userkey: ownerKey }) });

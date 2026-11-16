@@ -17,7 +17,7 @@ import {
 import { requestUrl, pathOf, parseBody, redirect, back } from './http.mjs';
 import { handleAppUpdateCheck, doAppReleasePost, appReleasePageData, validHttpsUrl, handleLatestBuild } from './app-release.mjs';
 import {
-  handleConnect, handleConnectInfo, handleHealth, handleLibVersion,
+  handleConnect, handleConnectInfo, handleHealth, handleOwnerHealth, handleLibVersion,
   handleLibDownload, handleLibInfo, handleLibManifest,
 } from './licensing.mjs';
 import {
@@ -86,6 +86,19 @@ function publicBase(req) {
 
 function fail(req, res, url, message, errors = {}, old = {}) {
   return redirect(res, url, { msgDanger: message, errors, old });
+}
+
+function safeNextPath(value) {
+  const next = String(value ?? '').trim();
+  if (!next.startsWith('/') || next.startsWith('//')) return '/dashboard';
+  try {
+    const base = 'http://anoymundo.invalid';
+    const target = new URL(next, base);
+    if (target.origin !== base) return '/dashboard';
+    return `${target.pathname}${target.search}${target.hash}`;
+  } catch {
+    return '/dashboard';
+  }
 }
 
 async function logAttempt(username, ip, ok) {
@@ -280,24 +293,26 @@ async function doLogin(req, res, body) {
   const password = str(body.password);
   const remember = !!body.stay_log;
   const ip = getClientIp(req);
+  const next = safeNextPath(body.next);
+  const old = { username, next };
   const errors = {};
   if (await tooManyAttempts(username, ip)) {
-    return fail(req, res, '/login', 'Too many sign-in attempts. Wait 10 minutes and try again.', { password: 'Temporarily locked.' }, { username });
+    return fail(req, res, '/login', 'Too many sign-in attempts. Wait 10 minutes and try again.', { password: 'Temporarily locked.' }, old);
   }
   if (!alnum(username, 3, 25)) errors.username = 'Enter a valid username (letters and numbers only).';
   if (password.length < 6 || password.length > 45) errors.password = 'Password must be 6-45 characters.';
   if (Object.keys(errors).length) {
     await logAttempt(username, ip, false);
-    return fail(req, res, '/login', 'Please check the form.', errors, { username });
+    return fail(req, res, '/login', 'Please check the form.', errors, old);
   }
   const auth = await authenticate(username, password);
   if (!auth.ok) {
     await logAttempt(username, ip, false);
-    return fail(req, res, '/login', auth.reason, { password: auth.reason }, { username });
+    return fail(req, res, '/login', auth.reason, { password: auth.reason }, old);
   }
   await logAttempt(username, ip, true);
   setSession(res, auth.user, remember);
-  return redirect(res, '/dashboard', { msgSuccess: `Welcome back, ${displayName(auth.user)}.` });
+  return redirect(res, next, { msgSuccess: `Welcome back, ${displayName(auth.user)}.` });
 }
 
 async function doRegister(req, res, body) {
@@ -900,7 +915,12 @@ export async function handle(req, res) {
     }
 
     // --------------------------- public endpoints ---------------------------
-    if (lp === '/api/health' || lp === '/health') return handleHealth(res, q.get('rpc') === '1');
+    if (lp === '/api/health' || lp === '/health') return handleHealth(res);
+    if (lp === '/api/owner/health') {
+      const owner = await guard(req, res, { owner: true });
+      if (!owner) return;
+      return handleOwnerHealth(res, q.get('rpc') === '1');
+    }
     if (lp === '/api/lib/version' || lp === '/version.txt' || lp === '/api/version' || lp === '/lib/version.txt') {
       return handleLibVersion(res);
     }
@@ -915,10 +935,10 @@ export async function handle(req, res) {
     if (lp === '/favicon.ico') { res.statusCode = 301; res.setHeader('Location', '/favicon.svg'); return res.end(); }
     // Personal API-key endpoints authenticate with X-API-Key, not a session.
     if (lp === '/api/v1' || lp.startsWith('/api/v1/')) {
-      return handleApiV1(req, res, body, q, p, method);
+      return await handleApiV1(req, res, body, q, p, method);
     }
     if (lp === '/connect' || lp === '/api/connect') {
-      if (method === 'POST') return handleConnect(req, res, body);
+      if (method === 'POST') return await handleConnect(req, res, body);
       // Some loaders (and deployment checks) use a query-string GET instead
       // of a form POST. Same validation, same JSON contract.
       if (q.has('game') && q.has('user_key') && q.has('serial')) {
@@ -933,13 +953,15 @@ export async function handle(req, res) {
     if (p === '/' || lp === '/login') {
       const existing = await currentUser(req);
       if (existing) return redirect(res, '/dashboard');
-      if (method === 'POST') return doLogin(req, res, body);
-      return page(req, res, 'login', { title: 'Login', clientIp: getClientIp(req) });
+      if (method === 'POST') return await doLogin(req, res, body);
+      return page(req, res, 'login', {
+        title: 'Login', clientIp: getClientIp(req), next: safeNextPath(q.get('next')),
+      });
     }
     if (lp === '/register') {
       const existing = await currentUser(req);
       if (existing) return redirect(res, '/dashboard');
-      if (method === 'POST') return doRegister(req, res, body);
+      if (method === 'POST') return await doRegister(req, res, body);
       return page(req, res, 'register', { title: 'Register', clientIp: getClientIp(req) });
     }
     if (lp === '/logout') {
@@ -1019,7 +1041,7 @@ export async function handle(req, res) {
     }
     if (lp === '/keys/api') return keysList(res, user, q);
     if (lp === '/keys/generate') {
-      if (method === 'POST') return doGenerate(req, res, body, user);
+      if (method === 'POST') return await doGenerate(req, res, body, user);
       const unlimited = isUnlimited(user);
       return page(req, res, 'keys_generate', {
         user, title: 'Generate keys', unlimited,
@@ -1040,7 +1062,7 @@ export async function handle(req, res) {
         },
       });
     }
-    if (lp === '/keys/edit' && method === 'POST') return doKeyEdit(req, res, body, user);
+    if (lp === '/keys/edit' && method === 'POST') return await doKeyEdit(req, res, body, user);
     if (lp === '/keys/reset' || lp === '/keys/resetall') {
       const userKey = str(body.userkey ?? q.get('userkey'));
       const key = userKey ? await getKeyByUserKey(userKey) : null;
@@ -1106,14 +1128,14 @@ export async function handle(req, res) {
 
     // ------------------------------- settings ------------------------------
     if (lp === '/settings') {
-      if (method === 'POST') return doSettings(req, res, body, user, '/settings');
+      if (method === 'POST') return await doSettings(req, res, body, user, '/settings');
       return page(req, res, 'settings', { user, title: 'Settings', unlimited: isUnlimited(user), form: { fullname: user.fullname || '' } });
     }
 
     // ---------------------------- server settings --------------------------
     if (lp === '/server') {
       if (!user.isAdmin) return redirect(res, '/dashboard', { msgWarning: 'You do not have access to that page.' });
-      if (method === 'POST') return doServer(req, res, body, user);
+      if (method === 'POST') return await doServer(req, res, body, user);
       const settings = await getSettings();
       return page(req, res, 'server', { user, title: 'Server', ...serverData(settings) });
     }
@@ -1121,7 +1143,7 @@ export async function handle(req, res) {
     // --------------------------------- admin --------------------------------
     if (lp === '/admin/create-referral') {
       if (!user.isAdmin) return redirect(res, '/dashboard', { msgWarning: 'You do not have access to that page.' });
-      if (method === 'POST') return doReferral(req, res, body, user);
+      if (method === 'POST') return await doReferral(req, res, body, user);
       let codesQuery = db().from('referral_code').select('*', { count: 'exact' }).order('id_reff', { ascending: false }).limit(25);
       if (!user.isOwner) codesQuery = codesQuery.eq('created_by', user.username);
       const { data: codes, count, error } = await codesQuery;
@@ -1175,7 +1197,7 @@ export async function handle(req, res) {
     if (userEditMatch) {
       if (!user.isOwner) return redirect(res, '/dashboard', { msgWarning: 'You do not have access to that page.' });
       const id = Number(userEditMatch[1]);
-      if (method === 'POST') return doUserEdit(req, res, body, user);
+      if (method === 'POST') return await doUserEdit(req, res, body, user);
       const { data: target } = await db().from('users').select('*').eq('id_users', id).maybeSingle();
       if (!target) return redirect(res, '/admin/manage-users', { msgDanger: 'User no longer exists.' });
       if (Number(target.level) === 1) return redirect(res, '/admin/manage-users', { msgWarning: 'The Owner account is managed from Settings.' });
@@ -1196,7 +1218,7 @@ export async function handle(req, res) {
     // ---------------------------- library / release ------------------------
     if (lp === '/lib') {
       if (!user.isOwner) return redirect(res, '/dashboard', { msgWarning: 'You do not have access to that page.' });
-      if (method === 'POST') return doLibUpload(req, res, body, user);
+      if (method === 'POST') return await doLibUpload(req, res, body, user);
       const settings = await getSettings();
       return page(req, res, 'lib', { user, title: 'Library', maxUploadMb: config.maxUploadMb, ...serverData(settings) });
     }
@@ -1208,7 +1230,7 @@ export async function handle(req, res) {
     }
     if (lp === '/app-update') {
       if (!user.isAdmin) return redirect(res, '/dashboard', { msgWarning: 'You do not have access to that page.' });
-      if (method === 'POST') return doAppReleasePost(req, res, body, user);
+      if (method === 'POST') return await doAppReleasePost(req, res, body, user);
       return page(req, res, 'app_update', { user, title: 'App update', ...(await appReleasePageData()) });
     }
 

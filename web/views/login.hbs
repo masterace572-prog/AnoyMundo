@@ -22,6 +22,7 @@
             {{> msgStatus}}
 
             <form method="post" action="/login" class="form" novalidate data-busy-form>
+                <input type="hidden" name="next" value="{{#if old.next}}{{old.next}}{{else}}{{next}}{{/if}}">
                 <div class="field {{#if errors.username}}invalid{{/if}}">
                     <label class="label" for="username">Username</label>
                     <div class="input-wrap">
