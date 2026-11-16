@@ -4,6 +4,17 @@ Screenshots, design notes (`docs/ui-redesign/…`) and the one-off generator
 scripts mentioned below were removed from the tree in the repo cleanup after
 2.3.2; they remain in git history.
 
+## 2.4.0 (versionCode 18)
+
+- Crash reports stay local and preserve source line numbers.
+- Home, Login, Splash status, Settings and sheets received visual updates,
+  including the Home status pill and `ic_help`; icon-only controls have
+  accessibility labels and decorative glyphs are hidden from accessibility.
+- Loading buttons use a quiet Lottie arc; reduced motion leaves it still, and
+  it stops when loading ends.
+- Splash update-check failures show offline/server states with a dedicated
+  server-failed message. Home notices fade out.
+
 ## 2.3.8 — Splash motion only (versionCode 17)
 
 - The Lottie animations stay only on the splash update check (quiet arc while

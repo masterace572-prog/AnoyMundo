@@ -6,4 +6,7 @@
     <item name="tag_swap_text" type="id" />
     <!-- com.xlox.ui.Motion: which Lottie a view shows -->
     <item name="tag_lottie_res" type="id" />
+    <!-- com.xlox.ui.Ui: button loading arc and its one-time detach listener -->
+    <item name="tag_button_progress" type="id" />
+    <item name="tag_button_progress_listener" type="id" />
 </resources>
