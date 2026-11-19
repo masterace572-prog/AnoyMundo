@@ -32,7 +32,7 @@ jobs:
           unzip -p /tmp/techpost.lottie "$entry" > xlox/app/src/main/res/raw/anoy_splash_techpost.json
           python3 -c 'import json,sys; a=json.load(open(sys.argv[1])); assert all(k in a for k in ("v", "fr", "ip", "op", "w", "h", "layers"))' xlox/app/src/main/res/raw/anoy_splash_techpost.json
           echo "Retrieved $entry ($(wc -c <xlox/app/src/main/res/raw/anoy_splash_techpost.json) bytes)"
-          git diff --quiet -- xlox/app/src/main/res/raw/anoy_splash_techpost.json && exit 0
+          git status --porcelain -- xlox/app/src/main/res/raw/anoy_splash_techpost.json | grep -q . || exit 0
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add xlox/app/src/main/res/raw/anoy_splash_techpost.json
