@@ -104,8 +104,22 @@ if len(sys.argv) > 1:
              f'{brand}: compiled APK has the correct package and app label')
         if f"package: name='{package}'" not in badging or f"application-label:'{brand}'" not in badging:
             annotation(summary)
-        gate("sdkVersion:'21'" in badging and "targetSdkVersion:'28'" in badging,
-             f'{brand}: min/target SDK and container compatibility unchanged')
+        # Check the authoritative compiled uses-sdk attributes. aapt2's
+        # badging labels vary across build-tools; resource XML integer values
+        # are stable and must be EXACTLY 21 / 28 for container compatibility.
+        manifest = aapt('xmltree', '--file', 'AndroidManifest.xml', apk)
+        def sdk_value(name):
+            match = re.search(r'android:' + name + r'\([^)]*\)\s*=\s*\(type 0x1[01]\)\s*(0x[0-9a-fA-F]+|[0-9]+)', manifest)
+            return int(match[1], 0) if match else None
+        minimum, target = sdk_value('minSdkVersion'), sdk_value('targetSdkVersion')
+        sdk_lines = '\n'.join(line.strip() for line in manifest.splitlines() if re.search('minSdkVersion|targetSdkVersion', line))
+        if os.environ.get('GITHUB_ACTIONS'):
+            metadata = f'{brand}: {summary}\n{sdk_lines}'
+            print('::notice title=Compiled APK metadata::' + metadata.replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A'))
+        gate(minimum == 21 and target == 28,
+             f'{brand}: compiled minSdk={minimum}, targetSdk={target} (required 21 / 28)')
+        if minimum != 21 or target != 28:
+            annotation(sdk_lines or 'Compiled uses-sdk attributes were not found in the aapt2 XML dump.')
         if brand == 'KennyPvt':
             dump = aapt('resources', apk)
             # Resource/style names may deliberately retain Anoy for compatibility;
