@@ -10,14 +10,16 @@ on:
       - '.github/workflows/extract-techpost-lottie.yml'
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   extract:
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
-      - name: Download and unpack the selected animation
+      - uses: actions/checkout@v7
+
+      - name: Download, validate and commit the selected animation
         shell: bash
         run: |
           set -euo pipefail
@@ -26,7 +28,13 @@ jobs:
             --connect-timeout 20 --max-time 60 --output /tmp/techpost.lottie "$url"
           entry=$(unzip -Z1 /tmp/techpost.lottie | grep -E '^animations/[^/]+\.json$' | head -1)
           test -n "$entry"
-          unzip -p /tmp/techpost.lottie "$entry" > /tmp/techpost.json
-          python3 -c 'import json,sys; a=json.load(open(sys.argv[1])); assert all(k in a for k in ("v", "fr", "ip", "op", "w", "h", "layers"))' /tmp/techpost.json
-          echo "Retrieved $entry ($(wc -c </tmp/techpost.json) bytes)"
-          base64 -w 4000 /tmp/techpost.json | sed 's/^/TECHPOST_B64:/'
+          mkdir -p xlox/app/src/main/res/raw
+          unzip -p /tmp/techpost.lottie "$entry" > xlox/app/src/main/res/raw/anoy_splash_techpost.json
+          python3 -c 'import json,sys; a=json.load(open(sys.argv[1])); assert all(k in a for k in ("v", "fr", "ip", "op", "w", "h", "layers"))' xlox/app/src/main/res/raw/anoy_splash_techpost.json
+          echo "Retrieved $entry ($(wc -c <xlox/app/src/main/res/raw/anoy_splash_techpost.json) bytes)"
+          git diff --quiet -- xlox/app/src/main/res/raw/anoy_splash_techpost.json && exit 0
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add xlox/app/src/main/res/raw/anoy_splash_techpost.json
+          git commit -m 'chore: add selected Techpost splash Lottie [skip ci]'
+          git push
