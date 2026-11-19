@@ -4,6 +4,18 @@ Screenshots, design notes (`docs/ui-redesign/…`) and the one-off generator
 scripts mentioned below were removed from the tree in the repo cleanup after
 2.3.2; they remain in git history.
 
+## 2.4.0 — Anoy Hax Lottie splash (versionCode 19)
+
+- Splash now uses a full-screen, local Lottie launch film on true black,
+  ending in **Anoy Hax**. The old hand-built greeting, word swap and breathing
+  animation are gone.
+- The owner-selected Techpost motion is bundled, recoloured to white on black,
+  and rebranded before its original product wordmark can appear. It loads from
+  the APK (not the network), uses the app's Inter Semibold font, and honours
+  Android reduced-motion settings by showing its final frame.
+- App-update checking, status feedback, retry handling and the hand-off to
+  sign-in or the APK update screen are unchanged.
+
 ## 2.3.9 — Signed APK release (versionCode 18)
 
 - Fresh release build of the current XLOX loader. App behaviour is unchanged.

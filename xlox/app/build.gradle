@@ -84,8 +84,9 @@ android {
         // 2.3.7: quiet Lottie status on splash, login key, preparing, library sheet.
         // 2.3.8: Lottie on the splash update check only (login, home, library sheet reverted).
         // 2.3.9: signed release pipeline refresh; no app behaviour change.
-        versionCode 18
-        versionName '2.3.9'
+        // 2.4.0: full-screen local black-and-white Lottie splash, ending in Anoy Hax.
+        versionCode 19
+        versionName '2.4.0'
 
         vectorDrawables {
             useSupportLibrary true

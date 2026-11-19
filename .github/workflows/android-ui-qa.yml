@@ -148,8 +148,8 @@ jobs:
           shots = Path('xlox/docs/ui-redesign/after')
           need = [
               # splash (frames, reduced motion, animations on)
-              'splash', 'splash_reduced_welcome', 'splash_t000', 'splash_t025', 'splash_t080',
-              'splash_t140', 'splash_t182', 'splash_t195', 'splash_t240', 'anim_splash_t10',
+              'splash', 'splash_reduced_welcome', 'splash_t000', 'splash_t080', 'splash_t160',
+              'splash_t240', 'splash_t450', 'splash_t510', 'splash_t750', 'anim_splash_t50',
               'home_expiry_ist',
               'splash_live_cold',
               # launcher icon

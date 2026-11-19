@@ -1,107 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Splash (spec 3.1), true black, 24 dp gutters. The story is unchanged:
-    splashMark    the system-splash wordmark in the same place (window centre);
-                  it cross-fades out as the film starts, so the hand-off is seamless
-    splashLockup  kicker "WELCOME TO", 12 dp, "Anoy Loader" (Wordmark), centred
-                  at ~42 % of the height; "Loader" dissolves into "Hax" in the slot
-    splashVersion "v2.3.4", Mono 12 tertiary, top right, 24 dp from the edges
-    status        bottom centre, 32 dp above the navigation inset: a 24 dp Lottie
-                  (2.3.7: quiet arc, or the check drawing in; amber dot) + Caption; below it a reserved
-                  detail line (slow connection, or the failure reason) and, only
-                  after a failure, Try again
-  Insets are added in code (SplashActivity).
+  Full-screen branded Lottie splash on true black. The selected Techpost motion
+  has been recoloured and rebranded in res/raw/anoy_splash.json, so the screen
+  contains no hand-built wordmark choreography. The Android 12 system splash
+  hands over to this view; app-update status and retry behaviour are unchanged.
 -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/splashRoot"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/black"
     android:clipChildren="false">
 
-    <ImageView
-        android:id="@+id/splashMark"
-        android:layout_width="@dimen/splash_mark"
-        android:layout_height="@dimen/splash_mark"
-        android:layout_gravity="center"
-        android:importantForAccessibility="no"
-        android:src="@drawable/splash_mark" />
-
-    <!-- 42 : 58 split puts the lockup's centre at ~42 % of the height. -->
-    <LinearLayout
+    <com.airbnb.lottie.LottieAnimationView
+        android:id="@+id/splashAnimation"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:clipChildren="false"
-        android:orientation="vertical">
-
-        <Space
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="42" />
-
-        <LinearLayout
-            android:id="@+id/splashLockup"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center_horizontal"
-            android:alpha="0"
-            android:clipChildren="false"
-            android:gravity="center_horizontal"
-            android:orientation="vertical"
-            android:paddingStart="@dimen/gutter_wide"
-            android:paddingEnd="@dimen/gutter_wide">
-
-            <TextView
-                android:id="@+id/splashGreeting"
-                style="@style/Text.Kicker.Splash"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/splash_greeting" />
-
-            <LinearLayout
-                android:id="@+id/splashName"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="@dimen/space_12"
-                android:orientation="horizontal">
-
-                <TextView
-                    android:id="@+id/splashAnoy"
-                    style="@style/Text.Wordmark"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/app_name" />
-
-                <FrameLayout
-                    android:id="@+id/splashSlot"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="@dimen/space_8">
-
-                    <TextView
-                        android:id="@+id/splashLoader"
-                        style="@style/Text.Wordmark"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/splash_loader" />
-
-                    <TextView
-                        android:id="@+id/splashHax"
-                        style="@style/Text.Wordmark"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:alpha="0"
-                        android:text="@string/splash_hax" />
-                </FrameLayout>
-            </LinearLayout>
-        </LinearLayout>
-
-        <Space
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="58" />
-    </LinearLayout>
+        android:importantForAccessibility="no"
+        android:scaleType="centerCrop" />
 
     <TextView
         android:id="@+id/splashVersion"
@@ -125,8 +41,7 @@
         android:paddingStart="@dimen/gutter_wide"
         android:paddingEnd="@dimen/gutter_wide">
 
-        <!-- 2.3.1: spinner / glyph + text form one wrap-content group, centred in
-             the bar, so a longer or shorter status grows from the centre. -->
+        <!-- The update status uses the small original Anoy Lottie icons. -->
         <LinearLayout
             android:id="@+id/splashStatusRow"
             android:layout_width="wrap_content"
@@ -135,9 +50,6 @@
             android:minHeight="@dimen/status_row_min_height"
             android:orientation="horizontal">
 
-            <!-- 2.3.7: quiet Lottie (anoy_arc loop / anoy_check one-shot), 24 dp.
-                 The arc is 15 dp across inside it, like the old 14 dp spinner;
-                 4 dp + its inset keep the old ~8 dp gap to the text. -->
             <com.airbnb.lottie.LottieAnimationView
                 android:id="@+id/splashStatusMark"
                 android:layout_width="@dimen/lottie_status"

@@ -2,26 +2,26 @@ package com.xlox;
 
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
-import android.animation.ValueAnimator;
 import android.content.Intent;
+import android.content.res.ColorStateList;
+import android.graphics.Typeface;
+import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.animation.Interpolator;
 import android.view.animation.LinearInterpolator;
-import android.view.animation.PathInterpolator;
-import android.content.res.ColorStateList;
-import android.graphics.drawable.Drawable;
 import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
+import androidx.core.content.res.ResourcesCompat;
 import androidx.core.splashscreen.SplashScreen;
 import androidx.core.splashscreen.SplashScreenViewProvider;
 
+import com.airbnb.lottie.FontAssetDelegate;
 import com.airbnb.lottie.LottieAnimationView;
 
 import com.xlox.ui.Motion;
@@ -34,211 +34,121 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 /**
- * Launcher entry: a ~3 s typography film on true black, then sign in / the
- * update check exactly as before.
+ * Launcher entry: a local, full-screen Lottie brand film on true black followed
+ * by the existing app-update gate. The bundled animation is an offline,
+ * black-and-white rebrand of the owner-selected Techpost motion; its final
+ * Lottie text layer reads {@code Anoy Hax}. See assets/licenses/LOTTIE.md.
  *
- * <p>The system splash (core-splashscreen) shows the static Anoy wordmark
- * (res/drawable/splash_mark.xml, the launcher icon's outlines). This activity
- * starts on the same image in the same place, then:
- * <pre>
- *   0.00-0.40 s  arrive   kicker "WELCOME TO" fades in (400 ms) while the system
- *                         wordmark cross-fades out; "Anoy Loader" follows 120 ms
- *                         later (no rise); the version at ~0.26 s, status ~0.6 s
- *   0.52-1.15 s  read     hold
- *   1.15-1.67 s  leave    the kicker fades out while drifting up 8 dp
- *   1.20-1.72 s  move     "Anoy Loader" glides up onto the lockup's centre line
- *   1.56-2.01 s  swap     "Loader" dissolves into "Hax" in the same slot, opacity
- *                         only, 450 ms, while the pair re-centres. The fades
- *                         overlap: "Hax" is in by 70 % and "Loader" only leaves
- *                         from 30 %, so the slot never looks empty
- *   2.01-2.85 s  settle   hold "Anoy Hax"
- *   2.85 s       handoff  280 ms cross-fade into LogAct (~3.13 s)
- * </pre>
- * 2.2.0: meanwhile the app (APK) update check runs and the bottom status line
- * reports it. The hand-off waits for BOTH the film and the check: up to date
- * goes on to sign in (whose library UpdateGate is unchanged); a newer release
- * opens {@link AppUpdateActivity}; a failed check shows the reason and Try
- * again and never continues on its own. If the check outlasts the film, "Anoy
- * Hax" breathes until it answers. 2.3.4: a check still running after 6 s says
- * "Taking longer than usual…" (spinner kept, no amber); after 15 s the detail
- * line adds "Still trying. Your connection may be slow." Try again appears only
- * after a real failure.
- * Every property is a pure function of time ({@link #applyTime}) driven by one
- * animator, so the moves stay locked together as one gesture. Text is only
- * faded and translated - never clipped and never scaled - on hardware layers.
- * Reduced motion: "Welcome To Anoy Loader" holds, then cuts straight to the
- * final "Anoy Hax" and hands off - no choreography.
+ * <p>The system splash is removed at once so the app controls a seamless black
+ * hand-off. The version and app-update status retain their prior timing and
+ * behaviour: a current app continues to sign-in, a newer app opens the update
+ * screen, and a failure stays on Splash with a retry action. The Lottie ending
+ * is the visual hand-off point. With reduced motion enabled, its final branded
+ * frame is shown without playing the film.</p>
  */
 public class SplashActivity extends AppCompatActivity {
 
-    // ---- Timeline (ms). Tuned together: change one, check the others. ----
-    /** System-splash wordmark cross-fades out as the lockup arrives. */
-    private static final long MARK_FADE_MS = 220L;
-    /** Arrive: opacity only. The kicker first, the name 120 ms later. */
-    private static final long ARRIVE_FADE_MS = 400L;
-    private static final long NAME_AT_MS = 120L;
-    /** Leave: the greeting fades out and drifts up. Never clipped or scaled. */
-    private static final long CUT_AT_MS = 1150L;
-    private static final long CUT_MS = 520L;
-    private static final float CUT_DRIFT_DP = 8f;
-    /** Move: "Anoy Loader" glides into the space the greeting left. */
-    private static final long MOVE_AT_MS = CUT_AT_MS + 50L;
-    private static final long MOVE_MS = 520L;
-    /**
-     * Swap: "Loader" and "Hax" cross-dissolve in the same slot (start edges
-     * aligned) while the pair re-centres. It starts as the move settles, so the
-     * whole cut reads as one continuous gesture.
-     */
-    private static final long SWAP_AT_MS = MOVE_AT_MS + 360L;
-    private static final long SWAP_MS = 450L;
-    /**
-     * Overlapping fade windows within the swap: "Hax" fades in over 0-70 % and
-     * "Loader" fades out over 30-100 %. Mid-way both are 84 % visible, so the
-     * words genuinely overlap - the slot never dims, empties or pops.
-     */
-    private static final float HAX_IN_END = 0.70f;
-    private static final float LOADER_OUT_START = 0.30f;
-    /** Version fades in early; the status line at ~600 ms. */
+    /** 482 frames at 60 fps in res/raw/anoy_splash.json. */
+    private static final long FILM_MS = 8_034L;
     private static final long VERSION_AT_MS = 260L;
     private static final long VERSION_MS = 320L;
     private static final long STATUS_AT_MS = 600L;
     private static final long STATUS_MS = 280L;
-    /** End of the film = hand-off (plus the 320 ms activity cross-fade). */
-    private static final long FILM_MS = 2850L;
-    /** Reduced motion: hold the welcome, cut to the final line, hold, hand off. */
-    private static final long REDUCED_WELCOME_MS = 1000L;
     private static final long REDUCED_FINAL_MS = 700L;
-    /** Startup slower than the film: very slow opacity breathe on "Anoy Hax". */
-    private static final long BREATHE_MS = 2400L;
-    private static final float BREATHE_MIN_ALPHA = 0.72f;
-    /** Safety net if the first frame never arrives. */
-    private static final long SAFETY_MS = FILM_MS + 2500L;
-
-    /** Inter cap height (1490 / 2048 em): used to centre the line optically. */
-    private static final float CAP_HEIGHT_EM = 1490f / 2048f;
-
-    private static final Interpolator FAST_OUT_SLOW_IN = new PathInterpolator(0.4f, 0f, 0.2f, 1f);
-    /**
-     * Symmetric ease-in-out for the cross-dissolve and its slide: no
-     * front-loaded jump, so the change is spread over the whole swap.
-     */
-    private static final Interpolator DISSOLVE = new PathInterpolator(0.45f, 0f, 0.55f, 1f);
+    /** Safety net if a renderer cannot start the animation. */
+    private static final long SAFETY_MS = FILM_MS + 2_500L;
 
     /** Debug builds only: hold the splash (used by the screenshot QA). */
     public static final String EXTRA_HOLD = "qa_hold";
     /** Debug builds only: freeze the film at a time in seconds for screenshots. */
     public static final String EXTRA_FRAME = "qa_frame";
-    /**
-     * Debug builds only: simulate the app update check without the network -
-     * checking | up_to_date | available | mandatory | fail.
-     */
+    /** Debug builds only: simulate the app update check without the network. */
     public static final String EXTRA_QA_APP_UPDATE = "qa_app_update";
-    /**
-     * Debug builds only (2.3.2 end-to-end test): offer this real release
-     * instead of asking the panel. The download, the APK checks and the
-     * PackageInstaller hand-off on the update screen are all real.
-     */
+    /** Debug builds only: offer this real release instead of asking the panel. */
     public static final String EXTRA_QA_REAL_URL = "qa_real_update_url";
     public static final String EXTRA_QA_REAL_CODE = "qa_real_update_code";
     public static final String EXTRA_QA_REAL_NAME = "qa_real_update_name";
-    /** Status line: the check starts once the version and status have faded in. */
+
+    /** Status line: the check starts after the version and status have faded in. */
     private static final long CHECK_AT_MS = VERSION_AT_MS + VERSION_MS;
-    /** "Up to date" (green check) stays on screen at least this long before the hand-off. */
+    /** "Up to date" stays on screen before the hand-off. */
     private static final long CURRENT_HOLD_MS = 700L;
-    /** "Update available" stays readable this long after its crossfade. */
+    /** "Update available" stays readable after its crossfade. */
     private static final long PROCEED_MS = 400L;
-    /** Status crossfades (2.3.4: all of them, "Up to date" too): 100 out / 180 in. */
     private static final long DONE_OUT_MS = Ui.SWAP_OUT;
     private static final long DONE_IN_MS = Ui.SWAP_IN;
     private static final long SWAP_OUT_MS = Ui.SWAP_OUT;
     private static final long SWAP_IN_MS = Ui.SWAP_IN;
-    /** A check still running this long says so: the status, then the detail line. */
     private static final long SLOW_STATUS_MS = Ui.SLOW_MS;
     private static final long SLOW_DETAIL_MS = 15_000L;
-    /** Debug simulation: how long the fake check takes. */
     private static final long QA_CHECK_MS = 900L;
 
     private enum Check { PENDING, CHECKING, CURRENT, AVAILABLE, FAILED }
 
     private final Handler handler = new Handler(Looper.getMainLooper());
-    /** Film finished (or never started): hand off as soon as the check allows. */
     private final Runnable next = this::onFilmDone;
-    private final ExecutorService checker = Executors.newSingleThreadExecutor(r -> new Thread(r, "anoy-app-check"));
+    private final ExecutorService checker = Executors.newSingleThreadExecutor(
+            r -> new Thread(r, "anoy-app-check"));
+
     private View root;
-    private View mark;
-    private View lockup;
-    private TextView greeting;
-    private View name;
-    private TextView loader;
-    private TextView hax;
+    private LottieAnimationView splashAnimation;
     private TextView version;
     private View statusBar;
     private View statusRow;
     private LottieAnimationView statusMark;
-    /** Uptime when the current status text appeared (for the "Up to date" hold). */
-    private long statusShownAt;
     private TextView statusLine;
     private TextView statusDetail;
     private View retry;
+    /** Uptime when the current status text appeared (for the current-state hold). */
+    private long statusShownAt;
     private Check check = Check.PENDING;
     private AppUpdater.Release release;
-    /** Bumped on every (re)check so a stale answer is ignored. */
     private int checkRun;
     private boolean filmDone;
     private boolean handingOff;
-    private String qaUpdate;
-    private AppUpdater.Release qaReal;
-    private ValueAnimator film;
-    private ValueAnimator breath;
-    private float driftPx;
-    /** Measured after layout: vertical move to the centre, horizontal re-centre. */
-    private float moveDy;
-    private float recentreDx;
-    private boolean measured;
     private boolean opened;
     private boolean hold;
+    private String qaUpdate;
+    private AppUpdater.Release qaReal;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         SplashScreen splash = SplashScreen.installSplashScreen(this);
-        // Our first frame is the same wordmark in the same place, so drop the
-        // system splash at once. Without a listener the platform fades it out
-        // on its own and a cold start can show it dim, then an empty window,
-        // then this activity fading in.
         splash.setOnExitAnimationListener(SplashScreenViewProvider::remove);
         super.onCreate(savedInstanceState);
+
         // Re-launch from the launcher while a task already exists: just finish.
         if (!isTaskRoot() && getIntent() != null && Intent.ACTION_MAIN.equals(getIntent().getAction())
                 && getIntent().hasCategory(Intent.CATEGORY_LAUNCHER)) {
             finish();
             return;
         }
+
         hold = BuildConfig.DEBUG && getIntent() != null && getIntent().getBooleanExtra(EXTRA_HOLD, false);
         qaUpdate = BuildConfig.DEBUG && getIntent() != null ? getIntent().getStringExtra(EXTRA_QA_APP_UPDATE) : null;
         String qaRealUrl = BuildConfig.DEBUG && getIntent() != null ? getIntent().getStringExtra(EXTRA_QA_REAL_URL) : null;
         if (qaRealUrl != null) {
             String qaRealName = getIntent().getStringExtra(EXTRA_QA_REAL_NAME);
             qaReal = new AppUpdater.Release(qaRealName != null ? qaRealName : "e2e",
-                    getIntent().getIntExtra(EXTRA_QA_REAL_CODE, 0), qaRealUrl, "End-to-end update test", false);
+                    getIntent().getIntExtra(EXTRA_QA_REAL_CODE, 0), qaRealUrl,
+                    "End-to-end update test", false);
         }
         final float qaFrame = BuildConfig.DEBUG && getIntent() != null
                 ? getIntent().getFloatExtra(EXTRA_FRAME, -1f) : -1f;
+
         try {
             Ui.edgeToEdge(this);
             setContentView(R.layout.activity_splash);
             root = findViewById(R.id.splashRoot);
-            mark = findViewById(R.id.splashMark);
-            lockup = findViewById(R.id.splashLockup);
-            greeting = findViewById(R.id.splashGreeting);
-            name = findViewById(R.id.splashName);
-            loader = findViewById(R.id.splashLoader);
-            hax = findViewById(R.id.splashHax);
+            splashAnimation = findViewById(R.id.splashAnimation);
+            configureSplashAnimation();
+
             version = findViewById(R.id.splashVersion);
             version.setText(getString(R.string.splash_version, BuildConfig.VERSION_NAME));
             statusBar = findViewById(R.id.splashStatusBar);
             statusRow = findViewById(R.id.splashStatusRow);
             statusMark = findViewById(R.id.splashStatusMark);
-            Motion.arc(statusMark); // as the old spinner: waiting from the first frame
+            Motion.arc(statusMark);
             statusLine = findViewById(R.id.splashStatus);
             statusDetail = findViewById(R.id.splashStatusDetail);
             retry = findViewById(R.id.splashRetry);
@@ -246,18 +156,11 @@ public class SplashActivity extends AppCompatActivity {
                 Ui.tap(v);
                 startCheck();
             });
-            driftPx = Ui.dp(this, CUT_DRIFT_DP);
-            // One real word space between "Anoy" and the Loader/Hax slot.
-            TextView anoy = findViewById(R.id.splashAnoy);
-            View slotView = findViewById(R.id.splashSlot);
-            ViewGroup.MarginLayoutParams slot = (ViewGroup.MarginLayoutParams) slotView.getLayoutParams();
-            slot.setMarginStart(Math.round(anoy.getPaint().measureText(" ")));
-            slotView.setLayoutParams(slot);
+
             final int footerMargin = getResources().getDimensionPixelSize(R.dimen.space_32);
             final int versionTop = getResources().getDimensionPixelSize(R.dimen.gutter_wide);
             final int versionEnd = getResources().getDimensionPixelSize(R.dimen.gutter_wide);
             Ui.onInsets(root, (bars, bottom, ime) -> {
-                // Only re-lays out when an inset really changes - never per frame.
                 ViewGroup.MarginLayoutParams lp = (ViewGroup.MarginLayoutParams) version.getLayoutParams();
                 int top = versionTop + bars.top;
                 int end = versionEnd + Math.max(bars.left, bars.right);
@@ -283,67 +186,85 @@ public class SplashActivity extends AppCompatActivity {
         }
 
         if (qaFrame >= 0f) {
-            // QA: one still frame of the film, no navigation, no network.
+            // QA: one deterministic Lottie frame, no navigation and no network.
             hold = true;
             if (qaUpdate == null) qaUpdate = "checking";
-            root.post(() -> {
-                if (!Ui.alive(this) || !measure()) return;
-                applyTime(Math.round(qaFrame * 1000f));
-            });
+            root.post(() -> showQaFrame(qaFrame));
             startCheck();
             return;
         }
-        // The hold screenshots never touch the network either.
+
         if (hold && qaUpdate == null) qaUpdate = "checking";
         handler.postDelayed(this::startCheck, CHECK_AT_MS);
+        revealChrome();
         if (Ui.reducedMotion(this)) {
-            playReduced();
-            return;
-        }
-        // Start on the first drawn frame (after layout) so a slow cold start
-        // can't eat into the film; until then the system wordmark stays put.
-        root.post(() -> {
-            if (!Ui.alive(this)) return;
-            if (!measure()) {
-                onFilmDone();
-                return;
-            }
-            film = ValueAnimator.ofFloat(0f, FILM_MS);
-            film.setDuration(FILM_MS);
-            film.setInterpolator(new LinearInterpolator());
-            film.addUpdateListener(a -> applyTime((long) (float) a.getAnimatedValue()));
-            film.addListener(new AnimatorListenerAdapter() {
-                private boolean done;
-
-                @Override
-                public void onAnimationEnd(Animator animation) {
-                    if (done) return;
-                    done = true;
-                    applyTime(FILM_MS);
-                    setTextLayers(false);
-                    onFilmDone();
-                }
+            root.post(() -> {
+                if (!Ui.alive(this)) return;
+                splashAnimation.cancelAnimation();
+                splashAnimation.setProgress(1f);
+                handler.postDelayed(next, REDUCED_FINAL_MS);
             });
-            setTextLayers(true);
-            film.start();
-        });
+        } else {
+            root.post(() -> {
+                if (Ui.alive(this)) splashAnimation.playAnimation();
+            });
+        }
         handler.postDelayed(next, SAFETY_MS);
+    }
+
+    private void configureSplashAnimation() {
+        // The rebranded Lottie text layer uses the same shipped Inter face as
+        // the rest of the app, rather than relying on a device font fallback.
+        splashAnimation.setFontAssetDelegate(new FontAssetDelegate() {
+            @Override
+            public Typeface fetchFont(String fontFamily) {
+                return ResourcesCompat.getFont(SplashActivity.this, R.font.inter_semibold);
+            }
+        });
+        splashAnimation.setAnimation(R.raw.anoy_splash);
+        splashAnimation.setRepeatCount(0);
+        splashAnimation.addAnimatorListener(new AnimatorListenerAdapter() {
+            private boolean completed;
+
+            @Override
+            public void onAnimationEnd(Animator animation) {
+                // Reduced motion and deterministic QA frames set progress directly;
+                // their explicit callbacks own the hand-off timing.
+                if (completed || Ui.reducedMotion(SplashActivity.this) || !Ui.alive(SplashActivity.this)) return;
+                completed = true;
+                onFilmDone();
+            }
+        });
+    }
+
+    private void revealChrome() {
+        version.animate().alpha(1f).setStartDelay(VERSION_AT_MS).setDuration(VERSION_MS)
+                .setInterpolator(Ui.ENTER).start();
+        statusBar.animate().alpha(1f).setStartDelay(STATUS_AT_MS).setDuration(STATUS_MS)
+                .setInterpolator(Ui.ENTER).start();
+    }
+
+    private void showQaFrame(float seconds) {
+        if (!Ui.alive(this)) return;
+        version.setAlpha(1f);
+        statusBar.setAlpha(1f);
+        splashAnimation.cancelAnimation();
+        splashAnimation.setProgress(Math.max(0f, Math.min(1f, seconds * 1000f / FILM_MS)));
     }
 
     // ------------------------------------------------------ app update check
 
-    /** The film is over (or could not run): go on once the check allows it. */
+    /** The visual film is over (or could not render): proceed when the check allows it. */
     private void onFilmDone() {
         if (filmDone || !Ui.alive(this)) return;
         filmDone = true;
         handler.removeCallbacks(next);
-        if (!maybeProceed()) breathe();
+        maybeProceed();
     }
 
     /** (Re)runs the check; the status line follows its real state. */
     private void startCheck() {
-        if (!Ui.alive(this) || handingOff) return;
-        if (check == Check.CHECKING) return;
+        if (!Ui.alive(this) || handingOff || check == Check.CHECKING) return;
         final int run = ++checkRun;
         check = Check.CHECKING;
         release = null;
@@ -370,7 +291,6 @@ public class SplashActivity extends AppCompatActivity {
         Log.i("SplashActivity", "Checking for an app update");
         checker.execute(() -> {
             try {
-                // 2.3.3: up to date less than 10 minutes ago -> no network.
                 if (AppUpdater.recentlyUpToDate(this)) {
                     Log.i("SplashActivity", "Up to date (checked within 10 minutes); skipping the network check");
                     handler.post(() -> onChecked(run, null));
@@ -402,12 +322,8 @@ public class SplashActivity extends AppCompatActivity {
             setStatus(getString(R.string.splash_status_available, found.versionName), 0, 0, false,
                     SWAP_OUT_MS, SWAP_IN_MS);
         }
-        // The slow-connection detail (if it came up) leaves with the answer.
         Ui.fadeReserved(statusDetail, false);
-        if (maybeProceed() && breath != null) {
-            breath.cancel();
-            name.setAlpha(1f);
-        }
+        maybeProceed();
     }
 
     private void onCheckFailed(int run, String reason) {
@@ -415,27 +331,20 @@ public class SplashActivity extends AppCompatActivity {
         check = Check.FAILED;
         setStatus(getString(R.string.splash_status_failed), R.drawable.dot_status, R.color.warning, false,
                 SWAP_OUT_MS, SWAP_IN_MS);
-        // Try again sits right below, so the reason drops its own "Try again."
         String detail = Ui.dropTryAgain(reason);
         statusDetail.animate().cancel();
         statusDetail.setAlpha(1f);
         statusDetail.setText(detail);
         statusDetail.setVisibility(detail == null || detail.isEmpty() ? View.INVISIBLE : View.VISIBLE);
         retry.setVisibility(View.VISIBLE);
-        // Never left invisible behind a still-running film.
         statusBar.setAlpha(1f);
     }
 
-    /**
-     * Hands off when both the film and the check are done: up to date goes to
-     * sign in, a newer release to the update screen. False while waiting (or
-     * after a failure, which waits for Try again).
-     */
+    /** Hands off only once both the animation and update answer have completed. */
     private boolean maybeProceed() {
         if (!filmDone || hold || handingOff) return false;
         long shown = android.os.SystemClock.uptimeMillis() - statusShownAt;
         if (check == Check.CURRENT) {
-            // The green check + "Up to date" holds for at least 700 ms.
             handingOff = true;
             handler.postDelayed(this::openLogin, Math.max(0L, DONE_OUT_MS + CURRENT_HOLD_MS - shown));
             return true;
@@ -448,11 +357,7 @@ public class SplashActivity extends AppCompatActivity {
         return false;
     }
 
-    /**
-     * Status line: Caption text with the quiet arc, the check (2.3.7: Lottie,
-     * one-shot), a tinted glyph (amber dot) or nothing. With durations it crossfades (opacity
-     * only); before the line is visible, or with animations off, it is instant.
-     */
+    /** Status line with the existing small Lottie arc/check and semantic fallback glyphs. */
     private void setStatus(String text, int iconRes, int colourRes, boolean spinner, long outMs, long inMs) {
         statusShownAt = android.os.SystemClock.uptimeMillis();
         boolean animate = outMs > 0 && statusBar.getAlpha() > 0f && !Ui.reducedMotion(this);
@@ -466,18 +371,17 @@ public class SplashActivity extends AppCompatActivity {
                 .withEndAction(() -> {
                     if (!Ui.alive(this)) return;
                     applyStatus(text, iconRes, colourRes, spinner);
-                    statusRow.animate().alpha(1f).setDuration(inMs).setInterpolator(new LinearInterpolator()).start();
+                    statusRow.animate().alpha(1f).setDuration(inMs)
+                            .setInterpolator(new LinearInterpolator()).start();
                 }).start();
     }
 
     private void applyStatus(String text, int iconRes, int colourRes, boolean spinner) {
-        // Drop a pending "Taking longer than usual…" swap: the real state wins.
         statusLine.animate().cancel();
         statusLine.setAlpha(1f);
         statusLine.setTag(R.id.tag_swap_text, null);
         statusLine.setText(text);
         int colour = ContextCompat.getColor(this, colourRes != 0 ? colourRes : R.color.text_secondary);
-        // 2.3.7: "Up to date" is the Lottie check drawing in, not a glyph.
         boolean done = iconRes == R.drawable.ic_check;
         Drawable glyph = null;
         if (iconRes != 0 && !done) {
@@ -504,7 +408,7 @@ public class SplashActivity extends AppCompatActivity {
         retry.setVisibility(View.GONE);
     }
 
-    /** Debug only: the check's answers without the network. */
+    /** Debug only: check answers without network access. */
     private void simulateCheck(int run) {
         final String qa = qaUpdate.toLowerCase(Locale.US);
         if ("checking".equals(qa)) return;
@@ -516,7 +420,6 @@ public class SplashActivity extends AppCompatActivity {
                     break;
                 case "fail":
                     onCheckFailed(run, getString(R.string.net_offline));
-                    // A Try again in the sample then succeeds.
                     qaUpdate = "up_to_date";
                     break;
                 default:
@@ -543,121 +446,10 @@ public class SplashActivity extends AppCompatActivity {
         finish();
     }
 
-    /** Measures the moves from the laid-out views; false if layout is unusable. */
-    private boolean measure() {
-        if (measured) return true;
-        if (root.getHeight() == 0 || name.getHeight() == 0) return false;
-        TextView anoy = findViewById(R.id.splashAnoy);
-        // Optical centre of the line = middle of the cap band above the baseline.
-        float capCentre = lockup.getTop() + name.getTop() + anoy.getTop() + anoy.getBaseline()
-                - CAP_HEIGHT_EM * anoy.getTextSize() / 2f;
-        // Once the kicker has left, the name settles on the lockup's centre line
-        // (~42 % of the height), so the screen keeps its composition.
-        moveDy = lockup.getTop() + lockup.getHeight() / 2f - capCentre;
-        // "Hax" sits where "Loader" starts; shift the pair so "Anoy Hax" is centred.
-        recentreDx = (loader.getWidth() - hax.getWidth()) / 2f;
-        measured = true;
-        return true;
-    }
-
-    /** Sets every view for film time t (ms). Pure: the same t gives the same frame. */
-    private void applyTime(long t) {
-        mark.setAlpha(1f - progress(t, 0, MARK_FADE_MS, FAST_OUT_SLOW_IN));
-
-        lockup.setAlpha(1f);
-        float arrive = progress(t, 0, ARRIVE_FADE_MS, FAST_OUT_SLOW_IN);
-        if (breath == null) name.setAlpha(progress(t, NAME_AT_MS, ARRIVE_FADE_MS, FAST_OUT_SLOW_IN));
-
-        // Greeting leaves: fade + gentle upward drift, sub-pixel. It stays
-        // VISIBLE until its alpha is exactly 0.
-        float leave = progress(t, CUT_AT_MS, CUT_MS, FAST_OUT_SLOW_IN);
-        greeting.setAlpha(arrive * (1f - leave));
-        greeting.setTranslationY(-leave * driftPx);
-        greeting.setVisibility(leave >= 1f ? View.INVISIBLE : View.VISIBLE);
-
-        // The name glides into the space the greeting left.
-        name.setTranslationY(progress(t, MOVE_AT_MS, MOVE_MS, FAST_OUT_SLOW_IN) * moveDy);
-
-        // Loader -> Hax: overlapping fades plus one slide, all on one clock.
-        float swap = linear(t, SWAP_AT_MS, SWAP_MS);
-        name.setTranslationX(DISSOLVE.getInterpolation(swap) * recentreDx);
-        hax.setAlpha(DISSOLVE.getInterpolation(window(swap, 0f, HAX_IN_END)));
-        loader.setAlpha(1f - DISSOLVE.getInterpolation(window(swap, LOADER_OUT_START, 1f)));
-
-        version.setAlpha(progress(t, VERSION_AT_MS, VERSION_MS, FAST_OUT_SLOW_IN));
-        // Once shown, the status line stays (it may carry an error and Try again).
-        float status = progress(t, STATUS_AT_MS, STATUS_MS, FAST_OUT_SLOW_IN);
-        if (statusBar.getAlpha() < status) statusBar.setAlpha(status);
-    }
-
-    /**
-     * Hardware layers for the moving text while the film runs, so alpha,
-     * translation and scale are composited instead of re-rasterising the glyphs
-     * every frame. Off again at the hand-off.
-     */
-    private void setTextLayers(boolean on) {
-        int type = on ? View.LAYER_TYPE_HARDWARE : View.LAYER_TYPE_NONE;
-        for (View v : new View[] {greeting, name, loader, hax}) {
-            if (v != null && v.getLayerType() != type) v.setLayerType(type, null);
-        }
-    }
-
-    /** Raw 0..1 progress of t through [start, start + duration]. */
-    private static float linear(long t, long start, long duration) {
-        if (t <= start) return 0f;
-        if (t >= start + duration) return 1f;
-        return (t - start) / (float) duration;
-    }
-
-    /** Re-maps p so it runs 0..1 across [from, to] and is clamped outside. */
-    private static float window(float p, float from, float to) {
-        if (p <= from) return 0f;
-        if (p >= to) return 1f;
-        return (p - from) / (to - from);
-    }
-
-    private static float progress(long t, long start, long duration, Interpolator easing) {
-        if (t <= start) return 0f;
-        if (t >= start + duration) return 1f;
-        return easing.getInterpolation((t - start) / (float) duration);
-    }
-
-    /** Reduced motion: welcome, then the final line, then hand off. No movement. */
-    private void playReduced() {
-        root.post(() -> {
-            if (!Ui.alive(this)) return;
-            if (!measure()) {
-                statusBar.setAlpha(1f);
-                onFilmDone();
-                return;
-            }
-            applyTime(CUT_AT_MS); // welcome lockup, settled, system mark gone
-            handler.postDelayed(() -> {
-                if (!Ui.alive(this)) return;
-                applyTime(FILM_MS);
-                handler.postDelayed(next, REDUCED_FINAL_MS);
-            }, REDUCED_WELCOME_MS);
-        });
-        handler.postDelayed(next, REDUCED_WELCOME_MS + REDUCED_FINAL_MS + 2500L);
-    }
-
-    /** Startup outlasted the film: keep "Anoy Hax" with a very slow opacity breathe. */
-    private void breathe() {
-        if (!Ui.alive(this) || Ui.reducedMotion(this) || breath != null) return;
-        breath = ValueAnimator.ofFloat(1f, BREATHE_MIN_ALPHA);
-        breath.setDuration(BREATHE_MS / 2);
-        breath.setInterpolator(FAST_OUT_SLOW_IN);
-        breath.setRepeatMode(ValueAnimator.REVERSE);
-        breath.setRepeatCount(ValueAnimator.INFINITE);
-        breath.addUpdateListener(a -> name.setAlpha((float) a.getAnimatedValue()));
-        breath.start();
-    }
-
     private void openLogin() {
         if (opened || !Ui.alive(this)) return;
         opened = true;
         startActivity(new Intent(this, LogAct.class));
-        // 280 ms crossfade (res/anim/fade_in, fade_out).
         overridePendingTransition(R.anim.fade_in, R.anim.fade_out);
         finish();
     }
@@ -665,10 +457,8 @@ public class SplashActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         handler.removeCallbacksAndMessages(null);
-        if (film != null) film.cancel();
-        if (breath != null) breath.cancel();
+        if (splashAnimation != null) splashAnimation.cancelAnimation();
         checker.shutdownNow();
-        setTextLayers(false);
         super.onDestroy();
     }
 }

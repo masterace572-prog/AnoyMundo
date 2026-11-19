@@ -228,20 +228,17 @@ install_apk "$APK"
 grant
 
 # ---------------------------------------------------------------- 1. splash
-# Still frames of the ~3 s film (qa_frame = film time in seconds):
-#   0.00 hand-off frame (= system splash wordmark)   0.25 arriving
-#   0.80 welcome lockup   1.40 greeting fading upward, name gliding to centre
-#   1.82 "Hax" arriving over a still-solid "Loader" (overlap starts)
-#   1.95 both words overlapping mid cross-dissolve, re-centring
-#   2.40 final "Anoy Hax"
-for f in 0.00 0.25 0.80 1.40 1.82 1.95 2.40; do
+# Still frames of the 8.03 s local Lottie film (qa_frame = seconds):
+#   0.00 hand-off on black; 0.80 / 1.60 / 2.40 source motion; 4.50 clean
+#   rebrand cut-over; 5.10 Anoy Hax revealed; 7.50 final branded frame.
+for f in 0.00 0.80 1.60 2.40 4.50 5.10 7.50; do
     stop_app
     adb shell am start -W -n $PKG/.SplashActivity --ef qa_frame "$f" >> "$LOG" 2>&1 || fatal "cannot start SplashActivity"
     sleep 1.2
     shot "splash_t$(echo "$f" | tr -d '.')"
 done
-# Reduced motion (animations are off on the QA emulator): the welcome lockup
-# holds for 1 s, then cuts straight to "Anoy Hax" (held, no hand-off).
+# Reduced motion (animations are off on the QA emulator): Anoy Hax's final
+# Lottie frame is shown without playing the launch film (held, no hand-off).
 stop_app
 adb shell am start -W -n $PKG/.SplashActivity --ez qa_hold true >> "$LOG" 2>&1 || fatal "cannot start SplashActivity"
 sleep 0.3
@@ -251,10 +248,10 @@ shot splash
 
 # ----------------------------------- 1b. splash status line + app update (2.2.0)
 # The check's answers, simulated (qa_app_update, debug only, no network), on
-# the final film frame; the version sits top right.
+# the final Anoy Hax frame; the version sits top right.
 for st in up_to_date available fail; do
     stop_app
-    adb shell am start -W -n $PKG/.SplashActivity --ef qa_frame 2.40 --es qa_app_update "$st" >> "$LOG" 2>&1 || true
+    adb shell am start -W -n $PKG/.SplashActivity --ef qa_frame 7.50 --es qa_app_update "$st" >> "$LOG" 2>&1 || true
     sleep 2.2
     shot "splash_status_$st"
     log "splash status $st texts: $(texts)"
@@ -580,18 +577,18 @@ adb shell settings put global window_animation_scale 1.0 || true
 adb shell settings put global transition_animation_scale 1.0 || true
 adb shell settings put global animator_duration_scale 1.0 || true
 stop_app
-( adb shell screenrecord --time-limit 6 /sdcard/splash.mp4 >/dev/null 2>&1 || true ) &
+( adb shell screenrecord --time-limit 10 /sdcard/splash.mp4 >/dev/null 2>&1 || true ) &
 REC=$!
 sleep 0.5
-adb shell am start -n $PKG/.SplashActivity >> "$LOG" 2>&1 || true
+adb shell am start -n $PKG/.SplashActivity --ez qa_hold true >> "$LOG" 2>&1 || true
 sleep 0.5
 shot anim_splash_t05
-sleep 0.5
-shot anim_splash_t10
-sleep 0.5
-shot anim_splash_t15
-sleep 0.5
+sleep 1.5
 shot anim_splash_t20
+sleep 3
+shot anim_splash_t50
+sleep 3
+shot anim_splash_t80
 wait $REC 2>/dev/null || true
 adb pull /sdcard/splash.mp4 "$OUT/anim_splash.mp4" >/dev/null 2>&1 && log "screenrecord ok" || log "WARN: screenrecord unavailable"
 wait_gone gateTitle 45 || true

@@ -84,9 +84,9 @@
         <item name="linearProgressIndicatorStyle">@style/Widget.Anoy.Progress</item>
     </style>
 
-    <!-- Launcher theme: the Android 12+ system splash is black with the white
-         Anoy wordmark (the launcher icon's outlines), and SplashActivity starts
-         on the same image, so there is only one splash. -->
+    <!-- Launcher theme: Android 12+ starts black with the white launcher mark.
+         SplashActivity immediately continues on true black with its local
+         rebranded Lottie launch film. -->
     <style name="AppTheme.Starting" parent="Theme.SplashScreen">
         <item name="windowSplashScreenBackground">@color/black</item>
         <item name="windowSplashScreenAnimatedIcon">@drawable/splash_mark</item>

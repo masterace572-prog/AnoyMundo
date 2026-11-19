@@ -17,7 +17,8 @@ Gates
   8. Brief rules: no purple / teal / bg_tile_*, no emoji, no default spinner,
      no Toast, no dynamic colour; Material / splashscreen / Lottie present at
      minSdk-21-compatible versions; FacebookActivity / designsystem stay gone.
-  9. Lottie files: 60 fps, under 60 KB, provenance + licences in assets/licenses.
+  9. Lottie files: 60 fps, size-budgeted, no embedded images, provenance +
+     licences in assets/licenses.
  10. Every MaterialButton uses an Anoy button style.
 """
 from __future__ import annotations
@@ -348,26 +349,44 @@ if not re.search(r'\.SplashActivity"[^>]*>\s*<intent-filter>\s*<action android:n
 gate("Brief rules: palette, no emoji / spinner / Toast / dynamic colour; deps pinned", rules)
 
 # ------------------------------------------------------------ 9. Lottie budget
+import hashlib
 import json as _json
 lottie = []
 raw_dir = RES / "raw"
-for name in ("anoy_arc", "anoy_check"):
+# The launch film is intentionally larger than the tiny status affordances, but
+# remains a vector-only local resource and is capped below 180 KB.
+LOTTIE_SPECS = {
+    "anoy_arc": 60 * 1024,
+    "anoy_check": 60 * 1024,
+    "anoy_splash": 180 * 1024,
+}
+for name, max_bytes in LOTTIE_SPECS.items():
     f = raw_dir / f"{name}.json"
     if not f.exists():
         lottie.append(f"missing res/raw/{name}.json")
         continue
     data = _json.loads(f.read_text())
-    if f.stat().st_size >= 60 * 1024:
-        lottie.append(f"{name}.json is {f.stat().st_size} bytes (limit 60 KB)")
+    if f.stat().st_size >= max_bytes:
+        lottie.append(f"{name}.json is {f.stat().st_size} bytes (limit {max_bytes // 1024} KB)")
     if data.get("fr") != 60:
         lottie.append(f"{name}.json frame rate is {data.get('fr')} (expected 60)")
     if data.get("assets"):
         lottie.append(f"{name}.json embeds assets (images)")
+if (raw_dir / "anoy_splash.json").exists():
+    splash_data = _json.loads((raw_dir / "anoy_splash.json").read_text())
+    if splash_data.get("nm") != "anoy_splash" or not splash_data.get("layers") \
+            or splash_data["layers"][0].get("nm") != "Anoy Hax":
+        lottie.append("anoy_splash.json is not the generated Anoy Hax launch film")
+source = ROOT / "third_party/lottie/techpost.json"
+if not source.exists():
+    lottie.append("missing third_party/lottie/techpost.json source")
+elif hashlib.sha256(source.read_bytes()).hexdigest() != "4e50ebe64cc4d931082950639b13bdd2c0a92952c8254367b28638e72c5a8565":
+    lottie.append("third_party/lottie/techpost.json checksum changed")
 lic = MAIN / "assets/licenses"
 for need in ("LOTTIE.md", "LUCIDE-ISC.txt"):
     if not (lic / need).exists():
         lottie.append(f"missing assets/licenses/{need}")
-gate("Lottie: 60 fps, < 60 KB, no images; provenance and licences shipped", lottie)
+gate("Lottie: 60 fps, size-budgeted, no images; provenance and licences shipped", lottie)
 
 # ---------------------------------------------------------- 10. button styles
 btns = []

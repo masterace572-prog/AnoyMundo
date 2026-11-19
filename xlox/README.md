@@ -15,7 +15,7 @@ SplashActivity ──► (AppUpdateActivity) ──► LogAct ──► MAct
 
 | Screen | Code / layout | What it does |
 |---|---|---|
-| **Splash** (launcher) | `SplashActivity`, `activity_splash` | Wordmark film (~3 s, reduced motion respected) and a status line while `AppUpdater.check` asks `GET /api/app/update`. A newer version code opens the update screen; "up to date" continues on its own; a failed check shows the reason and **Retry**. |
+| **Splash** (launcher) | `SplashActivity`, `activity_splash` | Local black-and-white Lottie brand film ending in **Anoy Hax** (reduced motion shows its final frame) and a status line while `AppUpdater.check` asks `GET /api/app/update`. A newer version code opens the update screen; "up to date" continues on its own; a failed check shows the reason and **Retry**. |
 | **App update** | `AppUpdateActivity`, `activity_app_update`, `item_changelog` | Changelog, **Update now** (and **Not now** unless mandatory). `AppUpdater` downloads over https (redirects https-only, retries for 5xx/408/429), checks the APK is `com.xlox` with the announced, higher version code, then commits it to a `PackageInstaller` session. Errors are shown inline with **Try again**. |
 | **Library gate** | `ui/UpdateGate`, `dialog_update` (bottom sheet) | Checks `GET /api/lib/manifest`. When a newer library exists, or none is installed, the only action is **Update now**; Back closes the app; sign in stays blocked until the download is verified (size + SHA-256) and installed. Also re-runs silently when the app returns to the foreground, and backs Settings → Re-download library. |
 | **Sign in** | `LogAct`, `activity_login` | Takes the licence key (`ANOY-7D-GKFHJ`); the native code calls `POST /connect` and verifies the token. Readable errors for unknown / expired / blocked keys, device limit, clock, maintenance, offline, timeout, VPN. |
@@ -26,8 +26,9 @@ SplashActivity ──► (AppUpdateActivity) ──► LogAct ──► MAct
 
 Black background, white text, one accent (`#0A84FF`). Views + XML only (no
 Compose), Material Components 1.13 (`MaterialButton`, cards, bottom sheets),
-Lottie for two small animations (`res/raw/anoy_sync.json`,
-`anoy_success.json`), fonts Inter and JetBrains Mono (`res/font`).
+a local rebranded Lottie launch film plus two small status animations
+(`res/raw/anoy_splash.json`, `anoy_arc.json`, `anoy_check.json`), fonts Inter
+and JetBrains Mono (`res/font`).
 
 | File | Contents |
 |---|---|
