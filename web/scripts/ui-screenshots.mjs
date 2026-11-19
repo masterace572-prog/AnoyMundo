@@ -1,3 +1,4 @@
+import { ownerPassword, randomReferral } from './offline-fixtures.mjs';
 // Captures the panel at desktop and phone sizes for visual review.
 // Runs in CI (.github/workflows/web-ui-qa.yml): starts the offline dev server
 // (memory DB), signs in as the Owner and saves PNGs to docs/ui-redesign/web.
@@ -14,12 +15,13 @@ const root = path.resolve(here, '..');
 const out = path.resolve(root, '..', 'docs', 'ui-redesign', 'web');
 mkdirSync(out, { recursive: true });
 
+const kennyReferral = randomReferral();
 const PORT = 3177;
 const BASE = `http://127.0.0.1:${PORT}`;
 const { chromium } = await import('playwright');
 
 const server = spawn(process.execPath, ['scripts/dev-server.mjs', '--memory'], {
-  cwd: root, env: { ...process.env, DB_DRIVER: 'memory', APK_VERIFY_STUB: '1', PORT: String(PORT) }, stdio: 'inherit',
+  cwd: root, env: { ...process.env, DB_DRIVER: 'memory', APK_VERIFY_STUB: '1', MEMORY_KENNY_REFERRAL: kennyReferral, PORT: String(PORT) }, stdio: 'inherit',
 });
 const stop = () => { try { server.kill('SIGTERM'); } catch { /* gone */ } };
 process.on('exit', stop);
@@ -97,7 +99,7 @@ try {
 
     await page.goto(`${BASE}/login`);
     await page.fill('#username', 'Anoy');
-    await page.fill('#password', 'Anoy1764');
+    await page.fill('#password', ownerPassword);
     await Promise.all([page.waitForNavigation(), page.click('button[type=submit]')]);
 
     // A batch of keys so the lists are not empty.
@@ -273,7 +275,7 @@ try {
     }
     await ctx.close();
   }
-  await channelBrowserTests(browser, BASE, out);
+  await channelBrowserTests(browser, BASE, out, { kennyReferral });
   await browser.close();
 } finally {
   stop();

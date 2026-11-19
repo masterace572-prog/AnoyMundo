@@ -57,6 +57,9 @@ gate(bool(brand_strings) and all(key in kenny and not re.search('anoy', kenny[ke
                               and ('KennyPvt' in kenny[key] or 'KENNYPVT' in kenny[key])
                               for key in brand_strings), 'KennyPvt overrides EVERY visible Anoy string')
 gate(main['app_name'] == 'Anoy' and kenny['app_name'] == 'KennyPvt', 'distinct launcher/app names')
+gate(main['telegram_url'] == 'https://t.me/libAkAudioVisiual'
+     and kenny.get('telegram_url') == 'https://t.me/crimecell',
+     'KennyPvt Telegram uses crimecell; Anoy contact is unchanged')
 for file in (APP / 'src/kenny/res').rglob('*.xml'):
     ET.parse(file)
 gate(all((APP / f'src/kenny/res/drawable/{name}.xml').is_file()
@@ -77,6 +80,9 @@ for channel in ('anoy', 'kenny'):
     gate(f'/api/lib/version?channel={channel}"' in macros
          and f'/api/lib/download?channel={channel}"' in macros,
          f'{channel}: native version/download endpoints select only its own channel')
+    expected_contact = 'crimecell' if channel == 'kenny' else 'libAkAudioVisiual'
+    gate(f'#define ANOY_TELEGRAM_URL "https://t.me/{expected_contact}"' in macros,
+         f'{channel}: native Telegram contact agrees with the flavor resources')
 
 java = APP / 'src/main/java/com/xlox'
 lib_client = (java / 'utils/Downtwo.java').read_text()
@@ -133,8 +139,12 @@ if len(sys.argv) > 1:
              f'{brand}: compiled minSdk={minimum}, targetSdk={target} (required 21 / 28)')
         if minimum != 21 or target != 28:
             annotation(sdk_lines or 'Compiled uses-sdk attributes were not found in the aapt2 XML dump.')
+        dump = aapt('resources', apk)
+        contact = 'crimecell' if brand == 'KennyPvt' else 'libAkAudioVisiual'
+        contact_block = re.search(r'(?ms)^\s*resource [^\n]*\bstring/telegram_url[^\n]*\n(.*?)(?=^\s*resource |\Z)', dump)
+        gate(bool(contact_block and f'https://t.me/{contact}' in contact_block[1]),
+             f'{brand}: compiled Telegram resource points to the correct contact')
         if brand == 'KennyPvt':
-            dump = aapt('resources', apk)
             # Resource/style names may deliberately retain Anoy for compatibility;
             # only string resource VALUES are user-visible.
             current_string = False
@@ -142,9 +152,9 @@ if len(sys.argv) > 1:
             for line in dump.splitlines():
                 if re.match(r'\s*resource ', line):
                     current_string = bool(re.search(r'\bstring/', line))
-                elif current_string and re.search(r'anoy', line, re.I):
+                elif current_string and re.search(r'anoy|libAkAudioVisiual', line, re.I):
                     leaked.append(line.strip())
-            gate(not leaked, 'KennyPvt: compiled string resources contain no Anoy branding')
+            gate(not leaked, 'KennyPvt: compiled string resources contain no Anoy branding or old Telegram contact')
             if leaked:
                 print('\n'.join(leaked[:12]))
                 annotation('\n'.join(leaked[:12]))

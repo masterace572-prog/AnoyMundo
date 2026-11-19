@@ -1,11 +1,12 @@
+import { ownerPassword } from './offline-fixtures.mjs';
 // Called by ui-screenshots.mjs on the OFFLINE demo server only. Tests the
-// actual browser XHR/DOM flow for the second-owner invite and binary upload.
+// actual browser flow for private Owner signup, referral deletion and uploads.
 import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
 import path from 'node:path';
 import { zipSync } from 'fflate';
 
-export async function channelBrowserTests(browser, base, out) {
+export async function channelBrowserTests(browser, base, out, { kennyReferral }) {
   const ownerCtx = await browser.newContext({ viewport: { width: 1440, height: 900 }, colorScheme: 'dark' });
   const secondCtx = await browser.newContext({ viewport: { width: 390, height: 844 }, colorScheme: 'dark' });
   const owner = await ownerCtx.newPage(), second = await secondCtx.newPage();
@@ -41,24 +42,41 @@ export async function channelBrowserTests(browser, base, out) {
     return data;
   };
   try {
-    await login(owner, 'Anoy', 'Anoy1764');
+    await login(owner, 'Anoy', ownerPassword);
     await owner.goto(`${base}/admin/create-referral`);
-    await owner.selectOption('#accLevel', '1');
-    assert.equal(await owner.locator('#accExpire').isDisabled(), true);
-    assert.equal(await owner.locator('#set_saldo').isDisabled(), true);
-    await shot(owner, 'owner_invite_form');
-    await Promise.all([owner.waitForNavigation(), owner.click('button[type=submit]')]);
+    assert.deepEqual(await owner.locator('#accLevel option').evaluateAll(options => options.map(o => o.value).sort()), ['2', '3']);
+    assert.doesNotMatch(await owner.locator('body').textContent(), /Anoy can invite|Choose Owner|Owner referrals expire/);
+    await shot(owner, 'referral_form');
+    await owner.selectOption('#accLevel', '3');
+    await owner.fill('#set_saldo', '0');
+    await Promise.all([owner.waitForNavigation(), owner.locator('form[action="/admin/create-referral"] button[type=submit]').click()]);
     const message = await owner.locator('[data-flash=success]').textContent();
-    const code = /KennyPvt owner referral: ([A-Z2-9]{7})/.exec(message)?.[1];
-    assert.ok(code);
+    const deletedCode = /Referral code created: ([A-Z2-9]{7})/.exec(message)?.[1];
+    assert.ok(deletedCode);
+    await owner.getByRole('button', { name: `Delete referral ${deletedCode}`, exact: true }).click();
+    await owner.locator('.modal-backdrop.show').waitFor();
+    await shot(owner, 'referral_delete_confirm');
+    await Promise.all([owner.waitForNavigation(), owner.locator('.modal .btn-danger').click()]);
+    assert.equal(await owner.getByRole('button', { name: `Delete referral ${deletedCode}`, exact: true }).count(), 0);
+    await second.goto(`${base}/register`);
+    for (const [field, value] of Object.entries({ username: 'DeletedInvite', fullname: 'Fixture User', email: 'deleted@example.com',
+      password: 'OpaqueSignal93', password2: 'OpaqueSignal93', referral: deletedCode })) {
+      await second.fill(`[name=${field}]`, value);
+    }
+    await Promise.all([second.waitForNavigation(), second.click('button[type=submit]')]);
+    assert.ok(new URL(second.url()).pathname === '/register', 'deleted referral cannot register');
 
     await second.goto(`${base}/register`);
     for (const [field, value] of Object.entries({ username: 'KennyPvt', fullname: 'Kenny Owner', email: 'kenny@example.com',
-      password: 'OpaqueSignal93', password2: 'OpaqueSignal93', referral: code })) {
+      password: 'OpaqueSignal93', password2: 'OpaqueSignal93', referral: kennyReferral })) {
       await second.fill(`[name=${field}]`, value);
     }
     await Promise.all([second.waitForURL('**/login'), second.click('button[type=submit]')]);
     await login(second, 'KennyPvt', 'OpaqueSignal93');
+    await second.goto(`${base}/admin/create-referral`);
+    assert.equal(await second.locator('#accLevel option[value="1"]').count(), 0);
+    assert.ok(await second.evaluate(() => document.documentElement.scrollWidth - window.innerWidth) <= 1, 'referral controls fit a phone');
+    await shot(second, 'phone_referrals');
     await second.goto(`${base}/lib`);
     assert.equal(await second.locator('[data-release-channel]').getAttribute('data-release-channel'), 'kenny');
     assert.match(await second.locator('.page-sub').textContent(), /KennyPvt only/);
@@ -83,6 +101,6 @@ export async function channelBrowserTests(browser, base, out) {
     const overflow = await second.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
     assert.ok(overflow <= 1, 'Kenny release UI fits a phone');
     assert.deepEqual(errors, [], 'no browser script errors in invitation/upload flow');
-    console.log('PASS browser: one-time Owner signup, true 10 MiB .so + >3 MiB ZIP upload, canonical name, channel isolation');
+    console.log('PASS browser: clean referral UI, confirmed deletion, private one-time Owner signup, 10 MiB .so + ZIP upload, channel isolation');
   } finally { await ownerCtx.close(); await secondCtx.close(); }
 }

@@ -119,7 +119,7 @@ export async function getRecentHistory(limit = 10) {
 }
 
 export async function getReferralCodes(limit = 10) {
-  return unwrap(await db().from('referral_code').select('*').order('id_reff', { ascending: false }).limit(limit));
+  return unwrap(await db().from('referral_code').select('*').is('revoked_at', null).order('id_reff', { ascending: false }).limit(limit));
 }
 
 // ---------------------------------------------------------------------------

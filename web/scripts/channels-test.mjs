@@ -1,3 +1,4 @@
+import { ownerPassword } from './offline-fixtures.mjs';
 // HTTP integration + archive adversarial tests. Offline only: no live owner,
 // referral, licence, storage object or release is touched.
 import assert from 'node:assert/strict';
@@ -16,6 +17,8 @@ process.env.AUTH_SECRET = crypto.randomBytes(32).toString('hex');
 const { handle } = await import('../src/app.mjs');
 const { db } = await import('../src/db.mjs');
 const { hashPassword } = await import('../src/auth.mjs');
+const { createOwnerInvite } = await import('../src/owners.mjs');
+const { registerFromReferral } = await import('../src/referrals.mjs');
 const { publicChannel } = await import('../src/channels.mjs');
 const { pickLatestBuild } = await import('../src/app-release.mjs');
 let base;
@@ -31,8 +34,8 @@ const sha = (bytes) => crypto.createHash('sha256').update(bytes).digest('hex');
 function client() {
   const jar = new Map();
   return {
-    async request(route, { method = 'GET', body, redirect = 'manual', raw = false } = {}) {
-      const headers = { Cookie: [...jar].map(([k, v]) => `${k}=${v}`).join('; '), 'sec-fetch-site': 'same-origin' };
+    async request(route, { method = 'GET', body, redirect = 'manual', raw = false, headers: extraHeaders = {} } = {}) {
+      const headers = { Cookie: [...jar].map(([k, v]) => `${k}=${v}`).join('; '), 'sec-fetch-site': 'same-origin', ...extraHeaders };
       if (body instanceof URLSearchParams) headers['Content-Type'] = 'application/x-www-form-urlencoded';
       else if (body !== undefined && !raw) { headers['Content-Type'] = 'application/json'; body = JSON.stringify(body); }
       const response = await fetch(new URL(route, base), { method, headers, body, redirect });
@@ -65,7 +68,7 @@ before(async () => {
   server.listen(0, '0.0.0.0');
   await once(server, 'listening');
   base = `http://127.0.0.1:${server.address().port}`;
-  await anoy.login('Anoy', 'Anoy1764');
+  await anoy.login('Anoy', ownerPassword);
   await db().from('users').insert({ username: 'TestAdmin', fullname: 'Test Admin', level: 2, saldo: 0, status: 1, password: hashPassword('OfflineTest97') });
   await admin.login('TestAdmin', 'OfflineTest97');
 });
@@ -84,13 +87,18 @@ test('public channels default safely for old loaders and reject unknown/prototyp
   assert.equal((await anon.request('/api/lib/manifest?channel=kenny')).data.available, false);
 });
 
-test('only Anoy can issue one pending owner referral, with expiry and no account balance/expiry', async () => {
-  assert.match((await anoy.request('/admin/create-referral')).data, /Owner — KennyPvt/);
-  await admin.post('/admin/create-referral', { accLevel: 1 });
-  assert.equal(db()._store.referral_code.filter(c => Number(c.level) === 1).length, 0, 'Admin cannot forge Owner role');
-  await Promise.all([anoy.post('/admin/create-referral', { accLevel: 1 }), anoy.post('/admin/create-referral', { accLevel: 1 })]);
-  const invites = db()._store.referral_code.filter(c => Number(c.level) === 1);
-  assert.equal(invites.length, 1, 'concurrent invitation requests reuse a single code');
+test('panel offers only Admin/Reseller; the single Owner invitation is provisioned privately', async () => {
+  const html = (await anoy.request('/admin/create-referral')).data;
+  const select = html.match(/<select[^>]+name="accLevel"[^>]*>(.*?)<\/select>/s)?.[1];
+  assert.ok(select && !/value="1"/.test(select));
+  assert.doesNotMatch(html, /Anoy can invite|Choose Owner|Owner referrals expire|syncOwnerFields/);
+  for (const actor of [anoy, admin]) await actor.post('/admin/create-referral', { accLevel: 1 });
+  assert.equal(db()._store.referral_code.filter(c => Number(c.level) === 1).length, 0, 'no panel actor can forge Owner creation');
+  const first = users().find(u => u.owner_channel === 'anoy');
+  assert.equal((await createOwnerInvite(users().find(u => u.level === 2))).ok, false);
+  await Promise.all([createOwnerInvite(first), createOwnerInvite(first)]);
+  const invites = db()._store.referral_code.filter(c => Number(c.level) === 1 && !c.revoked_at);
+  assert.equal(invites.length, 1, 'private provisioning reuses one pending code');
   ownerInvite = invites[0];
   assert.equal(ownerInvite.owner_channel, 'kenny');
   assert.equal(ownerInvite.created_by, 'Anoy');
@@ -100,10 +108,11 @@ test('only Anoy can issue one pending owner referral, with expiry and no account
 
   ownerInvite.invite_expires_at = new Date(Date.now() - 1000).toISOString();
   await anon.post('/register', signup('ExpiredOwner', ownerInvite.referral));
-  assert.equal(users().filter(u => u.level === 1).length, 1, 'expired invite cannot register an owner');
-  await anoy.post('/admin/create-referral', { accLevel: 1 });
-  const fresh = db()._store.referral_code.find(c => Number(c.level) === 1 && !c.used_by);
-  assert.notEqual(fresh.code, ownerInvite.code, 'expired invite is replaced');
+  assert.equal(users().filter(u => u.level === 1).length, 1, 'expired invitation cannot register an Owner');
+  await createOwnerInvite(first);
+  const fresh = db()._store.referral_code.find(c => Number(c.level) === 1 && !c.used_by && !c.revoked_at);
+  assert.notEqual(fresh.code, ownerInvite.code, 'expired invitation is revoked, not reused');
+  assert.ok(ownerInvite.revoked_at);
   ownerInvite = fresh;
 });
 
@@ -125,7 +134,7 @@ test('parallel registration consumes the owner invitation once; neither owner ca
   await kenny.login(second.username, 'OpaqueSignal93');
   assert.match((await kenny.request('/dashboard')).data, /Unlimited/);
   const roleSelect = (await anoy.request('/admin/create-referral')).data.match(/<select[^>]+name="accLevel"[^>]*>(.*?)<\/select>/s)?.[1];
-  assert.ok(roleSelect && !/value="1"/.test(roleSelect), 'Owner role disappears when both slots are filled');
+  assert.ok(roleSelect && !/value="1"/.test(roleSelect), 'Owner role is never available on the panel');
   for (const actor of [anoy, kenny, admin]) await actor.post('/admin/create-referral', { accLevel: 1 });
   await anon.post('/register', signup('ThirdOwner', ownerInvite.referral));
   assert.equal(users().filter(u => u.level === 1).length, 2, 'no third account or referral replay');
@@ -387,4 +396,106 @@ test('health probes only small identifiers and reports an unavailable table expl
     assert.equal(unavailable.data.ok, false);
     assert.match(unavailable.data.checks.schema.detail, /14\/15.*auth_attempt/);
   } finally { database.from = from; }
+});
+
+async function newReferral(actor, level = 3) {
+  const before = new Set(db()._store.referral_code.map(c => c.id_reff));
+  const response = await actor.post('/admin/create-referral', new URLSearchParams({ accLevel: String(level), accExpire: '30', set_saldo: '0' }));
+  assert.equal(response.location, '/admin/create-referral');
+  const code = db()._store.referral_code.find(c => !before.has(c.id_reff));
+  assert.ok(code, 'normal-role referral was created');
+  return code;
+}
+
+test('Admin and Reseller referrals each create exactly one user, even with concurrent signup', async () => {
+  for (const [role, prefix, actor] of [[2, 'AdminOnce', anoy], [3, 'ResellerOnce', admin]]) {
+    const code = await newReferral(actor, role);
+    const replies = await Promise.all([client().post('/register', signup(prefix + 'Alpha', code.referral.toLowerCase())), client().post('/register', signup(prefix + 'Bravo', code.referral))]);
+    assert.equal(replies.filter(r => r.location === '/login').length, 1);
+    assert.equal(replies.filter(r => r.location === '/register').length, 1);
+    const created = users().filter(u => u.username.startsWith(prefix));
+    assert.equal(created.length, 1);
+    assert.equal(created[0].level, role);
+    assert.equal(code.used_by, created[0].username);
+    assert.equal(created[0].owner_channel, null);
+    assert.equal((await client().post('/register', signup(prefix + 'Replay', code.referral))).location, '/register');
+    assert.equal(users().filter(u => u.username.startsWith(prefix)).length, 1);
+  }
+  const before = db()._store.referral_code.length;
+  await admin.post('/admin/create-referral', { accLevel: 2, accExpire: 30, set_saldo: 0 });
+  assert.equal(db()._store.referral_code.length, before, 'Admin cannot issue an Admin referral');
+  assert.equal(users().filter(u => u.level === 1).length, 2);
+});
+
+test('referral deletion is POST-only, same-origin, scoped and hides the unusable code', async () => {
+  const code = await newReferral(anoy);
+  const route = `/admin/referral/${code.id_reff}/delete`;
+  assert.equal((await anoy.request(route)).status, 405);
+  assert.ok(!code.revoked_at);
+  await anoy.request(route, { method: 'POST', body: {}, headers: { 'sec-fetch-site': 'cross-site' } });
+  assert.ok(!code.revoked_at, 'cross-site deletion was refused');
+  await admin.post(route, {});
+  assert.ok(!code.revoked_at, 'Admin cannot delete another creator\'s referral');
+  await anoy.post(route, {});
+  assert.ok(code.revoked_at);
+  assert.ok(!(await anoy.request('/admin/create-referral')).data.includes(code.referral));
+  assert.equal((await client().post('/register', signup('DeletedReferral', code.referral))).location, '/register');
+  assert.ok(!users().some(u => u.username === 'DeletedReferral'));
+  const firstRevocation = code.revoked_at;
+  await anoy.post(route, {});
+  assert.equal(code.revoked_at, firstRevocation, 'repeated deletion is harmless');
+  const own = await newReferral(admin);
+  await admin.post(`/admin/referral/${own.id_reff}/delete`, {});
+  assert.ok(own.revoked_at, 'Admin can delete their own referral');
+});
+
+test('deleting used referrals preserves accounts and never restores a one-use code', async () => {
+  const code = await newReferral(anoy);
+  assert.equal((await client().post('/register', signup('KeepAccount', code.referral))).location, '/login');
+  const account = users().find(u => u.username === 'KeepAccount');
+  const id = account.id_users;
+  await anoy.post(`/admin/referral/${code.id_reff}/delete`, {});
+  assert.ok(users().some(u => u.id_users === id));
+  const reseller = client();
+  await reseller.login('KeepAccount', 'OpaqueSignal93');
+  assert.equal((await reseller.post(`/admin/referral/${code.id_reff}/delete`, {})).location, '/dashboard');
+  assert.equal((await client().post('/register', signup('KeepAccountReplay', code.referral))).location, '/register');
+  assert.ok((await db().from('referral_code').update({ used_by: '' }).eq('id_reff', code.id_reff)).error);
+  assert.ok((await db().from('referral_code').update({ revoked_at: null }).eq('id_reff', code.id_reff)).error);
+  assert.ok((await db().from('referral_code').delete().eq('id_reff', code.id_reff)).error);
+  assert.ok((await db().from('referral_code').insert({ ...code, id_reff: undefined })).error, 'duplicate consumed/deleted code cannot be reissued');
+  await db().from('users').delete().eq('id_users', id);
+  assert.equal((await client().post('/register', signup('AfterAccountGone', code.referral))).location, '/register');
+});
+
+test('racing deletion and signup cannot create a second account or revive a referral', async () => {
+  const code = await newReferral(anoy);
+  await Promise.all([client().post('/register', signup('DeleteRaceWinner', code.referral)), anoy.post(`/admin/referral/${code.id_reff}/delete`, {})]);
+  assert.ok(code.revoked_at);
+  assert.ok(users().filter(u => u.username === 'DeleteRaceWinner').length <= 1);
+  assert.equal((await client().post('/register', signup('DeleteRaceReplay', code.referral))).location, '/register');
+  assert.ok(!users().some(u => u.username === 'DeleteRaceReplay'));
+});
+
+test('a failed account insert does not consume an unused referral', async () => {
+  const code = await newReferral(anoy);
+  const details = { username: 'Anoy', fullname: 'Fixture User', email: 'fixture@example.com', password: hashPassword('OfflineOnly93'), user_ip: '127.0.0.1' };
+  assert.equal((await registerFromReferral(code, details)).ok, false);
+  assert.equal(code.used_by, '');
+  assert.equal((await client().post('/register', signup('InsertRetry', code.referral))).location, '/login');
+  assert.equal(code.used_by, 'InsertRetry');
+});
+
+test('both Owner accounts remain permanent independently of invitation expiry', async () => {
+  for (const row of users().filter(u => u.level === 1)) {
+    assert.equal(row.expiration_date, null);
+    assert.ok((await db().from('users').update({ expiration_date: new Date(Date.now() + 7 * 86400_000).toISOString() }).eq('id_users', row.id_users)).error);
+  }
+  const expiredInvite = db()._store.referral_code.find(c => c.id_reff === ownerInvite.id_reff);
+  const original = expiredInvite.invite_expires_at;
+  expiredInvite.invite_expires_at = '2000-01-01T00:00:00.000Z';
+  const freshSession = client();
+  await freshSession.login(second.username, 'OpaqueSignal93');
+  assert.equal((await freshSession.request('/dashboard')).status, 200, 'Kenny account is not tied to the seven-day invitation');
+  expiredInvite.invite_expires_at = original;
 });

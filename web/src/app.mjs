@@ -1,6 +1,6 @@
 import crypto from 'node:crypto';
 import { ownerChannel, CHANNELS, publicChannel } from './channels.mjs';
-import { createOwnerInvite, canInviteOwner, registerOwner } from './owners.mjs';
+import { registerFromReferral, revokeReferral } from './referrals.mjs';
 import { doLibUpload } from './library-release.mjs';
 import { config } from './config.mjs';
 import {
@@ -330,9 +330,9 @@ async function doRegister(req, res, body) {
     if (!error && !data && referral.toUpperCase() !== referral) {
       ({ data, error } = await db().from('referral_code').select('*').eq('code', codeHash(referral)).maybeSingle());
     }
-    if (error || !data) errors.referral = 'That referral code is not valid.';
+    if (error || !data || data.revoked_at) errors.referral = 'That referral code is not valid.';
     else if (data.used_by) errors.referral = 'This referral code has already been used.';
-    else if (data.acc_expiration && new Date(data.acc_expiration).getTime() < Date.now()) errors.referral = 'This referral code has expired.';
+    else if (data.acc_expiration && new Date(data.acc_expiration).getTime() <= Date.now()) errors.referral = 'This referral code has expired.';
     else if (Number(data.level) === 1 && (data.owner_channel !== 'kenny' || !data.invite_expires_at || new Date(data.invite_expires_at).getTime() <= Date.now())) {
       errors.referral = 'This owner referral has expired or is invalid.';
     } else if (![1, 2, 3].includes(Number(data.level)) || Number(data.set_saldo) < 0 || Number(data.set_saldo) > 99999) {
@@ -341,44 +341,10 @@ async function doRegister(req, res, body) {
   }
   if (Object.keys(errors).length) return fail(req, res, '/register', 'Please check the form.', errors, old);
 
-  if (Number(code.level) === 1) {
-    const result = await registerOwner(code, { email, username, fullname, password: hashPassword(password), user_ip: getClientIp(req) });
-    if (!result?.ok) return fail(req, res, '/register', result?.message || 'Could not register the owner. Try again.', { referral: result?.message || 'Unavailable.' }, old);
-    return redirect(res, '/login', { msgSuccess: 'KennyPvt owner account created. Sign in to manage your own library and APK updates.' });
-  }
-
-  // Re-check the code immediately before creating the account, then claim it
-  // conditionally so two simultaneous registrations cannot share one code.
-  const { data: freshCode } = await db().from('referral_code').select('used_by,acc_expiration')
-    .eq('id_reff', code.id_reff).maybeSingle();
-  if (!freshCode || freshCode.used_by || (freshCode.acc_expiration && new Date(freshCode.acc_expiration).getTime() < Date.now())) {
-    return fail(req, res, '/register', 'That referral code was just used. Ask for a new one.', { referral: 'Already used.' }, old);
-  }
-  const { error: claimError, data: claimed } = await db().from('referral_code')
-    .update({ used_by: username, updated_at: nowIso() }).eq('id_reff', code.id_reff).eq('used_by', '').select('id_reff');
-  if (claimError || !claimed?.length) {
-    return fail(req, res, '/register', 'That referral code was just used. Ask for a new one.', { referral: 'Already used.' }, old);
-  }
-
-  const { error: insertError } = await db().from('users').insert({
-    email, username, fullname,
-    // A referral can never mint another Owner. Owner is unique and fixed.
-    level: Math.max(2, Math.min(3, num(code.level, 3))),
-    password: hashPassword(password),
-    saldo: Math.max(0, Math.min(99999, num(code.set_saldo, 0))),
-    uplink: code.created_by,
-    user_ip: getClientIp(req),
-    expiration_date: code.acc_expiration || null,
-    status: 1,
-    created_at: nowIso(),
-    updated_at: nowIso(),
+  const result = await registerFromReferral(code, {
+    email, username, fullname, password: hashPassword(password), user_ip: getClientIp(req),
   });
-  if (insertError) {
-    // Roll back the claim so the code is not burned by a failed signup.
-    await db().from('referral_code').update({ used_by: '', updated_at: nowIso() }).eq('id_reff', code.id_reff).eq('used_by', username);
-    console.error('[anoymundo] register insert failed:', insertError.message);
-    return fail(req, res, '/register', 'Could not create the account. Please try again.', {}, old);
-  }
+  if (!result?.ok) return fail(req, res, '/register', result?.message || 'Could not create the account. Please try again.', { referral: result?.message || 'Unavailable.' }, old);
   return redirect(res, '/login', { msgSuccess: 'Account created. Please sign in.' });
 }
 
@@ -548,19 +514,13 @@ async function doServer(req, res, body, user) {
 async function doReferral(req, res, body, user) {
   const targetUrl = '/admin/create-referral';
   if (!user.isAdmin) return redirect(res, '/dashboard', { msgWarning: 'You do not have access to that page.' });
-  if (Number(body.accLevel) === 1) {
-    const invite = await createOwnerInvite(user);
-    return redirect(res, targetUrl, invite?.ok
-      ? { msgSuccess: `KennyPvt owner referral: ${invite.referral}. Single use; register within 7 days. The owner has unlimited balance and no account expiry.` }
-      : { msgDanger: invite?.message || 'Could not create the owner referral.' });
-  }
   const setSaldo = Math.trunc(num(body.set_saldo, -1));
   const days = num(body.accExpire, 0);
-  const level = num(body.accLevel, 3);
+  const level = Number(body.accLevel);
   const errors = {};
   if (!Number.isSafeInteger(setSaldo) || setSaldo < 0 || setSaldo > 99999) errors.set_saldo = 'Enter a balance between 0 and 99999.';
   if (!config.accExpire[days]) errors.accExpire = 'Choose how long the account lasts.';
-  if (level === 1 || !config.accLevel[level]) errors.accLevel = 'Choose Admin or Reseller.';
+  if (![2, 3].includes(level)) errors.accLevel = 'Choose Admin or Reseller.';
   // Only the Owner can hand out Admin accounts.
   if (!errors.accLevel && level === 2 && !user.isOwner) errors.accLevel = 'Only the Owner can create Admin accounts.';
   if (Object.keys(errors).length) return fail(req, res, targetUrl, 'Please fix the highlighted fields.', errors);
@@ -590,7 +550,7 @@ async function doReferral(req, res, body, user) {
     created_at: nowIso(), updated_at: nowIso(),
   });
   if (error) {
-    console.error('[anoymundo] referral insert failed:', error.message);
+    console.error('[anoymundo] referral insert failed');
     if (debited) {
       const { data: now } = await db().from('users').select('saldo').eq('id_users', user.id_users).maybeSingle();
       await db().from('users').update({ saldo: Number(now?.saldo || 0) + setSaldo, updated_at: nowIso() }).eq('id_users', user.id_users);
@@ -997,17 +957,17 @@ export async function handle(req, res) {
     if (lp === '/admin/create-referral') {
       if (!user.isAdmin) return redirect(res, '/dashboard', { msgWarning: 'You do not have access to that page.' });
       if (method === 'POST') return await doReferral(req, res, body, user);
-      let codesQuery = db().from('referral_code').select('*', { count: 'exact' }).order('id_reff', { ascending: false }).limit(25);
+      let codesQuery = db().from('referral_code').select('*', { count: 'exact' }).is('revoked_at', null).order('id_reff', { ascending: false }).limit(25);
       if (!user.isOwner) codesQuery = codesQuery.eq('created_by', user.username);
       const { data: codes, count, error } = await codesQuery;
       if (error) throw new Error(error.message);
-      const ownerInviteAvailable = await canInviteOwner(user);
-      const levels = user.isOwner ? { 3: 'Reseller', 2: 'Admin', ...(ownerInviteAvailable ? { 1: 'Owner — KennyPvt (one account only)' } : {}) } : { 3: 'Reseller' };
+      const levels = user.isOwner ? { 3: 'Reseller', 2: 'Admin' } : { 3: 'Reseller' };
       return page(req, res, 'admin_referral', {
-        user, title: 'Referral codes', unlimited: isUnlimited(user), ownerInviteAvailable,
+        user, title: 'Referral codes', unlimited: isUnlimited(user),
         codes: (codes || []).map((c) => ({
           ...c,
-          levelName: ({ 1: 'Owner — KennyPvt', 2: 'Admin', 3: 'Reseller' })[Number(c.level)] || '—',
+          canDelete: user.isOwner ? Number(c.level) !== 1 || c.created_by === user.username : Number(c.level) === 3 && c.created_by === user.username,
+          levelName: ({ 1: 'Owner', 2: 'Admin', 3: 'Reseller' })[Number(c.level)] || '—',
           expiresLabel: (c.invite_expires_at || c.acc_expiration) ? humanDate(c.invite_expires_at || c.acc_expiration) : '—',
           saldoLabel: Number(c.level) === 1 ? 'Unlimited' : inr(c.set_saldo),
         })),
@@ -1017,6 +977,17 @@ export async function handle(req, res) {
           accLevel: buildSelect('accLevel', 'accLevel', levels, 3),
         },
       });
+    }
+    const referralDeleteMatch = p.match(/^\/admin\/referral\/(\d+)\/delete$/i);
+    if (referralDeleteMatch) {
+      if (!user.isAdmin) return redirect(res, '/dashboard', { msgWarning: 'You do not have access to that page.' });
+      if (method !== 'POST') {
+        res.setHeader('Allow', 'POST');
+        return sendJson(res, { ok: false, error: 'Use the delete button.' }, 405);
+      }
+      const result = await revokeReferral(user, Number(referralDeleteMatch[1]));
+      return redirect(res, '/admin/create-referral', result.ok
+        ? { msgSuccess: 'Referral deleted.' } : { msgDanger: result.message || 'Could not delete the referral.' });
     }
     if (lp === '/admin/manage-users') {
       if (!user.isOwner) return redirect(res, '/dashboard', { msgWarning: 'You do not have access to that page.' });

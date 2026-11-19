@@ -2,16 +2,24 @@
 // used by this app. Enabled with DB_DRIVER=memory (used by the offline test
 // suite and `npm run dev -- --memory`). Nothing here is used in production.
 
+import crypto from 'node:crypto';
+import bcrypt from 'bcryptjs';
+import { config } from './config.mjs';
 import { createMemoryStorage } from './memory-storage.mjs';
 
-const seed = () => ({
+const fixtureHash = value => crypto.createHash('md5').update(config.passwordSalt + value).digest('hex');
+
+const seed = () => {
+  const password = process.env.MEMORY_OWNER_PASSWORD;
+  const ownerReferral = process.env.MEMORY_KENNY_REFERRAL;
+  return ({
   users: [{
-    // Same Owner account as the production seed: Anoy / Anoy1764.
-    id_users: 1, fullname: 'Anoy', username: 'Anoy', email: 'saabarjun705@gmail.com',
+    // Offline-only account; no production password or usable default.
+    id_users: 1, fullname: 'Anoy', username: 'Anoy', email: 'owner@example.invalid',
     reset_link_token: '', exp_date: '', level: 1, saldo: 999999999999, status: 1,
-    owner_channel: 'anoy', uplink: 'Owner', password: '$2a$08$sQefH.l6cnpeUwuTifoZvuF1SSh7U6Mw4UwddAO9cawj5pip8blOa',
+    owner_channel: 'anoy', uplink: 'Owner', password: password ? bcrypt.hashSync(fixtureHash(password), 8) : '!setup-required!',
     user_ip: '', created_at: '2026-01-01T00:00:00Z',
-    updated_at: '2026-01-01T00:00:00Z', expiration_date: '2050-01-01T00:00:00Z',
+    updated_at: '2026-01-01T00:00:00Z', expiration_date: null,
   }],
   keys_code: [
     { id_keys: 1, game: 'PUBG', user_key: 'ANOY-2H-LYK0Y', duration: 2, expired_date: null, max_devices: 1, devices: null, status: 1, registrator: 'Anoy', price_paid: 0, created_at: '2026-01-01T00:00:00Z', updated_at: '2026-01-01T00:00:00Z' },
@@ -20,8 +28,12 @@ const seed = () => ({
   history: [],
   referral_code: [{
     id_reff: 1, code: 'f36d16b166f38a1a148a2069a74c866c', referral: 'WELCOME', level: 3,
-    set_saldo: 1000, used_by: '', created_by: 'Anoy', acc_expiration: '2030-01-01T00:00:00Z',
-  }],
+    set_saldo: 1000, used_by: '', created_by: 'Anoy', acc_expiration: '2030-01-01T00:00:00Z', revoked_at: null,
+  }, ...(ownerReferral ? [{
+    id_reff: 2, code: fixtureHash(ownerReferral), referral: ownerReferral, level: 1,
+    owner_channel: 'kenny', set_saldo: 0, used_by: '', created_by: 'Anoy',
+    acc_expiration: null, invite_expires_at: new Date(Date.now() + 7 * 86400_000).toISOString(), revoked_at: null,
+  }] : [])],
   feature: [{ id: 1, esp: 'on', item: 'on', silentaim: 'on', aim: 'on', bullettrack: 'on', memory: 'on', floating: 'on', setting: 'on' }],
   modname: [{ id: 1, modname: 'VIP MOD' }],
   onoff: [{ id: 1, status: 'off', myinput: '' }],
@@ -33,7 +45,8 @@ const seed = () => ({
   auth_attempt: [],
   api_keys: [],
   key_orders: [],
-});
+  });
+};
 
 const serials = {
   users: 'id_users', keys_code: 'id_keys', history: 'id_history',
@@ -134,8 +147,11 @@ class Query {
         if (table === 'users' && this.store.users.some((u) => u.username.toLowerCase() === String(record.username).toLowerCase())) {
           return { data: null, error: { message: 'duplicate key value violates unique constraint "users_username_key"', code: '23505' }, count: null };
         }
-        if (table === 'users' && ((Number(record.level) === 1 && (!['anoy', 'kenny'].includes(record.owner_channel) || this.store.users.some(u => u.owner_channel === record.owner_channel))) || (Number(record.level) !== 1 && record.owner_channel))) {
+        if (table === 'users' && ((Number(record.level) === 1 && (record.expiration_date != null || !['anoy', 'kenny'].includes(record.owner_channel) || this.store.users.some(u => u.owner_channel === record.owner_channel))) || (Number(record.level) !== 1 && record.owner_channel))) {
           return { data: null, error: { message: 'Owner channel is invalid or already occupied', code: '23505' }, count: null };
+        }
+        if (table === 'referral_code' && this.store.referral_code.some(r => r.code === record.code || r.referral.toLowerCase() === String(record.referral).toLowerCase())) {
+          return { data: null, error: { message: 'Referral already exists', code: '23505' }, count: null };
         }
         if (table === 'keys_code' && this.store.keys_code.some((k) => k.user_key === record.user_key)) {
           return { data: null, error: { message: 'duplicate key value violates unique constraint "keys_code_user_key_key"', code: '23505' }, count: null };
@@ -152,9 +168,15 @@ class Query {
       if (table === 'users' && rows.some(row => {
         const next = { ...row, ...this._payload };
         return Number(row.level) === 1
-          ? ['level', 'username', 'owner_channel', 'status'].some(key => next[key] !== row[key])
+          ? next.expiration_date != null || ['level', 'username', 'owner_channel', 'status'].some(key => next[key] !== row[key])
           : Number(next.level) === 1;
       })) return { data: null, error: { message: 'Owner identities cannot be changed' }, count: null };
+      if (table === 'referral_code' && rows.some(row => {
+        const next = { ...row, ...this._payload };
+        return ['code', 'referral', 'level', 'owner_channel', 'created_by', 'set_saldo', 'acc_expiration', 'invite_expires_at'].some(key => next[key] !== row[key])
+          || (row.used_by && next.used_by !== row.used_by)
+          || (row.revoked_at && (next.revoked_at !== row.revoked_at || next.used_by !== row.used_by));
+      })) return { data: null, error: { message: 'Referrals cannot be reused or restored' }, count: null };
       const updated = [];
       for (const row of rows) {
         Object.assign(row, clone(this._payload));
@@ -168,6 +190,7 @@ class Query {
 
     if (this._operation === 'delete') {
       if (table === 'users' && rows.some(row => Number(row.level) === 1)) return { data: null, error: { message: 'Owner accounts cannot be deleted' }, count: null };
+      if (table === 'referral_code' && rows.some(row => row.used_by || row.revoked_at)) return { data: null, error: { message: 'Used or deleted referrals cannot be reissued' }, count: null };
       const doomed = new Set(rows);
       this.store[table] = this.store[table].filter((r) => !doomed.has(r));
       result.data = rows.map(clone);

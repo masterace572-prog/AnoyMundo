@@ -14,6 +14,7 @@ const forceMemory = process.argv.includes('--memory');
 if (forceMemory || !process.env.SUPABASE_URL) {
   process.env.DB_DRIVER = 'memory';
   console.log('[dev] DB_DRIVER=memory (offline demo data)');
+  if (!process.env.MEMORY_OWNER_PASSWORD) console.log('[dev] Offline login is locked; configure MEMORY_OWNER_PASSWORD privately to enable it.');
 }
 
 const { default: handler } = await import('../api/index.js');

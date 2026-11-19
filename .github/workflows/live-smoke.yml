@@ -1,13 +1,8 @@
 name: Live deployment smoke test
 
-# Exercises the deployed Vercel panel against the real Supabase project.
-# Signed-in checks need the repository secret PANEL_OWNER_PASSWORD (Owner
-# account). Without it only the public checks run. Everything the test
-# creates is deleted again.
-# Historical optional [temp-account] mode asks for
-# a temporary reseller account (scripts/temp-account.mjs: the password stays on
-# the runner, only its bcrypt hash is published as the commit status
-# "temp-account"); the test waits up to 5 minutes for it to exist.
+# Public checks always run. Authenticated checks use only the private existing
+# Owner secret. No passwords or password hashes are accepted as workflow inputs
+# or published in commit statuses, logs, issues, or artifacts.
 on:
   workflow_dispatch:
     inputs:
@@ -19,14 +14,9 @@ on:
         description: 'Owner username used for the signed-in checks'
         type: string
         default: 'Anoy'
-      temp_password:
-        description: 'Optional password of a TEMPORARY test account (public repo: never enter a real password here)'
-        type: string
-        default: ''
 
 permissions:
   contents: read
-  statuses: write
 
 jobs:
   smoke:
@@ -36,22 +26,13 @@ jobs:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
         with:
-          node-version: '20'
-      - name: Request a temporary test account
-        if: contains(github.event.head_commit.message, '[temp-account]')
-        working-directory: web
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-        run: |
-          npm ci --no-audit --no-fund
-          node scripts/temp-account.mjs
+          node-version: '22'
       - name: End-to-end checks against the live panel
         working-directory: web
         env:
           BASE: ${{ inputs.base || 'https://anoymundo-panel.vercel.app' }}
-          OWNER_USERNAME: ${{ env.TEMP_USER || inputs.username || 'Anoy' }}
-          OWNER_PASSWORD: ${{ env.TEMP_PASSWORD || inputs.temp_password || secrets.PANEL_OWNER_PASSWORD }}
-          WAIT_FOR_ACCOUNT: ${{ env.TEMP_USER && '300' || '' }}
+          OWNER_USERNAME: ${{ inputs.username || 'Anoy' }}
+          OWNER_PASSWORD: ${{ secrets.PANEL_OWNER_PASSWORD }}
         run: |
           if [ -n "$OWNER_PASSWORD" ]; then echo "::add-mask::$OWNER_PASSWORD"; fi
           node scripts/live-smoke.mjs

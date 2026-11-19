@@ -16,8 +16,9 @@ Unknown, duplicate and prototype-property channel values are rejected. Owner
 writes ignore query-string routing and derive authority from an immutable,
 unique `users.owner_channel`; conflicting body channels are refused.
 
-Exactly two Owner slots are available. Anoy issues the expiring, single-use
-second-owner invitation. No production test account claims that slot. Both
+Exactly two permanent Owner slots are available. A private, single-use
+second-owner invitation is provisioned operationally and attributed to Anoy;
+there is no Owner creation option on the panel. No production test account claims that slot. Both
 Owners are protected from rename/demotion/deletion and cannot edit each other
 through user management. Each can still change their own password/profile.
 Keys, pricing/billing, general server settings and `/connect` are shared.
@@ -28,26 +29,26 @@ From `web/`: `npm ci && npm run build && npm test`.
 
 - **213 smoke assertions**: existing UI, shared licence/key/billing/settings
   behavior, sessions, CSRF, legacy endpoints and app updates.
-- **14 Node HTTP/channel/archive tests**: invitation expiry/replay/parallel
+- **20 Node HTTP/channel/archive tests**: invitation expiry/replay/parallel
   registration; both directions of Owner/account/release isolation; 10 MiB
   signed binary upload; ZIP above the old 3 MiB cap; canonical `libbgmi.so`;
   CRC/path/ABI/entry-count/real-inflation bounds; pending-only cancellation;
   failed Storage writes; concurrent publication; bounded health probes.
-- **35 PostgreSQL/PGlite checks**: migration preservation and repeatability,
+- **69 PostgreSQL/PGlite checks**: migration preservation and repeatability,
   old single-owner index upgrade, safe full-schema reapplication after two
   Owners exist, account constraints, atomic publication rollback, scoped RPCs,
   independent APK version codes, unlimited Owner billing and RPC grants.
 - `npm audit` and `npm audit --omit=dev --audit-level=moderate`: **0 findings**
   after upgrading `fflate` to 0.8.3. ZIP decompression itself uses a strict
   custom ZIP32 reader and bounded Node zlib; fflate writes normalized ZIPs.
-- Android static checks: **13 UI gates + 13 branding/channel gates**.
+- Android static checks: **13 UI gates + 16 branding/channel gates**.
 
 The Playwright suite signs up the second Owner **only on the offline memory
 server**, performs real XHR uploads (10 MiB `.so` / >3 MiB ZIP), verifies
 canonical names and cross-channel denial, checks phone overflow and captures
 desktop/phone pages. Generated screenshots remain ignored/artifact-only.
 
-## Production database and panel
+## Original two-channel production rollout
 
 - Additive migration applied as **`20261119230821 / two_owner_channels`**.
   Its source is `supabase/migrations/20261119_two_owner_channels.sql`, SHA-256
@@ -131,3 +132,27 @@ preserved by the implementation and checked where tooling permits.
   dispatch/cancellation, and sandbox networking cannot download Actions log
   archives. Normal push CI and structured check annotations were used for
   verification; no GitHub credentials were requested or exposed.
+
+## Referral/contact follow-up
+
+- All referrals are single use. Normal-role signup now uses
+  `register_account_from_referral`; deletion uses `revoke_referral`, both
+  service-role-only transactional RPCs. Used/deleted referral identities are
+  immutable and unique, preventing reset or reissue.
+- Referral deletion is POST-only, same-origin, authority-scoped and confirmed
+  in the browser. It never deletes an account or changes a balance.
+- Owner selection and the long Owner-invitation notice were removed. Both
+  Owner rows enforce a null account expiry; invitation expiry is independent.
+- Kenny's Java resource and native Telegram contact use `crimecell`; Anoy's
+  contact is unchanged. Android 2.4.1 (19) is a new release, not an overwrite.
+- Current-source bootstrap credentials/hashes and the historical QA mechanism
+  for publishing temporary password hashes were removed. Offline QA uses
+  ephemeral passwords; production credentials were not changed. Removing text
+  from the current tree does not erase earlier commits: if an old default is
+  still used, rotate it privately in Settings.
+- Root README contains only the project name. No private referral is recorded
+  in source, public docs, CI output or release notes.
+- Local validation: 213 smoke assertions, 20 channel/referral HTTP tests,
+  69 PostgreSQL checks, 13 UI gates and 16 branding/channel gates passed.
+  Desktop/phone browser tests passed, including confirmed referral deletion,
+  failed signup with the deleted code and private one-time Owner registration.

@@ -234,7 +234,7 @@ export async function currentUser(req) {
   // newer session is void as soon as the password hash changes.
   if (session.pv && String(user.password || '').slice(0, 12) !== String(session.pv)) return null;
   if (Number(user.status) !== 1 || Number(user.level) > 3) return null;
-  if (user.expiration_date && new Date(user.expiration_date).getTime() < Date.now()) return null;
+  if (!ownerChannel(user) && user.expiration_date && new Date(user.expiration_date).getTime() < Date.now()) return null;
   const isOwner = !!ownerChannel(user);
   return {
     ...user,
@@ -252,7 +252,7 @@ export async function authenticate(username, password) {
   if (!user) return { ok: false, reason: 'The username is not registered.' };
   if (!verifyPassword(password, user.password)) return { ok: false, reason: 'Wrong password, please try again.' };
   if (Number(user.status) !== 1) return { ok: false, reason: 'Account is not active.' };
-  if (user.expiration_date && new Date(user.expiration_date).getTime() < Date.now()) {
+  if (!ownerChannel(user) && user.expiration_date && new Date(user.expiration_date).getTime() < Date.now()) {
     return { ok: false, reason: 'Expired - Please Renew Your Account to Login.' };
   }
   return { ok: true, user };

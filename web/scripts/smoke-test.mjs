@@ -1,3 +1,4 @@
+import { ownerPassword } from './offline-fixtures.mjs';
 // End-to-end smoke test against the real HTTP handler with the offline
 // in-memory database driver. Run with: npm test
 import { spawn } from 'node:child_process';
@@ -134,9 +135,9 @@ try {
   ok(r.status === 302 && r.location === '/login', 'wrong password redirects back to login');
   r = await request('/login');
   ok(/Wrong password/.test(r.body) && /class="alert alert-danger"/.test(r.body), 'bad login shows an inline error');
-  r = await request('/login', { method: 'POST', body: form({ username: 'Anoy', password: 'Anoy1764' }), headers: { 'sec-fetch-site': 'cross-site' } });
+  r = await request('/login', { method: 'POST', body: form({ username: 'Anoy', password: ownerPassword }), headers: { 'sec-fetch-site': 'cross-site' } });
   ok(r.status === 302 && r.location === '/login' && !cookies.has('am_session'), 'a cross-site login POST is refused');
-  r = await login('anoy', 'Anoy1764');
+  r = await login('anoy', ownerPassword);
   ok(r.status === 302 && r.location === '/dashboard', 'Owner signs in (username is case-insensitive)');
   ok(cookies.has('am_session'), 'signed session cookie is issued');
 
@@ -359,7 +360,7 @@ try {
   await request('/logout');
 
   // 13. Owner sees the reseller, library + loader endpoints
-  await login('Anoy', 'Anoy1764');
+  await login('Anoy', ownerPassword);
   r = await request('/admin/manage-users');
   ok(/reseller1/.test(r.body) && /Unlimited/.test(r.body), 'user list shows the reseller and the Owner as unlimited');
   r = await request('/api/lib/version');

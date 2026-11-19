@@ -10,16 +10,17 @@
 #if defined(LOADER_KENNY)
 #define LOADER_BRAND      "KennyPvt"
 #define LOADER_CHANNEL    "kenny"
+#define ANOY_TELEGRAM_URL "https://t.me/crimecell"
 #define ANOY_VERSION_URL  "https://anoymundo-panel.vercel.app/api/lib/version?channel=kenny"
 #define ANOY_DOWNLOAD_URL "https://anoymundo-panel.vercel.app/api/lib/download?channel=kenny"
 #else
 #define LOADER_BRAND      "Anoy"
 #define LOADER_CHANNEL    "anoy"
+#define ANOY_TELEGRAM_URL "https://t.me/libAkAudioVisiual"
 #define ANOY_VERSION_URL  "https://anoymundo-panel.vercel.app/api/lib/version?channel=anoy"
 #define ANOY_DOWNLOAD_URL "https://anoymundo-panel.vercel.app/api/lib/download?channel=anoy"
 #endif
 #define ANOY_CONNECT_URL  "https://anoymundo-panel.vercel.app/connect"
-#define ANOY_TELEGRAM_URL "https://t.me/libAkAudioVisiual"
 
 /* Must match STATIC_WORDS on the panel (real = game-user_key-serial-WORDS). */
 #define ANOY_STATIC_WORDS "Vm8Lk7Uj2JmsjCPVPVjrLa7zgfx3uz9E"

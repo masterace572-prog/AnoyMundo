@@ -34,7 +34,7 @@ export const config = {
   rememberHours: 24,
   passwordSalt: 'XquxmymXDtWRA66D',
   license: 'Qp5KSGTquetnUkjX6UVBAURH8hTkZuLM',
-  version: '2.4.0',
+  version: '2.4.1',
   games: { PUBG: 'PUBG Mobile' },
   durations: {
     1: '1 hour',

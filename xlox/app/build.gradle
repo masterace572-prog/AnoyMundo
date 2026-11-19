@@ -83,8 +83,8 @@ android {
         // 2.3.6: a key banned in the panel signs the phone out with the reason.
         // 2.3.7: quiet Lottie status on splash, login key, preparing, library sheet.
         // 2.3.8: Lottie on the splash update check only (login, home, library sheet reverted).
-        versionCode 18
-        versionName '2.4.0'
+        versionCode 19
+        versionName '2.4.1'
 
         vectorDrawables {
             useSupportLibrary true

@@ -15,9 +15,9 @@ create unique index if not exists users_username_lower_idx on public.users (lowe
 insert into public.users
   (fullname, username, email, reset_link_token, exp_date, level, saldo,
    status, uplink, password, user_ip, created_at, updated_at, expiration_date)
-values ('Anoy', 'Anoy', 'saabarjun705@gmail.com', '', '', 1, 999999999999,
-   1, 'Owner', '$2a$08$sQefH.l6cnpeUwuTifoZvuF1SSh7U6Mw4UwddAO9cawj5pip8blOa',
-   '', now(), now(), '2050-01-01 00:00:00+00');
+values ('Anoy', 'Anoy', '', '', '', 1, 999999999999,
+   1, 'Owner', '!setup-required!',
+   '', now(), now(), null);
 
 -- 3. Owner never pays; owner check no longer hard-codes a username
 create or replace function public.create_keys_atomic(

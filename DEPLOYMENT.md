@@ -19,27 +19,39 @@ template bundle fails `npm run check`.
 ## 2. Database migration / safe rollout
 
 - **Fresh project:** run `supabase/schema.sql`. It includes v2.4's two-owner
-  constraints, RPCs and Storage bucket. It initially seeds Anoy only; invite
-  the KennyPvt owner through the panel.
+  constraints, RPCs and Storage bucket. It seeds a locked Anoy identity only;
+  configure the first password privately out of band. No credential is stored
+  in the repository and existing production passwords are never reset.
 - **Existing project:** apply **only**
-  `supabase/migrations/20261119_two_owner_channels.sql` for this upgrade. It is
-  additive/non-destructive: users, keys, settings, old library bytes and APK
-  releases are preserved. Existing releases become `channel='anoy'`.
+  `supabase/migrations/20261119_two_owner_channels.sql`, then
+  `supabase/migrations/20261119_referral_single_use.sql` (skip any migration
+  already applied). Both are additive: users, keys, settings, library bytes
+  and APK releases are preserved. Existing releases become `channel='anoy'`.
 - **NEVER re-run `20261107_v2_fresh_start.sql` on production.** That historical
   migration deliberately deletes users, keys and billing/referral history.
 
 Order: run local checks → apply the new migration transactionally → deploy the
-current branch to Vercel → verify public and signed-in endpoints → issue the
-single-use KennyPvt Owner invitation. Do not create a throwaway Kenny Owner in
+current branch to Vercel → verify public and signed-in endpoints → provision
+the single-use KennyPvt Owner invitation privately, if not already present. Do not create a throwaway Kenny Owner in
 production for testing: that slot is intended for the real second Owner and
 Owner identities cannot be deleted/reassigned by the application.
 
 The migration replaces the old one-owner index with two unique, immutable
-Owner channels (`anoy`, `kenny`). Only Anoy can create the second-owner invite;
-it expires after 7 days and is consumed transactionally on registration.
+Owner channels (`anoy`, `kenny`). Owner invitations are operationally provisioned
+only: there is no Owner option or invitation-creation action in the panel.
+The one pending Kenny invitation is attributed to Anoy, expires after 7 days
+if unused, and is consumed transactionally. This NEVER expires the account.
 Owner accounts have unlimited billing balance and no account expiry. Password
 and full-name changes are still made by each user in their own Settings.
 Neither Owner may edit/delete/demote/rename the other Owner account.
+
+Admin/Reseller referrals also insert the account and consume the code in one
+locked PostgreSQL transaction. A code cannot be used for another account,
+including parallel signups or after deleting the original account. Referral
+**Delete** is an authenticated, same-origin POST; it revokes and hides the code
+but preserves a private tombstone so that code cannot be reissued. Existing
+accounts and balances are unaffected. Admins can delete only their own
+Reseller referrals; Owners can manage shared normal-role referrals.
 
 Useful **read-only** verification:
 
@@ -146,7 +158,8 @@ python3 xlox/scripts/check_branding.py
 
 The PostgreSQL tests use PGlite offline, including migration preservation,
 repeat application, full-schema reapplication after two Owners exist, invite
-replay, Owner protection, cross-channel RPC denial and shared billing.
+replay/revocation, failed-signup rollback, permanent Owners, scoped deletion,
+cross-channel RPC denial and shared billing.
 
 `live-smoke.yml` is manual: runs the deployed app's public checks and, when
 `PANEL_OWNER_PASSWORD` is configured in repository secrets, signed-in checks
