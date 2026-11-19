@@ -1,0 +1,32 @@
+name: Extract Techpost Lottie source
+
+# One-time source retrieval for the exact animation selected for the Anoy splash.
+# The output is emitted in log chunks so it can be checked into the Android app
+# as a normal, offline raw resource. This workflow is removed after retrieval.
+on:
+  push:
+    branches: [arena/ef830848-anoymundo]
+    paths:
+      - '.github/workflows/extract-techpost-lottie.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  extract:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Download and unpack the selected animation
+        shell: bash
+        run: |
+          set -euo pipefail
+          url='https://assets-v2.lottiefiles.com/a/ca75e6e6-1808-11ee-a221-ef9a4cc4b613/zPk1JbJUf9.lottie'
+          curl --fail --location --proto '=https' --tlsv1.2 --retry 3 \
+            --connect-timeout 20 --max-time 60 --output /tmp/techpost.lottie "$url"
+          entry=$(unzip -Z1 /tmp/techpost.lottie | grep -E '^animations/[^/]+\.json$' | head -1)
+          test -n "$entry"
+          unzip -p /tmp/techpost.lottie "$entry" > /tmp/techpost.json
+          python3 -c 'import json,sys; a=json.load(open(sys.argv[1])); assert all(k in a for k in ("v", "fr", "ip", "op", "w", "h", "layers"))' /tmp/techpost.json
+          echo "Retrieved $entry ($(wc -c </tmp/techpost.json) bytes)"
+          base64 -w 4000 /tmp/techpost.json | sed 's/^/TECHPOST_B64:/'
