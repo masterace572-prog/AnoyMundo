@@ -86,8 +86,9 @@ android {
         // 2.3.9: signed release pipeline refresh; no app behaviour change.
         // 2.4.0: full-screen local black-and-white Lottie splash.
         // 2.4.1: direct Techpost vector glyph replacement (AnoyHax, T -> A).
-        versionCode 20
-        versionName '2.4.1'
+        // 2.4.2: independent in-place glyph slots avoid source matte collisions.
+        versionCode 21
+        versionName '2.4.2'
 
         vectorDrawables {
             useSupportLibrary true

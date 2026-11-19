@@ -374,10 +374,18 @@ for name, max_bytes in LOTTIE_SPECS.items():
         lottie.append(f"{name}.json embeds assets (images)")
 if (raw_dir / "anoy_splash.json").exists():
     splash_data = _json.loads((raw_dir / "anoy_splash.json").read_text())
-    layer_names = [layer.get("nm", "") for layer in splash_data.get("layers", [])]
-    if splash_data.get("nm") != "anoy_splash" or not all(
-            any(name.startswith(char) for name in layer_names) for char in "AnoyHax"):
+    layer_names = {layer.get("nm", "") for layer in splash_data.get("layers", [])}
+    expected_slots = {f"AnoyHax {char} (edited source slot)" for char in "AnoyHax"}
+    slots = [layer for layer in splash_data.get("layers", [])
+             if layer.get("nm") in expected_slots]
+    final_a = next((layer for layer in splash_data.get("layers", [])
+                    if layer.get("ind") == 4 and layer.get("nm") == "A"), None)
+    if splash_data.get("nm") != "anoy_splash" or not expected_slots.issubset(layer_names) \
+            or len(slots) != 7 or final_a is None:
         lottie.append("anoy_splash.json is not the generated AnoyHax vector launch film")
+    elif any(layer.get("parent") is not None or layer.get("tt") is not None
+             or layer.get("op", 0) > final_a.get("ip", 0) for layer in slots):
+        lottie.append("AnoyHax source slots overlap the standalone A reveal")
     if any(layer.get("ty") == 5 for layer in splash_data.get("layers", [])):
         lottie.append("anoy_splash.json adds a text layer instead of editing source vectors")
 glyphs = ROOT / "scripts/anoy_splash_glyphs.json"

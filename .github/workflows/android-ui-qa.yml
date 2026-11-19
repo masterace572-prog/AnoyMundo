@@ -149,7 +149,7 @@ jobs:
           need = [
               # splash (frames, reduced motion, animations on)
               'splash', 'splash_reduced_welcome', 'splash_t000', 'splash_t080', 'splash_t160',
-              'splash_t240', 'splash_t450', 'splash_t510', 'splash_t666', 'anim_splash_t50',
+              'splash_t240', 'splash_t450', 'splash_t510', 'splash_t530', 'splash_t666', 'anim_splash_t50',
               'home_expiry_ist',
               'splash_live_cold',
               # launcher icon

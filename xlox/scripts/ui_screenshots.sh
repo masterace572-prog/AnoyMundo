@@ -229,9 +229,9 @@ grant
 
 # ---------------------------------------------------------------- 1. splash
 # Still frames of the 6.67 s local Lottie film (qa_frame = seconds):
-#   0.00 hand-off on black; 0.80 / 1.60 / 2.40 source motion; 4.50 clean
-#   vector rebrand cut-over; 5.10 AnoyHax revealed; 6.66 final A pose.
-for f in 0.00 0.80 1.60 2.40 4.50 5.10 6.66; do
+#   0.00 hand-off on black; 0.80 / 1.60 / 2.40 source motion; 4.50 first
+#   edited glyph; 5.10 word-build; 5.30 clean AnoyHax; 6.66 final A pose.
+for f in 0.00 0.80 1.60 2.40 4.50 5.10 5.30 6.66; do
     stop_app
     adb shell am start -W -n $PKG/.SplashActivity --ef qa_frame "$f" >> "$LOG" 2>&1 || fatal "cannot start SplashActivity"
     sleep 1.2

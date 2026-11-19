@@ -4,6 +4,15 @@ Screenshots, design notes (`docs/ui-redesign/…`) and the one-off generator
 scripts mentioned below were removed from the tree in the repo cleanup after
 2.3.2; they remain in git history.
 
+## 2.4.2 — Collision-free AnoyHax vector slots (versionCode 21)
+
+- Corrects the direct vector rebrand so each **AnoyHax** glyph occupies one
+  independent existing source slot. This removes the source alpha-matte paths
+  that were visibly painting into the replacement **H** and **a**.
+- The word completes before the standalone edited **A** begins its original
+  reveal, so the two source-brand states never overlap on screen.
+- Still no cover, native view, Lottie text layer, or extra wordmark layer.
+
 ## 2.4.1 — Direct AnoyHax vector replacement (versionCode 20)
 
 - Corrects the splash branding at its source: the selected Lottie’s existing
