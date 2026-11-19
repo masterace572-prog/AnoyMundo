@@ -1,0 +1,112 @@
+<div class="page-head">
+    <div>
+        <h1 class="page-title">Generate keys</h1>
+        <p class="page-sub">Balance: {{#if unlimited}}Unlimited{{else}}₹{{user.saldoLabel}}{{/if}}</p>
+    </div>
+    <div class="page-actions">
+        <a href="/keys" class="btn btn-secondary hide-tab">{{icon "key-round"}}All keys</a>
+    </div>
+</div>
+
+{{> msgStatus}}
+
+{{#if flash.user_key}}
+<section class="card highlight keys-out" id="generated" style="margin-bottom:20px">
+    <div class="card-head">
+        <div class="tile green">{{icon "circle-check"}}</div>
+        <div><h2 class="card-title">New keys ready</h2><div class="card-sub">{{flash.game}} · {{devices flash.max_devices}} · starts on first use</div>{{#if flash.created_label}}<div class="card-sub">Created {{flash.created_label}} · if first used now, expires {{flash.expires_if_now}}</div>{{/if}}</div>
+        <span class="spacer"></span>
+        <button type="button" class="btn btn-primary btn-sm" data-copy-target="generated-keys">{{icon "copy"}}Copy all</button>
+    </div>
+    <textarea class="input" id="generated-keys" readonly rows="4" aria-label="Generated keys">{{flash.user_key}}</textarea>
+</section>
+{{/if}}
+
+{{#if balanceLow}}
+<div class="alert alert-warning">{{icon "triangle-alert"}}<p>Your balance is empty. Ask your admin to top up.</p></div>
+{{/if}}
+
+<form method="post" action="/keys/generate" class="grid-main" id="generate-form" novalidate data-busy-form
+      data-prices="{{priceJson}}" data-prefixes="{{prefixJson}}" data-unlimited="{{#if unlimited}}1{{/if}}"
+      data-saldo="{{user.saldo}}" data-min="{{customMin}}" data-max="{{customMax}}" data-full-custom="1">
+    <input type="hidden" name="request_id" id="request_id" value="">
+    <input type="hidden" name="game" value="PUBG">
+
+    <section class="card">
+        <div class="card-head">
+            <div class="tile">{{icon "wand-sparkles"}}</div>
+            <div><h2 class="card-title">Key options</h2><div class="card-sub">Pick a duration, devices and key type.</div></div>
+        </div>
+        <div class="form">
+            <div class="field {{#if errors.duration}}invalid{{/if}}">
+                <span class="label">{{icon "clock" "i-sm"}}Duration</span>
+                <div class="choice-grid" role="radiogroup" aria-label="Duration">
+                    {{#each durations}}
+                    <label class="choice"><input type="radio" name="duration" value="{{this.hours}}" {{#if (eq @root.form.duration this.hours)}}checked{{/if}}><span><b>{{this.label}}</b><small>{{this.price}}</small></span></label>
+                    {{/each}}
+                </div>
+                {{#if errors.duration}}<div class="error">{{icon "circle-alert"}}<span>{{errors.duration}}</span></div>{{else}}<div class="hint">Price per device.</div>{{/if}}
+            </div>
+
+            <div class="field-row">
+                <div class="field {{#if errors.max_devices}}invalid{{/if}}">
+                    <label class="label" for="max_devices">{{icon "smartphone" "i-sm"}}Devices per key</label>
+                    <div class="stepper">
+                        <button type="button" data-step="-1" data-target="max_devices" aria-label="Fewer devices">{{icon "minus" "i-sm"}}</button>
+                        <input type="number" class="input" name="max_devices" id="max_devices" min="1" max="100" step="1" inputmode="numeric" required value="{{#if form.max_devices}}{{form.max_devices}}{{else}}1{{/if}}">
+                        <button type="button" data-step="1" data-target="max_devices" aria-label="More devices">{{icon "plus" "i-sm"}}</button>
+                    </div>
+                    {{#if errors.max_devices}}<div class="error">{{icon "circle-alert"}}<span>{{errors.max_devices}}</span></div>{{/if}}
+                </div>
+                <div class="field">
+                    <span class="label">{{icon "layers" "i-sm"}}Key type</span>
+                    <div class="segmented block" role="radiogroup" aria-label="Key type">
+                        <label><input type="radio" name="custom" value="" {{#unless form.custom}}checked{{/unless}}><span>{{icon "sparkles" "i-sm"}}Random</span></label>
+                        <label><input type="radio" name="custom" value="1" {{#if form.custom}}checked{{/if}}><span>{{icon "pencil" "i-sm"}}Custom</span></label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="field {{#if errors.count}}invalid{{/if}}" id="count-field">
+                <label class="label" for="count">{{icon "hash" "i-sm"}}Number of keys</label>
+                <div class="stepper" style="max-width:260px">
+                    <button type="button" data-step="-1" data-target="count" aria-label="Fewer keys">{{icon "minus" "i-sm"}}</button>
+                    <input type="number" class="input" name="count" id="count" min="1" max="100" step="1" inputmode="numeric" value="{{#if form.count}}{{form.count}}{{else}}1{{/if}}">
+                    <button type="button" data-step="1" data-target="count" aria-label="More keys">{{icon "plus" "i-sm"}}</button>
+                </div>
+                {{#if errors.count}}<div class="error">{{icon "circle-alert"}}<span>{{errors.count}}</span></div>{{else}}<div class="hint">Up to 100 keys at once.</div>{{/if}}
+            </div>
+
+            <div class="field {{#if errors.custom_key}}invalid{{/if}}" id="custom-field" hidden>
+                <label class="label" for="custom_key">{{icon "pencil" "i-sm"}}Custom key</label>
+                <div class="input-wrap">
+                    {{icon "key-round" "lead"}}
+                    <input type="text" class="input mono upper" name="custom_key" id="custom_key" value="{{form.custom_key}}"
+                           maxlength="{{customMax}}" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="HELLO">
+                </div>
+                {{#if errors.custom_key}}<div class="error">{{icon "circle-alert"}}<span>{{errors.custom_key}}</span></div>{{else}}<div class="hint">{{customMin}}–{{customMax}} letters or numbers. One key.</div>{{/if}}
+            </div>
+        </div>
+    </section>
+
+    <aside class="card sticky-side">
+        <div class="card-head">
+            <div class="tile teal">{{icon "key-round"}}</div>
+            <div><h2 class="card-title">Summary</h2><div class="card-sub">What will be created</div></div>
+        </div>
+        <div class="label" style="margin-bottom:6px">Example key</div>
+        <div class="key-preview" id="key-example">—</div>
+        <div class="summary list" style="margin-top:14px">
+            <div class="list-row"><span>Price per key</span><span class="num" id="unit-price">—</span></div>
+            <div class="list-row"><span>Total</span><span class="total" id="total-price">—</span></div>
+        </div>
+        <div class="error" id="balance-error" hidden>{{icon "circle-alert"}}<span>This order is more than your balance.</span></div>
+        <button type="submit" class="btn btn-primary btn-block btn-lg gen-side-submit" id="generate-submit" data-busy-label="Creating…" style="margin-top:16px">{{icon "wand-sparkles"}}Generate</button>
+    </aside>
+    <div class="gen-spacer" aria-hidden="true"></div>
+    <!-- Phone: Total / Generate fixed above the tab bar (hidden while the keyboard is open). -->
+    <div class="gen-bar">
+        <div class="gen-total"><small>Total</small><b id="gen-bar-total">—</b></div>
+        <button type="submit" class="btn btn-primary" id="gen-bar-submit" data-busy-label="Creating…">Generate</button>
+    </div>
+</form>

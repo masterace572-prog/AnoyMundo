@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- API 26+ draws a translucent focus overlay over a focused ScrollView once
+         the device leaves touch mode (keyboard / D-pad). Keep the page black. -->
+    <style name="Scroll" parent="">
+        <item name="android:overScrollMode">never</item>
+        <item name="android:scrollbars">none</item>
+        <item name="android:defaultFocusHighlightEnabled">false</item>
+    </style>
+</resources>

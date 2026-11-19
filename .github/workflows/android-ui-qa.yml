@@ -1,0 +1,582 @@
+name: Android UI QA
+
+# Builds debug + release, runs Android Lint and the static UI gates, then
+# installs the app on an emulator and captures every screen and state of the
+# 2.1 redesign (see xlox/scripts/ui_screenshots.sh): live walkthrough, every
+# update-gate / sign-in / home state, animations on + off, font 0.85 / 2.0,
+# 360 dp, tablet and the minified release build.
+#
+# 2.3.2: manual only (Actions > Android UI QA > Run workflow). Pushes run the
+# fast build-xlox.yml, which now carries the static UI gates and the
+# permissions check. Screenshots and logs are uploaded as the "ui-qa"
+# artifact only; nothing is committed to the branch.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-ui-qa-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  qa:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 110
+    defaults:
+      run:
+        working-directory: xlox
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Bundle the BGMI icon (downloaded once, then committed)
+        run: python3 scripts/fetch_game_icon.py
+
+      - name: Static UI gates (no SDK needed)
+        run: python3 scripts/ui_quality_gate.py
+
+      - name: JDK 17
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+          cache-dependency-path: |
+            xlox/gradle/wrapper/gradle-wrapper.properties
+            xlox/build.gradle
+            xlox/app/build.gradle
+
+      - name: Install Android SDK, NDK and emulator image
+        run: |
+          SDK="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-$HOME/android-sdk}}"
+          mkdir -p "$SDK"
+          if [ -x "$SDK/cmdline-tools/latest/bin/sdkmanager" ]; then
+            SM="$SDK/cmdline-tools/latest/bin/sdkmanager"
+          elif command -v sdkmanager >/dev/null 2>&1; then
+            SM="$(command -v sdkmanager)"
+          else
+            curl -fsSL -o /tmp/cmdtools.zip \
+              https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
+            rm -rf /tmp/cmdtools && mkdir -p /tmp/cmdtools
+            unzip -q /tmp/cmdtools.zip -d /tmp/cmdtools
+            mkdir -p "$SDK/cmdline-tools/latest"
+            cp -r /tmp/cmdtools/cmdline-tools/. "$SDK/cmdline-tools/latest/"
+            SM="$SDK/cmdline-tools/latest/bin/sdkmanager"
+          fi
+          echo "ANDROID_HOME=$SDK" >> "$GITHUB_ENV"
+          echo "ANDROID_SDK_ROOT=$SDK" >> "$GITHUB_ENV"
+          yes | "$SM" --sdk_root="$SDK" --licenses > /dev/null 2>&1 || true
+          "$SM" --sdk_root="$SDK" --install \
+            "platform-tools" "platforms;android-34" "platforms;android-36" \
+            "build-tools;34.0.0" "ndk;24.0.8215888" \
+            "system-images;android-33;google_apis;x86_64" "emulator"
+
+      - name: Build debug + release APKs
+        # Signed with the release key when the repository secrets exist;
+        # otherwise the release APK is unsigned (the QA install re-signs it).
+        env:
+          XLOX_STORE_PASSWORD: ${{ secrets.XLOX_STORE_PASSWORD }}
+          XLOX_KEY_PASSWORD: ${{ secrets.XLOX_KEY_PASSWORD }}
+        run: |
+          chmod +x gradlew
+          set -o pipefail
+          mkdir -p ../qa-logs
+          set +e
+          ./gradlew :app:assembleDebug :app:assembleRelease --no-daemon -x lintVitalRelease > ../qa-logs/assemble.log 2>&1
+          rc=$?
+          cat ../qa-logs/assemble.log
+          if [ $rc -ne 0 ]; then
+            grep -E "Duplicate class|error:|: error|e: |ERROR:|What went wrong|AAPT|Execution failed|cannot find symbol" ../qa-logs/assemble.log \
+              | grep -v "^\s*at " | head -40 | while IFS= read -r line; do echo "::error::$(echo "$line" | cut -c1-400)"; done
+          fi
+          exit $rc
+
+      - name: Permissions in the built APKs
+        run: |
+          M=$(find app/build/intermediates -name AndroidManifest.xml -path '*merged_manifest*' -path '*debug*' | head -1)
+          [ -n "$M" ] && cp "$M" ../qa-logs/merged-manifest-debug.xml || true
+          PERMISSIONS_LOG_DIR=../qa-logs python3 scripts/check_apk_permissions.py \
+            "$(ls app/build/outputs/apk/debug/*.apk | head -1)" "$(ls app/build/outputs/apk/release/*.apk | head -1)"
+
+      - name: Android Lint (errors fail the job)
+        run: |
+          set -o pipefail
+          ./gradlew :app:lintDebug --no-daemon 2>&1 | tee ../qa-logs/lint.log
+          cp app/build/reports/lint-results-debug.txt ../qa-logs/ 2>/dev/null || \
+            cp app/build/intermediates/lint_intermediate_text_report/debug/lint-results-debug.txt ../qa-logs/ 2>/dev/null || true
+
+      - name: Emulator screenshots
+        run: |
+          set -eu
+          SDK="$ANDROID_SDK_ROOT"
+          export PATH="$SDK/platform-tools:$SDK/emulator:$SDK/cmdline-tools/latest/bin:$PATH"
+          if [ -e /dev/kvm ]; then sudo chmod 666 /dev/kvm || true; fi
+          export ANDROID_AVD_HOME="$HOME/.android/avd"
+          mkdir -p "$ANDROID_AVD_HOME"
+          echo "no" | avdmanager create avd --force -n qa \
+            -k 'system-images;android-33;google_apis;x86_64' --device pixel_5
+          OPTS="-port 5554 -avd qa -no-snapshot -no-window -noaudio -no-boot-anim -gpu swiftshader_indirect"
+          [ -w /dev/kvm ] || OPTS="$OPTS -accel off"
+          nohup emulator $OPTS > ../qa-logs/emulator-stdout.log 2>&1 &
+          EMU=$!
+          booted=0
+          for i in $(seq 1 240); do
+            kill -0 $EMU 2>/dev/null || { echo "emulator exited"; cat ../qa-logs/emulator-stdout.log; exit 1; }
+            [ "$(adb -s emulator-5554 shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" = "1" ] && { booted=1; break; }
+            sleep 5
+          done
+          [ "$booted" = 1 ] || { echo "emulator did not boot"; exit 1; }
+          export ANDROID_SERIAL=emulator-5554
+          sleep 10
+          adb shell input keyevent 82 || true
+          adb shell settings put secure immersive_mode_confirmations confirmed || true
+          adb shell settings put global window_animation_scale 0.0 || true
+          adb shell settings put global transition_animation_scale 0.0 || true
+          adb shell settings put global animator_duration_scale 0.0 || true
+          SHOT_DIR=docs/ui-redesign/after sh scripts/ui_screenshots.sh
+          kill $EMU 2>/dev/null || true
+
+      - name: Validate screenshots and logs
+        if: always()
+        working-directory: ${{ github.workspace }}
+        run: |
+          python3 - <<'PY'
+          import hashlib, re, sys
+          from pathlib import Path
+          shots = Path('xlox/docs/ui-redesign/after')
+          need = [
+              # splash (frames, reduced motion, animations on)
+              'splash', 'splash_reduced_welcome', 'splash_t000', 'splash_t025', 'splash_t080',
+              'splash_t140', 'splash_t182', 'splash_t195', 'splash_t240', 'anim_splash_t10',
+              'home_expiry_ist',
+              'splash_live_cold',
+              # launcher icon
+              'icon_recents', 'icon_drawer_default',
+              # launch result handling
+              'home_launch_started_return', 'home_launch_polish_throws_return',
+              'home_launch_null_running', 'home_launch_failed', 'home_typical',
+              # files access requested from Launch
+              'perm_all_files', 'perm_files', 'perm_install', 'home_perm_install_denied', 'home_perm_restarting',
+              'home_obb1_mid', 'home_obb3_missing',
+              # live walkthrough
+              'login', 'login_keyboard', 'login_error_empty', 'login_error_malformed', 'login_key_visible',
+              'gate_check_failed_live', 'login_offline', 'login_ok_home', 'home_signout_sheet', 'signout_done',
+              # sign-in states
+              'login_loading', 'login_wrong', 'login_maintenance', 'login_server', 'login_success',
+              # update gate states
+              'gate_checking', 'gate_required', 'gate_downloading', 'gate_downloading_unknown',
+              'gate_installing', 'gate_done', 'gate_check_failed', 'gate_download_failed',
+              # home states
+              'home', 'home_scrolled', 'home_note_empty', 'home_note_custom', 'home_expired',
+              'home_under_day', 'home_loading', 'home_server_warning', 'home_preparing',
+              'home_launching', 'home_error', 'home_snackbar',
+              # accessibility / sizes
+              'login_font085', 'home_font085', 'login_font20', 'home_font20', 'gate_font20',
+              'login_360', 'home_360', 'gate_360', 'login_tablet', 'home_tablet', 'gate_tablet',
+              'release_login',
+              # polish pass: explanation sheets, Forget this key, game closed, licence refresh
+              'perm_explain_all_files', 'perm_explain_install', 'home_perm_not_now', 'forget_key_done',
+              'home_game_closed', 'home_licence_extended', 'home_licence_soon', 'home_licence_offline',
+              'home_licence_expired_by_panel',
+              # help sheet, support info preview
+              'help_sheet', 'help_support_info', 'help_support_copied',
+              # 2.3.1: Settings > Licence / Updates, re-download
+              'settings_licence', 'settings_key_revealed', 'settings_key_copied',
+              'settings_update_current', 'settings_update_failed', 'settings_update_available',
+              'settings_redownload_confirm', 'gate_redownloaded',
+              # 2.2.0: splash status line, app (APK) update screen, Settings
+              'splash_status_up_to_date', 'splash_status_available', 'splash_status_fail',
+              'app_update_normal', 'app_update_downloading', 'app_update_failed', 'app_update_mandatory',
+              'app_update_state_installing', 'splash_check_failed_live', 'home_settings', 'home_settings_bottom',
+              'home_clock_a', 'home_clock_b',
+          ]
+          errors = []
+          files = {p.stem: p for p in shots.glob('*.png')}
+          for n in need:
+              p = files.get(n)
+              if not p or p.stat().st_size < (2500 if n.startswith('splash') else 8000):
+                  errors.append(f'missing or blank screenshot: {n}')
+          seen = {}
+          for n, p in files.items():
+              h = hashlib.md5(p.read_bytes()).hexdigest()
+              # '_scrolled': since 2.2.0 (no Device card) home fits on one screen at
+              # normal sizes, so the scrolled frame can equal the top one. 2.3.0: the
+              # same holds for Settings on tall screens ('settings_bottom'). 2.3.1:
+              # 'settings_licence' is the Settings top again (= home_settings).
+              if h in seen and not any(k in n + seen[h] for k in ('live', 'anim_', 'icon_', 'splash_reduced', 'splash_t240', 'home_launch_', 'home_obb', 'perm_', '_scrolled', 'settings_bottom', 'settings_licence')):
+                  errors.append(f'identical frames: {seen[h]} / {n}')
+              seen[h] = n
+          trace = Path('qa-logs/emulator-trace.txt')
+          t = trace.read_text(errors='replace') if trace.exists() else ''
+          for line in t.splitlines():
+              if line.startswith('focus for ') and 'com.xlox' not in line:
+                  # A cold start has no focused window for its first frames;
+                  # only another app in front is a failure.
+                  if 'mCurrentFocus=null' in line and ('live' in line or 'anim_' in line):
+                      continue
+                  errors.append('app not in front: ' + line)
+          if 'update gate passed' not in t:
+              errors.append('the live update gate never let the user through')
+          # Launch handling: a started game never shows the launch error.
+          for case, should_fail in (('started', False), ('started_polish_throws', False),
+                                    ('null_running', False), ('null_dead', True), ('throws', True)):
+              m = re.search(r'^launch %s texts: (.*)$' % case, t, re.M)
+              if not m:
+                  errors.append(f'launch case {case} not captured')
+                  continue
+              failed = 'launch the game' in m.group(1)
+              if failed != should_fail:
+                  errors.append(f'launch case {case}: error shown = {failed}, expected {should_fail}')
+              if not should_fail and 'text="Stop"' not in m.group(1):
+                  errors.append(f'launch case {case}: game not shown as running')
+          # Game OBB copy before launch (real AppManager + container storage).
+          def obb(tag):
+              m = re.search(r'^%s: (.*)$' % re.escape(tag), t, re.M)
+              return m.group(1) if m else ''
+          G = 'com.pubg.imobile'
+          MB = 1048576
+          o1, o2, o3 = obb('obb1 log'), obb('obb2 log'), obb('obb3 log')
+          src = re.search(r'AppManager: Source ([^|\s]+)', o1)
+          dst = re.search(r'AppManager: Destination ([^|\s]+)', o1)
+          if not src or not dst:
+              errors.append('first install: OBB source / destination not logged: ' + o1[:800])
+          else:
+              d = dst.group(1).rstrip('/')
+              if d == src.group(1).rstrip('/') or re.match(r'^/(storage/emulated/0|sdcard)/Android/obb/%s$' % re.escape(G), d):
+                  errors.append('first install: container OBB folder is the device folder: ' + d)
+          for name, size in (('main.20.%s.obb' % G, 320 * MB), ('patch.20.%s.obb' % G, 24 * MB)):
+              m = re.search(r'Copied and verified (\S*/%s) \((\d+) B\)' % re.escape(name), o1)
+              if not m or int(m.group(2)) != size:
+                  errors.append('first install: %s not copied into the container with the right size' % name)
+              if 'Skip (current) ' + name not in o2:
+                  errors.append('second launch: %s not recognised as current' % name)
+          if re.search(r'AppManager: Copy \S*main\.19\.', o1):
+              errors.append('first install: copied an older main OBB (only the newest main is copied)')
+          if 'Copy progress 100%' not in o1:
+              errors.append('first install: no copy progress reported')
+          i_done, i_launch = o1.rfind('Copied and verified'), o1.find('game files ready, launching')
+          if i_launch < 0 or i_done < 0 or i_launch < i_done:
+              errors.append('first install: launch did not wait for the verified copy')
+          for tag in ('obb1', 'obb2'):
+              if 'Settings' not in obb(tag + ' focus'):
+                  errors.append(tag + ': the game was not launched after the OBB step: ' + obb(tag + ' focus'))
+          if re.search(r'AppManager: Copy /', o2):
+              errors.append('second launch: copied again although the container copy is current')
+          if 'launching' not in o2:
+              errors.append('second launch: did not launch')
+          if 'blocking access to the game files folder' not in obb('obb0 texts'):
+              errors.append('blocked OBB folder: no clear message: ' + obb('obb0 log')[:400])
+          if 'launching' in obb('obb0 log') or 'com.xlox' not in obb('obb0 focus'):
+              errors.append('blocked OBB folder: the game was launched anyway')
+          if 'Game files not found' not in obb('obb3 texts'):
+              errors.append('no game OBB: missing-files message not shown')
+          if 'launching' in o3 or 'com.xlox' not in obb('obb3 focus'):
+              errors.append('no game OBB: the game was launched anyway')
+          if 'Preparing' not in obb('obb1 mid texts'):
+              print('note: Preparing percent not caught mid-copy on screen (copy finished fast); progress checked from the log')
+          # Permissions: Launch asks for All files access, Files and Install
+          # unknown apps in turn (only those three), then carries on into the
+          # OBB copy; refusing any one shows its message, no copy, no launch.
+          def line(tag):
+              m = re.search(r'^%s: (.*)$' % re.escape(tag), t, re.M)
+              return m.group(1) if m else ''
+          # 2.3.1: the countdown is one line again: "29d 21h 05m 03s", under a day "3h 00m 29s".
+          def clock(tx):
+              m = re.search(r'text="(\d+d \d\dh \d\dm \d\ds|\d+h \d\dm \d\ds)"', tx)
+              return m.group(1) if m else ''
+          if 'com.xlox' in line('perm_allow step1 focus') or 'ettings' not in line('perm_allow step1 focus'):
+              errors.append('Launch did not open the All files access page: ' + line('perm_allow step1 focus'))
+          if 'permissioncontroller' not in line('perm_allow step2 focus'):
+              errors.append('Launch did not show the Files dialog after All files access: ' + line('perm_allow step2 focus'))
+          if 'com.xlox' in line('perm_allow step3 focus') or 'ettings' not in line('perm_allow step3 focus'):
+              errors.append('Launch did not open the Install unknown apps page after Files: ' + line('perm_allow step3 focus'))
+          pl = line('perm_allow log')
+          asked = re.findall(r'Permission prompt: (\w+)', pl)
+          if asked != ['ALL_FILES', 'FILES', 'INSTALL']:
+              errors.append('permission prompts were %s, expected ALL_FILES, FILES, INSTALL' % asked)
+          i_ok = pl.find('Permissions granted: continuing the launch')
+          i_prep = pl.find('Launch: preparing game files')
+          if i_ok < 0 or i_prep < i_ok:
+              errors.append('all three granted but the launch / OBB copy did not continue: ' + pl[-600:])
+          rl = line('perm_resume log')
+          if 'Copied and verified' in pl and 'game files ready, launching' in pl:
+              print('permissions then copy: copied in the same app run, then launched')
+          elif 'restarting to finish setting up game files' in pl:
+              # Android opens the game folder only to a process started after
+              # Install unknown apps: Anoy restarts once, then Launch resumes.
+              if line('perm_allow pid before') == line('perm_allow pid after') or not line('perm_allow pid after'):
+                  errors.append('restart for game files: the app did not restart (pid %s -> %s)'
+                                % (line('perm_allow pid before'), line('perm_allow pid after')))
+              if 'com.xlox' not in line('perm_allow final focus'):
+                  errors.append('restart for game files: Anoy did not come back: ' + line('perm_allow final focus'))
+              if 'resuming after the restart' not in rl:
+                  errors.append('after the restart the Launch did not resume: ' + rl[-400:])
+              if not re.search(r'Copied and verified \S*/main\.20\.%s\.obb \(%d B\)' % (re.escape(G), 64 * MB), rl):
+                  errors.append('after the restart the OBB was not copied: ' + rl[-600:])
+              i_c, i_l = rl.rfind('Copied and verified'), rl.find('game files ready, launching')
+              if i_l < 0 or i_l < i_c or 'ettings' not in line('perm_resume focus'):
+                  errors.append('after the restart the game was not launched after the copy: ' + line('perm_resume focus'))
+          else:
+              errors.append('permissions then copy: unexpected result: ' + pl[-600:])
+          g = line('perm_allow granted')
+          # (BLUETOOTH_CONNECT is granted by Android itself to apps targeting < 31.)
+          for p in ('RECORD_AUDIO', 'ACCESS_FINE_LOCATION', 'POST_NOTIFICATIONS'):
+              if 'android.permission.%s:granted=true' % p in g:
+                  errors.append('%s was granted although Anoy must not ask for it' % p)
+          for tag, msg in (('perm_files_deny', 'Allow Files access'),
+                           ('perm_install_deny', 'Allow Install unknown apps'),
+                           ('perm_all_files_deny', 'Allow All files access')):
+              if msg not in line(tag + ' texts'):
+                  errors.append('%s: no "%s" message: %s' % (tag, msg, line(tag + ' log')[-400:]))
+              if 'preparing game files' in line(tag + ' log') or 'com.xlox' not in line(tag + ' focus'):
+                  errors.append('%s: copy / launch started after a refusal' % tag)
+          if 'permissioncontroller' not in line('perm_files_deny prompt focus'):
+              errors.append('Files dialog not shown: ' + line('perm_files_deny prompt focus'))
+          if 'ettings' not in line('perm_install_deny prompt focus'):
+              errors.append('Install unknown apps page not shown: ' + line('perm_install_deny prompt focus'))
+          # Explanation sheet right before the All files access / Install unknown apps
+          # pages (not before the Files dialog); "Not now" opens no page.
+          # 2.3.0: kicker PERMISSION, the permission name as the title, WHY WE ASK / HOW TO ALLOW.
+          for tag, title in (('perm_explain_all_files', 'text="All files access"'),
+                             ('perm_explain_install', 'text="Install unknown apps"')):
+              tx = line(tag + ' texts')
+              if (title not in tx or 'Continue to Settings' not in tx or 'Not now' not in tx
+                      or 'HOW TO ALLOW' not in tx.upper()):
+                  errors.append('%s: no explanation sheet before the settings page: %s' % (tag, tx[:300]))
+              if 'com.xlox' not in line(tag + ' focus'):
+                  errors.append('%s: the settings page opened before the explanation: %s' % (tag, line(tag + ' focus')))
+          for n in ('ALL_FILES', 'INSTALL'):
+              i_e, i_p = pl.find('Permission explained: ' + n), pl.find('Permission prompt: ' + n)
+              if i_e < 0 or i_p < 0 or i_e > i_p:
+                  errors.append('%s: settings page opened without the explanation first: %s' % (n, pl[-500:]))
+          if 'Permission explained: FILES' in pl:
+              errors.append('the Files runtime dialog got an explanation sheet (only settings pages get one)')
+          nl = line('perm_not_now log')
+          if 'Permission not now: ALL_FILES' not in nl or 'Permission prompt: ALL_FILES' in nl:
+              errors.append('Not now: a settings page opened or Not now was not handled: ' + nl[-400:])
+          if 'com.xlox' not in line('perm_not_now focus') or 'preparing game files' in nl:
+              errors.append('Not now: Anoy left the screen or started the copy: ' + line('perm_not_now focus'))
+          if 'Allow All files access so game files' not in line('perm_not_now texts'):
+              errors.append('Not now after Launch: the existing refusal message is missing: ' + line('perm_not_now texts')[:300])
+          # Sign out keeps the saved key; Forget this key removes it (field empty).
+          st = line('signout sheet texts')
+          if 'Forget this key' not in st or 'stays saved' not in st:
+              errors.append('sign-out sheet: no Forget this key / keeps-the-key wording: ' + st[:300])
+          if line('signout saved key').strip() != '1':
+              errors.append('Sign out removed the saved key (count %r)' % line('signout saved key'))
+          if line('forget saved key').strip() != '0':
+              errors.append('Forget this key kept the saved key (count %r)' % line('forget saved key'))
+          ks, kf = line('signout key field'), line('forget key field')
+          print('key field after Sign out:%s / after Forget this key:%s' % (ks, kf))
+          if 'missing' in ks or 'missing' in kf:
+              errors.append('key field not found after sign out: %s / %s' % (ks, kf))
+          elif 'len=0' not in ks and (ks == kf or 'QA7K2' in kf):
+              errors.append('after Forget this key the key field still shows the key:' + kf)
+          # Game closed outside Anoy: Stop while it runs, then Launch - no error.
+          if 'text="Stop"' not in line('game_closed running texts'):
+              errors.append('game running outside Anoy: Stop not shown: ' + line('game_closed running texts')[:300])
+          ga = line('game_closed after texts')
+          if 'text="Launch"' not in ga or 'text="Running"' in ga or 'launch the game' in ga:
+              errors.append('game closed outside Anoy: not back to Launch, or an error: ' + ga[:400])
+          if 'closed outside Anoy' not in line('game_closed log') or 'Launch failed' in line('game_closed log'):
+              errors.append('game closed outside Anoy: not reconciled: ' + line('game_closed log')[-300:])
+          # Licence refresh on return to home.
+          lb, la = line('licence_extend before texts'), line('licence_extend after texts')
+          # now + 60 days can render within the same millisecond (exactly 60d 00h 00m 00s).
+          if ('29d 21h' not in clock(lb) or not re.match(r'(59d 23h|60d 00h 00m 00s)', clock(la))
+                  or 'expiry changed' not in line('licence_extend log')):
+              errors.append('panel extension not reflected on return to home: %s -> %s' % (lb[:200], la[:200]))
+          if 'Expires soon' in lb:
+              errors.append('29 days left shown as Expires soon')
+          sa = line('licence_soon after texts')
+          # 2.3.0: no Renew button (Help covers renewing); no days column under a day.
+          if 'Expires soon' not in sa or not re.search(r'^0?3h 0\dm \d\ds$', clock(sa)):
+              errors.append('low time: no Expires soon / hours-first countdown: ' + sa[:400])
+          fa, fl = line('licence_fail after texts'), line('licence_fail log')
+          if 'Last checked' not in fa or '29d 21h' not in clock(fa) or 'Sign in again' in fa or 'Expired' in fa:
+              errors.append('refresh failure: last known time not kept quietly: ' + fa[:400])
+          if 'keeping the last known time' not in fl or 'No active session' in fl:
+              errors.append('refresh failure: signed out or not handled: ' + fl[-300:])
+          ea = line('licence_expired after texts')
+          if 'Expired' not in ea or 'Sign in again' not in ea:
+              errors.append('panel says expired: not shown on return to home: ' + ea[:400])
+          # Help: three tips, support info previewed without the key. 2.2.0: it
+          # never opens on its own (only from the "?" button).
+          if line('help_first first') != 'none' or line('help_first second') != 'none':
+              errors.append('Help opened on its own: got %r then %r' % (line('help_first first'), line('help_first second')))
+          if 'first-run tips' in line('help_first log'):
+              errors.append('first-run Help logic still runs: ' + line('help_first log')[-300:])
+          xi = line('expiry_ist texts')
+          if '14 Nov 2026, 10:30 PM IST' not in xi:
+              errors.append('IST: 2026-11-14T17:00:00.000Z must read "14 Nov 2026, 10:30 PM IST" (as on the website): ' + xi[:300])
+          ht = line('help sheet texts')
+          # 2.3.0: the topics are kickers (dumped uppercase) LAUNCH / FILES AND ACCESS / RENEW.
+          for want in ('LAUNCH', 'FILES AND ACCESS', 'RENEW', 'Copy support info', 'Help on Telegram', 'Got it'):
+              if want not in ht:
+                  errors.append('Help sheet: %r missing: %s' % (want, ht[:400]))
+          si = line('help support info')
+          # 2.3.1: the full licence key, its status and the IST expiry are included (and said so).
+          for want in ('Anoy 2.', 'Library:', 'Android:', 'Device:', 'Game:', 'Access: allowed',
+                       'Licence key: ANOY-30D-QA7K2', 'Licence status: ', 'Expires (IST): ', 'Status:'):
+              if want not in si:
+                  errors.append('support info: %r missing: %s' % (want, si[:400]))
+          if 'Includes your licence key. Only share it with Anoy support.' not in line('help support texts'):
+              errors.append('support info: the licence key note is missing: ' + line('help support texts')[:400])
+          sv = si + ' ' + line('help support texts')
+          for bad in ('/storage', '/data/', '/sdcard', "isn't included"):
+              if bad in sv:
+                  errors.append('support info leaks / says %r: %s' % (bad, sv[:400]))
+          # 2.3.0: the Copy button itself confirms ("Copied" + check), no snackbar.
+          if 'text="Copied"' not in line('help copied texts') or 'Help: support info copied' not in line('help log'):
+              errors.append('Copy support info: no confirmation: ' + line('help copied texts')[:300])
+          # ---- 2.3.1 ----
+          # Settings > Licence: masked key, the eye reveals it, a tap copies it.
+          km, kr, kc = line('licence masked'), line('licence revealed'), line('licence copied')
+          if not re.match(r'^ANOY\u2022{6}A7K2$', km):
+              errors.append('Settings: licence key not masked first4/last4: %r' % km)
+          if kr != 'ANOY-30D-QA7K2':
+              errors.append('Settings: the eye did not reveal the key: %r' % kr)
+          if kc != 'Copied':
+              errors.append('Settings: tapping the key row did not show Copied: %r' % kc)
+          lt = line('licence settings texts')
+          for want in ('LICENCE', 'LICENCE KEY', 'STATUS', 'EXPIRES', 'ACTIVE', 'IST', 'UPDATES',
+                       'CHECK FOR APP UPDATES', 'RE-DOWNLOAD LIBRARY', 'LIBRARY VERSION'):
+              if want not in lt.upper():
+                  errors.append('Settings top: %r missing: %s' % (want, lt[:500]))
+          # Check for app updates: Checking... -> Up to date / Couldn't check / the update screen.
+          if line('app check current') != 'Up to date':
+              errors.append('Check for app updates: no "Up to date": %r' % line('app check current'))
+          if line('app check failed') != "Couldn't check":
+              errors.append('Check for app updates: no "Couldn\'t check": %r' % line('app check failed'))
+          if 'AppUpdateActivity' not in line('app check available focus') or '2.4.0' not in line('app check available texts'):
+              errors.append('Check for app updates: newer version did not open the update screen: '
+                            + line('app check available focus'))
+          if 'MAct' not in line('app check not now focus') or line('app check not now settings') != 'shown':
+              errors.append('update screen from Settings: Not now did not return to Settings: %s / %s'
+                            % (line('app check not now focus'), line('app check not now settings')))
+          # Re-download library: confirmation sheet, Cancel closes it; the "installed" state.
+          rt = line('redownload sheet texts')
+          for want in ('LIBRARY', 'Re-download library?', "Use it if the game won't launch properly",
+                       'text="Re-download"', 'text="Cancel"'):
+              if want not in rt and want.upper() not in rt.upper():
+                  errors.append('Re-download sheet: %r missing: %s' % (want, rt[:400]))
+          if line('redownload cancel') != 'closed':
+              errors.append('Re-download sheet: Cancel did not close it')
+          if 'Library 1.13 installed' not in line('redownload done texts'):
+              errors.append('Re-download: no "Library 1.13 installed": ' + line('redownload done texts')[:300])
+          # Sign in: "Login" button and "Don't have a licence? Buy one".
+          lg = line('login texts')
+          if 'text="Login"' not in lg or 'have a licence?' not in lg or 'text="Buy one"' not in lg:
+              errors.append('sign in: Login / "Don\'t have a licence? Buy one" missing: ' + lg[:400])
+          if line('login button') != 'Login':
+              errors.append('sign in: the button does not read Login: %r' % line('login button'))
+          if not re.search(r'typical phone: game card bottom \d+, launch bar top \d+: clear', t):
+              errors.append('GAME card is covered by the Launch bar on a 411 x 914 dp phone')
+          # ---- 2.2.0 ----
+          # Splash: version top right, status line from the (simulated) check.
+          for st, want in (('up_to_date', 'Up to date'), ('available', 'Update available (v2.4.0)'),
+                           ('fail', 'check for updates')):
+              tx = line('splash status %s texts' % st)
+              if want not in tx or 'text="v2.3.3"' not in tx:
+                  errors.append('splash status %s: %r / version missing: %s' % (st, want, tx[:300]))
+          if 'text="Retry"' not in line('splash status fail texts'):
+              errors.append('splash: a failed check has no Retry: ' + line('splash status fail texts')[:300])
+          # App update screen: normal (Not now), download -> clear failure + Retry, Not now -> sign in.
+          un = line('app update normal texts')
+          for want in ('Update available', 'Update now', 'Not now', "WHAT'S NEW", 'Faster start-up'):
+              if want.upper() not in un.upper():
+                  errors.append('app update (normal): %r missing: %s' % (want, un[:400]))
+          if 'Keep Anoy open' not in line('app update downloading texts') or '%' not in line('app update downloading texts'):
+              errors.append('app update: no download progress: ' + line('app update downloading texts')[:300])
+          uf = line('app update failed texts')
+          # 2.3.0: the failure block reads "Update failed. <reason>" and the button Try again.
+          # 2.3.2: a failed download names its HTTP code ("Couldn't download the update (HTTP 404)").
+          if ('text="Try again"' not in uf or 'Update failed. ' not in uf
+                  or ('valid Anoy update' not in uf and 'download the update (HTTP' not in uf)):
+              errors.append('app update: failure without reason / Retry: ' + uf[:400])
+          if 'LogAct' not in line('app update not now focus'):
+              errors.append('app update: Not now did not continue to sign in: ' + line('app update not now focus'))
+          um = line('app update mandatory texts')
+          # 2.3.0: "Update required" is the kicker (dumped uppercase).
+          if 'UPDATE REQUIRED' not in um.upper() or 'Update now' not in um or 'Not now' in um:
+              errors.append('app update (mandatory): must offer Update now only: ' + um[:400])
+          if 'AppUpdateActivity' not in line('app update mandatory back focus'):
+              errors.append('app update (mandatory): back left the screen: ' + line('app update mandatory back focus'))
+          if 'Installing' not in line('app update installing texts'):
+              errors.append('app update: installing state: ' + line('app update installing texts')[:300])
+          # Live splash: the real check ran; offline -> reason + Retry, never a silent continue.
+          sl = line('splash live log')
+          if 'Checking for an app update' not in sl or 'App is up to date' not in sl:
+              errors.append('live splash: the real app update check did not pass: ' + sl[-300:])
+          so = line('splash offline texts')
+          if 'check for updates' not in so or 'text="Retry"' not in so or 'offline' not in so:
+              errors.append('offline splash: no reason / Retry: ' + so[:400])
+          if 'SplashActivity' not in line('splash offline focus'):
+              errors.append('offline splash continued without the check: ' + line('splash offline focus'))
+          if 'splash retry: passed' not in t:
+              errors.append('splash Retry did not continue once back online: ' + line('splash retry focus'))
+          # Home: "Welcome back", the panel's own note, game version line; no Device card / sign-out on home.
+          ht2 = line('home texts').replace('\xa0', ' ')  # tidy keeps the last two words together
+          if 'Welcome back' not in ht2 or 'Play safe else flag ban' not in ht2 or 'Play fairly' in ht2:
+              errors.append('home header / notice: %s' % ht2[:400])
+          if 'text="Device"' in ht2 or 'text="Sign out"' in ht2 or 'text="Anoy"' in ht2:
+              errors.append('home still shows Device / Sign out / "Anoy" title: ' + ht2[:400])
+          if not re.search(r'^\d+d \d\dh \d\dm \d\ds$', clock(ht2)):
+              errors.append('home countdown is not one "29d 21h 05m 03s" line: ' + ht2[:300])
+          if 'EXPIRES IN' not in ht2.upper() or 'ANNOUNCEMENT' not in ht2.upper():
+              errors.append('home: no EXPIRES IN kicker / ANNOUNCEMENT kicker: ' + ht2[:300])
+          if 'text="days"' in ht2 or 'text="sec"' in ht2:
+              errors.append('home: the old countdown columns are still there: ' + ht2[:300])
+          if 'ANOY HAX' not in ht2.upper() or 'text="BGMI"' not in ht2:
+              errors.append('home: no ANOY HAX kicker / BGMI title: ' + ht2[:300])
+          # The countdown really ticks (frozen elsewhere in QA): two frames 2 s apart differ.
+          ca, cb = files.get('home_clock_a'), files.get('home_clock_b')
+          if ca and cb and ca.read_bytes() == cb.read_bytes():
+              errors.append('home countdown did not tick: home_clock_a and home_clock_b are identical')
+          # Settings (2.3.1): licence, updates, device, report, version, Sign out; no Access group.
+          sx = line('settings texts') + ' ' + line('settings bottom texts')
+          for want in ('Settings', 'Licence key', 'Check for app updates', 'Re-download library', 'Library version',
+                       'Model', 'Android', 'Report on Telegram', 'Copy support info', 'App version', '2.3.3 (12)',
+                       'Sign out'):
+              if want not in sx:
+                  errors.append('Settings: %r missing: %s' % (want, sx[:500]))
+          for gone in ('All files access', 'Game files (OBB)', 'ACCESS AND FILES', 'Launch copies the game files'):
+              if gone in sx or gone in sx.upper():
+                  errors.append('Settings still shows the Access and files group (%r)' % gone)
+          if 'text="Launch"' in sx or 'text="Stop"' in sx:
+              errors.append('Settings shows Launch / Stop: ' + sx[:300])
+          sr = line('settings licence rows')
+          if (not re.search(r'key=ANOY\u2022{6}A7K2 status=Active expires=\d+ \w{3} \d{4}, \d+:\d\d [AP]M IST library=', sr)
+                  or line('settings access group') != 'gone'):
+              errors.append('Settings licence rows / Access group: %s / %s' % (sr, line('settings access group')))
+          m = re.search(r'licence card description: content-desc="([^"]*)"', t)
+          if not m or not m.group(1).startswith('Licence active,'):
+              errors.append('licence card is not read as one sentence: ' + (m.group(1) if m else 'missing'))
+          for name in ('logcat.txt', 'logcat-sizes.txt', 'release-logcat.txt'):
+              p = Path('qa-logs') / name
+              text = p.read_text(errors='replace') if p.exists() else ''
+              lines = text.splitlines()
+              for i, line in enumerate(lines):
+                  if 'FATAL EXCEPTION' in line and 'com.xlox' in '\n'.join(lines[i:i + 3]):
+                      errors.append(f'{name}: crash\n' + '\n'.join(lines[i:i + 20]))
+                      break
+          for e in errors:
+              print('::error::' + e.splitlines()[0])
+              print(e)
+          if errors:
+              sys.exit(1)
+          print('screenshot validation passed:', sorted(files))
+          PY
+
+      - name: Upload screenshots and logs
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: ui-qa
+          path: |
+            xlox/docs/ui-redesign/
+            qa-logs/
+          if-no-files-found: warn
+          retention-days: 7

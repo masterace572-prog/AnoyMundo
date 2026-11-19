@@ -1,0 +1,27 @@
+{
+  "name": "anoymundo-panel",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Anoy licence panel: Vercel serverless functions + Supabase",
+  "engines": {
+    "node": ">=20.x"
+  },
+  "scripts": {
+    "prebuild": "node scripts/build-icons.mjs && node scripts/build-templates.mjs",
+    "build": "npm run check",
+    "check": "node scripts/check.mjs",
+    "dev": "node scripts/dev-server.mjs",
+    "start": "node scripts/dev-server.mjs",
+    "test": "node scripts/smoke-test.mjs"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.49.0",
+    "bcryptjs": "^2.4.3",
+    "handlebars": "^4.7.8"
+  },
+  "devDependencies": {
+    "dotenv": "^16.4.7",
+    "lucide-static": "^1.70.0"
+  }
+}

@@ -1,0 +1,50 @@
+name: Web UI QA
+
+# Renders the panel with the offline dev server and saves desktop + phone
+# screenshots of every page, uploaded as the "web-ui-screenshots" artifact
+# (7 days). Nothing is committed to the repository.
+on:
+  workflow_dispatch:
+  push:
+    branches: [arena/2e95185a-anoymundo]
+    paths:
+      - 'web/**'
+      - '.github/workflows/web-ui-qa.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: web-ui-qa-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  screenshots:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+      - run: npm test
+      - run: node scripts/check.mjs
+      - name: Install Playwright
+        run: |
+          npm i --no-save playwright@1.49.1
+          npx playwright install --with-deps chromium
+      - name: Capture screenshots
+        run: node scripts/ui-screenshots.mjs
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: web-ui-screenshots
+          path: docs/ui-redesign/web/
+          if-no-files-found: warn
+          retention-days: 7
