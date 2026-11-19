@@ -35,6 +35,21 @@ def strings(path):
     return {e.attrib['name']: ''.join(e.itertext()) for e in ET.parse(path).getroot().findall('string')}
 
 
+def compiled_sdk_value(manifest, name):
+    # Old aapt2: android:minSdkVersion(...)= (type 0x10)0x15
+    # New aapt2: http://schemas.android.com/apk/res/android:minSdkVersion(...)=21
+    match = re.search(r'android:' + re.escape(name)
+                      + r'\([^)]*\)\s*=\s*(?:\(type 0x1[01]\)\s*)?(0x[0-9a-fA-F]+|[0-9]+)(?=\s|$)', manifest)
+    return int(match[1], 0) if match else None
+
+
+gate(all(compiled_sdk_value(xml, 'minSdkVersion') == number for xml, number in (
+    ('A: android:minSdkVersion(0x0101020c)=(type 0x10)0x15', 21),
+    ('A: http://schemas.android.com/apk/res/android:minSdkVersion(0x0101020c)=21', 21),
+    ('A: http://schemas.android.com/apk/res/android:minSdkVersion(0x0101020c)=23', 23),
+    ('A: android:targetSdkVersion(0x01010270)=28', None),
+)), 'compiled SDK parser accepts both aapt2 formats without masking changed SDK values')
+
 main = strings(APP / 'src/main/res/values/strings.xml')
 kenny = strings(APP / 'src/kenny/res/values/strings.xml')
 brand_strings = {key: value for key, value in main.items() if re.search('anoy', value, re.I)}
@@ -108,10 +123,8 @@ if len(sys.argv) > 1:
         # badging labels vary across build-tools; resource XML integer values
         # are stable and must be EXACTLY 21 / 28 for container compatibility.
         manifest = aapt('xmltree', '--file', 'AndroidManifest.xml', apk)
-        def sdk_value(name):
-            match = re.search(r'android:' + name + r'\([^)]*\)\s*=\s*\(type 0x1[01]\)\s*(0x[0-9a-fA-F]+|[0-9]+)', manifest)
-            return int(match[1], 0) if match else None
-        minimum, target = sdk_value('minSdkVersion'), sdk_value('targetSdkVersion')
+        minimum = compiled_sdk_value(manifest, 'minSdkVersion')
+        target = compiled_sdk_value(manifest, 'targetSdkVersion')
         sdk_lines = '\n'.join(line.strip() for line in manifest.splitlines() if re.search('minSdkVersion|targetSdkVersion', line))
         if os.environ.get('GITHUB_ACTIONS'):
             metadata = f'{brand}: {summary}\n{sdk_lines}'
