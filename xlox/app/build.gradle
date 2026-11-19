@@ -87,8 +87,9 @@ android {
         // 2.4.0: full-screen local black-and-white Lottie splash.
         // 2.4.1: direct Techpost vector glyph replacement (AnoyHax, T -> A).
         // 2.4.2: independent in-place glyph slots avoid source matte collisions.
-        versionCode 21
-        versionName '2.4.2'
+        // 2.4.3: preserve the original Lottie graph while fixing its counters.
+        versionCode 22
+        versionName '2.4.3'
 
         vectorDrawables {
             useSupportLibrary true

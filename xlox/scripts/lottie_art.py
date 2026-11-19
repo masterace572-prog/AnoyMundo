@@ -10,9 +10,10 @@ animation selected by the owner. Its untouched source is kept at
 
 The splash source is 30 fps and contains the vendor wordmark as vector paths.
 The build script doubles its timeline to 60 fps, recolours it to the Anoy
-black-and-white palette, and rebuilds the source's final word-vector slots as
-Inter SemiBold outlines for "AnoyHax" (including its large `T` → `A` reveal).
-This keeps all motion local and offline, with no overlay or added text layer.
+black-and-white palette, and replaces the source word's vector outlines with
+Inter SemiBold paths for "AnoyHax" (including its large `T` → `A` reveal).
+It retains the source animation graph, timing, parents and mattes—without an
+overlay or added text layer.
 """
 from __future__ import annotations
 
@@ -173,16 +174,43 @@ def set_colour(prop: dict[str, Any], colour: list[float]) -> None:
                     frame[key] = colour
 
 
-def recolour(node: Any, colour: list[float]) -> None:
+# This is the source animation's mint background and its counter/eraser fill.
+# It must become black, rather than white, to preserve the original holes in
+# glyphs such as p and o after the monochrome conversion.
+SOURCE_MINT = [104 / 255, 228 / 255, 158 / 255]
+
+
+def is_source_mint(colour: Any) -> bool:
+    return isinstance(colour, list) and len(colour) >= 3 \
+            and all(abs(colour[index] - SOURCE_MINT[index]) < 0.02 for index in range(3))
+
+
+def colour_samples(prop: dict[str, Any]) -> list[list[float]]:
+    """Return the original colours of a static or keyframed Lottie property."""
+    if prop.get("a") == 0 and isinstance(prop.get("k"), list):
+        return [prop["k"]]
+    if prop.get("a") == 1 and isinstance(prop.get("k"), list):
+        samples = []
+        for frame in prop["k"]:
+            if isinstance(frame, dict):
+                samples.extend(value for key in ("s", "e")
+                               if isinstance((value := frame.get(key)), list))
+        return samples
+    return []
+
+
+def recolour_splash(node: Any) -> None:
+    """Convert the selected source to black and white without losing counters."""
     if isinstance(node, dict):
         for key, value in node.items():
             if key == "c" and isinstance(value, dict):
+                colour = BLACK if any(is_source_mint(sample) for sample in colour_samples(value)) else WHITE
                 set_colour(value, colour)
             else:
-                recolour(value, colour)
+                recolour_splash(value)
     elif isinstance(node, list):
         for value in node:
-            recolour(value, colour)
+            recolour_splash(value)
 
 
 def static_shape_paths(node: Any) -> list[tuple[list[dict[str, Any]], int, dict[str, Any]]]:
@@ -244,123 +272,89 @@ def load_glyphs() -> dict[str, list[dict[str, Any]]]:
     return glyphs
 
 
-def replace_single_glyph_path(layer_data: dict[str, Any], char: str,
-                              glyphs: dict[str, list[dict[str, Any]]]) -> None:
-    """Swap the one source path used by the later standalone `T` → `A` reveal."""
+def fill_colours(node: Any) -> list[list[float]]:
+    """Collect the source fill colours before their monochrome conversion."""
+    colours = []
+    if isinstance(node, dict):
+        if node.get("ty") == "fl" and isinstance(node.get("c"), dict):
+            colours.extend(colour_samples(node["c"]))
+        for value in node.values():
+            colours.extend(fill_colours(value))
+    elif isinstance(node, list):
+        for value in node:
+            colours.extend(fill_colours(value))
+    return colours
+
+
+def replace_glyph_paths(layer_data: dict[str, Any], char: str,
+                        glyphs: dict[str, list[dict[str, Any]]]) -> None:
+    """Replace a source letter path while retaining its layer, matte and motion."""
     entries = static_shape_paths(layer_data.get("shapes", []))
     if not entries:
         raise RuntimeError(f"No editable vector path in source layer {layer_data.get('nm')}")
     source_paths = [entry[2]["ks"]["k"] for entry in entries]
     target_bounds = bounds(source_paths)
+    # Techpost's h slot is ascender-sized; preserve a lowercase y's x-height
+    # and descender proportions inside that same animated slot.
+    if char == "y":
+        tx0, ty0, tx1, ty1 = target_bounds
+        target_bounds = (tx0, ty1 - (ty1 - ty0) * 0.76, tx1, ty1)
     glyph = glyphs[char]
     glyph_bounds = bounds(glyph)
     parent, index, original = entries[0]
     replacements = []
-    for n, contour in enumerate(glyph):
+    for number, contour in enumerate(glyph):
         path = deepcopy(original)
-        path["nm"] = f"Anoy {char} outline {n + 1}"
+        path["nm"] = f"Anoy {char} outline {number + 1}"
         path["ks"] = static(remap_contour(contour, glyph_bounds, target_bounds))
         replacements.append(path)
     parent[index:index + 1] = replacements
-    # A source standalone mark carries a single path. Keep the replacement
-    # self-contained if a future source revision adds hidden helper paths.
     for extra_parent, _, path in reversed(entries[1:]):
         if path in extra_parent:
             extra_parent.remove(path)
 
 
-def vector_glyph_group(char: str, contours: list[dict[str, Any]],
-                       target_bounds: tuple[float, float, float, float]) -> dict[str, Any]:
-    """One edited source shape group: outline paths plus the source's white fill."""
-    source_bounds = bounds(contours)
-    items = []
-    for number, contour in enumerate(contours):
-        items.append({
-            "ty": "sh", "nm": f"Anoy {char} outline {number + 1}", "d": 1,
-            "ks": static(remap_contour(contour, source_bounds, target_bounds)),
-        })
-    items.extend([
-        {"ty": "fl", "nm": "Fill", "c": static(WHITE), "o": static(100), "r": 1, "bm": 0},
-        transform(),
-    ])
-    return {"ty": "gr", "nm": f"Edited source glyph {char}", "np": len(items) - 1,
-            "cix": 2, "bm": 0, "ix": 1, "it": items, "hd": False}
+def hide_counter_eraser(layer_data: dict[str, Any], char: str) -> None:
+    """Keep a source counter layer in its timeline but make it non-rendering.
 
-
-def glyph_layer_transform(start: int, end: int) -> dict[str, Any]:
-    """A short, source-timeline fade for each directly edited word slot."""
-    return {
-        "o": {"a": 1, "k": [
-            {"t": start, "s": [0], "h": 1},
-            {"t": start + 5, "s": [100], "o": {"x": [0.2], "y": [0]},
-             "i": {"x": [0], "y": [1]}},
-            {"t": end, "s": [100]},
-        ]},
-        "r": static(0), "p": static([0, 0, 0]), "a": static([0, 0, 0]),
-        "s": static([100, 100, 100]),
-    }
+    The replacement outer glyph already includes its own Inter counter contour.
+    Drawing the old source eraser as a complete replacement glyph was the cause
+    of the visibly overlapping H/a shapes.
+    """
+    layer_data["ks"]["o"] = static(0)
+    layer_data["nm"] = f"Anoy {char} source counter (retained timing)"
 
 
 def rebrand_wordmark(data: dict[str, Any]) -> None:
-    """Replace the source artwork with seven collision-free vector glyph slots.
+    """Edit the original word paths while leaving its animation graph intact.
 
-    Techpost's construction uses paired alpha-matte paths for counters in `p`
-    and `o`. Swapping every one of those paths for a complete Inter glyph made
-    the two complete outlines paint on top of one another. Instead, the seven
-    *existing final-word layers* are directly rebuilt as independent vector
-    slots. The original supporting/matte layers are disabled, never covered;
-    no text layer or extra logo layer is introduced.
+    This deliberately preserves every original in/out point, transform, parent,
+    alpha-matte and reveal rectangle. Only the actual vector outlines change.
+    Source mint counter erasers are retained as non-rendering timeline layers:
+    the full Inter outline on their parent has the correct counter already.
     """
     glyphs = load_glyphs()
-    by_id = {layer.get("ind"): layer for layer in data["layers"]}
-
-    # These are all of the original word-construction paths and their alpha
-    # mattes. The checksum above pins this source topology. The underline (3)
-    # and final standalone mark (4/5) are deliberately not in this range.
-    for index in range(7, 81):
-        source_layer = by_id.get(index)
-        if source_layer is not None and source_layer.get("ty") == 4:
-            source_layer["ip"] = source_layer["op"]
-            source_layer["nm"] = "replaced source word construction"
-
-    # The clean, final source slots run left-to-right. Reuse those exact vector
-    # layers rather than adding artwork above the selected animation. Coordinates
-    # are on the original 1080 x 2040 Lottie canvas and match its wordmark box.
-    # The original standalone T starts its own reveal at source frame 180. The
-    # word completes just before then, ensuring the clean AnoyHax word and the
-    # later A reveal never occupy the canvas together.
-    word_end = 181
-    slots = [
-        (27, "A", 136), (23, "n", 141), (21, "o", 143), (19, "y", 145),
-        (15, "H", 147), (11, "a", 149), (9, "x", 151),
-    ]
-    x, baseline, scale, gap = 184.0, 1050.0, 0.085, 8.0
-    for index, char, start in slots:
-        glyph_bounds = bounds(glyphs[char])
-        gx0, gy0, gx1, gy1 = glyph_bounds
-        target_bounds = (x, baseline - gy1 * scale, x + (gx1 - gx0) * scale,
-                         baseline - gy0 * scale)
-        source_layer = by_id[index]
-        source_layer["nm"] = f"AnoyHax {char} (edited source slot)"
-        source_layer["ip"] = start
-        source_layer["op"] = word_end
-        source_layer["st"] = 0
-        source_layer.pop("parent", None)
-        source_layer.pop("tt", None)
-        source_layer.pop("td", None)
-        source_layer["ks"] = glyph_layer_transform(start, word_end)
-        source_layer["shapes"] = [vector_glyph_group(char, glyphs[char], target_bounds)]
-        x = target_bounds[2] + gap
-
-    # Retain the selected animation's later standalone logo timing, editing its
-    # two existing vector paths from T to A in-place as well.
-    for index in (4, 5):
-        source_layer = by_id[index]
-        replace_single_glyph_path(source_layer, "A", glyphs)
-        source_layer["nm"] = "A" if index == 4 else "A reveal matte"
-    # Delay the source's standalone T animation until the word slots are gone;
-    # its original keyframes begin at 180, so it still uses the native motion.
-    by_id[4]["ip"] = word_end
+    slot = {"T": "A", "e": "n", "c": "o", "h": "y", "p": "H", "o": "a", "s": "x", "t": None}
+    for source_layer in data["layers"]:
+        if source_layer.get("ty") != 4:
+            continue
+        name = source_layer.get("nm", "")
+        original = name[:1]
+        if original not in slot:
+            continue
+        replacement = slot[original]
+        if replacement is None:
+            # The final eighth Techpost letter has no AnoyHax counterpart, but
+            # remains as a zero-opacity source layer so the animation graph is
+            # not restructured.
+            source_layer["ks"]["o"] = static(0)
+            source_layer["nm"] = "unused terminal source glyph"
+            continue
+        if any(is_source_mint(colour) for colour in fill_colours(source_layer.get("shapes", []))):
+            hide_counter_eraser(source_layer, replacement)
+            continue
+        replace_glyph_paths(source_layer, replacement, glyphs)
+        source_layer["nm"] = replacement + name[1:]
 
 
 def techpost_splash() -> dict[str, Any]:
@@ -378,10 +372,10 @@ def techpost_splash() -> dict[str, Any]:
     data["fr"] = FR
     data["nm"] = "anoy_splash"
 
-    # The source's green backgrounds become true black. Every edited vector
-    # foreground becomes white; there is no added text, view or matte layer.
-    for source_layer in data["layers"]:
-        recolour(source_layer, BLACK if source_layer.get("nm") in {"BG", "BG 2"} else WHITE)
+    # Convert source green to true black and every other source colour to white.
+    # Counter/eraser green receives the same black conversion, preserving the
+    # original construction's visual negative space and matte behaviour.
+    recolour_splash(data["layers"])
     data["assets"] = []
     data.pop("fonts", None)
     return data

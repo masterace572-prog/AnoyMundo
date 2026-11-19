@@ -46,9 +46,11 @@ import java.util.concurrent.Executors;
  */
 public class SplashActivity extends AppCompatActivity {
 
-    /** The source's final branded `A` pose: frame 400 of the 60 fps Lottie. */
-    private static final int SPLASH_FINAL_FRAME = 400;
-    private static final long FILM_MS = 6_667L;
+    /** The source's branded `A` pose used when motion is reduced. */
+    private static final int REDUCED_MOTION_A_FRAME = 400;
+    /** The selected source film's final playable frame at 60 fps. */
+    private static final int PLAYBACK_FINAL_FRAME = 481;
+    private static final long FILM_MS = 8_034L;
     private static final long VERSION_AT_MS = 260L;
     private static final long VERSION_MS = 320L;
     private static final long STATUS_AT_MS = 600L;
@@ -200,7 +202,7 @@ public class SplashActivity extends AppCompatActivity {
             root.post(() -> {
                 if (!Ui.alive(this)) return;
                 splashAnimation.cancelAnimation();
-                splashAnimation.setFrame(SPLASH_FINAL_FRAME);
+                splashAnimation.setFrame(REDUCED_MOTION_A_FRAME);
                 handler.postDelayed(next, REDUCED_FINAL_MS);
             });
         } else {
@@ -213,9 +215,9 @@ public class SplashActivity extends AppCompatActivity {
 
     private void configureSplashAnimation() {
         splashAnimation.setAnimation(R.raw.anoy_splash);
-        // Stop on the source animation's edited final A pose instead of its
-        // blank tail. The word and A are vector paths inside this one Lottie.
-        splashAnimation.setMaxFrame(SPLASH_FINAL_FRAME);
+        // Play the selected source's complete 8.03-second motion graph. The
+        // word and A are edited vectors inside this one Lottie, not overlays.
+        splashAnimation.setMaxFrame(PLAYBACK_FINAL_FRAME);
         splashAnimation.setRepeatCount(0);
         splashAnimation.addAnimatorListener(new AnimatorListenerAdapter() {
             private boolean completed;
@@ -243,7 +245,7 @@ public class SplashActivity extends AppCompatActivity {
         version.setAlpha(1f);
         statusBar.setAlpha(1f);
         splashAnimation.cancelAnimation();
-        splashAnimation.setFrame(Math.max(0, Math.min(SPLASH_FINAL_FRAME,
+        splashAnimation.setFrame(Math.max(0, Math.min(PLAYBACK_FINAL_FRAME,
                 Math.round(seconds * 60f))));
     }
 

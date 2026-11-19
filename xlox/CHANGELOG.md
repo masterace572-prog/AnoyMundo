@@ -4,6 +4,16 @@ Screenshots, design notes (`docs/ui-redesign/…`) and the one-off generator
 scripts mentioned below were removed from the tree in the repo cleanup after
 2.3.2; they remain in git history.
 
+## 2.4.3 — Original source motion preserved (versionCode 22)
+
+- Restores the selected Techpost Lottie’s complete 8.03-second layer graph,
+  transforms, alpha mattes, and per-letter reveal timing while retaining the
+  direct **AnoyHax** / final **A** vector replacement.
+- Fixes the replacement counter collision at its source: mint counter-erasure
+  layers remain in the source timeline but no longer paint a duplicate glyph.
+  The replacement Inter outlines provide the correct counters themselves.
+- No blackout, overlay, Lottie text layer, or added wordmark layer.
+
 ## 2.4.2 — Collision-free AnoyHax vector slots (versionCode 21)
 
 - Corrects the direct vector rebrand so each **AnoyHax** glyph occupies one

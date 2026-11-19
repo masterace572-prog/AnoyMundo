@@ -374,18 +374,44 @@ for name, max_bytes in LOTTIE_SPECS.items():
         lottie.append(f"{name}.json embeds assets (images)")
 if (raw_dir / "anoy_splash.json").exists():
     splash_data = _json.loads((raw_dir / "anoy_splash.json").read_text())
-    layer_names = {layer.get("nm", "") for layer in splash_data.get("layers", [])}
-    expected_slots = {f"AnoyHax {char} (edited source slot)" for char in "AnoyHax"}
-    slots = [layer for layer in splash_data.get("layers", [])
-             if layer.get("nm") in expected_slots]
-    final_a = next((layer for layer in splash_data.get("layers", [])
-                    if layer.get("ind") == 4 and layer.get("nm") == "A"), None)
-    if splash_data.get("nm") != "anoy_splash" or not expected_slots.issubset(layer_names) \
-            or len(slots) != 7 or final_a is None:
-        lottie.append("anoy_splash.json is not the generated AnoyHax vector launch film")
-    elif any(layer.get("parent") is not None or layer.get("tt") is not None
-             or layer.get("op", 0) > final_a.get("ip", 0) for layer in slots):
-        lottie.append("AnoyHax source slots overlap the standalone A reveal")
+    splash_by_id = {layer.get("ind"): layer for layer in splash_data.get("layers", [])}
+    # The selected composition's source letter layers, after the direct path
+    # edit. These parent/matte relationships are intentionally unchanged: they
+    # are the original animation, not a static replacement wordmark.
+    expected_word_layers = {
+        4: ("A", 1, None), 27: ("n", 7, 1), 23: ("o", 7, 1),
+        21: ("y", 7, 1), 19: ("H", 7, 1), 15: ("a", 7, 1),
+        11: ("x", 7, 1),
+    }
+    word_graph_ok = all(
+        (layer := splash_by_id.get(index)) is not None
+        and layer.get("nm", "").startswith(name)
+        and layer.get("parent") == parent and layer.get("tt") == matte
+        for index, (name, parent, matte) in expected_word_layers.items()
+    )
+    source_file = ROOT / "third_party/lottie/techpost.json"
+    if source_file.exists():
+        source_data = _json.loads(source_file.read_text())
+        source_by_id = {layer.get("ind"): layer for layer in source_data.get("layers", [])}
+        motion_graph_ok = all(
+            (layer := splash_by_id.get(index)) is not None
+            and (source_layer := source_by_id.get(index)) is not None
+            and layer.get("ip") == source_layer.get("ip", 0) * 2
+            and layer.get("op") == source_layer.get("op", 0) * 2
+            and layer.get("parent") == source_layer.get("parent")
+            and layer.get("tt") == source_layer.get("tt")
+            and layer.get("td") == source_layer.get("td")
+            for index in source_by_id
+        )
+    else:
+        motion_graph_ok = False
+    output_text = (raw_dir / "anoy_splash.json").read_text()
+    if splash_data.get("nm") != "anoy_splash" or not word_graph_ok or not motion_graph_ok \
+            or not all(f"Anoy {char} outline" in output_text for char in "AnoyHax"):
+        lottie.append("anoy_splash.json does not preserve the edited AnoyHax source motion graph")
+    counter_layers = [splash_by_id.get(index) for index in (13, 17, 25)]
+    if any(layer is None or layer.get("ks", {}).get("o", {}).get("k") != 0 for layer in counter_layers):
+        lottie.append("AnoyHax source counter erasers are not disabled")
     if any(layer.get("ty") == 5 for layer in splash_data.get("layers", [])):
         lottie.append("anoy_splash.json adds a text layer instead of editing source vectors")
 glyphs = ROOT / "scripts/anoy_splash_glyphs.json"

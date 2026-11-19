@@ -228,17 +228,18 @@ install_apk "$APK"
 grant
 
 # ---------------------------------------------------------------- 1. splash
-# Still frames of the 6.67 s local Lottie film (qa_frame = seconds):
-#   0.00 hand-off on black; 0.80 / 1.60 / 2.40 source motion; 4.50 first
-#   edited glyph; 5.10 word-build; 5.30 clean AnoyHax; 6.66 final A pose.
-for f in 0.00 0.80 1.60 2.40 4.50 5.10 5.30 6.66; do
+# Still frames of the complete 8.03 s local Lottie film (qa_frame = seconds):
+#   0.00 hand-off on black; 0.80 / 1.60 / 2.40 source motion; 4.50 and 5.10
+#   are the original word construction; 5.70 is clean AnoyHax; 6.66 final A;
+#   7.50 verifies the source animation's original tail.
+for f in 0.00 0.80 1.60 2.40 4.50 5.10 5.70 6.66 7.50; do
     stop_app
     adb shell am start -W -n $PKG/.SplashActivity --ef qa_frame "$f" >> "$LOG" 2>&1 || fatal "cannot start SplashActivity"
     sleep 1.2
     shot "splash_t$(echo "$f" | tr -d '.')"
 done
-# Reduced motion (animations are off on the QA emulator): Anoy Hax's final
-# Lottie frame is shown without playing the launch film (held, no hand-off).
+# Reduced motion (animations are off on the QA emulator): the edited A pose is
+# shown without playing the launch film (held, no hand-off).
 stop_app
 adb shell am start -W -n $PKG/.SplashActivity --ez qa_hold true >> "$LOG" 2>&1 || fatal "cannot start SplashActivity"
 sleep 0.3
