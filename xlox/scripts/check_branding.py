@@ -17,12 +17,18 @@ failures = []
 checks = 0
 
 
+def annotation(message):
+    if os.environ.get('GITHUB_ACTIONS'):
+        print('::error title=Brand/channel APK check::' + str(message).replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A'))
+
+
 def gate(condition, message):
     global checks
     checks += 1
     print(('PASS  ' if condition else 'FAIL  ') + message)
     if not condition:
         failures.append(message)
+        annotation(message)
 
 
 def strings(path):
@@ -83,14 +89,25 @@ if len(sys.argv) > 1:
     tools = sorted(glob.glob(str(Path(sdk) / 'build-tools/*/aapt2')))
     if not tools:
         sys.exit('aapt2 not found under ANDROID_SDK_ROOT/build-tools')
+    def aapt(*args):
+        result = subprocess.run([tools[-1], 'dump', *args], capture_output=True, text=True)
+        if result.returncode:
+            annotation(f'aapt2 {args[0]}: {result.stderr[:2000]}')
+            sys.exit(result.returncode)
+        return result.stdout
+
     for apk, package, brand in zip(sys.argv[1:], ('com.xlox', 'com.kennypvt'), ('Anoy', 'KennyPvt')):
-        badging = subprocess.run([tools[-1], 'dump', 'badging', apk], check=True, capture_output=True, text=True).stdout
+        badging = aapt('badging', apk)
+        summary = '\n'.join(line for line in badging.splitlines() if re.match(r'package:|application-label:|sdkVersion:|targetSdkVersion:', line))
+        print(summary)
         gate(f"package: name='{package}'" in badging and f"application-label:'{brand}'" in badging,
              f'{brand}: compiled APK has the correct package and app label')
+        if f"package: name='{package}'" not in badging or f"application-label:'{brand}'" not in badging:
+            annotation(summary)
         gate("sdkVersion:'21'" in badging and "targetSdkVersion:'28'" in badging,
              f'{brand}: min/target SDK and container compatibility unchanged')
         if brand == 'KennyPvt':
-            dump = subprocess.run([tools[-1], 'dump', 'resources', apk], check=True, capture_output=True, text=True).stdout
+            dump = aapt('resources', apk)
             # Resource/style names may deliberately retain Anoy for compatibility;
             # only string resource VALUES are user-visible.
             current_string = False
@@ -103,6 +120,7 @@ if len(sys.argv) > 1:
             gate(not leaked, 'KennyPvt: compiled string resources contain no Anoy branding')
             if leaked:
                 print('\n'.join(leaked[:12]))
+                annotation('\n'.join(leaked[:12]))
 
 print(f'\n{checks - len(failures)}/{checks} branding/channel gates passed')
 sys.exit(bool(failures))

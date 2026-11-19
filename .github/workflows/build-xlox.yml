@@ -139,10 +139,14 @@ jobs:
           cp "$KENNY" ../dist/KennyPvt-loader.apk
           (cd ../dist && sha256sum Anoy-XLOX-loader.apk KennyPvt-loader.apk > SHA256SUMS.txt)
 
-      - name: Verify permissions, package identities and visible branding in BOTH APKs
+      - name: Verify permissions in BOTH APKs
+        run: python3 scripts/check_apk_permissions.py ../dist/Anoy-XLOX-loader.apk ../dist/KennyPvt-loader.apk
+
+      - name: Verify compiled package identities and visible branding in BOTH APKs
+        run: python3 scripts/check_branding.py ../dist/Anoy-XLOX-loader.apk ../dist/KennyPvt-loader.apk
+
+      - name: Verify native alignment in BOTH APKs
         run: |
-          python3 scripts/check_apk_permissions.py ../dist/Anoy-XLOX-loader.apk ../dist/KennyPvt-loader.apk
-          python3 scripts/check_branding.py ../dist/Anoy-XLOX-loader.apk ../dist/KennyPvt-loader.apk
           for APK in ../dist/Anoy-XLOX-loader.apk ../dist/KennyPvt-loader.apk; do
             unzip -p "$APK" lib/arm64-v8a/libXloX.so > /tmp/libXloX.so
             python3 scripts/check_elf_alignment.py --fail-on-unaligned /tmp/libXloX.so
