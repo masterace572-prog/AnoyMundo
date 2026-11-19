@@ -156,3 +156,26 @@ preserved by the implementation and checked where tooling permits.
   69 PostgreSQL checks, 13 UI gates and 16 branding/channel gates passed.
   Desktop/phone browser tests passed, including confirmed referral deletion,
   failed signup with the deleted code and private one-time Owner registration.
+
+Follow-up production evidence:
+
+- Migration **`20261119234910 / referral_single_use`** applied. Local source
+  SHA-256: `64e542d6d6fb86021ce220f8902152a4649bbff62cb407dd61ae3ec3cf05900c`.
+- Deployment **`dpl_D1vUko2bDFwaKZyrJWkpYCj5PcLZ`**, source
+  **`ca92e5fda0fde1a4aa4f81eee97f5cbec438502a`**, is READY/PROMOTED to the
+  production panel. Post-deploy health passed with 15/15 tables.
+- The specifically requested referral is revoked and absent from active
+  listings. Existing user/key counts remain one each. Anoy is permanent;
+  exactly one valid unused Kenny Owner invitation remains privately stored.
+- Existing Anoy library 49 was rehashed from the actual stored bytes and
+  still matches the original SHA-256; current APK update remains row 14 /
+  code 17. No library or panel APK-update selection was replaced.
+- [Web/browser QA](https://github.com/masterace572-prog/AnoyMundo/actions/runs/44640733758)
+  and [dual-APK CI](https://github.com/masterace572-prog/AnoyMundo/actions/runs/44640733741)
+  passed. The latter checked the compiled contact resources of both brands,
+  packaged permissions, identities, SDKs, native alignment and signatures.
+- [Both signed APKs, 2.4.1 (19)](https://github.com/masterace572-prog/AnoyMundo/releases/tag/loaders-v2.4.1-19)
+  were published together from the exact source commit. GitHub's uploaded
+  asset digests match the build checksums in the release notes.
+- Authenticated production Storage and physical-device checks remain outside
+  this follow-up's verified scope; no credentials were requested or read.
