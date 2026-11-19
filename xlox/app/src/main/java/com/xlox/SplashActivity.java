@@ -4,7 +4,6 @@ import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
 import android.content.Intent;
 import android.content.res.ColorStateList;
-import android.graphics.Typeface;
 import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.os.Handler;
@@ -17,11 +16,9 @@ import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
-import androidx.core.content.res.ResourcesCompat;
 import androidx.core.splashscreen.SplashScreen;
 import androidx.core.splashscreen.SplashScreenViewProvider;
 
-import com.airbnb.lottie.FontAssetDelegate;
 import com.airbnb.lottie.LottieAnimationView;
 
 import com.xlox.ui.Motion;
@@ -36,8 +33,9 @@ import java.util.concurrent.Executors;
 /**
  * Launcher entry: a local, full-screen Lottie brand film on true black followed
  * by the existing app-update gate. The bundled animation is an offline,
- * black-and-white rebrand of the owner-selected Techpost motion; its final
- * Lottie text layer reads {@code Anoy Hax}. See assets/licenses/LOTTIE.md.
+ * black-and-white rebrand of the owner-selected Techpost motion; its existing
+ * vector glyph paths are replaced in-place with {@code AnoyHax} and {@code A}.
+ * See assets/licenses/LOTTIE.md.
  *
  * <p>The system splash is removed at once so the app controls a seamless black
  * hand-off. The version and app-update status retain their prior timing and
@@ -48,8 +46,9 @@ import java.util.concurrent.Executors;
  */
 public class SplashActivity extends AppCompatActivity {
 
-    /** 482 frames at 60 fps in res/raw/anoy_splash.json. */
-    private static final long FILM_MS = 8_034L;
+    /** The source's final branded `A` pose: frame 400 of the 60 fps Lottie. */
+    private static final int SPLASH_FINAL_FRAME = 400;
+    private static final long FILM_MS = 6_667L;
     private static final long VERSION_AT_MS = 260L;
     private static final long VERSION_MS = 320L;
     private static final long STATUS_AT_MS = 600L;
@@ -201,7 +200,7 @@ public class SplashActivity extends AppCompatActivity {
             root.post(() -> {
                 if (!Ui.alive(this)) return;
                 splashAnimation.cancelAnimation();
-                splashAnimation.setProgress(1f);
+                splashAnimation.setFrame(SPLASH_FINAL_FRAME);
                 handler.postDelayed(next, REDUCED_FINAL_MS);
             });
         } else {
@@ -213,15 +212,10 @@ public class SplashActivity extends AppCompatActivity {
     }
 
     private void configureSplashAnimation() {
-        // The rebranded Lottie text layer uses the same shipped Inter face as
-        // the rest of the app, rather than relying on a device font fallback.
-        splashAnimation.setFontAssetDelegate(new FontAssetDelegate() {
-            @Override
-            public Typeface fetchFont(String fontFamily) {
-                return ResourcesCompat.getFont(SplashActivity.this, R.font.inter_semibold);
-            }
-        });
         splashAnimation.setAnimation(R.raw.anoy_splash);
+        // Stop on the source animation's edited final A pose instead of its
+        // blank tail. The word and A are vector paths inside this one Lottie.
+        splashAnimation.setMaxFrame(SPLASH_FINAL_FRAME);
         splashAnimation.setRepeatCount(0);
         splashAnimation.addAnimatorListener(new AnimatorListenerAdapter() {
             private boolean completed;
@@ -249,7 +243,8 @@ public class SplashActivity extends AppCompatActivity {
         version.setAlpha(1f);
         statusBar.setAlpha(1f);
         splashAnimation.cancelAnimation();
-        splashAnimation.setProgress(Math.max(0f, Math.min(1f, seconds * 1000f / FILM_MS)));
+        splashAnimation.setFrame(Math.max(0, Math.min(SPLASH_FINAL_FRAME,
+                Math.round(seconds * 60f))));
     }
 
     // ------------------------------------------------------ app update check

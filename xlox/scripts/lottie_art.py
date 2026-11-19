@@ -9,10 +9,10 @@ animation selected by the owner. Its untouched source is kept at
 `third_party/lottie/techpost.json`; see assets/licenses/LOTTIE.md.
 
 The splash source is 30 fps and contains the vendor wordmark as vector paths.
-The build script doubles its timeline to 60 fps, recolours the source to the
-Anoy black-and-white palette, covers the third-party wordmark before it is
-shown, and adds an animated Lottie text layer reading "Anoy Hax". This keeps
-all animation local and offline, and never displays another product's name.
+The build script doubles its timeline to 60 fps, recolours it to the Anoy
+black-and-white palette, and replaces every vendor glyph path in-place with
+Inter SemiBold outlines for "AnoyHax" (including its large `T` → `A` reveal).
+This keeps all motion local and offline, with no overlay or added text layer.
 """
 from __future__ import annotations
 
@@ -26,11 +26,13 @@ from typing import Any
 ROOT = Path(__file__).resolve().parents[1]
 RAW = ROOT / "app/src/main/res/raw"
 TECHPOST_SOURCE = ROOT / "third_party/lottie/techpost.json"
+SPLASH_GLYPHS = ROOT / "scripts/anoy_splash_glyphs.json"
 FR = 60
 STROKE = 1.75
 WHITE = [1, 1, 1, 1]
 BLACK = [0, 0, 0, 1]
 TECHPOST_SHA256 = "4e50ebe64cc4d931082950639b13bdd2c0a92952c8254367b28638e72c5a8565"
+INTER_SEMIBOLD_SHA256 = "6be4b4f246f52fa13471cbb80df1d9c520c269992059abaed894bbe5080aa7a3"
 
 # Ease out without overshoot (cubic-bezier 0.2, 0, 0, 1) and a gentle in-out.
 EASE_OUT = ({"x": [0.2], "y": [0.0]}, {"x": [0.0], "y": [1.0]})
@@ -62,17 +64,6 @@ def transform(**kw: Any) -> dict[str, Any]:
         "ty": "tr", "nm": "Transform",
         "p": static(kw.get("p", [0, 0])), "a": static([0, 0]), "s": static([100, 100]),
         "r": static(kw.get("r", 0)), "o": static(100), "sk": static(0), "sa": static(0),
-    }
-
-
-def layer_transform(*, opacity: dict[str, Any] | None = None, position: Any = None,
-                    anchor: Any = None, scale: Any = None) -> dict[str, Any]:
-    return {
-        "o": opacity or static(100),
-        "r": static(0),
-        "p": static(position or [0, 0, 0]),
-        "a": static(anchor or [0, 0, 0]),
-        "s": scale or static([100, 100, 100]),
     }
 
 
@@ -194,43 +185,135 @@ def recolour(node: Any, colour: list[float]) -> None:
             recolour(value, colour)
 
 
-def full_screen_blackout() -> dict[str, Any]:
-    """Masks the source wordmark before it appears, so only Anoy branding shows."""
-    return {
-        "ddd": 0, "ind": 92, "ty": 4, "nm": "Anoy brand blackout", "sr": 1, "ao": 0, "bm": 0,
-        "ks": layer_transform(), "ip": 268, "op": 482, "st": 0,
-        "shapes": [
-            {"ty": "rc", "nm": "Black field", "d": 1,
-             "p": static([0, 0]), "s": static([1080, 2040]), "r": static(0)},
-            {"ty": "fl", "nm": "Fill", "c": static(BLACK), "o": static(100), "r": 1, "bm": 0},
-            transform(),
-        ],
-    }
+def static_shape_paths(node: Any) -> list[tuple[list[dict[str, Any]], int, dict[str, Any]]]:
+    """Find static vector paths with the parent list and index needed to replace them."""
+    found = []
+    if isinstance(node, dict):
+        for value in node.values():
+            if isinstance(value, list):
+                for index, item in enumerate(value):
+                    if isinstance(item, dict) and item.get("ty") == "sh" \
+                            and item.get("ks", {}).get("a") == 0 \
+                            and isinstance(item.get("ks", {}).get("k", {}).get("v"), list):
+                        found.append((value, index, item))
+                    found.extend(static_shape_paths(item))
+            elif isinstance(value, dict):
+                found.extend(static_shape_paths(value))
+    elif isinstance(node, list):
+        for value in node:
+            found.extend(static_shape_paths(value))
+    return found
 
 
-def anoy_brand_text() -> dict[str, Any]:
-    """A true Lottie text layer, not a native TextView, for the rebranded final state."""
-    opacity = {"a": 1, "k": [
-        {"t": 268, "s": [0], "h": 1},
-        {"t": 302, "s": [100], "o": {"x": [0.2], "y": [0]}, "i": {"x": [0], "y": [1]}},
-        {"t": 482, "s": [100]},
-    ]}
-    scale = {"a": 1, "k": [
-        {"t": 268, "s": [94, 94, 100], "h": 1},
-        {"t": 320, "s": [100, 100, 100]},
-    ]}
-    document = {
-        "sz": [1080, 150], "ps": [-540, -100], "s": 112,
-        "f": "Inter-SemiBold", "t": "Anoy Hax", "j": 2, "tr": -3,
-        "lh": 136, "ls": 0, "fc": [1, 1, 1], "of": False,
-    }
-    return {
-        "ddd": 0, "ind": 91, "ty": 5, "nm": "Anoy Hax", "sr": 1, "ao": 0, "bm": 0,
-        "ks": layer_transform(opacity=opacity, position=[540, 1020, 0], scale=scale),
-        "ip": 268, "op": 482, "st": 0,
-        "t": {"d": {"k": [{"s": document, "t": 268}]}, "p": {},
-              "m": {"g": 1, "a": static([0, 0])}},
-    }
+def bounds(paths: list[dict[str, Any]]) -> tuple[float, float, float, float]:
+    points = [point for path in paths for point in path["v"]]
+    xs = [point[0] for point in points]
+    ys = [point[1] for point in points]
+    return min(xs), min(ys), max(xs), max(ys)
+
+
+def remap_contour(contour: dict[str, Any], source_bounds: tuple[float, float, float, float],
+                  target_bounds: tuple[float, float, float, float]) -> dict[str, Any]:
+    """Maps an Inter outline (y-up) into an existing Lottie glyph box (y-down)."""
+    sx0, sy0, sx1, sy1 = source_bounds
+    tx0, ty0, tx1, ty1 = target_bounds
+    sw = max(1.0, sx1 - sx0)
+    sh = max(1.0, sy1 - sy0)
+    tw = tx1 - tx0
+    th = ty1 - ty0
+
+    def vertex(point: list[float]) -> list[float]:
+        return [round(tx0 + (point[0] - sx0) * tw / sw, 3),
+                round(ty0 + (sy1 - point[1]) * th / sh, 3)]
+
+    def tangent(vector: list[float]) -> list[float]:
+        return [round(vector[0] * tw / sw, 3), round(-vector[1] * th / sh, 3)]
+
+    return {"i": [tangent(v) for v in contour["i"]],
+            "o": [tangent(v) for v in contour["o"]],
+            "v": [vertex(v) for v in contour["v"]], "c": True}
+
+
+def load_glyphs() -> dict[str, list[dict[str, Any]]]:
+    data = json.loads(SPLASH_GLYPHS.read_text())
+    if data.get("source_sha256") != INTER_SEMIBOLD_SHA256 or data.get("units_per_em") != 2048:
+        raise RuntimeError("Unexpected cached Inter glyph data")
+    glyphs = data.get("glyphs", {})
+    if set(glyphs) != set("AnoyHax"):
+        raise RuntimeError("Cached splash glyphs must contain exactly AnoyHax")
+    return glyphs
+
+
+def rename_source_group(node: Any, original: str, replacement: str) -> None:
+    if isinstance(node, dict):
+        if node.get("nm") == original:
+            node["nm"] = replacement
+        for value in node.values():
+            rename_source_group(value, original, replacement)
+    elif isinstance(node, list):
+        for value in node:
+            rename_source_group(value, original, replacement)
+
+
+def replace_glyph_paths(layer_data: dict[str, Any], char: str, glyphs: dict[str, list[dict[str, Any]]]) -> None:
+    """Swap every outline in one existing source glyph layer, keeping its exact motion/mattes."""
+    entries = static_shape_paths(layer_data.get("shapes", []))
+    if not entries:
+        raise RuntimeError(f"No editable vector path in source layer {layer_data.get('nm')}")
+    source_paths = [entry[2]["ks"]["k"] for entry in entries]
+    target_bounds = bounds(source_paths)
+    # The Techpost `h` slot is an ascender. A lowercase y needs its own
+    # x-height/descender proportion rather than inheriting that tall box.
+    if char == "y":
+        tx0, ty0, tx1, ty1 = target_bounds
+        target_bounds = (tx0, ty1 - (ty1 - ty0) * 0.76, tx1, ty1)
+    glyph = glyphs[char]
+    glyph_bounds = bounds(glyph)
+
+    # A source glyph layer contains one path. We replace it with every contour
+    # in the corresponding Inter glyph, in the same group and before its fill.
+    parent, index, original = entries[0]
+    replacements = []
+    for n, contour in enumerate(glyph):
+        path = deepcopy(original)
+        path["nm"] = f"Anoy {char} outline {n + 1}"
+        path["ks"] = static(remap_contour(contour, glyph_bounds, target_bounds))
+        replacements.append(path)
+    parent[index:index + 1] = replacements
+    # No target glyph in this animation has more than two contours; the source
+    # path list is otherwise one item. Remove any superseded extras defensively.
+    for parent, index, path in reversed(entries[1:]):
+        if path in parent:
+            parent.remove(path)
+
+
+def rebrand_wordmark(data: dict[str, Any]) -> None:
+    """Replace Techpost's vector glyphs in-place with AnoyHax's vector glyphs.
+
+    The original animation has eight word slots: T e c h p o s t. We retain the
+    selected animation's timing, transforms and track mattes, remapping them to
+    A n o y H a x and disabling only the surplus terminal t slot. This means
+    there is no second text element, no blackout layer and no overlay.
+    """
+    glyphs = load_glyphs()
+    slot = {"T": "A", "e": "n", "c": "o", "h": "y", "p": "H", "o": "a", "s": "x", "t": None}
+    for source_layer in data["layers"]:
+        if source_layer.get("ty") != 4:
+            continue
+        name = source_layer.get("nm", "")
+        initial = name[:1]
+        if initial not in slot:
+            continue
+        replacement = slot[initial]
+        if replacement is None:
+            # The eighth source slot was Techpost's final `t`; AnoyHax needs
+            # seven slots, so make it non-rendering without moving any timing.
+            source_layer["ip"] = source_layer["op"]
+            source_layer["nm"] = "unused terminal source slot"
+            continue
+        replace_glyph_paths(source_layer, replacement, glyphs)
+        source_layer["nm"] = replacement + name[1:]
+        rename_source_group(source_layer["shapes"], initial, replacement)
 
 
 def techpost_splash() -> dict[str, Any]:
@@ -243,22 +326,17 @@ def techpost_splash() -> dict[str, Any]:
         raise RuntimeError("Unexpected Techpost source metadata")
 
     data = deepcopy(data)
+    rebrand_wordmark(data)
     scale_timeline(data)
     data["fr"] = FR
     data["nm"] = "anoy_splash"
 
-    # The source's green backgrounds become true black. Every foreground shape
-    # becomes white to match the app's restrained, monochrome splash language.
+    # The source's green backgrounds become true black. Every edited vector
+    # foreground becomes white; there is no added text, view or matte layer.
     for source_layer in data["layers"]:
         recolour(source_layer, BLACK if source_layer.get("nm") in {"BG", "BG 2"} else WHITE)
-
-    # At frame 134 (2.23 s) the original starts assembling its own wordmark.
-    # A black Lottie layer cleanly takes over then our Lottie text layer arrives.
-    data["layers"] = [anoy_brand_text(), full_screen_blackout()] + data["layers"]
-    data["fonts"] = {"list": [{
-        "fName": "Inter-SemiBold", "fFamily": "Inter", "fStyle": "SemiBold", "ascent": 75,
-    }]}
     data["assets"] = []
+    data.pop("fonts", None)
     return data
 
 

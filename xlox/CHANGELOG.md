@@ -4,6 +4,15 @@ Screenshots, design notes (`docs/ui-redesign/…`) and the one-off generator
 scripts mentioned below were removed from the tree in the repo cleanup after
 2.3.2; they remain in git history.
 
+## 2.4.1 — Direct AnoyHax vector replacement (versionCode 20)
+
+- Corrects the splash branding at its source: the selected Lottie’s existing
+  vector paths now render **AnoyHax** in place of **Techpost**. Its standalone
+  final **T** vector is directly replaced by **A**.
+- Removed the intervening blackout and the added Lottie text layer. There is
+  only the one edited Lottie animation — no overlay text or second brand element.
+- The splash ends on the edited **A** pose, including in reduced-motion mode.
+
 ## 2.4.0 — Anoy Hax Lottie splash (versionCode 19)
 
 - Splash now uses a full-screen, local Lottie launch film on true black,

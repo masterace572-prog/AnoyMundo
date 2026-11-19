@@ -228,10 +228,10 @@ install_apk "$APK"
 grant
 
 # ---------------------------------------------------------------- 1. splash
-# Still frames of the 8.03 s local Lottie film (qa_frame = seconds):
+# Still frames of the 6.67 s local Lottie film (qa_frame = seconds):
 #   0.00 hand-off on black; 0.80 / 1.60 / 2.40 source motion; 4.50 clean
-#   rebrand cut-over; 5.10 Anoy Hax revealed; 7.50 final branded frame.
-for f in 0.00 0.80 1.60 2.40 4.50 5.10 7.50; do
+#   vector rebrand cut-over; 5.10 AnoyHax revealed; 6.66 final A pose.
+for f in 0.00 0.80 1.60 2.40 4.50 5.10 6.66; do
     stop_app
     adb shell am start -W -n $PKG/.SplashActivity --ef qa_frame "$f" >> "$LOG" 2>&1 || fatal "cannot start SplashActivity"
     sleep 1.2
@@ -248,10 +248,10 @@ shot splash
 
 # ----------------------------------- 1b. splash status line + app update (2.2.0)
 # The check's answers, simulated (qa_app_update, debug only, no network), on
-# the final Anoy Hax frame; the version sits top right.
+# the final A frame; the version sits top right.
 for st in up_to_date available fail; do
     stop_app
-    adb shell am start -W -n $PKG/.SplashActivity --ef qa_frame 7.50 --es qa_app_update "$st" >> "$LOG" 2>&1 || true
+    adb shell am start -W -n $PKG/.SplashActivity --ef qa_frame 6.66 --es qa_app_update "$st" >> "$LOG" 2>&1 || true
     sleep 2.2
     shot "splash_status_$st"
     log "splash status $st texts: $(texts)"

@@ -374,9 +374,20 @@ for name, max_bytes in LOTTIE_SPECS.items():
         lottie.append(f"{name}.json embeds assets (images)")
 if (raw_dir / "anoy_splash.json").exists():
     splash_data = _json.loads((raw_dir / "anoy_splash.json").read_text())
-    if splash_data.get("nm") != "anoy_splash" or not splash_data.get("layers") \
-            or splash_data["layers"][0].get("nm") != "Anoy Hax":
-        lottie.append("anoy_splash.json is not the generated Anoy Hax launch film")
+    layer_names = [layer.get("nm", "") for layer in splash_data.get("layers", [])]
+    if splash_data.get("nm") != "anoy_splash" or not all(
+            any(name.startswith(char) for name in layer_names) for char in "AnoyHax"):
+        lottie.append("anoy_splash.json is not the generated AnoyHax vector launch film")
+    if any(layer.get("ty") == 5 for layer in splash_data.get("layers", [])):
+        lottie.append("anoy_splash.json adds a text layer instead of editing source vectors")
+glyphs = ROOT / "scripts/anoy_splash_glyphs.json"
+if not glyphs.exists():
+    lottie.append("missing scripts/anoy_splash_glyphs.json")
+else:
+    glyph_data = _json.loads(glyphs.read_text())
+    if glyph_data.get("source_sha256") != "6be4b4f246f52fa13471cbb80df1d9c520c269992059abaed894bbe5080aa7a3" \
+            or set(glyph_data.get("glyphs", {})) != set("AnoyHax"):
+        lottie.append("AnoyHax glyph cache is not the expected Inter Semibold source")
 source = ROOT / "third_party/lottie/techpost.json"
 if not source.exists():
     lottie.append("missing third_party/lottie/techpost.json source")
