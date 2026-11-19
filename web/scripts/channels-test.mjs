@@ -221,6 +221,11 @@ test('a ZIP larger than the old upload cap publishes only to Kenny; invalid uplo
   const anoyBefore = await manifest('anoy');
   const published = await kenny.post('/lib?channel=anoy', { action: 'upload', upload_path: ticket.upload_path, version: '7.1', notes: 'Kenny only' });
   assert.equal(published.status, 200); assert.equal(published.data.channel, 'kenny');
+  const health = await anon.request('/api/health');
+  assert.equal(health.status, 200);
+  assert.equal(health.data.checks.lib_channel.ok, true, 'health accepts two current releases instead of a single-row query');
+  assert.match(health.data.checks.lib_channel.detail, /anoy: 1\.1.*kenny: 7\.1/);
+  assert.match(health.data.checks.schema.detail, /15\/15/);
   const kennyBefore = await manifest('kenny');
   assert.equal(kennyBefore.version, '7.1'); assert.equal(kennyBefore.file_name, 'libbgmi.so');
   assert.deepEqual(await manifest('anoy'), anoyBefore, 'query parameters cannot redirect an owner write');

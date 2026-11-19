@@ -123,7 +123,7 @@ export async function handleHealth(res, deep = false) {
   let ok = envOk;
   const [database, libChannel] = await Promise.all([
     db().from('onoff').select('id').eq('id', 1).maybeSingle().then((r) => r).catch((e) => ({ error: e })),
-    db().from('client_release').select('version,file_name,is_current').eq('is_current', true).maybeSingle()
+    db().from('client_release').select('channel,version,file_name').eq('is_current', true).limit(2)
       .then((r) => r).catch((e) => ({ error: e })),
   ]);
   if (database.error) {
@@ -133,15 +133,16 @@ export async function handleHealth(res, deep = false) {
     checks.database = { ok: true, detail: `connected · ${sqlDateTime()} IST` };
   }
   if (libChannel.error) {
+    ok = false;
     checks.lib_channel = { ok: false, detail: libChannel.error.message };
   } else {
     checks.lib_channel = {
       ok: true,
-      detail: libChannel.data ? `version ${libChannel.data.version} (${libChannel.data.file_name})` : 'no release uploaded',
+      detail: libChannel.data?.length ? libChannel.data.map(row => `${row.channel}: ${row.version} (${row.file_name})`).join('; ') : 'no releases uploaded',
     };
   }
   try {
-    const expected = ['users', 'keys_code', 'history', 'referral_code', 'feature', 'modname', 'onoff', '_ftext', 'credit', 'lib', 'client_release', 'auth_attempt', 'api_keys', 'key_orders'];
+    const expected = ['users', 'keys_code', 'history', 'referral_code', 'feature', 'modname', 'onoff', '_ftext', 'credit', 'lib', 'client_release', 'app_release', 'auth_attempt', 'api_keys', 'key_orders'];
     // Parallel round trips keep the health probe fast on a cold lambda.
     const results = await Promise.all(expected.map((table) => countRows(table).catch(() => null)));
     const present = results.filter((n) => n !== null).length;
