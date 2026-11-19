@@ -35,6 +35,17 @@ jobs:
       - run: npm ci
       - run: npm test
       - run: node scripts/check.mjs
+      # Explicit post-deploy acceptance only. Never mutates a live release or
+      # creates an Owner; optionally uses the EXISTING Owner secret to PUT and
+      # remove one private 10 MiB pending object. No licence-key fixtures.
+      - name: Live channel and Storage acceptance (explicit opt-in)
+        if: contains(github.event.head_commit.message, '[live-check]')
+        env:
+          BASE: https://anoymundo-panel.vercel.app
+          OWNER_USERNAME: Anoy
+          OWNER_PASSWORD: ${{ secrets.PANEL_OWNER_PASSWORD }}
+          CHANNEL_LIVE_ONLY: '1'
+        run: node scripts/live-smoke.mjs
       - name: Install Playwright
         run: |
           npm i --no-save playwright@1.49.1

@@ -121,6 +121,9 @@ async function main() {
   // 1. health + public surface
   let r = await request('/api/health');
   ok(r.status === 200 && r.body?.ok === true, 'GET /api/health: Supabase reachable, schema complete', JSON.stringify(r.body).slice(0, 300));
+  if (process.env.GITHUB_ACTIONS && (r.status !== 200 || !r.body?.ok)) {
+    console.log('::error title=Live health details::' + JSON.stringify({ status: r.status, body: r.body }).slice(0, 5000).replace(/%/g, '%25').replace(/\n/g, '%0A').replace(/\r/g, '%0D'));
+  }
   r = await request('/');
   ok(r.status === 200 && /Login/.test(r.body) && /ui\.css/.test(r.body), 'GET / renders the sign-in page with ui.css');
   ok(!/ic_anoy|tailwind|bootstrap/i.test(r.body), 'login page uses no logo image and no old CSS frameworks');
@@ -229,6 +232,7 @@ async function main() {
   }
 
   if (isOwner) await ownerStorageChecks(request, ok, BASE);
+  if (process.env.CHANNEL_LIVE_ONLY === '1') return;
 
   // 4. random + custom keys (owner is never charged)
   r = await request('/keys/generate', { method: 'POST', headers: SAME, body: form({ game: 'PUBG', duration: isOwner ? '168' : '2', max_devices: '1', count: '2', custom: '', request_id: `live-random-${run}-${crypto.randomUUID()}` }) });
@@ -267,8 +271,11 @@ async function main() {
   await request('/api-keys', { method: 'POST', headers: SAME, body: form({ action: 'create', name: `live-smoke-${run}` }) });
   r = await request('/api-keys');
   const token = String(r.body).match(/amk_[A-Za-z0-9_-]{20,}/)?.[0] || '';
-  const ids = [...String(r.body).matchAll(/name="action" value="delete"><input type="hidden" name="id" value="(\d+)"/g)].map((m) => m[1]);
-  cleanupApiKeyId = ids[0] || '';
+  // Never delete an existing key merely because creation failed. Only the
+  // uniquely named API-key row from THIS run is eligible for cleanup.
+  const createdRow = [...String(r.body).matchAll(/<tr>[\s\S]*?<\/tr>/g)]
+    .map(match => match[0]).find(html => html.includes(`data-label="Name">live-smoke-${run}</td>`)) || '';
+  cleanupApiKeyId = /name="action" value="delete"><input type="hidden" name="id" value="(\d+)"/.exec(createdRow)?.[1] || '';
   ok(token.length > 20, 'a new API key is shown once');
   const H = { 'X-API-Key': token };
   r = await request('/api/v1/me', { headers: H });
@@ -313,6 +320,7 @@ try {
 } catch (err) {
   failed += 1;
   console.error(`  FAIL  ${err.stack || err}`);
+  if (process.env.GITHUB_ACTIONS) console.log('::error title=Live acceptance failed::' + String(err.message || err).replace(/[\r\n]+/g, ' ').slice(0, 1000));
 } finally {
   await cleanup().catch((err) => { failed += 1; console.error(`  FAIL  cleanup ${err}`); });
 }
