@@ -1,135 +1,168 @@
-# Deployment — Anoy panel on Vercel + Supabase
+# Deployment — shared Anoy / KennyPvt panel
 
-**Live site:** https://anoymundo-panel.vercel.app
+**Panel:** https://anoymundo-panel.vercel.app
+**Repository:** `masterace572-prog/AnoyMundo`
+**Implementation branch:** `arena/dda4cc57-anoymundo`
 
-| Piece | Value |
-|---|---|
-| GitHub | `masterace572-prog/AnoyMundo`, branch `arena/2e95185a-anoymundo` |
-| Vercel project | `anoymundo-panel` — `prj_eV3iBh1EUffuxQSaV6AkIEh0kn4D`, Root Directory `web`, function region `bom1` (Mumbai) |
-| Supabase | `anoymundo-panel` — `bwsqenepvfwhfomdhaig` (ap-south-1) |
-| Owner | `Anoy` (level 1, unlimited balance, saabarjun705@gmail.com) |
-| Panel name / Telegram | `Anoy` / `@libAkAudioVisiual` |
+## 1. Infrastructure
 
----
+One custom Node ESM / Handlebars application, deployed as `web/api/index.js`
+on Vercel (project `anoymundo-panel`, root directory **web**, region **bom1**).
+One Supabase project (`bwsqenepvfwhfomdhaig`, **ap-south-1**), with private
+Postgres tables and private Storage. The application uses its own sessions,
+not Supabase Auth. Only the server has the service-role key.
 
-## 1. What is deployed
+Build: `npm install` then `npm run build`. Generated templates and icon assets
+are committed so function bundling does not depend on build order. A stale
+template bundle fails `npm run check`.
 
-`web/` is the whole app. `vercel.json` pins `"framework": null` so Vercel builds
-`api/index.js` as one Node.js serverless function, in region `bom1` next to the
-Supabase database (ap-south-1; keep the two together, every page makes database
-round trips). Caching: only `GET /api/app/update` is shared-cached
-(`s-maxage=60, stale-while-revalidate=300`); everything else, including
-`/connect`, the library endpoints and every signed-in page, is `no-store`. The
-hashed icon sprite `/assets/icons/ui-<hash>.svg` is cached for a year; `public/` is served as static
-files (`/assets/css/ui.css`, `/assets/js/app-ui.js`, fonts, `/favicon.svg`) and
-every other path goes to the function. `npm run build` compiles the Handlebars
-templates into `src/templates.generated.mjs` (committed, so bundling never
-depends on build order) and runs `scripts/check.mjs`, which fails the build on
-broken templates, leftover PHP, gradients, external CDNs or billing/security
-regressions.
+## 2. Database migration / safe rollout
 
-## 2. Supabase
+- **Fresh project:** run `supabase/schema.sql`. It includes v2.4's two-owner
+  constraints, RPCs and Storage bucket. It initially seeds Anoy only; invite
+  the KennyPvt owner through the panel.
+- **Existing project:** apply **only**
+  `supabase/migrations/20261119_two_owner_channels.sql` for this upgrade. It is
+  additive/non-destructive: users, keys, settings, old library bytes and APK
+  releases are preserved. Existing releases become `channel='anoy'`.
+- **NEVER re-run `20261107_v2_fresh_start.sql` on production.** That historical
+  migration deliberately deletes users, keys and billing/referral history.
 
-- Fresh projects: run `supabase/schema.sql` once (tables, RLS — service role
-  only —, `create_keys_atomic`, `delete_keys_refund`, helper functions).
-- This project: migration `supabase/migrations/20261107_v2_fresh_start.sql`
-  (applied as `v2_fresh_start_owner_anoy`). It
-  - widens `keys_code.user_key` to 64 characters,
-  - **wipes** all users, keys, API keys, referral codes, history, key orders
-    and sign-in attempts,
-  - creates the single Owner `Anoy` (bcrypt hash only, balance 999999999999,
-    treated as unlimited and never charged),
-  - adds a case-insensitive unique index on usernames,
-  - updates `create_keys_atomic` so level-1 accounts are never charged.
-  Server settings (maintenance, mod status, feature flags) and the loader
-  release are kept.
-- Migration `supabase/migrations/20261107_v2_2_app_release.sql` adds the
-  `app_release` table behind `/app-update` and `GET /api/app/update`.
+Order: run local checks → apply the new migration transactionally → deploy the
+current branch to Vercel → verify public and signed-in endpoints → issue the
+single-use KennyPvt Owner invitation. Do not create a throwaway Kenny Owner in
+production for testing: that slot is intended for the real second Owner and
+Owner identities cannot be deleted/reassigned by the application.
 
-Check:
+The migration replaces the old one-owner index with two unique, immutable
+Owner channels (`anoy`, `kenny`). Only Anoy can create the second-owner invite;
+it expires after 7 days and is consumed transactionally on registration.
+Owner accounts have unlimited billing balance and no account expiry. Password
+and full-name changes are still made by each user in their own Settings.
+Neither Owner may edit/delete/demote/rename the other Owner account.
+
+Useful **read-only** verification:
 
 ```sql
-select (select count(*) from users) as users,
-       (select username from users where level = 1) as owner,
-       (select count(*) from keys_code) as keys,
-       (select count(*) from api_keys) as api_keys,
-       (select version from client_release where is_current) as release;
--- expected: 1, Anoy, 0, 0, <current library version>
+select username, level, owner_channel from public.users order by id_users;
+select channel, version, file_size, sha256, storage_path
+  from public.client_release where is_current order by channel;
+select channel, version_name, version_code
+  from public.app_release where is_current order by channel;
+select id, public, file_size_limit from storage.buckets
+  where id = 'loader-releases';
 ```
 
-`client_release.content_base64` holds the loader ZIP (Vercel's filesystem is
-read-only). `GET /api/lib/manifest` reports its version, size and SHA-256; the
-Android app verifies both after downloading.
+Each release table permits at most one current row **per channel**. Publication
+uses service-role-only RPCs with per-channel advisory locks, so failed writes
+cannot demote the previous release or touch the other channel. Keys, pricing,
+billing RPCs, maintenance, floating text and feature settings remain shared.
 
-## 3. Vercel environment variables
+## 3. Library files: 10 MiB, .so or ZIP
+
+The browser first asks `POST /lib {action:'prepare_upload', file_size:...}`.
+The server authenticates the Owner and signs one random private object:
+`<own-channel>/pending/<uuid>`. The browser **PUTs the binary directly to
+Storage**, then sends a small publication descriptor to `/lib`. This avoids
+Vercel's approximately 4.5 MB request-body limit.
+
+The server caps both input and total expanded ZIP bytes at **10 MiB** and ZIP
+entry count at 128; checks paths, CRCs and actual bounded inflation; accepts
+arm64 ELF libraries; and writes a normalized ZIP with **libbgmi.so** as its main
+entry. Input filenames do not become installed library names. Verified sibling
+`.so` dependencies are retained. The private bucket `loader-releases` allows
+11 MiB per object to accommodate normalized ZIP overhead. Do not make it public
+or add anonymous upload policies.
+
+`GET /api/lib/download?channel=…` signs a short-lived download URL and returns
+302. The manifest supplies normalized size and SHA-256. Existing base64-stored
+releases remain downloadable unchanged; legacy small base64 publications are
+accepted up to approximately 3 MiB, but new integrations must use direct
+upload for the full 10 MiB limit. External HTTPS links remain supported.
+`cancel_upload` can remove only an Owner's own **pending** object, never a live
+release. A lost publication response is ambiguous: reload before retrying;
+the server never deletes an output that might already be current.
+
+## 4. Environment variables
 
 | Name | Required | Notes |
 |---|---|---|
-| `SUPABASE_URL` | yes | `https://bwsqenepvfwhfomdhaig.supabase.co` |
-| `SUPABASE_SERVICE_ROLE_KEY` | yes | server-only, never `NEXT_PUBLIC_` |
-| `AUTH_SECRET` | yes | signs the session cookie; keep it stable |
-| `STATIC_WORDS` | yes | licence-token salt — must match `xlox/app/src/main/jni/panel_config.h` |
-| `BRAND_NAME` | no | `Anoy` |
-| `OWNER_USERNAME` | no | default `Anoy` |
-| `TELEGRAM_USERNAME` | no | `libAkAudioVisiual` |
-| `PUBLIC_BASE_URL` | no | `https://anoymundo-panel.vercel.app` |
-| `MAX_LIB_UPLOAD_MB` | no | `3` (the base64 JSON upload must stay under Vercel's 4.5 MB body limit; use an external URL for bigger files) |
-| `FALLBACK_LIB_VERSION` | no | version reported when no release exists |
+| `SUPABASE_URL` | yes | Existing Supabase URL; its HTTPS origin is also allowed by the panel CSP for direct uploads |
+| `SUPABASE_SERVICE_ROLE_KEY` | yes | Server only; never exposed to the browser |
+| `AUTH_SECRET` | yes | Keep stable between deployments; signs session cookies |
+| `STATIC_WORDS` | yes | Must match native `panel_config.h`; unchanged by this upgrade |
+| `BRAND_NAME` | no | Shared website name; default `Anoy` |
+| `OWNER_USERNAME` | no | Legacy account-name safeguard only; not Owner authority |
+| `TELEGRAM_USERNAME` | no | Shared contact; default `libAkAudioVisiual` |
+| `PUBLIC_BASE_URL` | no | Canonical panel URL |
+| `MAX_LIB_UPLOAD_MB` | no | Legacy deployment metadata only; v2.4 enforces 10 MiB in code |
+| `FALLBACK_LIB_VERSION` | no | Anoy-only legacy fallback; Kenny never falls back to Anoy |
 
-No secret is committed (`.env*` is git-ignored).
+No new secret, second database, second site or client-side service key is
+needed. Production is deployed explicitly from the working branch; do not
+assume that a Git push automatically promotes the site. Use the existing
+Vercel project/team, with `gitSource.ref='arena/dda4cc57-anoymundo'` and
+`target='production'` (or the Vercel dashboard's deploy/promote controls).
 
-Pushes to the branch create preview deployments only. Production
-(`anoymundo-panel.vercel.app`) is deployed from the branch on demand (Vercel
-dashboard → Deployments → Promote / Redeploy, or the API with
-`gitSource.ref = arena/2e95185a-anoymundo` and `target = production`).
+## 5. Android build and publication
 
-## 4. Verification
+One workflow, **Build Anoy and KennyPvt APKs** (`build-xlox.yml`), builds:
 
-| Where | What |
-|---|---|
-| `cd web && npm test` | end-to-end checks against an in-memory DB: sign-in, every page, random + custom keys (format, upper case, duplicates, 4–6 char endings), charging/refunds, `/connect`, maintenance, feature flags, API keys and `/api/v1`, library upload/manifest/download, security guards |
-| **Live deployment smoke test** workflow | `web/scripts/live-smoke.mjs` against the live site: health, pages, assets, manifest vs. download SHA-256, and — when the repository secret `PANEL_OWNER_PASSWORD` is set — Owner sign-in, key creation (random, custom, duplicate), `/connect`, API keys, then deletes everything it created. With a reseller account (`temp_password` input) it checks reseller pages and verifies charges and refunds instead |
-| `GET /api/health` | `{ ok: true }` with database + schema checks |
+| Flavor / Gradle task | Application ID | Download / artifact |
+|---|---|---|
+| `:app:assembleAnoyRelease` | `com.xlox` | `Anoy-XLOX-loader.apk` / `Anoy-APK` |
+| `:app:assembleKennyRelease` | `com.kennypvt` | `KennyPvt-loader.apk` / `KennyPvt-APK` |
 
-## 5. After deploying
+Both use the existing signing key and repository secrets `XLOX_STORE_PASSWORD`
+/ `XLOX_KEY_PASSWORD`. The workflow never regenerates Anoy's key. Without
+signing, it produces clearly marked **unsigned artifacts only**, not a public
+release. JDK 17, SDK 36 and NDK `24.0.8215888` are installed on the CI runner.
 
-1. Sign in as **Anoy** and change the password under **Settings**.
-2. Add the repository secret **`PANEL_OWNER_PASSWORD`** (GitHub → Settings →
-   Secrets → Actions) if you want CI to run the signed-in live checks and to
-   publish loader ZIPs (`build-xlox.yml` → *publish_loader_zip*). The
-   repository is public, so never put the password in a workflow file.
-3. Upload the real arm64-v8a `libbgmi.so` (as a ZIP) at **/lib**. Every app
-   install must update to it before it can sign in.
-4. Create referral codes for resellers under **Referral codes**.
+The workflow runs panel/SQL tests, UI/branding static gates, both builds,
+both lint tasks, package/branding/permission checks on both APKs, signature
+verification and native alignment checks. Signed APKs are attached to **one**
+`loaders-v<versionName>-<versionCode>` GitHub release. Old releases/tags are
+**never pruned** because either Owner may still be using their links. No live
+library or APK update is automatically published to the panel.
 
-## 6. Android loader builds
+Each Owner goes to **App update → Use latest build**, which selects only their
+brand's filename, reviews the changelog and publishes. Unknown/forged write
+channels are rejected; the server derives the real channel from the user's
+immutable database identity. Existing loaders without a `channel` parameter
+continue using Anoy. KennyPvt adds `channel=kenny` to every library and app-update
+check, including Java fallbacks and native endpoints.
 
-`.github/workflows/build-xlox.yml` (push to `xlox/**` or manual run) runs the
-static UI gates, builds the signed release APK with JDK 17, the runner's
-Android SDK and NDK `24.0.8215888`, runs Android Lint, checks the APK's
-permissions and the 16 KB ELF alignment of `libXloX.so` and the loader ZIP,
-uploads the `xlox-apk` artifact (7 days) and publishes the GitHub release
-`anoy-v<versionName>-<versionCode>` (marked Latest; every other release and tag
-is deleted). Nothing is committed back to the repository. The owner then
-publishes the update in the panel at `/app-update` (**Use latest build**).
-`android-ui-qa.yml` (manual) runs emulator screenshots; `app-update-e2e.yml`
-(manual) tests the in-app update against the real release asset.
-
-## 7. Local development & troubleshooting
+## 6. Verification
 
 ```bash
 cd web
 npm ci
 npm run build
-npm test
-npm run dev        # 0.0.0.0:3000; memory DB unless SUPABASE_URL is set (web/.env.local)
+npm test                 # 213 smoke assertions, channel/upload HTTP tests, PostgreSQL tests
+cd ..
+python3 xlox/scripts/ui_quality_gate.py
+python3 xlox/scripts/check_branding.py
 ```
 
-| Symptom | Cause / fix |
+The PostgreSQL tests use PGlite offline, including migration preservation,
+repeat application, full-schema reapplication after two Owners exist, invite
+replay, Owner protection, cross-channel RPC denial and shared billing.
+
+`live-smoke.yml` is manual: runs the deployed app's public checks and, when
+`PANEL_OWNER_PASSWORD` is configured in repository secrets, signed-in checks
+with disposable keys/API keys. The tests do not create an Owner or change a
+live release. `web-ui-qa.yml` captures desktop/mobile pages. Manual Android UI
+QA and APK-update end-to-end workflows continue targeting Anoy's preserved
+package with explicit flavor tasks.
+
+## 7. Troubleshooting
+
+| Symptom | Check |
 |---|---|
-| `/api/health` → `env.ok:false` | `SUPABASE_URL` or `SUPABASE_SERVICE_ROLE_KEY` missing |
-| `schema: n/14` | `supabase/schema.sql` not applied |
-| “temporarily unavailable … nothing was charged” | Supabase unreachable — retry |
-| sign-in loops | `AUTH_SECRET` changed between deployments |
-| app says “Panel returned HTTP 5xx” | check Vercel function logs (`[anoymundo]` lines) |
-| `/api/lib/download` 404 | no release uploaded yet — use `/lib` |
+| Owner has no release access / column missing | Apply the v2.4 migration before deploying the new code |
+| Direct upload blocked by CSP | `SUPABASE_URL` must be the configured HTTPS Storage project origin |
+| Storage HTTP 404 / bucket missing | Migration must create private `loader-releases` |
+| Upload rejected | Input ≤10 MiB; expanded ZIP ≤10 MiB; valid arm64 ELF; unambiguous main library |
+| Kenny download 404 before first publication | Expected; the second Owner must upload their own library |
+| APK update rejected on device | Check flavor/package, versionCode and signing key; APKs are not interchangeable |
+| Sign-in loops | Check stable `AUTH_SECRET` and account password/session status |

@@ -2,6 +2,8 @@
 // in-memory database driver. Run with: npm test
 import { spawn } from 'node:child_process';
 import crypto from 'node:crypto';
+import { zipSync } from 'fflate';
+import { normalizeLibrary } from '../src/library-package.mjs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -364,14 +366,18 @@ try {
   ok(r.status === 200 && r.body.trim() === '1.0', 'GET /api/lib/version serves plain text');
   r = await request('/api/lib/manifest');
   ok(r.body?.ok === true && r.body?.version === '1.0' && r.body?.available === false, 'manifest says nothing is published yet');
-  const zip = Buffer.from('UEsDBAoAAAAAAA==', 'base64').toString('base64');
+  const elf = Buffer.alloc(128);
+  elf.set([0x7f, 0x45, 0x4c, 0x46, 2, 1]); elf[18] = 183;
+  const zipBytes = Buffer.from(zipSync({ 'any-name.so': elf }));
+  const zip = zipBytes.toString('base64');
+  const normalizedHash = md5Sha(normalizeLibrary(zipBytes));
   r = await request('/lib', { method: 'POST', headers: SAME, body: { version: '1.1', file_name: 'test.zip', content_base64: zip, notes: 'smoke test' } });
   ok(r.body?.ok === true, 'POST /lib publishes a release');
   r = await request('/api/lib/manifest');
   ok(r.body?.version === '1.1' && r.body?.available === true && r.body?.source === 'file' && /^[a-f0-9]{64}$/.test(r.body?.sha256 || ''),
     'manifest reports the new version, size and sha256');
   r = await request('/api/lib/download');
-  ok(r.status === 200 && r.response.headers.get('x-content-sha256') === md5Sha(Buffer.from(zip, 'base64')), 'download sends an integrity header');
+  ok(r.status === 302 && r.response.headers.get('x-content-sha256') === normalizedHash, 'download sends an integrity header');
   r = await request('/lib', { method: 'POST', headers: SAME, body: { action: 'link', version: '1.2', external_url: 'https://example.com/lib.so' } });
   ok(r.body?.ok === true && r.body?.mode === 'link', 'POST /lib link action bumps the version');
   r = await request('/api/lib/download');
@@ -394,11 +400,11 @@ try {
   r = await request('/api/lib/download');
   ok(r.status === 302 && r.location === 'https://example.com/only.so', 'download follows the published link');
   r = await request('/lib', { method: 'POST', headers: SAME, body: { action: 'upload', version: '1.4', file_name: 'both.zip', content_base64: zip, external_url: 'https://example.com/ignored.so' } });
-  ok(r.body?.ok === true && r.body?.file_name === 'both.zip', 'file + link publishes once');
+  ok(r.body?.ok === true && r.body?.file_name === 'libbgmi.so', 'file + link publishes once');
   r = await request('/api/lib/manifest');
   ok(r.body?.version === '1.4' && r.body?.source === 'file', 'with a file and a link, the file wins');
   r = await request('/api/lib/download');
-  ok(r.status === 200 && r.response.headers.get('x-content-sha256') === md5Sha(Buffer.from(zip, 'base64')), 'the stored file is served, the link ignored');
+  ok(r.status === 302 && r.response.headers.get('x-content-sha256') === normalizedHash, 'the stored file is served, the link ignored');
   r = await request('/lib');
   ok(r.status === 200 && (r.body.match(/<form\b/g) || []).length === 1 && !/link-form/.test(r.body), 'library page has one publish form');
   // v2.3.5: the BGMI version the library works with.

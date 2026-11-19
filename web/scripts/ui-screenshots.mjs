@@ -7,6 +7,7 @@ import { spawn } from 'node:child_process';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { channelBrowserTests } from './channel-browser-tests.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, '..');
@@ -17,8 +18,8 @@ const PORT = 3177;
 const BASE = `http://127.0.0.1:${PORT}`;
 const { chromium } = await import('playwright');
 
-const server = spawn(process.execPath, ['scripts/dev-server.mjs'], {
-  cwd: root, env: { ...process.env, PORT: String(PORT), HOST: '127.0.0.1' }, stdio: 'inherit',
+const server = spawn(process.execPath, ['scripts/dev-server.mjs', '--memory'], {
+  cwd: root, env: { ...process.env, DB_DRIVER: 'memory', APK_VERIFY_STUB: '1', PORT: String(PORT) }, stdio: 'inherit',
 });
 const stop = () => { try { server.kill('SIGTERM'); } catch { /* gone */ } };
 process.on('exit', stop);
@@ -272,6 +273,7 @@ try {
     }
     await ctx.close();
   }
+  await channelBrowserTests(browser, BASE, out);
   await browser.close();
 } finally {
   stop();

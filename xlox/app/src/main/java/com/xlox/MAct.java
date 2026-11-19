@@ -398,7 +398,7 @@ public class MAct extends AppCompatActivity {
         String savedKey = new Prefs(this).getSt(PREF_USER, "");
         if (preview) {
             expiry = qaExpiry();
-            savedKey = "ANOY-30D-QA7K2";
+            savedKey = (BuildConfig.DISPLAY_BRAND.toUpperCase(Locale.US) + "-30D-QA7K2");
         }
         totalMillis = keyDurationMillis(savedKey);
         // Expiry is shown in Indian Standard Time, like the panel, whatever
@@ -915,7 +915,7 @@ public class MAct extends AppCompatActivity {
         long wait = preview ? QA_LICENCE_REFRESH_MIN_MS
                 : fromTimer ? LICENCE_REFRESH_EVERY_MS - 5000L : LICENCE_REFRESH_MIN_MS;
         if (now - lastLicenceAttempt < wait) return;
-        final String key = preview ? "ANOY-30D-QA7K2" : new Prefs(this).getSt(PREF_USER, "");
+        final String key = preview ? (BuildConfig.DISPLAY_BRAND.toUpperCase(Locale.US) + "-30D-QA7K2") : new Prefs(this).getSt(PREF_USER, "");
         if (key == null || key.trim().isEmpty()) return;
         lastLicenceAttempt = now;
         if (!preview && (!Net.isOnline(this) || Net.isVpn(this))) {
@@ -1467,7 +1467,7 @@ public class MAct extends AppCompatActivity {
      */
     private String supportInfo() {
         StringBuilder b = new StringBuilder();
-        b.append("Anoy ").append(BuildConfig.VERSION_NAME).append(" (").append(BuildConfig.VERSION_CODE).append(")\n");
+        b.append(BuildConfig.DISPLAY_BRAND).append(" ").append(BuildConfig.VERSION_NAME).append(" (").append(BuildConfig.VERSION_CODE).append(")\n");
         String library = null;
         try {
             library = LibManager.installedVersion(this);
@@ -1501,7 +1501,7 @@ public class MAct extends AppCompatActivity {
     /** Drops keys, file paths, links and e-mail addresses from a status line and shortens it. */
     static String redactStatus(String text) {
         if (text == null) return "";
-        String s = text.replaceAll("(?i)\\bANOY-[A-Z0-9]+-[A-Z0-9]+\\b", "[key]")
+        String s = text.replaceAll("(?i)\\b[A-Z0-9]+-[0-9]+[HD]-[A-Z0-9]+\\b", "[key]")
                 .replaceAll("(?i)\\b[a-z][a-z0-9+.-]*://\\S+", "[link]")
                 .replaceAll("\\S+@\\S+\\.\\S+", "[email]")
                 .replaceAll("(?:/[^\\s/]+){2,}/?", "[path]")
@@ -2103,7 +2103,7 @@ public class MAct extends AppCompatActivity {
     /** The saved key (debug preview: the QA key when none is saved). */
     private String licenceKey() {
         String key = new Prefs(this).getSt(PREF_USER, "");
-        if ((key == null || key.trim().isEmpty()) && preview) key = "ANOY-30D-QA7K2";
+        if ((key == null || key.trim().isEmpty()) && preview) key = (BuildConfig.DISPLAY_BRAND.toUpperCase(Locale.US) + "-30D-QA7K2");
         return key == null ? "" : key.trim();
     }
 
@@ -2211,7 +2211,7 @@ public class MAct extends AppCompatActivity {
                         if ("failed".equals(qa)) throw new UpdateException(getString(R.string.net_offline), true);
                         if ("available".equals(qa)) {
                             found = new AppUpdater.Release("2.4.0", BuildConfig.VERSION_CODE + 1,
-                                    "https://github.com/masterace572-prog/AnoyMundo/releases/download/sample/Anoy.apk",
+                                    "https://example.com/" + BuildConfig.DISPLAY_BRAND + ".apk",
                                     "Faster start-up\nClearer update messages", false);
                         }
                     } else {

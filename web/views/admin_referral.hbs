@@ -6,6 +6,9 @@
 </div>
 
 {{> msgStatus}}
+{{#if ownerInviteAvailable}}
+<div class="alert alert-info">Anoy can invite exactly one KennyPvt owner. Choose Owner below. That account gets unlimited balance, no account expiry, and its own library and APK updates. Neither owner can edit the other owner account or releases. Owner referrals expire in 7 days.</div>
+{{/if}}
 
 <div class="grid-split">
 <section class="card">
@@ -41,20 +44,37 @@
     </div>
     <div class="table-wrap">
         <table class="responsive">
-            <thead><tr><th>Code</th><th>Role</th><th>Balance</th><th>Used by</th></tr></thead>
+            <thead><tr><th>Code</th><th>Role</th><th>Balance</th><th>Expires</th><th>Used by</th></tr></thead>
             <tbody>
                 {{#each codes}}
                 <tr>
                     <td class="primary-cell" data-label="Code"><span class="keytext">{{this.referral}}<button type="button" class="icon-btn" data-copy-text="{{this.referral}}" aria-label="Copy code {{this.referral}}" title="Copy">{{icon "copy"}}</button></span></td>
                     <td data-label="Role">{{this.levelName}}</td>
                     <td data-label="Balance" class="num">{{this.saldoLabel}}</td>
+                    <td data-label="Expires">{{this.expiresLabel}}</td>
                     <td data-label="Used by">{{#if this.used_by}}{{this.used_by}}{{else}}<span class="status unused">Available</span>{{/if}}</td>
                 </tr>
                 {{else}}
-                <tr class="is-empty"><td colspan="4"><div class="empty">{{icon "ticket"}}<b>No codes yet</b>Create one to invite a reseller.<a href="#set_saldo" class="btn btn-secondary" data-focus="set_saldo">Create a code</a></div></td></tr>
+                <tr class="is-empty"><td colspan="5"><div class="empty">{{icon "ticket"}}<b>No codes yet</b>Create one to invite a reseller.<a href="#set_saldo" class="btn btn-secondary" data-focus="set_saldo">Create a code</a></div></td></tr>
                 {{/each}}
             </tbody>
         </table>
     </div>
 </section>
 </div>
+
+{{#if ownerInviteAvailable}}
+<script>
+(function () {
+    var role = document.getElementById('accLevel');
+    var lasts = document.getElementById('accExpire');
+    var balance = document.getElementById('set_saldo');
+    function syncOwnerFields() {
+        var owner = role.value === '1';
+        lasts.disabled = owner; balance.disabled = owner;
+        lasts.closest('.field').hidden = owner; balance.closest('.field').hidden = owner;
+    }
+    role.addEventListener('change', syncOwnerFields); syncOwnerFields();
+})();
+</script>
+{{/if}}

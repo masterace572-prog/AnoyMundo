@@ -54,7 +54,7 @@ public final class GameSupport {
             connection.setReadTimeout(READ_TIMEOUT_MS);
             connection.setUseCaches(false);
             connection.setRequestProperty("Accept", "application/json");
-            connection.setRequestProperty("User-Agent", "Anoy/" + BuildConfig.VERSION_NAME + " (Android)");
+            connection.setRequestProperty("User-Agent", BuildConfig.DISPLAY_BRAND + "/" + BuildConfig.VERSION_NAME + " (Android)");
             if (connection.getResponseCode() != HttpURLConnection.HTTP_OK) return;
             JSONObject json = new JSONObject(read(connection.getInputStream()));
             if (!json.optBoolean("ok", false)) return;

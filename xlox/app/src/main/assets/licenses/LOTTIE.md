@@ -8,17 +8,17 @@ status line (2.3.7; splash only since 2.3.8), played by `com.xlox.ui.Motion`:
 | `anoy_arc.json` | Quiet white arc: splash "Checking for updates…" (loop) | 2.4 s (144 frames) | ~1 KB |
 | `anoy_check.json` | Blue #0A84FF ring + tick that draw in, then hold: splash "Up to date" (one-shot) | 0.7 s (42 frames) | ~2 KB |
 
-All are **original work authored in this repository** for Anoy Loader. They
+All are **original work authored in this repository** for the loader family. They
 are not derived from LottieFiles or any third-party animation. They are
 generated as plain JSON by `xlox/scripts/lottie_art.py` (Python, no After
 Effects), which is the source of truth: edit the script and re-run it rather
 than editing the JSON by hand.
 
-The splash no longer uses Lottie. It is a typography film of real TextViews
-(`SplashActivity`), and the static Anoy wordmark used by the launcher icon and
-the system splash is drawn from Inter outlines by
-`xlox/scripts/brand_wordmark.py` (Inter is SIL OFL 1.1, see `OFL-Inter.txt`;
-the 5 KB A/n/o/y subset it reads is `xlox/scripts/fonts/InterVariable-Anoy.ttf`).
+The main splash film uses real TextViews (`SplashActivity`); only the small
+status line uses Lottie. The launcher/system-splash wordmarks use bundled
+Inter outlines (SIL OFL 1.1, see `OFL-Inter.txt`). Anoy keeps its original
+committed vectors. `xlox/scripts/brand_wordmark.py` generates the KennyPvt
+flavor vectors from the same bundled `inter_semibold.ttf`, without a download.
 
 Art direction: stroke only (1.75–2 dp), white on black, blue `#0A84FF` only
 for the done check; no fills, glow, bounce or overshoot; 60 fps, simple paths

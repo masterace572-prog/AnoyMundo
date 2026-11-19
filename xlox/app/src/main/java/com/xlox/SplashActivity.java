@@ -528,7 +528,7 @@ public class SplashActivity extends AppCompatActivity {
 
     private static AppUpdater.Release sampleRelease(boolean mandatory) {
         return new AppUpdater.Release("2.4.0", BuildConfig.VERSION_CODE + 1,
-                "https://github.com/masterace572-prog/AnoyMundo/releases/download/sample/Anoy.apk",
+                "https://example.com/" + BuildConfig.DISPLAY_BRAND + ".apk",
                 "Faster start-up\nClearer update messages\nFixes for the game files copy", mandatory);
     }
 

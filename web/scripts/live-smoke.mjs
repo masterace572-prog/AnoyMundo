@@ -4,6 +4,7 @@
 // part creates (keys, one API key) is deleted again before it exits.
 // With the Owner account every page is checked and nothing is charged; with a
 // reseller account only reseller pages are checked and charges are verified.
+import { publicChannelChecks, ownerStorageChecks } from './live-channel-checks.mjs';
 import crypto from 'node:crypto';
 
 const BASE = (process.env.BASE || 'https://anoymundo-panel.vercel.app').replace(/\/+$/, '');
@@ -152,24 +153,8 @@ async function main() {
       `${route} is not cached`, `${r.response.headers.get('cache-control')} / ${r.response.headers.get('x-vercel-cache')}`);
   }
 
-  // 2. loader library endpoints
-  r = await request('/api/lib/manifest');
-  ok(r.status === 200 && r.body?.ok === true && typeof r.body?.version === 'string', 'GET /api/lib/manifest', JSON.stringify(r.body).slice(0, 200));
-  const manifest = r.body || {};
-  r = await request('/api/lib/version');
-  ok(r.status === 200 && String(r.body).trim() === manifest.version, `GET /api/lib/version matches the manifest (${String(r.body).trim()})`);
-  if (manifest.available) {
-    r = await request('/api/lib/download', { raw: true });
-    if (r.status === 302) {
-      ok(!!r.response.headers.get('location'), 'GET /api/lib/download redirects to the external file');
-    } else {
-      const sha = crypto.createHash('sha256').update(r.buffer).digest('hex');
-      ok(r.status === 200 && r.buffer.subarray(0, 2).toString() === 'PK', 'GET /api/lib/download serves a ZIP');
-      ok(!manifest.size || r.buffer.length === Number(manifest.size), `download size matches the manifest (${r.buffer.length})`);
-      ok(!manifest.sha256 || sha === manifest.sha256, 'download SHA-256 matches the manifest');
-      ok(r.buffer.includes(Buffer.from('libbgmi.so')), 'ZIP contains libbgmi.so');
-    }
-  }
+  await publicChannelChecks(request, ok);
+
 
   if (!PASSWORD) {
     console.log('\n  (OWNER_PASSWORD not set: signed-in checks skipped)');
@@ -219,7 +204,7 @@ async function main() {
     ok(r.body?.status === true && /^[a-f0-9]{32}$/.test(r.body?.data?.token || ''), 'POST /connect accepts a key that existed before this deployment', JSON.stringify(r.body).slice(0, 200));
   }
   const routes = ['/dashboard', '/keys', '/keys/generate', '/settings', '/api-keys', '/api-docs', '/docs'];
-  if (isOwner) routes.push('/server', '/admin/manage-users', '/admin/create-referral', '/lib');
+  if (isOwner) routes.push('/server', '/admin/manage-users', '/admin/create-referral', '/lib', '/app-update');
   for (const route of routes) {
     r = await request(route);
     ok(r.status === 200 && /ui\.css/.test(r.body), `GET ${route} -> 200`, String(r.status));
@@ -243,6 +228,8 @@ async function main() {
     ok(r.status === 302, 'non-owners cannot open /lib');
   }
 
+  if (isOwner) await ownerStorageChecks(request, ok, BASE);
+
   // 4. random + custom keys (owner is never charged)
   r = await request('/keys/generate', { method: 'POST', headers: SAME, body: form({ game: 'PUBG', duration: isOwner ? '168' : '2', max_devices: '1', count: '2', custom: '', request_id: `live-random-${run}-${crypto.randomUUID()}` }) });
   let out = await generatedKeys();
@@ -256,7 +243,7 @@ async function main() {
   r = await request('/keys/generate', { method: 'POST', headers: SAME, body: form({ game: 'PUBG', duration: isOwner ? '24' : '2', max_devices: '1', custom: '1', custom_key: custom.toLowerCase(), request_id: `live-custom-${run}-${crypto.randomUUID()}` }) });
   out = await generatedKeys();
   out.keys.forEach((k) => cleanupKeys.add(k));
-  ok(out.keys.length === 1 && out.keys[0] === `${PREFIX}-${isOwner ? '1D' : '2H'}-${custom}`, `custom key created in upper case: ${out.keys.join(',')}`);
+  ok(out.keys.length === 1 && out.keys[0] === custom, `custom key created in upper case: ${out.keys.join(',')}`);
   r = await request('/keys/generate', { method: 'POST', headers: SAME, body: form({ game: 'PUBG', duration: isOwner ? '24' : '2', max_devices: '1', custom: '1', custom_key: custom, request_id: `live-dup-${run}-${crypto.randomUUID()}` }) });
   r = await request('/keys/generate');
   ok(/already exists/.test(r.body), 'a duplicate custom key is reported, nothing created');

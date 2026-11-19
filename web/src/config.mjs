@@ -23,18 +23,18 @@ export const config = {
     (env.SUPABASE_SERVICE_ROLE_KEY ? `dev-${env.SUPABASE_SERVICE_ROLE_KEY.slice(-32)}` : 'local-dev-secret-change-me'),
   staticWords: env.STATIC_WORDS || env.LOADER_LICENSE_SALT || 'Vm8Lk7Uj2JmsjCPVPVjrLa7zgfx3uz9E',
   brand: env.BRAND_NAME || 'Anoy',
-  // The single Owner account. owner-only routes are bound to this username as
-  // well as level 1, so a stray level-1 row can never reach the owner panel.
-  // The database enforces the same rule with a unique partial index.
+  // Original account name retained for legacy user-management protection.
+  // Actual Owner authority comes ONLY from level + immutable owner_channel
+  // (channels.mjs), never an editable username or a request parameter.
   ownerUsername: String(env.OWNER_USERNAME || 'Anoy').trim(),
   telegramHandle: String(env.TELEGRAM_USERNAME || 'libAkAudioVisiual').replace(/^@/, ''),
   baseUrl: env.PUBLIC_BASE_URL || '',
-  maxUploadMb: Number(env.MAX_LIB_UPLOAD_MB || 3),
+  maxUploadMb: 10, // Direct signed Storage uploads; both input and expanded contents capped at 10 MiB.
   sessionMinutes: 30,
   rememberHours: 24,
   passwordSalt: 'XquxmymXDtWRA66D',
   license: 'Qp5KSGTquetnUkjX6UVBAURH8hTkZuLM',
-  version: '2.0.0',
+  version: '2.4.0',
   games: { PUBG: 'PUBG Mobile' },
   durations: {
     1: '1 hour',

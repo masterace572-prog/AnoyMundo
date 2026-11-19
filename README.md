@@ -5,7 +5,7 @@ Two parts, one repository:
 | Part | Folder | Runs on |
 |---|---|---|
 | **Licence panel** (web) | [`web/`](web) | Vercel (Node.js serverless) + Supabase Postgres |
-| **Android loader** (`com.xlox`) | [`xlox/`](xlox) | Android 5.0+ (arm64-v8a), built by GitHub Actions |
+| **Android loaders** (`com.xlox`, `com.kennypvt`) | [`xlox/`](xlox) | Android 5.0+ (arm64-v8a), built by GitHub Actions |
 
 **Live panel:** https://anoymundo-panel.vercel.app
 
@@ -18,19 +18,33 @@ verification), [API.md](API.md) (personal API keys, `/api/v1`),
 
 ---
 
-## Owner account
+## Two Owners, one shared panel
 
-The database starts fresh with exactly one user:
+| Owner slot / brand | Fixed channel | Android package |
+|---|---|---|
+| Existing **Anoy** | `anoy` | `com.xlox` (unchanged; existing signing key) |
+| Second **KennyPvt** Owner | `kenny` | `com.kennypvt` (separately installable) |
 
-| Username | Level | Balance | Email |
-|---|---|---|---|
-| `Anoy` | 1 — Owner | Unlimited (never charged) | saabarjun705@gmail.com |
+Anoy creates a **single-use Owner referral** at **Referral codes → Owner —
+KennyPvt**. The second person registers normally with that code within 7 days.
+Both Owners have unlimited balance and no account expiry. Once the second
+slot is filled, neither Owner (nor any Admin) can create a third Owner.
 
-Owner-only routes are bound to level 1 **and** the `OWNER_USERNAME`
-(default `Anoy`). The password is not stored in this repository; change it from
-**Settings** after the first sign-in. Levels: 1 Owner, 2 Admin, 3 Reseller.
-New resellers register with a referral code that the Owner creates under
-**Referral codes** (no default code exists).
+Owner authority is `level=1` plus an immutable, unique `owner_channel`, never a
+request parameter or editable username. Neither Owner can edit/delete the
+other Owner account, library releases or APK-update releases. Password and
+full-name changes still happen in each user's own **Settings**.
+
+**Shared:** one site/database, licence keys, prices, billing/refunds, general
+server settings and Admin/Reseller functionality. **Separate:** libraries,
+BGMI-supported-version notes, APK update choices and each loader's branding.
+Old loaders with no channel parameter keep using **Anoy**.
+
+**Library uploads:** raw `.so` or ZIP, up to **10 MiB** input and expanded
+contents. Files upload directly to private Supabase Storage, not as a large
+base64 Vercel request. Whatever input filename is used, the main installed
+library is **`libbgmi.so`**. See [DEPLOYMENT.md](DEPLOYMENT.md) for migration and
+rollout; never re-run the historical destructive fresh-start migration.
 
 ## Licence key format
 
@@ -76,13 +90,16 @@ Loader endpoints: `POST /connect` (licence check), `GET /api/lib/manifest`
 (`{version, available, size, sha256}`), `GET /api/lib/version` (plain text),
 `GET /api/lib/download` (ZIP with `X-Release-Version` / `X-Content-SHA256`),
 `GET /api/app/update?code=<versionCode>` (current app update, if any),
-`GET /api/health`.
+`GET /api/health`. All `/api/lib/*` and `/api/app/update` calls accept
+`?channel=anoy` or `?channel=kenny`; omitting it means Anoy, not a shared release.
+Library downloads can redirect to a short-lived Storage URL; verify the final
+ZIP against the manifest hash.
 
 ```bash
 cd web
 npm ci
 npm run build      # compiles templates + static checks
-npm test           # end-to-end checks against an in-memory database
+npm test           # smoke, channel/upload HTTP and real PostgreSQL (PGlite) checks
 npm run dev        # http://localhost:3000 (memory DB unless Supabase env is set)
 ```
 
@@ -107,10 +124,18 @@ Splash (app update check) → sign in (library update gate, then licence key)
 - **Home:** licence expiry and countdown (IST), game and library state, one
   primary action (Launch / Stop / Install game / Sign in again), Settings.
 
-Builds run on GitHub Actions: `build-xlox.yml` (every push to `xlox/**`) builds,
-lints and checks the signed APK and publishes it as the GitHub release
-`anoy-v<versionName>-<versionCode>`; `android-ui-qa.yml` (manual) captures
-emulator screenshots as a workflow artifact.
+One GitHub Actions workflow, **Build Anoy and KennyPvt APKs**, builds and
+checks **both** signed flavors, uploads separate `Anoy-APK` / `KennyPvt-APK`
+artifacts, and attaches `Anoy-XLOX-loader.apk` and `KennyPvt-loader.apk` to one
+`loaders-v<versionName>-<versionCode>` release. It never prunes older releases
+or overwrites the live panel's library. Each Owner independently publishes
+their APK update through **App update → Use latest build**. Without signing
+secrets, CI uploads clearly marked unsigned artifacts only.
+
+KennyPvt has its own app strings, launcher/system-splash wordmarks, native
+library endpoints and Java fallbacks. JNI class names, licensing protocol,
+container/OBB flow, minSdk 21, targetSdk 28 and Anoy signing compatibility are
+unchanged. Manual Android UI QA continues targeting the Anoy flavor.
 
 ### Icons
 
@@ -136,7 +161,7 @@ web/                     panel (Vercel root directory)
   public/assets/         ui.css, app-ui.js, fonts, favicon.svg
   scripts/               build, checks, smoke tests, dev server
 supabase/schema.sql      full schema (fresh projects)
-supabase/migrations/     applied migrations (v2 fresh start, app_release)
+supabase/migrations/     historical migrations + non-destructive two-owner upgrade
 xlox/                    Android loader (Gradle project)
 .github/workflows/       APK build + release, UI QA, update e2e, live smoke test
 ```

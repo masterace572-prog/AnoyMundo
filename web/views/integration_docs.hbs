@@ -223,9 +223,10 @@ void apply(const std::string&amp; json) {
                     <tbody>
                         <tr><td><span class="doc-inline">GET /api/health</span></td><td><span class="doc-inline">ok</span>, DB + lib channel, <span class="doc-inline">13/13</span> schema check</td></tr>
                         <tr><td><span class="doc-inline">GET /api/lib/version</span></td><td>plain text version, e.g. <span class="doc-inline">1.0</span> — first line read by the loader</td></tr>
-                        <tr><td><span class="doc-inline">GET /api/lib/download</span></td><td>current loader ZIP (or 302 to an external URL)</td></tr>
+                        <tr><td><span class="doc-inline">GET /api/lib/download</span></td><td>current loader ZIP (or 302 to a signed Storage / external URL)</td></tr>
                         <tr><td><span class="doc-inline">GET /api/lib/manifest</span></td><td>JSON <span class="doc-inline">{ ok, version, available, size, sha256, source }</span> — read by the loader's mandatory update check before sign-in</td></tr>
                         <tr><td><span class="doc-inline">GET /api/lib/info</span></td><td>JSON list of uploaded releases</td></tr>
+                        <tr><td><span class="doc-inline">?channel=anoy / ?channel=kenny</span></td><td>Required on every KennyPvt library or APK update check. Missing channel stays Anoy for old loaders; never a shared release. Installed main library: libbgmi.so. Both apps still share /connect and all licence keys.</td></tr>
                         <tr><td><span class="doc-inline">GET /connect</span> (no params)</td><td><span class="doc-inline">web_info</span> / <span class="doc-inline">web__dev</span> panel info</td></tr>
                         <tr><td><span class="doc-inline">GET /api/v1/keys</span> …</td><td>Key-management REST API — needs a personal API key, documented at <a href="/api-docs">/api-docs</a></td></tr>
                     </tbody>

@@ -244,7 +244,7 @@ public class LogAct extends AppCompatActivity {
 
     /** QA only (debug builds): plays a sign-in outcome through the real UI states. */
     private void runQaResult(String result) {
-        if (keyInput.getText().length() == 0) keyInput.setText("ANOY-7D-QA7K2");
+        if (keyInput.getText().length() == 0) keyInput.setText((BuildConfig.DISPLAY_BRAND.toUpperCase(Locale.US) + "-7D-QA7K2"));
         if ("empty".equals(result)) {
             keyInput.setText("");
             attemptSignIn();

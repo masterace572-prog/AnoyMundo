@@ -4,7 +4,7 @@ name: Live deployment smoke test
 # Signed-in checks need the repository secret PANEL_OWNER_PASSWORD (Owner
 # account). Without it only the public checks run. Everything the test
 # creates is deleted again.
-# 2.3.3: a push whose commit message contains [temp-account] instead asks for
+# Historical optional [temp-account] mode asks for
 # a temporary reseller account (scripts/temp-account.mjs: the password stays on
 # the runner, only its bcrypt hash is published as the commit status
 # "temp-account"); the test waits up to 5 minutes for it to exist.
@@ -23,9 +23,6 @@ on:
         description: 'Optional password of a TEMPORARY test account (public repo: never enter a real password here)'
         type: string
         default: ''
-  push:
-    branches: [arena/2e95185a-anoymundo]
-    paths: ['.github/workflows/live-smoke.yml', 'web/scripts/live-smoke.mjs']
 
 permissions:
   contents: read

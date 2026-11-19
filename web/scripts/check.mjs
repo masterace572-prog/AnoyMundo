@@ -23,6 +23,7 @@ Handlebars.registerPartial('msgStatus', templates.msgStatus);
 for (const [name, source] of Object.entries(templates)) {
   try {
     // Handlebars.compile is lazy, so parse explicitly to catch syntax errors.
+    if (source !== fs.readFileSync(path.join(root, 'views', `${name}.hbs`), 'utf8')) errors.push(`template ${name}: bundle is stale (run npm run build)`);
     Handlebars.parse(source);
     Handlebars.compile(source);
     process.stdout.write(`  ok  template ${name}\n`);
@@ -34,6 +35,7 @@ for (const [name, source] of Object.entries(templates)) {
 for (const mod of ['../src/config.mjs', '../src/memory-db.mjs', '../src/db.mjs',
   '../src/auth.mjs', '../src/render.mjs', '../src/http.mjs',
   '../src/licensing.mjs', '../src/key-service.mjs', '../src/api-keys.mjs',
+  '../src/channels.mjs', '../src/owners.mjs', '../src/library-package.mjs', '../src/library-release.mjs',
   '../src/app.mjs', '../api/index.js']) {
   try { await import(mod); process.stdout.write(`  ok  module ${mod}\n`); }
   catch (e) { errors.push(`module ${mod}: ${e.stack || e.message}`); }

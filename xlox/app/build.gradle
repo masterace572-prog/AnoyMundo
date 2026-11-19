@@ -83,8 +83,8 @@ android {
         // 2.3.6: a key banned in the panel signs the phone out with the reason.
         // 2.3.7: quiet Lottie status on splash, login key, preparing, library sheet.
         // 2.3.8: Lottie on the splash update check only (login, home, library sheet reverted).
-        versionCode 17
-        versionName '2.3.8'
+        versionCode 18
+        versionName '2.4.0'
 
         vectorDrawables {
             useSupportLibrary true
@@ -94,7 +94,32 @@ android {
             abiFilters 'arm64-v8a'
         }
 
+        buildConfigField 'String', 'PANEL_BASE_URL', '"https://anoymundo-panel.vercel.app"'
         multiDexEnabled true
+    }
+
+    // Separate installation/data/update identities; JNI classes keep com.xlox.
+    // Anoy's application ID and signing key are unchanged for in-place updates.
+    flavorDimensions 'brand'
+    productFlavors {
+        anoy {
+            dimension 'brand'
+            applicationId 'com.xlox'
+            buildConfigField 'String', 'RELEASE_CHANNEL', '"anoy"'
+            buildConfigField 'String', 'DISPLAY_BRAND', '"Anoy"'
+            externalNativeBuild {
+                ndkBuild { arguments 'RELEASE_CHANNEL=anoy' }
+            }
+        }
+        kenny {
+            dimension 'brand'
+            applicationId 'com.kennypvt'
+            buildConfigField 'String', 'RELEASE_CHANNEL', '"kenny"'
+            buildConfigField 'String', 'DISPLAY_BRAND', '"KennyPvt"'
+            externalNativeBuild {
+                ndkBuild { arguments 'RELEASE_CHANNEL=kenny' }
+            }
+        }
     }
 
     buildTypes {

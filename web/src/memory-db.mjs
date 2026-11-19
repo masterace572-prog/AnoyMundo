@@ -2,12 +2,14 @@
 // used by this app. Enabled with DB_DRIVER=memory (used by the offline test
 // suite and `npm run dev -- --memory`). Nothing here is used in production.
 
+import { createMemoryStorage } from './memory-storage.mjs';
+
 const seed = () => ({
   users: [{
     // Same Owner account as the production seed: Anoy / Anoy1764.
     id_users: 1, fullname: 'Anoy', username: 'Anoy', email: 'saabarjun705@gmail.com',
     reset_link_token: '', exp_date: '', level: 1, saldo: 999999999999, status: 1,
-    uplink: 'Owner', password: '$2a$08$sQefH.l6cnpeUwuTifoZvuF1SSh7U6Mw4UwddAO9cawj5pip8blOa',
+    owner_channel: 'anoy', uplink: 'Owner', password: '$2a$08$sQefH.l6cnpeUwuTifoZvuF1SSh7U6Mw4UwddAO9cawj5pip8blOa',
     user_ip: '', created_at: '2026-01-01T00:00:00Z',
     updated_at: '2026-01-01T00:00:00Z', expiration_date: '2050-01-01T00:00:00Z',
   }],
@@ -24,9 +26,9 @@ const seed = () => ({
   modname: [{ id: 1, modname: 'VIP MOD' }],
   onoff: [{ id: 1, status: 'off', myinput: '' }],
   credit: [{ id: 1, name: '' }],
-  lib: [{ id: 1, file: 'lib.so', file_type: 'Onlinelib/lib.so', file_size: '555 KB', time: '2022-06-04T23:43:38Z' }],
+  lib: [{ id: 1, channel: 'anoy', file: 'lib.so', file_type: 'Onlinelib/lib.so', file_size: '555 KB', time: '2022-06-04T23:43:38Z' }],
   _ftext: [{ id: 1, _status: 'Safe', _ftext: 'MOD STATUS :- 100% SAFE' }],
-  client_release: [{ id: 1, version: '1.0', file_name: 'no-release.zip', file_size: 0, sha256: '', content_base64: null, external_url: null, notes: 'Placeholder', game_version: null, is_current: true, uploaded_by: 'admin', created_at: new Date().toISOString() }],
+  client_release: [{ id: 1, channel: 'anoy', version: '1.0', file_name: 'no-release.zip', file_size: 0, sha256: '', content_base64: null, external_url: null, notes: 'Placeholder', game_version: null, is_current: true, uploaded_by: 'admin', created_at: new Date().toISOString() }],
   app_release: [],
   auth_attempt: [],
   api_keys: [],
@@ -132,6 +134,9 @@ class Query {
         if (table === 'users' && this.store.users.some((u) => u.username.toLowerCase() === String(record.username).toLowerCase())) {
           return { data: null, error: { message: 'duplicate key value violates unique constraint "users_username_key"', code: '23505' }, count: null };
         }
+        if (table === 'users' && ((Number(record.level) === 1 && (!['anoy', 'kenny'].includes(record.owner_channel) || this.store.users.some(u => u.owner_channel === record.owner_channel))) || (Number(record.level) !== 1 && record.owner_channel))) {
+          return { data: null, error: { message: 'Owner channel is invalid or already occupied', code: '23505' }, count: null };
+        }
         if (table === 'keys_code' && this.store.keys_code.some((k) => k.user_key === record.user_key)) {
           return { data: null, error: { message: 'duplicate key value violates unique constraint "keys_code_user_key_key"', code: '23505' }, count: null };
         }
@@ -144,6 +149,12 @@ class Query {
     }
 
     if (this._operation === 'update') {
+      if (table === 'users' && rows.some(row => {
+        const next = { ...row, ...this._payload };
+        return Number(row.level) === 1
+          ? ['level', 'username', 'owner_channel', 'status'].some(key => next[key] !== row[key])
+          : Number(next.level) === 1;
+      })) return { data: null, error: { message: 'Owner identities cannot be changed' }, count: null };
       const updated = [];
       for (const row of rows) {
         Object.assign(row, clone(this._payload));
@@ -156,6 +167,7 @@ class Query {
     }
 
     if (this._operation === 'delete') {
+      if (table === 'users' && rows.some(row => Number(row.level) === 1)) return { data: null, error: { message: 'Owner accounts cannot be deleted' }, count: null };
       const doomed = new Set(rows);
       this.store[table] = this.store[table].filter((r) => !doomed.has(r));
       result.data = rows.map(clone);
@@ -199,6 +211,7 @@ export function createMemoryDb() {
   const store = seed();
   return {
     from(table) { return new Query(store, table); },
+    storage: createMemoryStorage(),
     _store: store,
   };
 }

@@ -1,4 +1,7 @@
 import crypto from 'node:crypto';
+import { ownerChannel, CHANNELS, publicChannel } from './channels.mjs';
+import { createOwnerInvite, canInviteOwner, registerOwner } from './owners.mjs';
+import { doLibUpload } from './library-release.mjs';
 import { config } from './config.mjs';
 import {
   db, getUserByUsername, listUsers, getKeyById, getKeyByUserKey,
@@ -254,9 +257,6 @@ export function bumpVersion(value) {
   return m ? `${m[1]}${Number(m[2]) + 1}` : '0.1';
 }
 
-/** Version a reset starts again from (e.g. for a new BGMI version). */
-const RESET_VERSION = '0.1';
-
 function serverData(settings) {
   const release = settings.release || null;
   return {
@@ -268,7 +268,7 @@ function serverData(settings) {
     lib: settings.lib ? { ...settings.lib, currentTime: sqlDateTime() } : {},
     release,
     currentVersion: release?.version || '',
-    suggestedVersion: bumpVersion(release?.version || '1.0'),
+    suggestedVersion: release ? bumpVersion(release.version) : '0.1',
   };
 }
 
@@ -333,11 +333,19 @@ async function doRegister(req, res, body) {
     if (error || !data) errors.referral = 'That referral code is not valid.';
     else if (data.used_by) errors.referral = 'This referral code has already been used.';
     else if (data.acc_expiration && new Date(data.acc_expiration).getTime() < Date.now()) errors.referral = 'This referral code has expired.';
-    else if (![2, 3].includes(Number(data.level)) || Number(data.set_saldo) < 0 || Number(data.set_saldo) > 99999) {
+    else if (Number(data.level) === 1 && (data.owner_channel !== 'kenny' || !data.invite_expires_at || new Date(data.invite_expires_at).getTime() <= Date.now())) {
+      errors.referral = 'This owner referral has expired or is invalid.';
+    } else if (![1, 2, 3].includes(Number(data.level)) || Number(data.set_saldo) < 0 || Number(data.set_saldo) > 99999) {
       errors.referral = 'This referral code is not valid. Ask your admin for a new one.';
     } else code = data;
   }
   if (Object.keys(errors).length) return fail(req, res, '/register', 'Please check the form.', errors, old);
+
+  if (Number(code.level) === 1) {
+    const result = await registerOwner(code, { email, username, fullname, password: hashPassword(password), user_ip: getClientIp(req) });
+    if (!result?.ok) return fail(req, res, '/register', result?.message || 'Could not register the owner. Try again.', { referral: result?.message || 'Unavailable.' }, old);
+    return redirect(res, '/login', { msgSuccess: 'KennyPvt owner account created. Sign in to manage your own library and APK updates.' });
+  }
 
   // Re-check the code immediately before creating the account, then claim it
   // conditionally so two simultaneous registrations cannot share one code.
@@ -540,6 +548,12 @@ async function doServer(req, res, body, user) {
 async function doReferral(req, res, body, user) {
   const targetUrl = '/admin/create-referral';
   if (!user.isAdmin) return redirect(res, '/dashboard', { msgWarning: 'You do not have access to that page.' });
+  if (Number(body.accLevel) === 1) {
+    const invite = await createOwnerInvite(user);
+    return redirect(res, targetUrl, invite?.ok
+      ? { msgSuccess: `KennyPvt owner referral: ${invite.referral}. Single use; register within 7 days. The owner has unlimited balance and no account expiry.` }
+      : { msgDanger: invite?.message || 'Could not create the owner referral.' });
+  }
   const setSaldo = Math.trunc(num(body.set_saldo, -1));
   const days = num(body.accExpire, 0);
   const level = num(body.accLevel, 3);
@@ -592,7 +606,7 @@ async function doUserEdit(req, res, body, user) {
   const target = id ? await db().from('users').select('*').eq('id_users', id).maybeSingle() : null;
   if (!target?.data) return fail(req, res, '/admin/manage-users', 'User no longer exists.');
   // The Owner row is never editable from the user manager, and no account can
-  // be promoted to Owner. There is exactly one Owner, enforced again in SQL.
+  // be promoted to Owner. There are exactly two fixed Owner slots, enforced again in SQL.
   if (String(target.data.username) === config.ownerUsername || Number(target.data.level) === 1) {
     return fail(req, res, '/admin/manage-users', 'The Owner account cannot be changed here.');
   }
@@ -628,150 +642,6 @@ async function doUserEdit(req, res, body, user) {
     await db().from('users').update({ uplink: username }).eq('uplink', target.data.username);
   }
   return redirect(res, targetUrl, { msgSuccess: `Saved ${username}.` });
-}
-
-function validVersion(value) {
-  return /^[A-Za-z0-9][A-Za-z0-9._+-]{0,31}$/.test(str(value));
-}
-
-/** BGMI version the library works with: empty (no warning) or digits like 3.9.0. */
-function validGameVersion(value) {
-  const v = str(value);
-  return v === '' || /^\d{1,4}(\.\d{1,6}){0,3}$/.test(v);
-}
-
-function urlFileName(url, fallback) {
-  try {
-    const last = new URL(url).pathname.split('/').filter(Boolean).pop();
-    return String(last || fallback).replace(/["\r\n/\\]/g, '_').slice(0, 255);
-  } catch { return fallback; }
-}
-
-/**
- * Publishes a loader release. Four actions:
- *   reset  -> (2.3.6) rename the current release to 0.1, same file. Phones
- *             notice the new number and download the library once more.
- *   game   -> (v2.3.5) only set the BGMI version the current release works
- *             with (empty turns the app's BGMI warning off)
- *   upload -> new file OR external https link becomes the current release.
- *             One rule when both arrive: the file wins and the link is
- *             ignored (never stored, never validated), so exactly one release
- *             is published per click.
- *   link   -> push a new version + external URL onto the current release
- *             (kept for older panel pages and scripts)
- *
- * Both are validated BEFORE anything is changed, and if the insert fails the
- * previous current release is restored. It can never leave zero current
- * releases (which was the "external link update doesn't work" failure).
- */
-async function doLibUpload(req, res, body, user) {
-  if (!user.isOwner) return sendJson(res, { ok: false, error: 'Only the Owner can publish releases.' }, 403);
-  const rawAction = str(body.action);
-  const action = ['link', 'game', 'reset'].includes(rawAction) ? rawAction : 'upload';
-  // Optional everywhere: a request without the field keeps the current value.
-  const hasGame = Object.prototype.hasOwnProperty.call(body || {}, 'game_version');
-  const gameVersion = str(body.game_version).slice(0, 32);
-  if (hasGame && !validGameVersion(gameVersion)) {
-    return sendJson(res, { ok: false, error: 'Enter the BGMI version as numbers, like 3.9.0 (or leave it empty).' }, 400);
-  }
-
-  if (action === 'reset') {
-    const { data: current, error: readError } = await db().from('client_release')
-      .select('id,version').eq('is_current', true).maybeSingle();
-    if (readError) return sendJson(res, { ok: false, error: 'Could not read the current release.' }, 500);
-    if (!current) return sendJson(res, { ok: false, error: 'Publish a release first.' }, 404);
-    if (current.version === RESET_VERSION) return sendJson(res, { ok: true, version: RESET_VERSION, mode: 'reset' });
-    const { error } = await db().from('client_release')
-      .update({ version: RESET_VERSION, uploaded_by: user.username }).eq('id', current.id);
-    if (error) return sendJson(res, { ok: false, error: `Could not reset the version: ${error.message}` }, 500);
-    return sendJson(res, { ok: true, version: RESET_VERSION, previous: current.version, mode: 'reset' });
-  }
-
-  if (action === 'game') {
-    const { data: current, error: readError } = await db().from('client_release')
-      .select('id,version').eq('is_current', true).maybeSingle();
-    if (readError) return sendJson(res, { ok: false, error: 'Could not read the current release.' }, 500);
-    if (!current) return sendJson(res, { ok: false, error: 'Publish a release first.' }, 404);
-    const { error } = await db().from('client_release').update({ game_version: gameVersion || null }).eq('id', current.id);
-    if (error) return sendJson(res, { ok: false, error: `Could not save the BGMI version: ${error.message}` }, 500);
-    return sendJson(res, { ok: true, version: current.version, game_version: gameVersion, mode: 'game' });
-  }
-
-  const version = str(body.version).slice(0, 32);
-  const base64 = action === 'upload' ? str(body.content_base64) : '';
-  // File wins: with a file the link is dropped before anything looks at it.
-  const externalUrl = base64 ? '' : str(body.external_url).slice(0, 2000);
-  const notes = str(body.notes).slice(0, 500) || null;
-
-  if (!validVersion(version)) {
-    return sendJson(res, { ok: false, error: 'Enter a version like 1.3 (letters, numbers, . _ + -).' }, 400);
-  }
-  if (externalUrl && !validHttpsUrl(externalUrl)) {
-    return sendJson(res, { ok: false, error: 'The external link must be a full https:// address (http:// is not allowed).' }, 400);
-  }
-
-  const { data: current, error: readError } = await db().from('client_release')
-    .select('*').eq('is_current', true).maybeSingle();
-  if (readError) return sendJson(res, { ok: false, error: 'Could not read the current release.' }, 500);
-
-  if (action === 'link') {
-    if (!externalUrl) return sendJson(res, { ok: false, error: 'Enter an external link.' }, 400);
-    if (!current) return sendJson(res, { ok: false, error: 'Upload a release first, then update its link.' }, 404);
-    const patch = {
-      version, external_url: externalUrl, content_base64: null,
-      file_name: urlFileName(externalUrl, current.file_name || 'release.zip'),
-      file_size: 0, sha256: '', notes, uploaded_by: user.username,
-    };
-    if (hasGame) patch.game_version = gameVersion || null;
-    const { error } = await db().from('client_release').update(patch).eq('id', current.id);
-    if (error) return sendJson(res, { ok: false, error: `Could not update the link: ${error.message}` }, 500);
-    return sendJson(res, { ok: true, version, external_url: externalUrl, file_name: patch.file_name, mode: 'link' });
-  }
-
-  const name = str(body.file_name).replace(/["\r\n/\\]/g, '_').slice(0, 255) ||
-    urlFileName(externalUrl, 'release.zip');
-  if (!base64 && !externalUrl) {
-    return sendJson(res, { ok: false, error: 'Choose a file or enter an external link.' }, 400);
-  }
-  const bytes = base64
-    ? Buffer.from(base64.replace(/^data:[^;]+;base64,/, ''), 'base64')
-    : Buffer.alloc(0);
-  if (bytes.length > config.maxUploadMb * 1024 * 1024) {
-    return sendJson(res, { ok: false, error: `File is larger than ${config.maxUploadMb} MB.` }, 400);
-  }
-  if (base64 && bytes.length < 4) {
-    return sendJson(res, { ok: false, error: 'The uploaded file looks invalid.' }, 400);
-  }
-  const sha256 = bytes.length ? crypto.createHash('sha256').update(bytes).digest('hex') : '';
-
-  const { error: demoteError } = await db().from('client_release')
-    .update({ is_current: false }).eq('is_current', true);
-  if (demoteError) {
-    return sendJson(res, { ok: false, error: 'Could not retire the previous release. Nothing was changed.' }, 500);
-  }
-
-  const { error: insertError } = await db().from('client_release').insert({
-    version, file_name: name, file_size: bytes.length, sha256,
-    content_base64: base64 ? bytes.toString('base64') : null,
-    external_url: externalUrl || null, notes,
-    // Not sent: carry the previous release's BGMI version over.
-    game_version: hasGame ? (gameVersion || null) : (current?.game_version || null),
-    is_current: true, uploaded_by: user.username, created_at: nowIso(),
-  }).select('id').single();
-  if (insertError) {
-    if (current) await db().from('client_release').update({ is_current: true }).eq('id', current.id);
-    console.error('[anoymundo] release insert failed:', insertError.message);
-    return sendJson(res, { ok: false, error: 'Could not publish the release. The previous version is still active.' }, 500);
-  }
-
-  // Best-effort audit row; never let it fail a successful publish.
-  try {
-    await db().from('lib').insert({
-      file: name, file_type: `Onlinelib/${name}`,
-      file_size: `${(bytes.length / 1024).toFixed(1)} KB`, time: nowIso(),
-    });
-  } catch { /* ignore */ }
-  return sendJson(res, { ok: true, version, file_name: name, file_size: bytes.length, sha256, mode: 'upload' });
 }
 
 // ---------------------------------------------------------------------------
@@ -901,15 +771,20 @@ export async function handle(req, res) {
 
     // --------------------------- public endpoints ---------------------------
     if (lp === '/api/health' || lp === '/health') return handleHealth(res, q.get('rpc') === '1');
+    const libraryRoute = lp.startsWith('/api/lib/') || ['/version.txt', '/api/version', '/lib/version.txt',
+      '/xlox.zip', '/lib.zip', '/onlinelib/lib.so', '/lib.so', '/download/lib.so'].includes(lp);
+    if ((libraryRoute || lp === '/api/app/update') && !publicChannel(q)) {
+      return sendJson(res, { ok: false, error: 'Unknown release channel.' }, 400);
+    }
     if (lp === '/api/lib/version' || lp === '/version.txt' || lp === '/api/version' || lp === '/lib/version.txt') {
-      return handleLibVersion(res);
+      return handleLibVersion(res, publicChannel(q));
     }
     if (lp === '/api/lib/download' || lp === '/xlox.zip' || lp === '/lib.zip' ||
         lp === '/onlinelib/lib.so' || lp === '/lib.so' || lp === '/download/lib.so') {
-      return handleLibDownload(req, res);
+      return handleLibDownload(req, res, publicChannel(q));
     }
-    if (lp === '/api/lib/info') return handleLibInfo(res);
-    if (lp === '/api/lib/manifest') return handleLibManifest(res);
+    if (lp === '/api/lib/info') return handleLibInfo(res, publicChannel(q));
+    if (lp === '/api/lib/manifest') return handleLibManifest(res, publicChannel(q));
     // The Android app's own update (APK), checked on the splash screen.
     if (lp === '/api/app/update') return handleAppUpdateCheck(res, q);
     if (lp === '/favicon.ico') { res.statusCode = 301; res.setHeader('Location', '/favicon.svg'); return res.end(); }
@@ -939,7 +814,7 @@ export async function handle(req, res) {
     if (lp === '/register') {
       const existing = await currentUser(req);
       if (existing) return redirect(res, '/dashboard');
-      if (method === 'POST') return doRegister(req, res, body);
+      if (method === 'POST') return await doRegister(req, res, body);
       return page(req, res, 'register', { title: 'Register', clientIp: getClientIp(req) });
     }
     if (lp === '/logout') {
@@ -1121,19 +996,20 @@ export async function handle(req, res) {
     // --------------------------------- admin --------------------------------
     if (lp === '/admin/create-referral') {
       if (!user.isAdmin) return redirect(res, '/dashboard', { msgWarning: 'You do not have access to that page.' });
-      if (method === 'POST') return doReferral(req, res, body, user);
+      if (method === 'POST') return await doReferral(req, res, body, user);
       let codesQuery = db().from('referral_code').select('*', { count: 'exact' }).order('id_reff', { ascending: false }).limit(25);
       if (!user.isOwner) codesQuery = codesQuery.eq('created_by', user.username);
       const { data: codes, count, error } = await codesQuery;
       if (error) throw new Error(error.message);
-      const levels = user.isOwner ? { 3: 'Reseller', 2: 'Admin' } : { 3: 'Reseller' };
+      const ownerInviteAvailable = await canInviteOwner(user);
+      const levels = user.isOwner ? { 3: 'Reseller', 2: 'Admin', ...(ownerInviteAvailable ? { 1: 'Owner — KennyPvt (one account only)' } : {}) } : { 3: 'Reseller' };
       return page(req, res, 'admin_referral', {
-        user, title: 'Referral codes', unlimited: isUnlimited(user),
+        user, title: 'Referral codes', unlimited: isUnlimited(user), ownerInviteAvailable,
         codes: (codes || []).map((c) => ({
           ...c,
-          levelName: ({ 2: 'Admin', 3: 'Reseller' })[Number(c.level)] || '—',
-          expiresLabel: c.acc_expiration ? humanDate(c.acc_expiration) : '—',
-          saldoLabel: inr(c.set_saldo),
+          levelName: ({ 1: 'Owner — KennyPvt', 2: 'Admin', 3: 'Reseller' })[Number(c.level)] || '—',
+          expiresLabel: (c.invite_expires_at || c.acc_expiration) ? humanDate(c.invite_expires_at || c.acc_expiration) : '—',
+          saldoLabel: Number(c.level) === 1 ? 'Unlimited' : inr(c.set_saldo),
         })),
         totalCodes: count ?? (codes || []).length,
         selects: {
@@ -1196,20 +1072,20 @@ export async function handle(req, res) {
     // ---------------------------- library / release ------------------------
     if (lp === '/lib') {
       if (!user.isOwner) return redirect(res, '/dashboard', { msgWarning: 'You do not have access to that page.' });
-      if (method === 'POST') return doLibUpload(req, res, body, user);
-      const settings = await getSettings();
+      if (method === 'POST') return await doLibUpload(req, res, body, user);
+      const settings = await getSettings(ownerChannel(user));
       return page(req, res, 'lib', { user, title: 'Library', maxUploadMb: config.maxUploadMb, ...serverData(settings) });
     }
 
     // ------------------------- app (APK) update ----------------------------
     if (lp === '/app-update/latest-build') {
-      if (!user.isAdmin) return sendJson(res, { ok: false, error: 'Only the Owner or an Admin can do that.' }, 403);
-      return handleLatestBuild(res);
+      if (!user.isOwner) return sendJson(res, { ok: false, error: 'Only an Owner can manage their own app update.' }, 403);
+      return await handleLatestBuild(res, ownerChannel(user));
     }
     if (lp === '/app-update') {
-      if (!user.isAdmin) return redirect(res, '/dashboard', { msgWarning: 'You do not have access to that page.' });
-      if (method === 'POST') return doAppReleasePost(req, res, body, user);
-      return page(req, res, 'app_update', { user, title: 'App update', ...(await appReleasePageData()) });
+      if (!user.isOwner) return redirect(res, '/dashboard', { msgWarning: 'You do not have access to that page.' });
+      if (method === 'POST') return await doAppReleasePost(req, res, body, user);
+      return page(req, res, 'app_update', { user, title: 'App update', ...(await appReleasePageData(ownerChannel(user))) });
     }
 
     // -------------------------------- 404 -----------------------------------

@@ -15,10 +15,10 @@ set -eu
 
 LOG=../qa-logs/emulator-trace.txt
 OUT=${SHOT_DIR:-docs/ui-redesign/after}
-APK=app/build/outputs/apk/debug/app-debug.apk
-RELEASE_APK=app/build/outputs/apk/release/app-release.apk
+APK=app/build/outputs/apk/anoy/debug/app-anoy-debug.apk
+RELEASE_APK=app/build/outputs/apk/anoy/release/app-anoy-release.apk
 # Without the signing secrets Gradle names the release build *-unsigned.apk.
-[ -f "$RELEASE_APK" ] || RELEASE_APK=app/build/outputs/apk/release/app-release-unsigned.apk
+[ -f "$RELEASE_APK" ] || RELEASE_APK=app/build/outputs/apk/anoy/release/app-anoy-release-unsigned.apk
 PKG=com.xlox
 
 mkdir -p ../qa-logs "$OUT"

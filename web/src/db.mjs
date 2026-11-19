@@ -65,15 +65,15 @@ export async function countRows(table, column = '*') {
 // ---------------------------------------------------------------------------
 // settings / lookup tables
 // ---------------------------------------------------------------------------
-export async function getSettings() {
+export async function getSettings(channel = 'anoy') {
   const [onoff, ftext, feature, modname, credit, libRows, release] = await Promise.all([
     db().from('onoff').select('*').eq('id', 1).maybeSingle(),
     db().from('_ftext').select('*').eq('id', 1).maybeSingle(),
     db().from('feature').select('*').eq('id', 1).maybeSingle(),
     db().from('modname').select('*').eq('id', 1).maybeSingle(),
     db().from('credit').select('*').eq('id', 1).maybeSingle(),
-    db().from('lib').select('*').order('id', { ascending: false }).limit(1),
-    db().from('client_release').select('id,version,file_name,file_size,sha256,external_url,notes,game_version,is_current,uploaded_by,created_at').eq('is_current', true).maybeSingle(),
+    db().from('lib').select('*').eq('channel', channel).order('id', { ascending: false }).limit(1),
+    db().from('client_release').select('id,version,file_name,file_size,sha256,external_url,storage_path,notes,game_version,is_current,uploaded_by,created_at').eq('channel', channel).eq('is_current', true).maybeSingle(),
   ]);
   for (const r of [onoff, ftext, feature, modname, credit, libRows, release]) {
     if (r.error) throw new Error(r.error.message);

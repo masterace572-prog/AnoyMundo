@@ -50,9 +50,9 @@ public final class Downtwo {
 
     public static native String Link();
 
-    private static final String FALLBACK_BASE = "https://anoymundo-panel.vercel.app";
-    private static final String USER_AGENT = "Anoy/" + BuildConfig.VERSION_NAME + " (Android)";
-    private static final String PART_NAME = "anoy-release.part";
+    private static final String FALLBACK_BASE = BuildConfig.PANEL_BASE_URL;
+    private static final String USER_AGENT = BuildConfig.DISPLAY_BRAND + "/" + BuildConfig.VERSION_NAME + " (Android)";
+    private static final String PART_NAME = "library-release.part";
 
     private static final int CONNECT_TIMEOUT_MS = 15_000;
     private static final int READ_TIMEOUT_MS = 30_000;
@@ -72,30 +72,38 @@ public final class Downtwo {
     public static String versionUrl() {
         try {
             String value = Version();
-            if (value != null && value.startsWith("http")) return value;
+            if (value != null && value.startsWith("http")) return channelUrl(value);
         } catch (Throwable t) {
             Log.e(TAG, "Native Version() unavailable", t);
         }
-        return FALLBACK_BASE + "/api/lib/version";
+        return channelUrl(FALLBACK_BASE + "/api/lib/version");
     }
 
     public static String downloadUrl() {
         try {
             String value = Link();
-            if (value != null && value.startsWith("http")) return value;
+            if (value != null && value.startsWith("http")) return channelUrl(value);
         } catch (Throwable t) {
             Log.e(TAG, "Native Link() unavailable", t);
         }
-        return FALLBACK_BASE + "/api/lib/download";
+        return channelUrl(FALLBACK_BASE + "/api/lib/download");
+    }
+
+    private static String channelUrl(String url) {
+        android.net.Uri parsed = android.net.Uri.parse(url);
+        android.net.Uri.Builder builder = parsed.buildUpon().clearQuery();
+        for (String key : parsed.getQueryParameterNames()) {
+            if ("channel".equals(key)) continue;
+            for (String value : parsed.getQueryParameters(key)) builder.appendQueryParameter(key, value);
+        }
+        return builder.appendQueryParameter("channel", BuildConfig.RELEASE_CHANNEL).build().toString();
     }
 
     public static String manifestUrl() {
         String version = versionUrl();
-        String suffix = "/api/lib/version";
-        if (version.endsWith(suffix)) {
-            return version.substring(0, version.length() - suffix.length()) + "/api/lib/manifest";
-        }
-        return FALLBACK_BASE + "/api/lib/manifest";
+        int suffix = version.indexOf("/api/lib/version");
+        String base = suffix >= 0 ? version.substring(0, suffix) : FALLBACK_BASE;
+        return channelUrl(base + "/api/lib/manifest");
     }
 
     // ----------------------------------------------------------------- types

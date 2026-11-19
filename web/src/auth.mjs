@@ -1,6 +1,7 @@
 import crypto from 'node:crypto';
 import bcrypt from 'bcryptjs';
 import { config } from './config.mjs';
+import { ownerChannel } from './channels.mjs';
 import { getUserById, getUserByUsername } from './db.mjs';
 
 export const SESSION_COOKIE = 'am_session';
@@ -234,7 +235,7 @@ export async function currentUser(req) {
   if (session.pv && String(user.password || '').slice(0, 12) !== String(session.pv)) return null;
   if (Number(user.status) !== 1 || Number(user.level) > 3) return null;
   if (user.expiration_date && new Date(user.expiration_date).getTime() < Date.now()) return null;
-  const isOwner = Number(user.level) === 1 && user.username === config.ownerUsername;
+  const isOwner = !!ownerChannel(user);
   return {
     ...user,
     isAdmin: isOwner || Number(user.level) === 2,

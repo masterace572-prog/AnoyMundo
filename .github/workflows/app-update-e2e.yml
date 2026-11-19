@@ -2,7 +2,7 @@ name: App update end-to-end
 
 # 2.3.2: proves the in-app update works against the real GitHub release.
 #  1. The panel's link check (web/src/app-release.mjs, the code the panel runs
-#     before publishing) passes on the newest anoy-v<name>-<code> asset and
+#     before publishing) passes on the newest branded release assets and
 #     refuses a release web page and a missing asset.
 #  2. On an emulator, a debug build that reports the previous version code
 #     (2.3.1 = 10 for 2.3.2) is offered that same asset, taps Update now, downloads it,
@@ -12,13 +12,9 @@ name: App update end-to-end
 # install of the release-signed arm64 APK is therefore expected to be refused
 # by Android (different key / ABI); the test passes once the system installer
 # shows the update prompt for the downloaded, checked APK.
-# Manual (Actions > App update end-to-end > Run workflow) or on a push of this file.
+# Manual only (Actions > App update end-to-end > Run workflow).
 on:
   workflow_dispatch:
-  push:
-    branches: [arena/2e95185a-anoymundo]
-    paths:
-      - '.github/workflows/app-update-e2e.yml'
 
 permissions:
   contents: read
@@ -49,6 +45,8 @@ jobs:
       - name: Newest release asset passes the panel's link check
         id: latest
         run: node scripts/verify-apk-link.mjs --latest
+      - name: KennyPvt asset also passes the panel link check
+        run: node scripts/verify-apk-link.mjs --channel=kenny --latest
       - name: Bad links are refused
         run: |
           node scripts/verify-apk-link.mjs --bad \
@@ -100,7 +98,7 @@ jobs:
           OLD=$((UPDATE_CODE - 1))
           echo "OLD_CODE=$OLD" >> "$GITHUB_ENV"
           set +e
-          ./gradlew :app:assembleDebug -PanoyQaVersionCode=$OLD --no-daemon > /tmp/assemble.log 2>&1
+          ./gradlew :app:assembleAnoyDebug -PanoyQaVersionCode=$OLD --no-daemon > /tmp/assemble.log 2>&1
           rc=$?
           tail -30 /tmp/assemble.log
           [ $rc -eq 0 ] || { grep -E "error:|What went wrong" /tmp/assemble.log | head -20 | sed 's/^/::error::/'; exit $rc; }
@@ -133,7 +131,7 @@ jobs:
           adb shell settings put global transition_animation_scale 0.0 || true
           adb shell settings put global animator_duration_scale 0.0 || true
 
-          APK=$(ls app/build/outputs/apk/debug/*.apk | head -1)
+          APK=$(ls app/build/outputs/apk/anoy/debug/*.apk | head -1)
           # The app ships arm64-v8a native code only; this emulator is x86_64.
           # As in ui_screenshots.sh, install an ABI-neutral copy re-signed with
           # a throwaway key (every JNI call is guarded; the update flow is Java).

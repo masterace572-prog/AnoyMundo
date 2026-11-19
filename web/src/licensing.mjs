@@ -1,4 +1,5 @@
 import crypto from 'node:crypto';
+import { LIBRARY_BUCKET } from './library-package.mjs';
 import { config } from './config.mjs';
 import { db, getSettings, getKeyForGame, deviceList, countRows } from './db.mjs';
 import { envStatus } from './config.mjs';
@@ -178,11 +179,11 @@ export async function handleHealth(res, deep = false) {
 }
 
 /** Plain-text version string read by the Android loader (Downtwo.java). */
-export async function handleLibVersion(res) {
+export async function handleLibVersion(res, channel = 'anoy') {
   try {
-    const { data, error } = await db().from('client_release').select('version').eq('is_current', true).maybeSingle();
+    const { data, error } = await db().from('client_release').select('version').eq('channel', channel).eq('is_current', true).maybeSingle();
     if (error) throw new Error(error.message);
-    const value = data?.version || process.env.FALLBACK_LIB_VERSION || '1.0';
+    const value = data?.version || (channel === 'anoy' ? process.env.FALLBACK_LIB_VERSION || '1.0' : '0.0');
     return sendText(res, `${value}\n`);
   } catch (e) {
     // Never invent a version on a database error: a made-up number would
@@ -200,19 +201,19 @@ export async function handleLibVersion(res) {
  * `game_version` (v2.3.5) is the newest BGMI version the library works with;
  * empty means the app shows no BGMI warning.
  */
-export async function handleLibManifest(res) {
+export async function handleLibManifest(res, channel = 'anoy') {
   try {
     const { data, error } = await db().from('client_release')
-      .select('version,file_name,file_size,sha256,external_url,notes,game_version,created_at')
-      .eq('is_current', true).maybeSingle();
+      .select('version,file_name,file_size,sha256,external_url,storage_path,notes,game_version,created_at')
+      .eq('channel', channel).eq('is_current', true).maybeSingle();
     if (error) throw new Error(error.message);
     // An uploaded file always stores its size and sha256; a pushed link clears
     // both. Reading those avoids transferring the file itself.
     const hasFile = !!(data && Number(data.file_size) > 0 && data.sha256);
     const hasLink = !!(data && data.external_url);
     return sendJson(res, {
-      ok: true,
-      version: data?.version || process.env.FALLBACK_LIB_VERSION || '1.0',
+      ok: true, channel, library_name: 'libbgmi.so',
+      version: data?.version || (channel === 'anoy' ? process.env.FALLBACK_LIB_VERSION || '1.0' : '0.0'),
       available: hasFile || hasLink,
       size: hasFile ? Number(data.file_size || 0) : 0,
       sha256: hasFile ? String(data.sha256 || '') : '',
@@ -229,17 +230,26 @@ export async function handleLibManifest(res) {
 }
 
 /** Binary release download. Also serves the legacy /Onlinelib/lib.so path. */
-export async function handleLibDownload(req, res) {
+export async function handleLibDownload(req, res, channel = 'anoy') {
   try {
     const { data, error } = await db().from('client_release')
-      .select('version,file_name,content_base64,external_url,file_size,sha256')
-      .eq('is_current', true).maybeSingle();
+      .select('version,file_name,content_base64,storage_path,external_url,file_size,sha256')
+      .eq('channel', channel).eq('is_current', true).maybeSingle();
     if (error) throw new Error(error.message);
     if (!data) return sendText(res, 'No release has been uploaded yet.', 404);
     // A stored file always wins. Only a release published as a pure link (the
     // /lib "Push a link" action clears content_base64) redirects, so an old
     // external URL can never shadow a freshly uploaded file.
     res.setHeader('X-Release-Version', String(data.version || ''));
+    if (data.storage_path) {
+      const { data: signed, error: signError } = await db().storage.from(LIBRARY_BUCKET).createSignedUrl(data.storage_path, 60, { download: 'libbgmi.zip' });
+      if (signError || !signed?.signedUrl) throw new Error('Cannot sign the library download.');
+      res.statusCode = 302;
+      res.setHeader('Location', signed.signedUrl);
+      res.setHeader('Cache-Control', 'no-store');
+      if (data.sha256) res.setHeader('X-Content-SHA256', data.sha256);
+      return res.end();
+    }
     if (!data.content_base64 && data.external_url) {
       res.statusCode = 302;
       res.setHeader('Location', data.external_url);
@@ -263,10 +273,10 @@ export async function handleLibDownload(req, res) {
   }
 }
 
-export function handleLibInfo(res) {
+export function handleLibInfo(res, channel = 'anoy') {
   return db().from('client_release')
     .select('id,version,file_name,file_size,sha256,external_url,notes,is_current,uploaded_by,created_at')
-    .order('id', { ascending: false }).limit(20)
+    .eq('channel', channel).order('id', { ascending: false }).limit(20)
     .then(({ data, error }) => sendJson(res, error ? { error: error.message } : { releases: data || [] }, error ? 500 : 200))
     .catch((error) => sendJson(res, { error: error.message }, 500));
 }

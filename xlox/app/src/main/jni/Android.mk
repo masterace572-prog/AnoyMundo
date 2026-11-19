@@ -8,6 +8,10 @@ LOCAL_CFLAGS := -Wno-error=format-security -fvisibility=hidden -ffunction-sectio
 LOCAL_CFLAGS += -fno-rtti -fno-exceptions -fpermissive
 LOCAL_CPPFLAGS += -Wno-error=format-security -fvisibility=hidden -ffunction-sections -fdata-sections -w -Werror -s -std=c++17
 LOCAL_CPPFLAGS += -Wno-error=c++11-narrowing -fms-extensions -fno-rtti -fno-exceptions -fpermissive
+# ndkBuild receives this independently for each Gradle product flavor.
+ifeq ($(RELEASE_CHANNEL),kenny)
+LOCAL_CPPFLAGS += -DLOADER_KENNY=1
+endif
 LOCAL_LDFLAGS += -Wl,--gc-sections,--strip-all
 # Android 15+ devices can boot with 16 KB memory pages. The linker refuses to
 # dlopen() any ELF whose PT_LOAD p_align is smaller than the device page size,

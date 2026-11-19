@@ -6,7 +6,7 @@ name: Web UI QA
 on:
   workflow_dispatch:
   push:
-    branches: [arena/2e95185a-anoymundo]
+    branches: [main, arena/dda4cc57-anoymundo]
     paths:
       - 'web/**'
       - '.github/workflows/web-ui-qa.yml'

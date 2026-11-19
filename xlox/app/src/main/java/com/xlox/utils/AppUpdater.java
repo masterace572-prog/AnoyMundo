@@ -49,10 +49,10 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public final class AppUpdater {
 
     private static final String TAG = "AppUpdater";
-    private static final String FALLBACK_BASE = "https://anoymundo-panel.vercel.app";
+    private static final String FALLBACK_BASE = BuildConfig.PANEL_BASE_URL;
     private static final String LIB_VERSION_PATH = "/api/lib/version";
     private static final String CHECK_PATH = "/api/app/update";
-    private static final String USER_AGENT = "Anoy/" + BuildConfig.VERSION_NAME + " (Android)";
+    private static final String USER_AGENT = BuildConfig.DISPLAY_BRAND + "/" + BuildConfig.VERSION_NAME + " (Android)";
     /** Broadcast the PackageInstaller session reports its status to. */
     public static final String ACTION_INSTALL_STATUS = BuildConfig.APPLICATION_ID + ".APP_INSTALL_STATUS";
 
@@ -134,14 +134,14 @@ public final class AppUpdater {
     /** The panel this build talks to, from the same native config the library check uses. */
     static String panelBase() {
         String url = Downtwo.versionUrl();
-        if (url != null && url.startsWith("https://") && url.endsWith(LIB_VERSION_PATH)) {
-            return url.substring(0, url.length() - LIB_VERSION_PATH.length());
+        if (url != null && url.startsWith("https://") && url.contains(LIB_VERSION_PATH)) {
+            return url.substring(0, url.indexOf(LIB_VERSION_PATH));
         }
         return FALLBACK_BASE;
     }
 
     public static String checkUrl() {
-        return panelBase() + CHECK_PATH + "?code=" + BuildConfig.VERSION_CODE;
+        return panelBase() + CHECK_PATH + "?code=" + BuildConfig.VERSION_CODE + "&channel=" + BuildConfig.RELEASE_CHANNEL;
     }
 
     /**
@@ -249,7 +249,7 @@ public final class AppUpdater {
 
     /** The APK for this release in the private cache (may not exist yet). */
     public static File apkFile(Context context, Release release) {
-        return new File(new File(context.getCacheDir(), DIR), "anoy-" + release.versionCode + ".apk");
+        return new File(new File(context.getCacheDir(), DIR), BuildConfig.RELEASE_CHANNEL + "-" + release.versionCode + ".apk");
     }
 
     /**
@@ -447,7 +447,7 @@ public final class AppUpdater {
             sessionId = installer.createSession(params);
             session = installer.openSession(sessionId);
             try (InputStream in = new FileInputStream(apk);
-                 OutputStream out = session.openWrite("anoy.apk", 0, apk.length())) {
+                 OutputStream out = session.openWrite(BuildConfig.RELEASE_CHANNEL + ".apk", 0, apk.length())) {
                 byte[] buffer = new byte[64 * 1024];
                 int read;
                 while ((read = in.read(buffer)) != -1) out.write(buffer, 0, read);

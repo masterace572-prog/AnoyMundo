@@ -5,10 +5,10 @@
 //
 //   GET  /api/app/update   public, no auth. The current release or
 //                          { available: false }. The app compares versionCode.
-//   POST /app-update       Owner / Admin. action=publish | remove (withdraw).
+//   POST /app-update       Owner only. action=publish | remove (withdraw).
 //   GET  /app-update/latest-build
-//                          Owner / Admin. The newest GitHub release of this
-//                          repo (tag anoy-v<name>-<code>) for "Use latest build".
+//                          Owner only. The newest GitHub release of this
+//                          repo (tag loaders-v<name>-<code>, or legacy anoy-v<name>-<code>) for "Use latest build".
 //
 // Only an https:// link to the APK is stored (for example a GitHub release
 // asset). No file upload, no signing material: Android itself refuses an
@@ -19,6 +19,7 @@
 // body that starts with "PK". The panel itself (maxDuration 30 s) can never
 // serve an APK, so links to it are refused outright.
 import { db, isMemory } from './db.mjs';
+import { CHANNELS, assertWriteChannel, publicChannel } from './channels.mjs';
 import { config } from './config.mjs';
 import { sendJson, humanDate } from './render.mjs';
 
@@ -59,8 +60,8 @@ function missingTable(error) {
   return /42P01|PGRST205|does not exist|could not find the table/i.test(text);
 }
 
-export async function currentAppRelease() {
-  const { data, error } = await db().from('app_release').select('*').eq('is_current', true).maybeSingle();
+export async function currentAppRelease(channel = 'anoy') {
+  const { data, error } = await db().from('app_release').select('*').eq('channel', channel).eq('is_current', true).maybeSingle();
   if (error) {
     if (missingTable(error)) return null;
     throw error;
@@ -74,7 +75,7 @@ const APK_CHECK_TIMEOUT_MS = 10_000;
 const APK_CHECK_MAX_REDIRECTS = 6;
 const REDIRECTS = new Set([301, 302, 303, 307, 308]);
 export const APK_ASSET_NAME = 'Anoy-XLOX-loader.apk';
-const RELEASE_TAG = /^anoy-v([0-9A-Za-z][0-9A-Za-z._+]*)-(\d{1,10})$/;
+const RELEASE_TAG = /^(?:anoy|loaders)-v([0-9A-Za-z][0-9A-Za-z._+]*)-(\d{1,10})$/;
 
 function hostOf(url) {
   try { return new URL(url).hostname.toLowerCase(); } catch { return ''; }
@@ -195,13 +196,15 @@ const STUB_BUILD = {
   apk_url: `https://github.com/masterace572-prog/AnoyMundo/releases/download/anoy-v2.3.2-11/${APK_ASSET_NAME}`,
 };
 
-/** The newest release whose tag reads anoy-v<name>-<code> and that carries the APK, or null. */
-export function pickLatestBuild(releases) {
+/** The newest branded APK in a dual or legacy release, or null. */
+export function pickLatestBuild(releases, channel = 'anoy') {
+  const assetName = CHANNELS[channel]?.apkName;
+  if (!assetName) return null;
   for (const rel of Array.isArray(releases) ? releases : []) {
     if (!rel || rel.draft || rel.prerelease) continue;
     const m = RELEASE_TAG.exec(String(rel.tag_name || ''));
     if (!m) continue;
-    const asset = (rel.assets || []).find((a) => a && a.name === APK_ASSET_NAME && a.browser_download_url);
+    const asset = (rel.assets || []).find((a) => a && a.name === assetName && a.browser_download_url);
     if (!asset) continue;
     return {
       version_name: m[1], version_code: Number(m[2]), tag: rel.tag_name,
@@ -211,10 +214,11 @@ export function pickLatestBuild(releases) {
   return null;
 }
 
-/** GET /app-update/latest-build (Owner / Admin). Public GitHub API, no token. */
-export async function handleLatestBuild(res) {
+/** GET /app-update/latest-build (Owner only). Public GitHub API, no token. */
+export async function handleLatestBuild(res, channel = 'anoy') {
   res.setHeader('Cache-Control', 'no-store');
-  if (isMemory && process.env.APK_VERIFY_STUB === '1') return sendJson(res, { ok: true, ...STUB_BUILD });
+  if (isMemory && process.env.APK_VERIFY_STUB === '1') return sendJson(res, { ok: true, ...STUB_BUILD, channel,
+    apk_url: STUB_BUILD.apk_url.replace(APK_ASSET_NAME, CHANNELS[channel].apkName) });
   const repo = String(process.env.GITHUB_REPO || 'masterace572-prog/AnoyMundo').trim();
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 10_000);
@@ -226,11 +230,11 @@ export async function handleLatestBuild(res) {
     if (!r.ok) {
       return sendJson(res, { ok: false, error: `GitHub answered HTTP ${r.status}. Enter the fields by hand or try again.` }, 502);
     }
-    const build = pickLatestBuild(await r.json());
+    const build = pickLatestBuild(await r.json(), channel);
     if (!build) {
-      return sendJson(res, { ok: false, error: `No GitHub release named anoy-v<version>-<code> with ${APK_ASSET_NAME} was found.` }, 404);
+      return sendJson(res, { ok: false, error: `No dual-brand GitHub release named loaders-v<version>-<code> with ${CHANNELS[channel].apkName} was found.` }, 404);
     }
-    return sendJson(res, { ok: true, ...build });
+    return sendJson(res, { ok: true, channel, ...build });
   } catch (error) {
     console.error('[anoymundo] latest build lookup failed:', error?.message || error);
     return sendJson(res, { ok: false, error: 'Could not reach GitHub. Enter the fields by hand or try again.' }, 502);
@@ -241,6 +245,7 @@ export async function handleLatestBuild(res) {
 
 function publicRelease(row) {
   return {
+    channel: row.channel || 'anoy',
     version_name: row.version_name,
     version_code: Number(row.version_code),
     apk_url: row.apk_url,
@@ -263,14 +268,16 @@ export const APP_UPDATE_CACHE = 'public, s-maxage=60, stale-while-revalidate=300
 
 export async function handleAppUpdateCheck(res, query) {
   res.setHeader('Access-Control-Allow-Origin', '*');
+  const channel = publicChannel(query);
+  if (!channel) return sendJson(res, { ok: false, error: 'Unknown release channel.' }, 400);
   let row;
   try {
-    row = await currentAppRelease();
+    row = await currentAppRelease(channel);
   } catch (error) {
     console.error('[anoymundo] app update check failed:', error?.message || error);
     return sendJson(res, { ok: false, error: 'Update check unavailable. Try again.' }, 503);
   }
-  const payload = { ok: true, available: !!row };
+  const payload = { ok: true, channel, available: !!row };
   if (row) Object.assign(payload, publicRelease(row));
   const installed = Number.parseInt(str(query?.get?.('code')), 10);
   if (Number.isFinite(installed) && installed > 0) {
@@ -280,8 +287,8 @@ export async function handleAppUpdateCheck(res, query) {
 }
 
 /** Data for the panel page. 2.3.2: only the current update - no history is shown. */
-export async function appReleasePageData() {
-  const current = await currentAppRelease();
+export async function appReleasePageData(channel = 'anoy') {
+  const current = await currentAppRelease(channel);
   const decorate = (row) => row && ({
     ...row,
     version_code: Number(row.version_code),
@@ -295,22 +302,23 @@ export async function appReleasePageData() {
 }
 
 /**
- * POST /app-update (JSON). Validates everything first; on a failed insert the
- * previous current release is restored, so there is never a half-published
- * state. Errors come back per field.
+ * POST /app-update (JSON). Owner channel is server-derived. Validate first,
+ * then use one per-channel SQL transaction; a failed insert cannot retire the
+ * previous update. Errors come back per field.
  */
 export async function doAppReleasePost(req, res, body, user) {
-  if (!user?.isAdmin) {
-    return sendJson(res, { ok: false, error: 'Only the Owner or an Admin can publish app updates.' }, 403);
+  const channel = assertWriteChannel(user, body);
+  if (!channel) {
+    return sendJson(res, { ok: false, error: 'Only an Owner can manage their own app update channel.' }, 403);
   }
   const action = str(body.action) || 'publish';
 
   // "Remove" (2.3.2 wording; "withdraw" still accepted): phones stop being
   // offered the current update. The row is kept, only is_current changes.
   if (action === 'remove' || action === 'withdraw') {
-    const current = await currentAppRelease();
+    const current = await currentAppRelease(channel);
     if (!current) return sendJson(res, { ok: false, error: 'There is no published app update to remove.' }, 404);
-    const { error } = await db().from('app_release').update({ is_current: false }).eq('id', current.id);
+    const { error } = await db().from('app_release').update({ is_current: false }).eq('channel', channel).eq('id', current.id);
     if (error) return sendJson(res, { ok: false, error: 'Could not remove the update. Nothing was changed.' }, 500);
     return sendJson(res, { ok: true, removed: true, withdrawn: true, version_name: current.version_name });
   }
@@ -342,7 +350,7 @@ export async function doAppReleasePost(req, res, body, user) {
 
   let current = null;
   try {
-    current = await currentAppRelease();
+    current = await currentAppRelease(channel);
   } catch {
     return sendJson(res, { ok: false, error: 'Could not read the current app update. Nothing was changed.' }, 500);
   }
@@ -357,20 +365,25 @@ export async function doAppReleasePost(req, res, body, user) {
   const first = Object.values(errors)[0];
   if (first) return sendJson(res, { ok: false, error: first, errors }, 400);
 
-  if (current) {
-    const { error } = await db().from('app_release').update({ is_current: false }).eq('id', current.id);
-    if (error) return sendJson(res, { ok: false, error: 'Could not retire the previous app update. Nothing was changed.' }, 500);
-  }
   const row = {
-    version_name: versionName, version_code: code, apk_url: apkUrl, changelog, mandatory,
+    channel, version_name: versionName, version_code: code, apk_url: apkUrl, changelog, mandatory,
     is_current: true, published_by: user.username, created_at: nowIso(),
   };
-  const { error: insertError } = await db().from('app_release').insert(row).select('id').single();
-  if (insertError) {
-    if (current) await db().from('app_release').update({ is_current: true }).eq('id', current.id);
-    console.error('[anoymundo] app release insert failed:', insertError.message);
-    const hint = missingTable(insertError) ? ' The app_release table is missing: apply the Supabase migration.' : '';
-    return sendJson(res, { ok: false, error: `Could not publish the app update. The previous one is still active.${hint}` }, 500);
+  if (isMemory) {
+    const rows = db()._store.app_release;
+    // Serialize through the synchronous in-memory update (production uses a DB lock).
+    const active = rows.find((r) => r.channel === channel && r.is_current);
+    if (active && code <= Number(active.version_code)) return sendJson(res, { ok: false, error: 'Version code must increase.' }, 409);
+    for (const r of rows) if (r.channel === channel) r.is_current = false;
+    rows.push({ ...row, id: Math.max(0, ...rows.map((r) => r.id)) + 1 });
+  } else {
+    const { data, error } = await db().rpc('publish_app_release', { p_actor_id: user.id_users, p_release: row });
+    let result = data;
+    try { if (typeof result === 'string') result = JSON.parse(result); } catch { result = null; }
+    if (error || !result?.ok) {
+      console.error('[panel] app publish failed:', error?.message || 'not accepted');
+      return sendJson(res, { ok: false, error: 'Could not confirm publication. Reload your app update page and check the version code before retrying.' }, 409);
+    }
   }
   return sendJson(res, { ok: true, ...publicRelease(row) });
 }
