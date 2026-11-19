@@ -4,6 +4,14 @@ Screenshots, design notes (`docs/ui-redesign/…`) and the one-off generator
 scripts mentioned below were removed from the tree in the repo cleanup after
 2.3.2; they remain in git history.
 
+## 2.3.9 — Signed APK release (versionCode 18)
+
+- Fresh release build of the current XLOX loader. App behaviour is unchanged.
+- The Android build workflow now runs automatically for this branch, uploads
+  the signed APK and starter loader ZIP as artifacts, and publishes the APK
+  as GitHub release `anoy-v2.3.9-18` when the repository signing secrets are
+  available.
+
 ## 2.3.8 — Splash motion only (versionCode 17)
 
 - The Lottie animations stay only on the splash update check (quiet arc while

@@ -24,7 +24,7 @@ on:
         default: '1.0.0'
   # Ordinary pushes build and attach the APK; they never touch the live panel.
   push:
-    branches: [arena/2e95185a-anoymundo]
+    branches: [arena/ef830848-anoymundo]
     paths:
       - 'xlox/**'
       - '.github/workflows/build-xlox.yml'
