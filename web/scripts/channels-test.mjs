@@ -361,3 +361,30 @@ test('simultaneous publications leave exactly one current release per owner with
   assert.equal(appPosts.filter(response => response.status === 409 || response.status === 400).length, 2, 'duplicate concurrent code loses cleanly');
   for (const channel of ['anoy', 'kenny']) assert.equal(db()._store.app_release.filter(row => row.channel === channel && row.is_current).length, 1);
 });
+
+test('health probes only small identifiers and reports an unavailable table explicitly', async () => {
+  const database = db(), from = database.from;
+  const selected = [];
+  database.from = table => {
+    const query = from.call(database, table);
+    const select = query.select;
+    query.select = function (columns, ...rest) {
+      selected.push([table, columns]);
+      return select.call(this, columns, ...rest);
+    };
+    return query;
+  };
+  try {
+    const healthy = await anon.request('/api/health');
+    assert.equal(healthy.status, 200);
+    assert.ok(selected.length >= 15);
+    assert.ok(selected.every(([, columns]) => !columns.includes('*')), 'health never reads stored library/password/key contents');
+    database.from = table => table === 'auth_attempt'
+      ? { select: () => ({ limit: async () => ({ data: null, error: { message: 'Simulated unavailable table' } }) }) }
+      : from.call(database, table);
+    const unavailable = await anon.request('/api/health');
+    assert.equal(unavailable.status, 500);
+    assert.equal(unavailable.data.ok, false);
+    assert.match(unavailable.data.checks.schema.detail, /14\/15.*auth_attempt/);
+  } finally { database.from = from; }
+});

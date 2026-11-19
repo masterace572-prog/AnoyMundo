@@ -53,6 +53,7 @@ export async function ownerStorageChecks(request, ok, base) {
   ok(foreign.status === 403, 'live panel refuses a forged other-owner write before changing anything');
 
   let pending;
+  let uploaded = false, cleaned = false;
   try {
     const prepared = await request('/lib', { method: 'POST', body: { action: 'prepare_upload', file_size: 10 * 1024 * 1024, file_name: 'live-upload-test.so' } });
     pending = prepared.body?.upload_path;
@@ -64,14 +65,18 @@ export async function ownerStorageChecks(request, ok, base) {
       'browser CSP allows the exact configured Storage origin');
     const upload = await fetch(uploadUrl, { method: 'PUT', signal: AbortSignal.timeout(90000),
       headers: { 'Content-Type': 'application/octet-stream' }, body: Buffer.alloc(10 * 1024 * 1024) });
+    uploaded = upload.ok;
     ok(upload.ok, '10 MiB binary PUT to real private Storage succeeds', `HTTP ${upload.status}`);
     await upload.body?.cancel();
   } finally {
     if (pending) {
       const cancelled = await request('/lib', { method: 'POST', body: { action: 'cancel_upload', upload_path: pending } });
-      ok(cancelled.status === 200 && cancelled.body?.cancelled === true, 'cleanup: private test upload removed (never published)');
+      cleaned = cancelled.status === 200 && cancelled.body?.cancelled === true;
+      ok(cleaned, 'cleanup: private test upload removed (never published)');
     }
   }
   const after = await request(`/api/lib/manifest?channel=${channel}`);
-  ok(JSON.stringify(before.body) === JSON.stringify(after.body), 'live library stays byte-for-byte unchanged during upload check');
+  const unchanged = JSON.stringify(before.body) === JSON.stringify(after.body);
+  ok(unchanged, 'live library stays byte-for-byte unchanged during upload check');
+  return uploaded && cleaned && unchanged && foreign.status === 403;
 }

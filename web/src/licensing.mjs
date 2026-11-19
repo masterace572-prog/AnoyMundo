@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 import { LIBRARY_BUCKET } from './library-package.mjs';
 import { config } from './config.mjs';
-import { db, getSettings, getKeyForGame, deviceList, countRows } from './db.mjs';
+import { db, getSettings, getKeyForGame, deviceList } from './db.mjs';
 import { envStatus } from './config.mjs';
 import { sendJson, sendText, sqlDateTime } from './render.mjs';
 
@@ -142,12 +142,23 @@ export async function handleHealth(res, deep = false) {
     };
   }
   try {
-    const expected = ['users', 'keys_code', 'history', 'referral_code', 'feature', 'modname', 'onoff', '_ftext', 'credit', 'lib', 'client_release', 'app_release', 'auth_attempt', 'api_keys', 'key_orders'];
-    // Parallel round trips keep the health probe fast on a cold lambda.
-    const results = await Promise.all(expected.map((table) => countRows(table).catch(() => null)));
-    const present = results.filter((n) => n !== null).length;
-    checks.schema = { ok: present === expected.length, detail: `${present}/${expected.length} expected tables present` };
-    if (present !== expected.length) ok = false;
+    const expected = {
+      users: 'id_users', keys_code: 'id_keys', history: 'id_history', referral_code: 'id_reff',
+      feature: 'id', modname: 'id', onoff: 'id', _ftext: 'id', credit: 'id', lib: 'id',
+      client_release: 'id', app_release: 'id', auth_attempt: 'id', api_keys: 'id', key_orders: 'request_id',
+    };
+    // Check presence with ONE lightweight column/row. A HEAD count selecting
+    // '*' can still make PostgREST process every historical base64 release.
+    const results = await Promise.all(Object.entries(expected).map(async ([table, column]) => {
+      try {
+        const { error } = await db().from(table).select(column).limit(1);
+        return error ? table : null;
+      } catch { return table; }
+    }));
+    const missing = results.filter(Boolean);
+    const total = results.length, present = total - missing.length;
+    checks.schema = { ok: !missing.length, detail: `${present}/${total} expected tables present` + (missing.length ? ` (unavailable: ${missing.join(', ')})` : '') };
+    if (missing.length) ok = false;
   } catch (e) {
     checks.schema = { ok: false, detail: e.message };
     ok = false;

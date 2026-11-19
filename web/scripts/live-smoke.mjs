@@ -161,6 +161,7 @@ async function main() {
 
   if (!PASSWORD) {
     console.log('\n  (OWNER_PASSWORD not set: signed-in checks skipped)');
+    if (process.env.GITHUB_ACTIONS) console.log('::notice title=Live acceptance scope::Public channel checks only. PANEL_OWNER_PASSWORD is not configured; authenticated Storage checks were skipped.');
     return;
   }
 
@@ -231,7 +232,10 @@ async function main() {
     ok(r.status === 302, 'non-owners cannot open /lib');
   }
 
-  if (isOwner) await ownerStorageChecks(request, ok, BASE);
+  if (isOwner) {
+    const storageOk = await ownerStorageChecks(request, ok, BASE);
+    if (storageOk && process.env.GITHUB_ACTIONS) console.log('::notice title=Live 10 MiB Storage::PASS: signed binary PUT, pending-object cleanup, Owner channel denial and unchanged live library.');
+  }
   if (process.env.CHANNEL_LIVE_ONLY === '1') return;
 
   // 4. random + custom keys (owner is never charged)
@@ -325,4 +329,5 @@ try {
   await cleanup().catch((err) => { failed += 1; console.error(`  FAIL  cleanup ${err}`); });
 }
 console.log(`\n${passed} passed, ${failed} failed`);
+if (process.env.GITHUB_ACTIONS) console.log(`::notice title=Live acceptance result::${passed} passed, ${failed} failed.`);
 process.exit(failed ? 1 : 0);
