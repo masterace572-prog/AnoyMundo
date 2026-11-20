@@ -42,7 +42,7 @@ python3 scripts/kenny_icons.py --check
 python3 scripts/test_kenny_icons.py
 python3 scripts/ui_quality_gate.py
 python3 scripts/check_branding.py
-# Also check all 20 actual packaged PNGs after assembly:
+# Also check all 20 packaged PNGs after assembly (ANDROID_SDK_ROOT + aapt2):
 python3 scripts/kenny_icons.py --check --apk ../dist/KennyPvt-loader.apk
 ```
 
@@ -54,9 +54,11 @@ original Anoy icon files against their unchanged hashes.
 
 CI verifies source pixels, density/alpha/mask geometry, the exact flavor-only
 bitmap allowlist, compiled `icon` / `roundIcon` references, package/contact/SDK
-isolation and decoded pixels from the real Kenny APK. Regression tests reject
-changed source art, Anoy-art changes, missing packaged densities and modified
-packaged pixels. The Anoy APK must contain neither Kenny's images nor their
+isolation and decoded pixels from the real Kenny APK. APK checks follow the
+compiled resource table, including AGP's shortened `res/a.png` paths; they do
+not assume source basenames survive optimization. Regression tests reject
+changed source art, Anoy-art changes, missing/ambiguous/reassigned packaged
+densities and modified packaged pixels. The Anoy APK must contain neither Kenny's images nor their
 flavor-only provenance file. A physical launcher/device test is separate from
 these reproducible checks.
 

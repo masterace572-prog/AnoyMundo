@@ -63,9 +63,10 @@ class KennyArtworkTests(unittest.TestCase):
         self.assertFalse(icons.equal_pixels(changed, expected))
         self.assertFalse(icons.equal_pixels(expected.resize((49, 49)), expected))
 
-    def make_apk(self, path, *, missing=None, corrupt=None):
+    def make_apk(self, path, *, missing=None, corrupt=None, shortened=True):
+        entries = {}
         with ZipFile(path, 'w') as apk:
-            for source, expected in self.images.items():
+            for index, (source, expected) in enumerate(self.images.items()):
                 if source == missing:
                     continue
                 image = expected.copy()
@@ -73,29 +74,64 @@ class KennyArtworkTests(unittest.TestCase):
                     image.putpixel((image.width // 2, image.height // 2), (0, 255, 0, 255))
                 encoded = BytesIO()
                 image.save(encoded, format='PNG', optimize=False)
-                # aapt2 re-encodes PNGs and commonly appends -v4 to density dirs.
-                apk.writestr(f'res/{source.parent.name}-v4/{source.name}', encoded.getvalue())
+                # Release AGP shortens paths; debug aapt commonly appends -v4.
+                filename = f'res/{index:02x}.png' if shortened else f'res/{source.parent.name}-v4/{source.name}'
+                apk.writestr(filename, encoded.getvalue())
+                density = source.parent.name.removeprefix('drawable-')
+                entries.setdefault(source.stem, []).append(f'    ({density}-v4) (file) {filename} type=PNG\n')
+        return ''.join(f'  resource {0x7f080100 + index:#010x} com.kennypvt:drawable/{name}\n' + ''.join(configs)
+                       for index, (name, configs) in enumerate(entries.items()))
 
-    def test_reencoded_apk_pngs_pass_by_pixels_not_file_hash(self):
+    def test_resource_table_parser_keeps_names_and_density_variants_separate(self):
+        table = '''  resource 0x7f080100 drawable/kenny_launcher_legacy_extra
+    (mdpi-v4) (file) res/not-the-icon.png type=PNG
+  resource 0x7f080101 com.kennypvt:drawable/kenny_launcher_legacy
+    (mdpi-v4) (file) res/a.png type=PNG
+    (240dpi) (file) "res/b.png" type=PNG
+'''
+        images = icons.packaged_images(table)
+        self.assertEqual(images['kenny_launcher_legacy', 'mdpi'], ['res/a.png'])
+        self.assertEqual(images['kenny_launcher_legacy', 'hdpi'], ['res/b.png'])
+        self.assertEqual(images['kenny_launcher_legacy_extra', 'mdpi'], ['res/not-the-icon.png'])
+        self.assertNotIn(('kenny_launcher_legacy', 'xhdpi'), images)
+
+    def test_reencoded_and_renamed_apk_pngs_pass_by_pixels_not_file_hash(self):
         with TemporaryDirectory() as directory:
             apk = Path(directory) / 'kenny.apk'
-            self.make_apk(apk)
-            with redirect_stdout(StringIO()):
-                icons.check_apk(apk, self.images)
+            for shortened in (True, False):
+                table = self.make_apk(apk, shortened=shortened)
+                with redirect_stdout(StringIO()):
+                    icons.check_apk(apk, self.images, resource_dump=table)
 
     def test_apk_missing_one_density_fails(self):
         with TemporaryDirectory() as directory:
             apk = Path(directory) / 'missing.apk'
-            self.make_apk(apk, missing=next(iter(self.images)))
+            table = self.make_apk(apk, missing=next(iter(self.images)))
             with self.assertRaisesRegex(AssertionError, 'Missing or ambiguous packaged icon'):
-                icons.check_apk(apk, self.images)
+                icons.check_apk(apk, self.images, resource_dump=table)
+
+    def test_apk_reassigned_density_fails(self):
+        with TemporaryDirectory() as directory:
+            apk = Path(directory) / 'wrong-density.apk'
+            table = self.make_apk(apk).replace('res/00.png', 'res/04.png', 1)
+            with self.assertRaisesRegex(AssertionError, 'Packaged icon density changed'):
+                icons.check_apk(apk, self.images, resource_dump=table)
+
+    def test_apk_ambiguous_density_fails(self):
+        with TemporaryDirectory() as directory:
+            apk = Path(directory) / 'ambiguous.apk'
+            table = self.make_apk(apk)
+            table = table.replace('(mdpi-v4) (file) res/00.png type=PNG',
+                                  '(mdpi-v4) (file) res/00.png type=PNG\n    (mdpi-v4) (file) res/01.png type=PNG', 1)
+            with self.assertRaisesRegex(AssertionError, 'Missing or ambiguous packaged icon'):
+                icons.check_apk(apk, self.images, resource_dump=table)
 
     def test_apk_changed_artwork_fails(self):
         with TemporaryDirectory() as directory:
             apk = Path(directory) / 'changed.apk'
-            self.make_apk(apk, corrupt=next(iter(self.images)))
+            table = self.make_apk(apk, corrupt=next(iter(self.images)))
             with self.assertRaisesRegex(AssertionError, 'Packaged artwork changed'):
-                icons.check_apk(apk, self.images)
+                icons.check_apk(apk, self.images, resource_dump=table)
 
 
 if __name__ == '__main__':

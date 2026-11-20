@@ -192,11 +192,16 @@ if len(sys.argv) > 1:
             gate(expected_id is not None and actual_id == expected_id,
                  f'{brand}: compiled {attribute} selects drawable/{resource}')
         with ZipFile(apk) as package_zip:
-            artwork_files = [name for name in package_zip.namelist()
-                             if Path(name).name.startswith('kenny_') and name.endswith('.png')]
+            # AGP shortens packaged PNG paths (e.g. res/ab.png). Check the
+            # authoritative resource identities, never the physical basename.
+            artwork_resources = [name for name in set(artwork_refs.values())
+                                 if drawable_resource_id(dump, name) is not None]
             has_provenance = 'assets/licenses/KENNY_ARTWORK.md' in package_zip.namelist()
-            gate(bool(artwork_files) == (brand == 'KennyPvt') and has_provenance == (brand == 'KennyPvt'),
-                 f'{brand}: supplied artwork and its provenance are isolated to the Kenny flavor')
+            correct_artwork = (len(artwork_resources) == 4) if brand == 'KennyPvt' else not artwork_resources
+            isolated = correct_artwork and has_provenance == (brand == 'KennyPvt')
+            gate(isolated, f'{brand}: supplied artwork and its provenance are isolated to the Kenny flavor')
+            if not isolated:
+                annotation(f'{brand}: artwork resource identities={sorted(artwork_resources)}, provenance={has_provenance}')
         contact = 'crimecell' if brand == 'KennyPvt' else 'libAkAudioVisiual'
         contact_block = re.search(r'(?ms)^\s*resource [^\n]*\bstring/telegram_url[^\n]*\n(.*?)(?=^\s*resource |\Z)', dump)
         gate(bool(contact_block and f'https://t.me/{contact}' in contact_block[1]),

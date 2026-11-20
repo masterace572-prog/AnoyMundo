@@ -18,7 +18,10 @@ from __future__ import annotations
 import argparse
 import hashlib
 from io import BytesIO
+import os
 from pathlib import Path
+import re
+import subprocess
 import sys
 from zipfile import ZipFile
 
@@ -138,23 +141,52 @@ def equal_pixels(actual: Image.Image, expected: Image.Image) -> bool:
     return actual.size == expected.size and actual.convert('RGBA').tobytes() == expected.tobytes()
 
 
-def check_apk(path: Path, expected: dict[Path, Image.Image]) -> None:
-    """aapt may re-encode PNGs losslessly; compare decoded visible pixels."""
+def compiled_resources(path: Path) -> str:
+    sdk = os.environ.get('ANDROID_SDK_ROOT') or os.environ.get('ANDROID_HOME')
+    tools = sorted(Path(sdk).glob('build-tools/*/aapt2')) if sdk else []
+    if not tools:
+        raise ValueError('--apk requires aapt2 under ANDROID_SDK_ROOT/build-tools (source checks need no SDK)')
+    result = subprocess.run([str(tools[-1]), 'dump', 'resources', str(path)], capture_output=True, text=True)
+    if result.returncode:
+        raise ValueError('aapt2 could not inspect APK resources: ' + result.stderr[:2000])
+    return result.stdout
+
+
+def packaged_images(dump: str) -> dict[tuple[str, str], list[str]]:
+    """Resolve resource + density to file even when AGP shortens it to res/a.png."""
+    files: dict[tuple[str, str], list[str]] = {}
+    blocks = re.finditer(r'^\s*resource [^\n]*\bdrawable/(\w+)[^\n]*\n(.*?)(?=^\s*resource |\Z)', dump, re.M | re.S)
+    density_aliases = {'160dpi': 'mdpi', '240dpi': 'hdpi', '320dpi': 'xhdpi', '480dpi': 'xxhdpi', '640dpi': 'xxxhdpi'}
+    for block in blocks:
+        for line in block[2].splitlines():
+            match = re.match(r'^\s*\(([^)]*)\)\s*\(file\)\s+(?:"([^"]+)"|(\S+))', line)
+            if not match:
+                continue
+            qualifiers = [density_aliases.get(part, part) for part in match[1].split('-')]
+            for density in DENSITIES:
+                if density in qualifiers:
+                    files.setdefault((block[1], density), []).append(match[2] or match[3])
+    return files
+
+
+def check_apk(path: Path, expected: dict[Path, Image.Image], *, resource_dump: str | None = None) -> None:
+    """Follow the compiled resource table, then compare decoded visible pixels."""
+    files = packaged_images(compiled_resources(path) if resource_dump is None else resource_dump)
     with ZipFile(path) as apk:
         for source, image in expected.items():
-            density = source.parent.name
-            candidates = [name for name in apk.namelist() if name.startswith(f'res/{density}') and name.endswith('/' + source.name)]
-            assert len(candidates) == 1, 'Missing or ambiguous packaged icon: ' + str(source.relative_to(RES))
+            density = source.parent.name.removeprefix('drawable-')
+            candidates = files.get((source.stem, density), [])
+            assert len(candidates) == 1 and candidates[0] in apk.namelist(), 'Missing or ambiguous packaged icon: ' + str(source.relative_to(RES))
             with Image.open(BytesIO(apk.read(candidates[0]))) as decoded:
                 actual = decoded.convert('RGBA')
-                assert actual.size == image.size, 'Packaged icon density changed: ' + candidates[0]
+                assert actual.size == image.size, 'Packaged icon density changed: ' + str(source.relative_to(RES))
                 for colour in ('black', 'white'):
                     background = Image.new('RGBA', image.size, colour)
                     before = Image.alpha_composite(background, image).convert('RGB')
                     after = Image.alpha_composite(background, actual).convert('RGB')
                     difference = ImageChops.difference(before, after)
-                    assert max(high for low, high in difference.getextrema()) <= 1, 'Packaged artwork changed: ' + candidates[0]
-    print('PASS  Kenny APK contains the supplied artwork at all five densities (decoded pixel check)')
+                    assert max(high for low, high in difference.getextrema()) <= 1, 'Packaged artwork changed: ' + str(source.relative_to(RES))
+    print('PASS  Kenny APK contains the supplied artwork at all five densities (compiled resource table + decoded pixel check)')
 
 
 def main() -> None:
@@ -193,4 +225,7 @@ if __name__ == '__main__':
         main()
     except (AssertionError, OSError, ValueError) as error:
         print('FAIL  ' + str(error), file=sys.stderr)
+        if os.environ.get('GITHUB_ACTIONS'):
+            message = str(error).replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A')
+            print('::error title=Kenny artwork verification::' + message)
         sys.exit(1)
