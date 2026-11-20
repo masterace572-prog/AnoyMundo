@@ -53,10 +53,17 @@ jobs:
         working-directory: xlox
     steps:
       - uses: actions/checkout@v7
-      - name: Static UI and two-brand isolation gates
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Install pinned artwork-check dependency (not bundled in APKs)
+        run: python3 -m pip install --disable-pip-version-check -r scripts/icon-requirements.txt
+      - name: Static UI, artwork and two-brand isolation gates
         run: |
           python3 scripts/ui_quality_gate.py
           python3 scripts/check_branding.py
+          python3 scripts/kenny_icons.py --check
+          python3 scripts/test_kenny_icons.py
 
       - name: Read the common version
         run: |
@@ -146,6 +153,9 @@ jobs:
 
       - name: Verify compiled package identities and visible branding in BOTH APKs
         run: python3 scripts/check_branding.py ../dist/Anoy-XLOX-loader.apk ../dist/KennyPvt-loader.apk
+
+      - name: Verify supplied artwork pixels in the compiled Kenny APK
+        run: python3 scripts/kenny_icons.py --check --apk ../dist/KennyPvt-loader.apk
 
       - name: Verify native alignment in BOTH APKs
         run: |

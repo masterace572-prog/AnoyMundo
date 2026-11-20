@@ -7,7 +7,9 @@ fails and prints a PASS/FAIL line for every gate.
 Gates
   1. Every resource referenced from Java / XML exists.
   2. Format strings get the right number of arguments in getString().
-  3. No app logo anywhere: no ic_anoy / logo images, no bitmap resources.
+  3. Shared/Anoy UI stays wordmark-only: no ic_anoy / logo images or bitmap
+     resources except the bundled BGMI game icon. Kenny-only launcher/splash
+     artwork has a separate, exact 20-file bitmap allowlist (owner request).
   4. Colours only come from the palette in values/colors.xml.
   5. Text never gets a filled background (2.3.0: no chips at all; only the
      danger error block and the hairline help circle, which are controls).
@@ -213,7 +215,19 @@ for p in MAIN.rglob("*"):
 for f in xml_files + java_files:
     if re.search(r"ic_anoy|@drawable/logo|R\.drawable\.logo|@mipmap/", f.read_text()):
         logo.append(f"{rel(f)} references a logo/mipmap")
-gate("The app logo is not used anywhere", logo)
+gate("Shared/Anoy UI remains wordmark-only (BGMI game icon excepted)", logo)
+
+# Owner-requested exception: Kenny's supplied launcher/system-splash artwork
+# lives ONLY in its flavor. Do not broaden the shared/Anoy bitmap exception.
+kenny_res = APP / "src/kenny/res"
+kenny_bitmaps = {p.relative_to(kenny_res).as_posix() for p in kenny_res.rglob("*")
+                 if p.is_file() and p.suffix.lower() in {".png", ".jpg", ".jpeg", ".webp"}}
+allowed_kenny_bitmaps = {f"drawable-{density}/kenny_{name}.png"
+                         for density in ("mdpi", "hdpi", "xhdpi", "xxhdpi", "xxxhdpi")
+                         for name in ("launcher_legacy", "launcher_round", "launcher_foreground", "splash_badge")}
+gate("Kenny bitmap exception is limited to density-specific launcher/startup artwork",
+     ["Unexpected or missing Kenny bitmap: " + name
+      for name in sorted(kenny_bitmaps ^ allowed_kenny_bitmaps)])
 
 # ------------------------------------------------------- 4. palette only
 raw_colour = []

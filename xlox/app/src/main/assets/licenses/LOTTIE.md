@@ -15,10 +15,12 @@ Effects), which is the source of truth: edit the script and re-run it rather
 than editing the JSON by hand.
 
 The main splash film uses real TextViews (`SplashActivity`); only the small
-status line uses Lottie. The launcher/system-splash wordmarks use bundled
-Inter outlines (SIL OFL 1.1, see `OFL-Inter.txt`). Anoy keeps its original
-committed vectors. `xlox/scripts/brand_wordmark.py` generates the KennyPvt
-flavor vectors from the same bundled `inter_semibold.ttf`, without a download.
+status line uses Lottie. Anoy's launcher/system-splash wordmarks retain their
+original bundled Inter outlines (SIL OFL 1.1, see `OFL-Inter.txt`). KennyPvt
+instead uses project-owner-supplied image artwork for its launcher and initial
+startup badge; its flavor includes separate provenance in `KENNY_ARTWORK.md`.
+`xlox/scripts/kenny_icons.py` prepares only that flavor's images; the historical
+`brand_wordmark.py` entry point delegates to it and cannot restore old vectors.
 
 Art direction: stroke only (1.75–2 dp), white on black, blue `#0A84FF` only
 for the done check; no fills, glow, bounce or overshoot; 60 fps, simple paths

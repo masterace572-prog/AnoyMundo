@@ -10,6 +10,7 @@ import re
 import subprocess
 import sys
 import xml.etree.ElementTree as ET
+from zipfile import ZipFile
 
 ROOT = Path(__file__).resolve().parents[1]
 APP = ROOT / 'app'
@@ -43,12 +44,32 @@ def compiled_sdk_value(manifest, name):
     return int(match[1], 0) if match else None
 
 
+def manifest_resource_id(manifest, name):
+    match = re.search(r'android:' + re.escape(name)
+                      + r'\([^)]*\)\s*=\s*@(?:0x)?([0-9a-fA-F]+)(?=\s|$)', manifest)
+    return int(match[1], 16) if match else None
+
+
+def drawable_resource_id(resources, name):
+    match = re.search(r'^\s*resource\s+(0x[0-9a-fA-F]+)\s+[^\n]*\bdrawable/'
+                      + re.escape(name) + r'(?=\s|$)', resources, re.M)
+    return int(match[1], 16) if match else None
+
+
 gate(all(compiled_sdk_value(xml, 'minSdkVersion') == number for xml, number in (
     ('A: android:minSdkVersion(0x0101020c)=(type 0x10)0x15', 21),
     ('A: http://schemas.android.com/apk/res/android:minSdkVersion(0x0101020c)=21', 21),
     ('A: http://schemas.android.com/apk/res/android:minSdkVersion(0x0101020c)=23', 23),
     ('A: android:targetSdkVersion(0x01010270)=28', None),
 )), 'compiled SDK parser accepts both aapt2 formats without masking changed SDK values')
+gate(all(manifest_resource_id(xml, 'roundIcon') == 0x7f080123 for xml in (
+    'A: android:roundIcon(0x0101052c)=@0x7f080123',
+    'A: http://schemas.android.com/apk/res/android:roundIcon(0x0101052c)=@0x7f080123',
+)) and all(drawable_resource_id(xml, 'ic_launcher_round') == 0x7f080123 for xml in (
+    '    resource 0x7f080123 drawable/ic_launcher_round\n',
+    '    resource 0x7f080123 com.kennypvt:drawable/ic_launcher_round\n',
+)) and drawable_resource_id('resource 0x7f080123 drawable/ic_launcher_round_extra\n', 'ic_launcher_round') is None,
+     'compiled icon reference parser accepts aapt2 formats without confusing similarly named resources')
 
 main = strings(APP / 'src/main/res/values/strings.xml')
 kenny = strings(APP / 'src/kenny/res/values/strings.xml')
@@ -62,11 +83,35 @@ gate(main['telegram_url'] == 'https://t.me/libAkAudioVisiual'
      'KennyPvt Telegram uses crimecell; Anoy contact is unchanged')
 for file in (APP / 'src/kenny/res').rglob('*.xml'):
     ET.parse(file)
-gate(all((APP / f'src/kenny/res/drawable/{name}.xml').is_file()
-         and (APP / f'src/kenny/res/drawable/{name}.xml').read_bytes()
-         != (APP / f'src/main/res/drawable/{name}.xml').read_bytes()
-         for name in ('ic_launcher_glyph', 'ic_launcher_mark', 'splash_mark')),
-     'KennyPvt has its own adaptive, legacy and system-splash wordmarks')
+kenny_res = APP / 'src/kenny/res'
+artwork_refs = {
+    'ic_launcher': 'kenny_launcher_legacy',
+    'ic_launcher_round': 'kenny_launcher_round',
+    'ic_launcher_glyph': 'kenny_launcher_foreground',
+    'ic_launcher_mark': 'kenny_launcher_legacy',
+    'splash_mark': 'kenny_splash_badge',
+}
+android = '{http://schemas.android.com/apk/res/android}'
+gate(all((kenny_res / f'drawable/{name}.xml').is_file()
+         and ET.parse(kenny_res / f'drawable/{name}.xml').getroot().tag == 'bitmap'
+         and ET.parse(kenny_res / f'drawable/{name}.xml').getroot().get(android + 'src') == f'@drawable/{artwork}'
+         for name, artwork in artwork_refs.items()),
+     'KennyPvt launcher/helper/startup drawables use only the supplied artwork, not inherited Anoy wordmarks')
+gate(all((kenny_res / f'drawable-v26/{name}.xml').is_file()
+         and ET.parse(kenny_res / f'drawable-v26/{name}.xml').getroot().tag == 'adaptive-icon'
+         and ET.parse(kenny_res / f'drawable-v26/{name}.xml').getroot().find('foreground').get(android + 'drawable')
+         == '@drawable/ic_launcher_glyph'
+         for name in ('ic_launcher', 'ic_launcher_round')),
+     'both Kenny launcher entries use native adaptive masks on Android 26+')
+kenny_manifest = ET.parse(APP / 'src/kenny/AndroidManifest.xml').getroot().find('application')
+gate(kenny_manifest.get(android + 'roundIcon') == '@drawable/ic_launcher_round'
+     and '@drawable/ic_launcher' in (APP / 'src/main/AndroidManifest.xml').read_text(),
+     'Kenny has a separate circular fallback; the shared/Anoy manifest is unchanged')
+gate(all((kenny_res / f'drawable-{density}/{name}.png').is_file()
+         for density in ('mdpi', 'hdpi', 'xhdpi', 'xxhdpi', 'xxxhdpi')
+         for name in set(artwork_refs.values()))
+     and not any(path.suffix.lower() in ('.jpg', '.jpeg') for path in (APP / 'src/kenny').rglob('*')),
+     'Kenny artwork has all five density variants; no unscaled source JPEG is bundled')
 
 gradle = (APP / 'build.gradle').read_text()
 gate("namespace 'com.xlox'" in gradle and "applicationId 'com.xlox'" in gradle
@@ -140,6 +185,18 @@ if len(sys.argv) > 1:
         if minimum != 21 or target != 28:
             annotation(sdk_lines or 'Compiled uses-sdk attributes were not found in the aapt2 XML dump.')
         dump = aapt('resources', apk)
+        for attribute, resource in (('icon', 'ic_launcher'),
+                                    ('roundIcon', 'ic_launcher_round' if brand == 'KennyPvt' else 'ic_launcher')):
+            actual_id = manifest_resource_id(manifest, attribute)
+            expected_id = drawable_resource_id(dump, resource)
+            gate(expected_id is not None and actual_id == expected_id,
+                 f'{brand}: compiled {attribute} selects drawable/{resource}')
+        with ZipFile(apk) as package_zip:
+            artwork_files = [name for name in package_zip.namelist()
+                             if Path(name).name.startswith('kenny_') and name.endswith('.png')]
+            has_provenance = 'assets/licenses/KENNY_ARTWORK.md' in package_zip.namelist()
+            gate(bool(artwork_files) == (brand == 'KennyPvt') and has_provenance == (brand == 'KennyPvt'),
+                 f'{brand}: supplied artwork and its provenance are isolated to the Kenny flavor')
         contact = 'crimecell' if brand == 'KennyPvt' else 'libAkAudioVisiual'
         contact_block = re.search(r'(?ms)^\s*resource [^\n]*\bstring/telegram_url[^\n]*\n(.*?)(?=^\s*resource |\Z)', dump)
         gate(bool(contact_block and f'https://t.me/{contact}' in contact_block[1]),
