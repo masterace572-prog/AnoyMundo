@@ -179,3 +179,41 @@ Follow-up production evidence:
   asset digests match the build checksums in the release notes.
 - Authenticated production Storage and physical-device checks remain outside
   this follow-up's verified scope; no credentials were requested or read.
+
+## Kenny supplied-artwork icon follow-up
+
+The project owner's supplied 640 × 640 JPEG is preserved unmodified at
+`xlox/artwork/kenny-logo.jpg`; its SHA-256 is
+`d83c2810a2279fd429640294659a47d1548835ed3d727c1b666a777dec0b182c`.
+Kenny now overrides the legacy rounded-square icon, separate round fallback,
+both Android 26+ adaptive entries, and initial startup badge. The startup
+badge stays inside Android 12+'s circular mask and shares the first app frame.
+The existing typography film and its timings remain unchanged.
+
+- Generated 20 antialiased PNGs across mdpi through xxxhdpi, plus a standalone
+  preview. Source/preview files are outside both APK source sets. See
+  `xlox/artwork/README.md` for regeneration and flavor-only provenance.
+- The five Anoy icon files remain byte-for-byte unchanged. Neither Kenny's
+  images nor their flavor-only provenance file appear in the Anoy APK.
+- Local checks passed: **12 artwork regressions, 14 UI gates, 20 static
+  branding/channel gates**, and the existing **213 smoke + 20 HTTP/channel +
+  69 PostgreSQL checks**. Circular/rounded-mask previews were visually checked.
+- [Dual-APK CI](https://github.com/masterace572-prog/AnoyMundo/actions/runs/44645207086)
+  passed from exact source **`475f5c7af7d716e7972b2bff636d63a7309bc5ef`**.
+  Both APKs compiled/linted and passed permissions, package/contact/SDK,
+  compiled icon/roundIcon references, native alignment and signature checks.
+  All 20 real packaged Kenny images passed decoded pixel verification through
+  the compiled resource table, including AGP-shortened image paths.
+- [Release `loaders-v2.4.2-20`](https://github.com/masterace572-prog/AnoyMundo/releases/tag/loaders-v2.4.2-20)
+  is published, not a draft/prerelease, and targets that exact verified source.
+  GitHub's uploaded-asset digests match the release's build checksums:
+
+| APK | Bytes | SHA-256 |
+|---|---:|---|
+| `Anoy-XLOX-loader.apk` | 5,173,048 | `843d29be43568d18fe582732c07e61c9cb3b7c3fab447ee195a889cf8e8cec49` |
+| `KennyPvt-loader.apk` | 7,786,068 | `fe3e245d7787b0250e0cf2767902351527eb568b280bd8f3e95aedd7f642343c` |
+
+No database migration, credentials, invitation, panel library or live
+APK-update selection was changed by this artwork task. Older releases remain
+available. Physical launcher/device testing is separate from the automated
+build, resource and software-mask checks above.
