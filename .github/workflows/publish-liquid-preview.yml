@@ -101,6 +101,16 @@ jobs:
           path: dist/liquid
           run-id: ${{ inputs.source_run }}
           github-token: ${{ github.token }}
+      - uses: actions/download-artifact@v7
+        with:
+          pattern: Liquid-UI-API-*
+          path: qa-evidence
+          run-id: ${{ inputs.source_run }}
+          github-token: ${{ github.token }}
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - run: python3 -m pip install --disable-pip-version-check -r liquid/scripts/icon-requirements.txt
       - name: Independently verify untouched release assets and original certificate
         env:
           XLOX_STORE_PASSWORD: ${{ secrets.XLOX_STORE_PASSWORD }}
@@ -116,6 +126,39 @@ jobs:
             ACTUAL=$("$ANDROID_HOME/build-tools/34.0.0/apksigner" verify --print-certs "$APK" | sed -n 's/^Signer #1 certificate SHA-256 digest: //p')
             test "$ACTUAL" = "$EXPECTED" || { echo '::error::Release certificate mismatch'; exit 1; }
           done
+      - name: Preserve credential-free screen evidence without storing binaries in Git
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          from zipfile import ZipFile, ZIP_DEFLATED
+          import json
+          from PIL import Image, ImageOps, ImageDraw, ImageFont
+          root = Path('qa-evidence')
+          for api in (23, 33):
+              data = json.loads((root / f'Liquid-UI-API-{api}/results.json').read_text())
+              assert len(data['screens']) >= 50 and all(c['pass'] for c in data['checks'])
+          with ZipFile('dist/liquid/Liquid-UI-evidence.zip', 'w', ZIP_DEFLATED) as archive:
+              archive.writestr('README.txt', 'Actual offline Android 6 / 13 emulator UI fixtures. No native game, real phone, provider login or performance validation. No APKs or raw logs are included. All displayed licence data is fictitious.\n')
+              for path in sorted(root.rglob('*')):
+                  if path.is_file() and (path.suffix in ('.png', '.xml') or path.name == 'results.json'):
+                      archive.write(path, path.relative_to(root))
+          files = [('anoy-login', 'Sign in'), ('anoy-home', 'Home'), ('anoy-settings', 'Settings'),
+                   ('anoy-library-required', 'Library update'), ('anoy-apk-update-normal', 'App update'),
+                   ('kenny-splash', 'KennyPvt startup')]
+          page = Image.new('RGB', (924, 1472), '#080D17')
+          draw = ImageDraw.Draw(page)
+          font = ImageFont.load_default(size=18)
+          draw.text((22, 20), 'Liquid | actual native Android UI', fill='#F5F7FC', font=ImageFont.load_default(size=26))
+          draw.text((22, 57), 'Offline emulator captures - not a web mockup or real-device game test', fill='#B8C4D8', font=font)
+          for i, (name, label) in enumerate(files):
+              frame = Image.open(root / 'Liquid-UI-API-33' / (name + '.png')).convert('RGB')
+              frame = ImageOps.contain(frame, (284, 632))
+              x, y = 18 + (i % 3) * 306, 105 + (i // 3) * 678
+              draw.text((x, y), label, fill='#F5F7FC', font=font)
+              page.paste(frame, (x + (284-frame.width)//2, y+30))
+          page.save('dist/liquid/Liquid-UI-preview.png', optimize=True)
+          PY
+          (cd dist/liquid && sha256sum Liquid-UI-evidence.zip Liquid-UI-preview.png >> SHA256SUMS.txt)
       - name: Share only the named non-latest preview; retain stable assets
         run: |
           set -euo pipefail
@@ -148,6 +191,9 @@ jobs:
           OEM permissions, API-21 runtime or frame-rate/battery performance.
           The cancelled login experiment is not fixed or resumed by this preview.
 
+          `Liquid-UI-preview.png` contains actual native screenshots. The evidence ZIP
+          retains all captured states and view trees; it includes no APKs or raw logs.
+
           This is a **prerelease, not latest**. No live panel APK/library selection,
           site, account, licence or production database is changed.
           '''
@@ -156,7 +202,7 @@ jobs:
           text += '```text\n' + Path('dist/liquid/SHA256SUMS.txt').read_text() + '```\n'
           Path('/tmp/liquid-preview-notes.md').write_text(text)
           PY
-          gh release create "$TAG" dist/liquid/Anoy-Liquid.apk dist/liquid/KennyPvt-Liquid.apk dist/liquid/SHA256SUMS.txt --target "$SOURCE_SHA" --title 'PREVIEW: Anoy + KennyPvt Liquid UI 2.5.0' --prerelease --latest=false --notes-file /tmp/liquid-preview-notes.md
+          gh release create "$TAG" dist/liquid/Anoy-Liquid.apk dist/liquid/KennyPvt-Liquid.apk dist/liquid/SHA256SUMS.txt dist/liquid/Liquid-UI-evidence.zip dist/liquid/Liquid-UI-preview.png --target "$SOURCE_SHA" --title 'PREVIEW: Anoy + KennyPvt Liquid UI 2.5.0' --prerelease --latest=false --notes-file /tmp/liquid-preview-notes.md
           test "$LATEST_BEFORE" = "$(gh api "repos/$GH_REPO/releases/latest" --jq .tag_name)"
           gh api "repos/$GH_REPO/releases?per_page=100" > /tmp/liquid-releases-after.json
           python3 - <<'PY'

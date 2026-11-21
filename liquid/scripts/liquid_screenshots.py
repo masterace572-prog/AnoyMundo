@@ -108,8 +108,15 @@ def scroll_to(view_id, limit=6):
 def capture(name, required=(), hierarchy=True):
     time.sleep(.45)
     full = brand + '-' + name
-    focus = shell('dumpsys', 'window')
-    focused = next((line for line in focus.splitlines() if 'mCurrentFocus=' in line), '')
+    focused = ''
+    # Window focus can briefly be null during a cold, minified release start.
+    # Wait for the actual app window; never mistake the launcher for a capture.
+    for _ in range(24):
+        focus = shell('dumpsys', 'window')
+        focused = next((line for line in focus.splitlines() if 'mCurrentFocus=' in line), '')
+        if pkg in focused:
+            break
+        time.sleep(.25)
     check(pkg in focused, f'{full}: loader is the foreground app ({focused.strip()})')
     visible_text = []
     if hierarchy:
@@ -347,7 +354,7 @@ try:
         # Check real minified release inflation via its only exported entry.
         brand, pkg = 'anoy', 'com.xlox'
         install(args.apks / 'Anoy-Liquid.apk', folder)
-        start('SplashActivity', wait=.4)
+        start('SplashActivity', wait=1.5)
         capture('minified-release-entry', hierarchy=False)
         shell('am', 'force-stop', pkg)
 

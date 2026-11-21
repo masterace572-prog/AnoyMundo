@@ -183,6 +183,24 @@ jobs:
       - name: Publish concise review images and UI results
         if: always()
         run: python3 liquid/scripts/ci_evidence.py ui --path qa-logs/liquid-api-${{ matrix.api }}
+      - name: Review rendered frame 1
+        if: always()
+        run: python3 liquid/scripts/ci_evidence.py ui --slot 1 --path qa-logs/liquid-api-${{ matrix.api }}
+      - name: Review rendered frame 2
+        if: always()
+        run: python3 liquid/scripts/ci_evidence.py ui --slot 2 --path qa-logs/liquid-api-${{ matrix.api }}
+      - name: Review rendered frame 3
+        if: always()
+        run: python3 liquid/scripts/ci_evidence.py ui --slot 3 --path qa-logs/liquid-api-${{ matrix.api }}
+      - name: Review rendered frame 4
+        if: always()
+        run: python3 liquid/scripts/ci_evidence.py ui --slot 4 --path qa-logs/liquid-api-${{ matrix.api }}
+      - name: Review rendered frame 5
+        if: always()
+        run: python3 liquid/scripts/ci_evidence.py ui --slot 5 --path qa-logs/liquid-api-${{ matrix.api }}
+      - name: Review rendered frame 6
+        if: always()
+        run: python3 liquid/scripts/ci_evidence.py ui --slot 6 --path qa-logs/liquid-api-${{ matrix.api }}
       - name: Upload actual emulator screenshots, view trees and results
         if: always()
         uses: actions/upload-artifact@v7

@@ -44,7 +44,7 @@ def lint(root):
                 print(f'::notice title=Build diagnostic {name}::{escaped(chr(10).join(lines[-55:])[-7000:])}')
 
 
-def ui(root):
+def ui(root, slot=None):
     from PIL import Image
     report = root / 'results.json'
     if report.exists():
@@ -52,9 +52,10 @@ def ui(root):
         failures = [x['message'] for x in result.get('checks', []) if not x.get('pass')]
         summary = {'api': result.get('api'), 'screens': len(result.get('screens', [])),
                    'checks': len(result.get('checks', [])), 'failures': failures}
-        print('::notice title=Liquid UI results::' + escaped(json.dumps(summary)))
+        if slot is None:
+            print('::notice title=Liquid UI results::' + escaped(json.dumps(summary)))
     log = root / 'last-logcat.txt'
-    if log.exists():
+    if slot is None and log.exists():
         lines = log.read_text(errors='replace').splitlines()
         for index, line in enumerate(lines):
             if 'FATAL EXCEPTION' not in line:
@@ -62,13 +63,23 @@ def ui(root):
             block = '\n'.join(lines[index:index + 24])
             if 'com.xlox' in block or 'com.kennypvt' in block:
                 print('::error title=Liquid UI app-process crash::' + escaped(block[:3900]))
-    selected = [
-        'anoy-splash', 'anoy-login', 'anoy-home', 'anoy-settings',
-        'anoy-library-required', 'anoy-apk-update-normal', 'anoy-login-keyboard',
-        'anoy-home-font200', 'anoy-login-font200-bottom', 'anoy-settings-font200',
-        'anoy-library-font200-actions', 'kenny-splash', 'kenny-home', 'last-screen',
-    ]
-    for name in selected:
+    # The checks service caps notices per step and per job. Review one bounded
+    # JPEG per step, six complementary frames per API; full captures are artifacts.
+    api = result.get('api') if report.exists() else None
+    selected = ([
+        'kenny-splash', 'anoy-login', 'anoy-home', 'anoy-settings',
+        'anoy-login-keyboard', 'anoy-splash',
+    ] if api == 23 else [
+        'anoy-library-required', 'anoy-apk-update-normal', 'anoy-home-font200',
+        'anoy-login-font200-bottom', 'anoy-settings-font200', 'anoy-library-font200-actions',
+    ])
+    if slot is None:
+        return
+    name = selected[slot - 1]
+    # On a failed walk, prioritize its exact final frame in the last review slot.
+    if slot == 6 and report.exists() and failures:
+        name = 'last-screen'
+    for name in (name,):
         path = root / (name + '.png')
         if not path.exists():
             continue
@@ -78,9 +89,13 @@ def ui(root):
         while True:
             stream = BytesIO()
             image.save(stream, 'JPEG', quality=quality, optimize=True)
-            if len(stream.getvalue()) <= 36000 or quality <= 30:
+            if len(stream.getvalue()) <= 18000:
                 break
-            quality -= 7
+            if quality > 30:
+                quality -= 7
+            else:
+                image.thumbnail((int(image.width * .85), int(image.height * .85)))
+                quality = 60
         data = base64.b64encode(stream.getvalue()).decode('ascii')
         # GitHub truncates an annotation message at 4096 characters. Separate
         # bounded chunks preserve the complete JPEG instead of a grey partial.
@@ -93,8 +108,9 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('kind', choices=('lint', 'ui'))
     parser.add_argument('--path', type=Path)
+    parser.add_argument('--slot', type=int, choices=range(1, 7))
     args = parser.parse_args()
     if args.kind == 'lint':
         lint(args.path or Path.cwd())
     else:
-        ui(args.path)
+        ui(args.path, args.slot)
