@@ -73,8 +73,31 @@ There is no device trace or reproduction yet. Code inspection found these gaps:
   inherited provider filters, export setting and declaration order.
 
 Local runs passed these checks and the existing 14 UI gates, 20 branding/channel
-checks and 12 artwork tests. Full APK build/lint/signature evidence is recorded
-only once CI completes. These are not substitutes for the device checks below.
+checks and 12 artwork tests. Panel regression also passed: 213 smoke checks,
+20 HTTP/channel tests and 69 PostgreSQL checks. These are not substitutes for
+the device checks below.
+
+## Verified build output
+
+- Source: `2c01f911059e003a9a16dfaa703763f5e7515477`.
+- [CI 44898000562](https://github.com/masterace572-prog/AnoyMundo/actions/runs/44898000562):
+  **success**, both release builds and both lint tasks. JVM regressions, actual
+  merged callback manifests, permissions, package/branding, supplied Kenny
+  artwork, native alignment and both release signatures passed.
+- [Release 2.4.3 (21)](https://github.com/masterace572-prog/AnoyMundo/releases/tag/loaders-v2.4.3-21)
+  contains both APKs and `SHA256SUMS.txt`; notes explicitly say device validation
+  is pending and do not promise an embedded Twitter WebView.
+- `Anoy-XLOX-loader.apk`: 5,179,277 bytes; SHA-256
+  `e5ea33ecb9e35bb8969f2727e8229925b1ef08ba6e03c1c26b34bd6114911061`.
+- `KennyPvt-loader.apk`: 7,790,392 bytes; SHA-256
+  `1bbcfcc039d061aa0c3234ef8d4ac2bc8daa1da9e40827a75be02b680419bdbe`.
+- Old 2.4.2 release ID and every asset ID/name/size/digest were compared before
+  and after: unchanged. Both AAR hashes also remain unchanged. No live panel
+  release choice, database, backend code or JNI implementation was changed.
+
+**No real-device Twitter login or download timing improvement has been measured
+yet.** Build/verification success is not evidence that the reported phone-level
+OAuth problem has been fully resolved.
 
 ## Device acceptance checklist (not yet performed)
 
