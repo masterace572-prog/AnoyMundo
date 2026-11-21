@@ -132,10 +132,32 @@ def capture(name, required=(), hierarchy=True):
                 density = int(re.findall(r'\d+', shell('wm', 'density'))[-1]) / 160
                 check((y2 - y1) / density >= 47 and (x2 - x1) / density >= 47,
                       f'{full}: {view_id} meets the 48dp target (rounding tolerance 1dp)')
+    if name in {'login-tablet', 'home-tablet'} and hierarchy:
+        action = find('login' if name == 'login-tablet' else 'primaryAction', doc)
+        x1, _, x2, _ = bounds(action)
+        density = int(re.findall(r'\d+', shell('wm', 'density'))[-1]) / 160
+        width = (x2 - x1) / density
+        minimum, maximum = (360, 444) if name == 'login-tablet' else (500, 580)
+        check(minimum <= width <= maximum, f'{full}: tablet action is sensibly bounded ({width:.1f}dp)')
     image = adb('exec-out', 'screencap', '-p', binary=True)
     frame = Image.open(BytesIO(image)).convert('RGB')
     check(min(frame.size) >= 480 and max(ImageStat.Stat(frame).stddev) > 8,
           full + ': non-blank emulator frame')
+    if name == 'settings' and hierarchy:
+        # On API 23 the native VectorDrawable path used to leave Back blank.
+        # Map logical view bounds into the physical (possibly letterboxed) frame.
+        node = find('settingsBack', doc)
+        x1, y1, x2, y2 = bounds(node)
+        logical = re.findall(r'(\d+)x(\d+)', shell('wm', 'size'))[-1]
+        lw, lh = map(int, logical)
+        scale = min(frame.width / lw, frame.height / lh)
+        ox, oy = (frame.width - lw * scale) / 2, (frame.height - lh * scale) / 2
+        inset_x, inset_y = (x2-x1) * .25, (y2-y1) * .25
+        box = (int(ox+(x1+inset_x)*scale), int(oy+(y1+inset_y)*scale),
+               int(ox+(x2-inset_x)*scale), int(oy+(y2-inset_y)*scale))
+        centre = frame.crop(box)
+        bright = sum(min(pixel) > 150 for pixel in centre.getdata())
+        check(bright >= 3, full + ': Back contains a visible contrasting glyph')
     (args.out / (full + '.png')).write_bytes(image)
     evidence['screens'].append({'name': full, 'size': frame.size, 'text': visible_text})
     print('CAPTURE ' + full, flush=True)
@@ -331,7 +353,12 @@ try:
             start('LogAct', ('--es', 'qa_gate', 'required'))
             capture('library-font200', ('gateTitle',))
             for _ in range(2): swipe_up()
-            capture('library-font200-actions')
+            capture('library-font200-actions', ('gateAction',))
+            start('AppUpdateActivity', ('--es', 'app_update_name', '2.5.1', '--ei', 'app_update_code', '99',
+                  '--es', 'app_update_url', 'https://example.com/offline-ui-fixture.apk',
+                  '--es', 'app_update_changelog', 'Clearer update messages',
+                  '--ez', 'qa_update_preview', 'true'))
+            capture('apk-update-font200', ('appUpdatePrimary', 'appUpdateLater'))
             profile(1600, 2560, 320)
             login()
             capture('login-tablet', ('userkey', 'login'))

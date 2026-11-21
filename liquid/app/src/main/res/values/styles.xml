@@ -380,7 +380,9 @@
         <item name="android:paddingEnd">@dimen/space_24</item>
         <item name="cornerRadius">@dimen/button_radius</item>
         <item name="backgroundTint">@color/button_bg</item>
-        <item name="rippleColor">@color/ripple_control</item>
+        <item name="rippleColor">@color/ripple_primary</item>
+        <item name="strokeWidth">2dp</item>
+        <item name="strokeColor">@color/button_stroke</item>
         <item name="android:textColor">@color/button_text</item>
         <item name="android:textAppearance">@style/TextAppearance.Anoy.Button</item>
         <item name="android:fontFamily">@font/inter_semibold</item>

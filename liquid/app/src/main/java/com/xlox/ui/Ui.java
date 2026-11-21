@@ -173,6 +173,31 @@ public final class Ui {
         });
     }
 
+    /** Caps the actual floating surface, not only its children, on tablets. */
+    public static void floatingWidth(View view, int maxDp) {
+        View parent = (View) view.getParent();
+        final int maximum = dp(view.getContext(), maxDp);
+        Runnable fit = () -> {
+            ViewGroup.LayoutParams params = view.getLayoutParams();
+            int available = parent.getWidth() - parent.getPaddingLeft() - parent.getPaddingRight();
+            if (params instanceof ViewGroup.MarginLayoutParams) {
+                ViewGroup.MarginLayoutParams margin = (ViewGroup.MarginLayoutParams) params;
+                available -= margin.leftMargin + margin.rightMargin;
+            }
+            int width = Math.min(maximum, available);
+            if (width <= 0) return;
+            if (params instanceof android.widget.LinearLayout.LayoutParams) {
+                ((android.widget.LinearLayout.LayoutParams) params).gravity = android.view.Gravity.CENTER_HORIZONTAL;
+            }
+            if (params.width != width) {
+                params.width = width;
+                view.setLayoutParams(params);
+            }
+        };
+        parent.addOnLayoutChangeListener((v, l, t, r, b, ol, ot, or, ob) -> fit.run());
+        parent.post(fit);
+    }
+
     // ------------------------------------------------------------------ haptics
 
     public static void tap(View view) {

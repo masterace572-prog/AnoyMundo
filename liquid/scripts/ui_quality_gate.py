@@ -138,6 +138,20 @@ alpha = int(palette['button_sheen'][1:3], 16) / 255
 button = tuple(c * (1 - alpha) + alpha for c in rgb('accent'))
 if contrast(rgb('on_accent'), button) < 4.5:
     errors.append('Primary button sheen reduces label contrast below 4.5:1')
+def over(token, background):
+    alpha = int(palette[token][1:3], 16) / 255
+    return tuple(f * alpha + b * (1-alpha) for f, b in zip(rgb(token), background))
+
+for tint in ('glass_tint', 'glass_sheet_tint'):
+    worst = over('glass_light', over(tint, (1, 1, 1)))
+    for foreground in ('text_primary', 'text_secondary', 'text_tertiary', 'success', 'warning', 'danger'):
+        if contrast(rgb(foreground), worst) < 4.5:
+            errors.append(f'{foreground} / worst-case {tint}: contrast below 4.5:1')
+for fill in ('accent', 'accent_pressed'):
+    lit = over('button_sheen', over('ripple_primary', rgb(fill)))
+    if contrast(rgb('on_accent'), lit) < 4.5:
+        errors.append(fill + ': ripple plus sheen reduces white label contrast below 4.5:1')
+
 if contrast(rgb('field_outline'), rgb('field_bg')) < 3:
     errors.append('Key-field boundary contrast below 3:1')
 if contrast(rgb('focus_ring'), rgb('field_bg_focus')) < 3:

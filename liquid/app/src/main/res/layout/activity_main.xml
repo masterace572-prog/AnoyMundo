@@ -30,6 +30,7 @@
                 android:orientation="horizontal"
                 android:paddingTop="@dimen/space_12">
                 <LinearLayout
+                    android:id="@+id/homeHeading"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
@@ -49,19 +50,26 @@
                         android:accessibilityHeading="true"
                         android:text="@string/home_title" />
                 </LinearLayout>
-                <ImageButton
-                    android:id="@+id/helpButton"
-                    style="@style/IconButton"
-                    android:layout_marginStart="@dimen/space_12"
-                    android:contentDescription="@string/help_open"
-                    android:src="@drawable/ic_help" />
-                <ImageButton
-                    android:id="@+id/settingsButton"
-                    style="@style/IconButton"
-                    android:layout_marginStart="@dimen/space_8"
-                    android:layout_marginEnd="@dimen/icon_button_edge"
-                    android:contentDescription="@string/settings_open"
-                    android:src="@drawable/ic_settings" />
+                <LinearLayout
+                    android:id="@+id/homeUtilities"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+                    <ImageButton
+                        android:id="@+id/helpButton"
+                        style="@style/IconButton"
+                        android:layout_marginStart="@dimen/space_12"
+                        android:contentDescription="@string/help_open"
+                        app:srcCompat="@drawable/ic_help" />
+                    <ImageButton
+                        android:id="@+id/settingsButton"
+                        style="@style/IconButton"
+                        android:layout_marginStart="@dimen/space_8"
+                        android:layout_marginEnd="@dimen/icon_button_edge"
+                        android:contentDescription="@string/settings_open"
+                        app:srcCompat="@drawable/ic_settings" />
+                </LinearLayout>
             </LinearLayout>
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/licenceCard"
@@ -426,7 +434,7 @@
                         android:id="@+id/settingsBack"
                         style="@style/IconButton"
                         android:contentDescription="@string/settings_back"
-                        android:src="@drawable/ic_chevron_left" />
+                        app:srcCompat="@drawable/ic_chevron_left" />
                     <TextView
                         android:id="@+id/settingsTitle"
                         style="@style/Text.TitleL"
@@ -480,7 +488,7 @@
                                 android:id="@+id/licenceKeyEye"
                                 style="@style/IconButton.Inline"
                                 android:contentDescription="@string/licence_key_show"
-                                android:src="@drawable/ic_eye" />
+                                app:srcCompat="@drawable/ic_eye" />
                         </LinearLayout>
                         <View style="@style/RowDivider" />
                         <LinearLayout style="@style/Row" android:background="@null" android:focusable="true">

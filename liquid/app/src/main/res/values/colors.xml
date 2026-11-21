@@ -53,6 +53,7 @@
     <color name="icon_face_pressed">#FF344766</color>
     <color name="icon_edge">#FF526683</color>
     <color name="ripple_control">#24C8DCFF</color>
+    <color name="ripple_primary">#18C8DCFF</color>
 
     <!-- Procedural glass lens; the original brand artwork sits above it. -->
     <color name="lens_halo">#4D366294</color>

@@ -158,7 +158,7 @@ public class AppUpdateActivity extends AppCompatActivity {
         View divider = findViewById(R.id.appUpdateDivider);
         android.widget.ScrollView scroll = findViewById(R.id.appUpdateScroll);
         Ui.maxWidth(content, 600);
-        Ui.maxWidth(panel, 600);
+        Ui.floatingWidth(panel, 600);
         // Pinned footer: a hairline only while content runs underneath it.
         Runnable syncDivider = () -> divider.setVisibility(scroll.canScrollVertically(1) ? View.VISIBLE : View.INVISIBLE);
         scroll.getViewTreeObserver().addOnScrollChangedListener(syncDivider::run);
@@ -432,10 +432,10 @@ public class AppUpdateActivity extends AppCompatActivity {
         later.setText(downloading ? R.string.app_update_cancel_download : R.string.app_update_not_now);
         later.setVisibility(downloading || !release.mandatory ? View.VISIBLE : View.GONE);
         findViewById(R.id.appUpdateRequired).setVisibility(release.mandatory && !downloading ? View.VISIBLE : View.GONE);
-        // Bar and byte line keep their space; they show only while downloading.
+        // The idle footer stays compact; progress expands upward when needed.
         if (!downloading) {
-            progressText.setVisibility(View.INVISIBLE);
-            progressBar.setVisibility(View.INVISIBLE);
+            progressText.setVisibility(View.GONE);
+            progressBar.setVisibility(View.GONE);
         }
         switch (next) {
             case READY:
@@ -468,7 +468,7 @@ public class AppUpdateActivity extends AppCompatActivity {
     }
 
     /**
-     * Quiet Caption above the button (its line is always reserved), or, for a
+     * Quiet Caption above the button when needed, or, for a
      * failure, the danger-tint block: "Update failed" (danger, medium) over the
      * reason, minus its own "Try again." (the button reads Try again).
      */
@@ -497,7 +497,7 @@ public class AppUpdateActivity extends AppCompatActivity {
     private void hideStatus() {
         statusText.animate().cancel();
         statusText.setAlpha(1f);
-        statusText.setVisibility(View.INVISIBLE);
+        statusText.setVisibility(View.GONE);
         errorBlock.setVisibility(View.GONE);
     }
 

@@ -68,10 +68,10 @@ def ui(root, slot=None):
     api = result.get('api') if report.exists() else None
     selected = ([
         'kenny-splash', 'anoy-login', 'anoy-home', 'anoy-settings',
-        'anoy-login-keyboard', 'anoy-splash',
+        'anoy-login-keyboard', 'anoy-login-tablet',
     ] if api == 23 else [
         'anoy-library-required', 'anoy-apk-update-normal', 'anoy-home-font200',
-        'anoy-login-font200-bottom', 'anoy-settings-font200', 'anoy-library-font200-actions',
+        'anoy-login-font200-bottom', 'anoy-settings-font200', 'anoy-home-tablet',
     ])
     if slot is None:
         return

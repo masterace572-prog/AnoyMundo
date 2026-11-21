@@ -461,8 +461,24 @@ public class MAct extends AppCompatActivity {
         View content = findViewById(R.id.mainContent);
         View actionBar = findViewById(R.id.actionBar);
         View actionPanel = findViewById(R.id.actionPanel);
+        android.widget.LinearLayout header = findViewById(R.id.mainHeader);
+        View heading = findViewById(R.id.homeHeading);
+        View utilities = findViewById(R.id.homeUtilities);
+        boolean largeType = getResources().getConfiguration().fontScale > 1.3f;
+        header.setOrientation(largeType ? android.widget.LinearLayout.VERTICAL
+                : android.widget.LinearLayout.HORIZONTAL);
+        android.widget.LinearLayout.LayoutParams titleParams =
+                (android.widget.LinearLayout.LayoutParams) heading.getLayoutParams();
+        titleParams.width = largeType ? android.view.ViewGroup.LayoutParams.MATCH_PARENT : 0;
+        titleParams.weight = largeType ? 0 : 1;
+        heading.setLayoutParams(titleParams);
+        android.widget.LinearLayout.LayoutParams utilityParams =
+                (android.widget.LinearLayout.LayoutParams) utilities.getLayoutParams();
+        utilityParams.gravity = largeType ? android.view.Gravity.END : android.view.Gravity.CENTER_VERTICAL;
+        utilityParams.topMargin = largeType ? Ui.dp(this, 8) : 0;
+        utilities.setLayoutParams(utilityParams);
         Ui.maxWidth(content, 600);
-        Ui.maxWidth(actionPanel, 600);
+        Ui.floatingWidth(actionPanel, 600);
         View settingsContent = findViewById(R.id.settingsContent);
         Ui.onInsets(root, (bars, bottom, ime) -> {
             root.setPadding(bars.left, bars.top, bars.right, 0);

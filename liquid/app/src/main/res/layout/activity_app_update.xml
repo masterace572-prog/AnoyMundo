@@ -82,7 +82,7 @@
         <View
             android:id="@+id/appUpdateDivider"
             style="@style/Divider"
-            android:visibility="invisible"
+            android:visibility="gone"
             android:background="@color/transparent" />
         <com.xlox.ui.GlassLayout
             android:id="@+id/appUpdatePanel"
@@ -103,7 +103,7 @@
                 android:layout_marginBottom="@dimen/space_12"
                 android:accessibilityLiveRegion="polite"
                 android:gravity="center"
-                android:visibility="invisible" />
+                android:visibility="gone" />
             <LinearLayout
                 android:id="@+id/appUpdateErrorBlock"
                 android:layout_width="match_parent"
@@ -136,7 +136,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="@dimen/space_12"
                 android:importantForAccessibility="no"
-                android:visibility="invisible" />
+                android:visibility="gone" />
             <com.xlox.ui.GlassButton
                 android:id="@+id/appUpdatePrimary"
                 style="@style/Widget.Anoy.Button"
@@ -151,7 +151,7 @@
                 android:layout_marginTop="@dimen/space_12"
                 android:fontFeatureSettings="tnum"
                 android:gravity="center"
-                android:visibility="invisible" />
+                android:visibility="gone" />
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/appUpdateLater"
                 style="@style/Widget.Anoy.Button.Text.Secondary"

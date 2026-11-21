@@ -222,7 +222,8 @@ public class LogAct extends AppCompatActivity {
     private void setupInsets() {
         View root = findViewById(R.id.loginRoot);
         Ui.maxWidth(findViewById(R.id.loginContent), 440);
-        Ui.maxWidth(findViewById(R.id.loginActions), 440);
+        // Actions now live inside the already width-capped scroll content.
+        // Capping them again would double the tablet's horizontal padding.
         Ui.onInsets(root, (bars, bottom, ime) -> {
             root.setPadding(bars.left, bars.top, bars.right, bottom);
             // Keyboard open: the brand row stays, the top space shrinks, the
