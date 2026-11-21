@@ -144,6 +144,14 @@
     <string name="error_link">No app can open this link.</string>
     <string name="android_version">Android %1$s (API %2$d)</string>
 
+    <!-- Game-owned web navigation stays in the loader; provider content is unchanged. -->
+    <string name="game_web_title">Game web login</string>
+    <string name="game_web_close">Back to game</string>
+    <string name="game_web_returning">Returning to game…</string>
+    <string name="game_web_failed">The login page couldn\'t load. Go back to the game and try again.</string>
+    <string name="game_web_return_failed">Couldn\'t return this login to the virtual game. Go back and try again.</string>
+    <string name="game_web_interrupted">This login was interrupted. Go back to the game and start login again.</string>
+
     <!-- AppManager -->
     <string name="sandbox_install_failed">Couldn\'t install the game into the container.</string>
     <string name="package_not_found">BGMI is not installed.</string>

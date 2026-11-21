@@ -216,12 +216,27 @@ jobs:
             '- These downloads do not automatically change either live panel release.' \
             "- Source commit: ${{ github.sha }}" '' > /tmp/release-notes.md
           cat dist/SHA256SUMS.txt >> /tmp/release-notes.md
+          PRE_RELEASE=false
+          case "$APP_VERSION_NAME" in
+            *-webtest*|*-test*|*-rc*) PRE_RELEASE=true ;;
+          esac
+          if [ "$PRE_RELEASE" = true ]; then
+            printf '\n%s\n' \
+              '**Phone validation pending — this is a non-latest prerelease, not a confirmed runtime fix.**' \
+              'The web-login candidate uses the original Mundo AAR and keeps game web-login navigation inside the loader. Provider authentication still needs a real-device test. It does not change live panel selections.' \
+              'This candidate deliberately retains versionCode 21 for an in-place return to 2.4.3 without uninstalling or clearing container data.' >> /tmp/release-notes.md
+          fi
           if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
             TARGET=$(gh release view "$RELEASE_TAG" --json targetCommitish --jq .targetCommitish)
             [ "$TARGET" = '${{ github.sha }}' ] || { echo '::error::This version belongs to a different commit. Bump versionCode; the existing release is untouched.'; exit 1; }
             gh release upload "$RELEASE_TAG" dist/Anoy-XLOX-loader.apk dist/KennyPvt-loader.apk dist/SHA256SUMS.txt --clobber
           else
-            gh release create "$RELEASE_TAG" dist/Anoy-XLOX-loader.apk dist/KennyPvt-loader.apk dist/SHA256SUMS.txt \
-              --target '${{ github.sha }}' --title "Anoy + KennyPvt $APP_VERSION_NAME ($APP_VERSION_CODE)" --notes-file /tmp/release-notes.md --latest
+            if [ "$PRE_RELEASE" = true ]; then
+              gh release create "$RELEASE_TAG" dist/Anoy-XLOX-loader.apk dist/KennyPvt-loader.apk dist/SHA256SUMS.txt \
+                --target '${{ github.sha }}' --title "Anoy + KennyPvt $APP_VERSION_NAME ($APP_VERSION_CODE)" --notes-file /tmp/release-notes.md --prerelease --latest=false
+            else
+              gh release create "$RELEASE_TAG" dist/Anoy-XLOX-loader.apk dist/KennyPvt-loader.apk dist/SHA256SUMS.txt \
+                --target '${{ github.sha }}' --title "Anoy + KennyPvt $APP_VERSION_NAME ($APP_VERSION_CODE)" --notes-file /tmp/release-notes.md --latest
+            fi
           fi
           # Deliberately no release deletion, tag cleanup or /lib publication.

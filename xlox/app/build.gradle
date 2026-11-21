@@ -85,8 +85,10 @@ android {
         // 2.3.8: Lottie on the splash update check only (login, home, library sheet reverted).
         // 2.4.2: supplied Kenny artwork, rounded/round/adaptive icons and matching startup badge.
         // 2.4.3: browser-to-virtual-game login return; cancellable, bounded library requests.
+        // Web-login candidate: keep code 21 so manual rollback to 2.4.3 needs no uninstall.
+        // This named prerelease is not selected by the panel's latest-stable helper.
         versionCode 21
-        versionName '2.4.3'
+        versionName '2.4.4-webtest'
 
         vectorDrawables {
             useSupportLibrary true

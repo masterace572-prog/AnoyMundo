@@ -56,14 +56,22 @@ referenced resource exists, format arguments match) and runs in every build.
   SHA-256, free space, ZIP/ELF validation, staging/atomic installation and the
   64 MB client cap remain in place. Local install time and response-header time
   are logged separately, without signed URLs or login credentials.
-- **Game web-login returns** (`GameLoginCallbackActivity`, `utils/GameLoginRouter`):
-  the original Mundo AAR is unchanged. Known BGMI/Twitter callback schemes are
-  resolved only against exported activities of the running virtual BGMI (user 0)
-  and relayed through the SDK's public `launchIntent` API. No outside-game
-  launch, game restart, injected WebView, provider-token logging, or broad
-  HTTP(S) intent filter. Facebook retains the original intermediary. This repairs
-  a return-path gap; it does not force the game's browser choice or prove a real
-  Twitter login on every game/Android version. See [device QA](../docs/LOGIN_DOWNLOAD_QA.md).
+- **Contained game web login (candidate)** (`GameWebRouting`, `GameWebLoginActivity`):
+  2.4.3's callback-only patch did not fix the tester's external-browser escape.
+  The new game-process-only handler chains the original SDK's public activity
+  interpreter, preserving result binder/request code/options. It prefers a
+  matching virtual game web activity, otherwise opens a private loader WebView
+  instead of the outside browser. The WebView resolves callback schemes, HTTPS
+  App Links and scoped intent URIs dynamically against the running virtual BGMI,
+  never the OS's real-game resolver. No native JS bridge, certificate bypass,
+  user-agent spoofing, token logging, global browser filter or game restart.
+  The old callback alias remains a fallback for already-external flows. See
+  [contained-login QA and limits](../docs/CONTAINED_GAME_WEB_LOGIN.md).
+- **Candidate publication:** `-webtest`, `-test`, and `-rc` versions are published
+  as non-latest prereleases, ignored by the panel's latest-stable helper. This
+  webtest retains versionCode 21 so manual return to 2.4.3 needs no uninstall.
+  Both original AARs and older APKs remain untouched; actual phone login must
+  still be verified before promoting a stable release.
 - **Regression checks:** `python3 scripts/test_runtime_fixes.py` compiles and runs
   the production routing/transport classes on the JVM, plus Android wiring
   guards. Passing APK paths also verifies the actual merged callback manifest.

@@ -1,5 +1,12 @@
 # Game web-login return / library-wait fixes
 
+**Tester follow-up:** 2.4.3 did not resolve Twitter login. The clarified flow is:
+stock BGMI displays web login inside the game; the loader opens it externally,
+and the successful return tries to open the device's real BGMI, not the virtual
+game. The callback-only change below is therefore historical build evidence,
+not a successful fix for the user's flow. The outbound containment candidate is
+tracked separately in [CONTAINED_GAME_WEB_LOGIN.md](CONTAINED_GAME_WEB_LOGIN.md).
+
 ## Scope and diagnosis limits
 
 Version 2.4.3 (21) uses the original `xlox/app/libs/mundo-release.aar` unchanged

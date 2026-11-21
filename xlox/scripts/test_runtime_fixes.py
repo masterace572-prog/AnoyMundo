@@ -8,6 +8,7 @@ Optional APK arguments additionally check the actual merged callback manifest.
 from __future__ import annotations
 
 import hashlib
+from io import BytesIO
 import os
 from pathlib import Path
 import re
@@ -93,6 +94,77 @@ class AndroidWiring(unittest.TestCase):
             with self.assertRaises(AssertionError):
                 verify_compiled_manifest(invalid)
 
+    def test_outbound_web_routing_is_installed_only_for_the_virtual_game(self):
+        app = (JAVA / 'BoxApplication.java').read_text()
+        android_create = app.split('public void onCreate() {', 1)[1].split('public void onCreate(String', 1)[0]
+        self.assertNotIn('GameWebRouting.install', android_create)
+        guest_create = app.split('public void onCreate(String', 1)[1].split('public void onInitialized()', 1)[0]
+        self.assertIn('virtualGameProcess = true;', guest_create)
+        self.assertIn('installGameWebRouting(false);', guest_create)
+        self.assertIn('if (virtualGameProcess) installGameWebRouting(true);', app)
+        routing = (JAVA / 'utils/GameWebRouting.java').read_text()
+        self.assertIn('MetaCore.addServiceInterpreter(service, method, handler)', routing)
+        self.assertIn('BuildConfig.APPLICATION_ID', routing)
+        self.assertIn('Intent.ACTION_CHOOSER', routing)
+        self.assertIn('GameWebPolicy.contain', routing)
+        self.assertIn('MetaPackageManager.resolveActivityInfo(component)', routing)
+        self.assertIn('inGame.setComponent(new ComponentName(info.packageName, info.name))', routing)
+        self.assertNotIn('setAccessible', routing)
+
+    def test_original_sdk_supports_the_exact_outbound_hook_api_and_method_hashes(self):
+        with ZipFile(ROOT / 'app/libs/mundo-release.aar') as aar:
+            with ZipFile(BytesIO(aar.read('classes.jar'))) as jar:
+                core = jar.read('net_62v/external/MetaCore.class')
+                self.assertIn(b'addServiceInterpreter', core)
+                self.assertIn(b'(Ljava/lang/String;Ljava/lang/String;Ljava/lang/reflect/InvocationHandler;)Ljava/lang/reflect/InvocationHandler;', core)
+                start = jar.read('top/bienvenido/date_24323/a4.class')
+                for name in ('startActivity', 'startActivityAsUser', 'startActivityAndWait', 'startActivityWithConfig',
+                             'startActivityAsCaller', 'startActivityWithFeature', 'startActivityAsUserWithFeature'):
+                    value = 0
+                    for char in name:
+                        value = (31 * value + ord(char)) & 0xffffffff
+                    self.assertIn(value.to_bytes(4, 'big'), start, name)
+
+    def test_contained_browser_is_private_and_not_an_os_browser_handler(self):
+        app = ET.parse(MANIFEST).getroot().find('application')
+        activity = next(e for e in app.findall('activity') if e.get(ANDROID + 'name') == '.GameWebLoginActivity')
+        self.assertEqual(activity.get(ANDROID + 'exported'), 'false')
+        self.assertEqual(activity.findall('intent-filter'), [])
+        self.assertIsNone(activity.get(ANDROID + 'process'))
+        self.assertNotEqual(activity.get(ANDROID + 'noHistory'), 'true')
+
+    def test_webview_cannot_launch_an_outside_app_or_expose_a_native_js_bridge(self):
+        browser = (JAVA / 'GameWebLoginActivity.java').read_text()
+        self.assertNotRegex(browser, r'\bstartActivity(?:ForResult)?\s*\(')
+        for forbidden in ('addJavascriptInterface(', 'evaluateJavascript(', 'handler.proceed(', 'setUserAgentString(',
+                          'URI_ALLOW_UNSAFE', 'FLAG_GRANT_', 'launchApp(', 'killApp'):
+            self.assertNotIn(forbidden, browser)
+        self.assertIn('settings.setAllowFileAccess(false)', browser)
+        self.assertIn('settings.setAllowContentAccess(false)', browser)
+        self.assertIn('WebSettings.MIXED_CONTENT_NEVER_ALLOW', browser)
+        self.assertIn('handler.cancel();', browser)
+        self.assertIn('WebView.setWebContentsDebuggingEnabled(BuildConfig.DEBUG)', browser)
+        self.assertIn('MetaActivityManager.launchIntent(scoped, GameLoginRouter.USER)', browser)
+        self.assertIn('!target.exported', browser)
+        self.assertIn('GameWebNavigator.navigate', browser)
+        self.assertNotIn('setResult(RESULT_OK', browser)
+        self.assertIn('if (returned && !isFinishing()) finish();', browser)
+        self.assertLess(browser.index('prepareWebView();'), browser.index('setContentView('))
+        self.assertIn('WebView.setDataDirectorySuffix("loader_game_web")', browser)
+        for line in browser.splitlines():
+            if 'Log.' in line:
+                self.assertNotRegex(line, r'\b(url|value|candidate|data|parsed|ignored|fallback)\b')
+
+    def test_compiled_browser_parser_refuses_exported_or_globally_registered_webview(self):
+        private = '    E: activity (line=8)\n      A: android:name(0x01010003)="com.xlox.GameWebLoginActivity"\n      A: android:exported(0x01010010)=(type 0x12)0x0\n'
+        verify_contained_browser(private)
+        verify_contained_browser(private.replace('0x0\n', 'false\n'))
+        for invalid in ('', private + private, private.replace('0x0\n', '0xffffffff\n'),
+                        private + '      E: intent-filter (line=9)\n',
+                        private + '      A: android:process(0x01)=":other"\n'):
+            with self.assertRaises(AssertionError):
+                verify_contained_browser(invalid)
+
     def test_disposed_gates_cancel_network_and_queued_work(self):
         gate = (JAVA / 'ui/UpdateGate.java').read_text()
         self.assertIn('request.cancel();', gate)
@@ -120,7 +192,7 @@ class AndroidWiring(unittest.TestCase):
         self.assertIn('MAX_ATTEMPTS = 2', client)
 
 
-def verify_compiled_manifest(text: str) -> None:
+def compiled_components(text: str) -> list:
     components = []
     for match in re.finditer(r'(?m)^([ \t]*)E: (activity-alias|activity)\b[^\n]*\n', text):
         indent = len(match[1])
@@ -130,6 +202,11 @@ def verify_compiled_manifest(text: str) -> None:
                 break
             lines.append(line)
         components.append((match[2], '\n'.join(lines)))
+    return components
+
+
+def verify_compiled_manifest(text: str) -> None:
+    components = compiled_components(text)
     callbacks = [(i, body) for i, (kind, body) in enumerate(components)
                  if kind == 'activity' and '"com.xlox.GameLoginCallbackActivity"' in body]
     aliases = [(i, body) for i, (kind, body) in enumerate(components)
@@ -146,6 +223,16 @@ def verify_compiled_manifest(text: str) -> None:
     assert re.search(r'android:exported[^\n]*(?:0xffffffff|true)', callback)
 
 
+def verify_contained_browser(text: str) -> None:
+    browsers = [body for kind, body in compiled_components(text)
+                if kind == 'activity' and '"com.xlox.GameWebLoginActivity"' in body]
+    assert len(browsers) == 1, 'Missing/duplicate contained web login'
+    browser = browsers[0]
+    assert re.search(r'android:exported[^\n]*(?:\b0x0\b|false)', browser), 'Web login must not be exported'
+    assert 'E: intent-filter' not in browser, 'Not a global browser/deep-link handler'
+    assert 'android:process' not in browser, 'Use the initialized host core and a separate WebView profile'
+
+
 def check_apk(path: Path) -> None:
     sdk = os.environ.get('ANDROID_SDK_ROOT') or os.environ.get('ANDROID_HOME')
     tools = sorted(Path(sdk).glob('build-tools/*/aapt2')) if sdk else []
@@ -154,7 +241,8 @@ def check_apk(path: Path) -> None:
     text = subprocess.check_output([str(tools[-1]), 'dump', 'xmltree', '--file',
                                     'AndroidManifest.xml', str(path)], text=True)
     verify_compiled_manifest(text)
-    print('PASS compiled callback bridge, inherited provider filters and declaration order:', path.name)
+    verify_contained_browser(text)
+    print('PASS compiled private WebView and legacy callback manifest:', path.name)
 
 
 def main() -> None:
@@ -170,12 +258,13 @@ def main() -> None:
     ecj = os.environ.get('ECJ_JAR')
     if not java or not (javac or ecj):
         raise RuntimeError('A JDK is needed (or JAVA + ECJ_JAR for a JRE-only local environment)')
-    sources = [JAVA / 'utils' / name for name in ('GameLoginRouter.java', 'UpdateRequest.java', 'LibraryHttp.java')]
-    sources.append(ROOT / 'tests/runtime/RuntimeFixesTest.java')
+    sources = [JAVA / 'utils' / name for name in ('GameLoginRouter.java', 'UpdateRequest.java', 'LibraryHttp.java', 'GameWebPolicy.java', 'GameWebCallRouter.java', 'GameWebNavigator.java')]
+    sources.extend(ROOT / 'tests/runtime' / name for name in ('RuntimeFixesTest.java', 'GameWebFlowTest.java'))
     with tempfile.TemporaryDirectory(prefix='loader-runtime-test-') as output:
         compiler = [javac, '-source', '8', '-target', '8'] if javac else [java, '-jar', ecj, '-8', '-warn:none']
         subprocess.run([*compiler, '-d', output, *map(str, sources)], check=True)
-        subprocess.run([java, '-ea', '-cp', output, 'com.xlox.tests.RuntimeFixesTest'], check=True, timeout=30)
+        for test in ('RuntimeFixesTest', 'GameWebFlowTest'):
+            subprocess.run([java, '-ea', '-cp', output, 'com.xlox.tests.' + test], check=True, timeout=30)
 
 
 if __name__ == '__main__':

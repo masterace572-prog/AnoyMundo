@@ -4,7 +4,24 @@ Screenshots, design notes (`docs/ui-redesign/…`) and the one-off generator
 scripts mentioned below were removed from the tree in the repo cleanup after
 2.3.2; they remain in git history.
 
+## 2.4.4-webtest — Contained game web login (candidate, versionCode 21)
+
+- Tester confirmed 2.4.3 did not fix login: stock BGMI keeps web login in-game;
+  the loader opens it outside and the successful return targets real BGMI.
+- Address the outbound path through the original SDK's public activity-handler
+  chaining API, installed only in virtual game processes. Prefer the game's own
+  handler; otherwise open a private in-loader WebView instead of an OS browser.
+- Match returns dynamically against virtual BGMI's manifest, including App Links
+  and scoped intent URIs; never send an unhandled URL to the outside game. Keep
+  original activity-result arguments, private WebView profile, normal provider
+  user agent, strict TLS and no native JavaScript bridge or credential logging.
+- Non-latest prerelease, not a claimed phone-validated fix. Same code 21 allows
+  an in-place return to 2.4.3 without deleting app/container data. Old APKs and
+  both AARs are retained. Existing library-download fixes are unchanged.
+
 ## 2.4.3 — Game login returns and library waits (versionCode 21)
+
+**Tester follow-up: Twitter's reported flow is still not fixed by this version.**
 
 - Keep the original Mundo AAR; the quarantined replacement test is not used.
 - Receive known Twitter/BGMI browser-return schemes and forward the unchanged

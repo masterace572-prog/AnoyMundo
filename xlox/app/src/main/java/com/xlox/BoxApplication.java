@@ -5,6 +5,7 @@ import android.content.Context;
 import android.util.Log;
 
 import com.xlox.utils.LibManager;
+import com.xlox.utils.GameWebRouting;
 
 import java.io.File;
 
@@ -18,6 +19,7 @@ public class BoxApplication extends Application
     private static final String TAG = "BoxApplication";
     private static final String LOAD_TAG = "Load";
     private static final String GAME_PROCESS = "com.pubg.imobile";
+    private boolean virtualGameProcess;
 
     static {
         try {
@@ -73,6 +75,8 @@ public class BoxApplication extends Application
             return;
         }
 
+        virtualGameProcess = true;
+        installGameWebRouting(false);
         ENABLE_IMGUI = false;
         Context ctx = gApp != null ? gApp : this;
         try {
@@ -122,6 +126,21 @@ public class BoxApplication extends Application
             String message = "libbgmi.so load error: " + e;
             Log.e(LOAD_TAG, message, e);
             LibManager.recordLoadError(ctx, message);
+        }
+    }
+
+    @Override
+    public void onInitialized() {
+        if (virtualGameProcess) installGameWebRouting(true);
+    }
+
+    private void installGameWebRouting(boolean finalPass) {
+        try {
+            if (finalPass) GameWebRouting.refreshAfterInitialization();
+            else GameWebRouting.install();
+        } catch (Throwable ignored) {
+            // Keep activation/native loading independent; never log Intent data.
+            Log.w(TAG, "In-container game web routing is not available yet");
         }
     }
 
