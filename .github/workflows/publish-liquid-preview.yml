@@ -242,7 +242,7 @@ jobs:
           text += '```text\n' + Path('dist/liquid/SHA256SUMS.txt').read_text() + '```\n'
           Path('/tmp/liquid-preview-notes.md').write_text(text)
           PY
-          gh release create "$TAG" dist/liquid/Anoy-Liquid.apk dist/liquid/KennyPvt-Liquid.apk dist/liquid/SHA256SUMS.txt dist/liquid/Liquid-UI-evidence.zip dist/liquid/Liquid-UI-preview.png --target "$SOURCE_SHA" --title 'PREVIEW: Anoy + KennyPvt Liquid UI 2.5.0' --prerelease --latest=false --notes-file /tmp/liquid-preview-notes.md
+          gh release create "$TAG" dist/liquid/Anoy-Liquid.apk dist/liquid/KennyPvt-Liquid.apk dist/liquid/SHA256SUMS.txt dist/liquid/Liquid-UI-evidence.zip dist/liquid/Liquid-UI-preview.png --target "$SOURCE_SHA" --title 'PREVIEW: Anoy + KennyPvt Liquid UI 2.5.0' --prerelease --latest=false --notes-file /tmp/liquid-preview-notes.md >/tmp/liquid-preview-publish.log 2>&1
           test "$LATEST_BEFORE" = "$(gh api "repos/$GH_REPO/releases/latest" --jq .tag_name)"
           gh api "repos/$GH_REPO/releases?per_page=100" > /tmp/liquid-releases-after.json
           python3 - <<'PY'
@@ -255,3 +255,22 @@ jobs:
           print('PASS: stable release assets and latest pointer unchanged')
           PY
           echo "::notice title=Liquid preview shared::https://github.com/$GH_REPO/releases/tag/$TAG"
+      - name: Report concise sanitized sharing failure
+        if: failure()
+        run: |
+          python3 - <<'PY'
+          import os, re
+          from pathlib import Path
+          from urllib.parse import urlsplit, urlunsplit
+          path = Path('/tmp/liquid-preview-publish.log')
+          text = path.read_text(errors='replace')[-3000:] if path.exists() else 'Publication failed before release creation; inspect the failed step.'
+          token = os.environ.get('GH_TOKEN', '')
+          if token:
+              text = text.replace(token, '[redacted]')
+          def no_query(match):
+              url = urlsplit(match.group())
+              return urlunsplit((url.scheme, url.netloc, url.path, '', ''))
+          text = re.sub(r'https?://[^\s)]+', no_query, text)
+          text = text.replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A')
+          print('::error title=Liquid preview publication::' + text)
+          PY
