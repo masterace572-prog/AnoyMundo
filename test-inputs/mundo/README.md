@@ -1,9 +1,36 @@
-# One-time Anoy / Mundo test
+# One-time Anoy / Mundo test — reported broken
+
+## Runtime report / quarantine
+
+**Do not use the SDK36 test APK for normal login.** The tester reports a Login
+crash and the unexpected text `cracked by : @Anticheat02`. The crash has not
+been reproduced on a device here and no crash stack has been provided, so its
+exact cause is unknown. The text is absent from Anoy's application source;
+static scanning found no plaintext ASCII/UTF16 or simple base64 match in either
+AAR. Obfuscated/native runtime strings cannot be attributed to a function from
+that negative search alone. There is no proof here of malware or stolen keys.
+
+Return to [stable Anoy 2.4.2](https://github.com/masterace572-prog/AnoyMundo/releases/download/loaders-v2.4.2-20/Anoy-XLOX-loader.apk).
+Back up important data before any uninstall or data clear: those actions remove
+Anoy's app/container data. Do not send licence keys, tokens or passwords when
+sharing a crash trace. Android version, crash stage and a redacted fatal stack
+are needed before attempting a runtime fix; removing an attribution alone is
+not a crash fix.
+
+Automatic triggers for this one-time workflow have been removed. Manual
+unsigned diagnostics require explicit acknowledgement of the reported crash;
+further signing/publication of this exact input is disabled. The original AAR,
+uploaded AAR and existing APK assets are retained, not deleted or patched.
+Normal builds continue using the original library; no live panel setting was
+changed. The published test prerelease is marked as reported broken.
+
+## Input
 
 Input: `mundo-release-lv10_cracked.aar`, uploaded by the project owner.
 SHA-256: `404536acf645805c4843aefce5061b43d32c82e6e4bd6d32219bb43047c67473`.
 This filename is not proof of origin, licensing status, functionality or safety.
-The binary has only been statically inspected; use a spare test device.
+Agent-side inspection has been static. The tester's runtime failure is recorded
+above; this input should not be used for ordinary builds or login.
 
 ## Isolation
 
@@ -35,14 +62,14 @@ The binary has only been statically inspected; use a spare test device.
 ## Build / delivery
 
 `.github/workflows/anoy-mundo-test.yml` is separate from the normal dual-brand
-release workflow. Uploading an AAR alone does not trigger it. Its test-only
-workflow/script changes trigger the initial build on the current Arena branch;
-it also supports manual runs. The unsigned build job receives no signing
-password. A separate job verifies, aligns and signs with Anoy's existing key,
-then compares its signer to the verified stable 2.4.2 APK.
+release workflow. Originally its test-only workflow/script changes triggered
+the initial build. Those automatic triggers are now removed. Only an explicitly
+acknowledged manual unsigned diagnostic build is possible. The unsigned job
+receives no signing password. The historical separate signing/verification job
+is retained for reference but disabled after the runtime failure report.
 
-The output is `Anoy-Mundo-LV10-SDK36-test.apk`, shared as a distinctly named
-**prerelease**, explicitly **not latest**, with an
+The historical output is `Anoy-Mundo-LV10-SDK36-test.apk`, now marked reported
+broken. It was shared as a distinctly named **prerelease**, explicitly **not latest**, with an
 `anoy-mundo-lv10-sdk36-test-...` tag. Existing releases are never overwritten or removed. The panel's latest
 build selector ignores prereleases and also requires normal release tags and
 normal APK filenames, so this test cannot be automatically selected there.
@@ -61,7 +88,7 @@ python3 test-inputs/mundo/anoy_test.py self-test
 build/signature check is not a physical-device, container, game, injection,
 activation or malware-safety test.
 
-## Verified one-time output
+## Historical build/signature checks — not runtime approval
 
 - [Isolated CI run 44894751118](https://github.com/masterace572-prog/AnoyMundo/actions/runs/44894751118)
   passed from source `f1132b2d46234c25f367b9d3d6cbe8f1e7165d9c`.

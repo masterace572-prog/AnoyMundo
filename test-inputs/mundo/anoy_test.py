@@ -170,6 +170,14 @@ class StaticTests(unittest.TestCase):
         self.assertTrue(evidence['aar_metadata_check_bypassed_for_test'])
         self.assertIn('sdk36-test', evidence['version_name'])
         self.assertNotIn('-x :app:checkAnoyReleaseAarMetadata', (ROOT / '.github/workflows/build-xlox.yml').read_text())
+    def test_reported_runtime_failure_quarantines_distribution(self):
+        workflow = (ROOT / '.github/workflows/anoy-mundo-test.yml').read_text()
+        self.assertNotRegex(workflow, r'(?m)^  push:')
+        self.assertIn('inputs.acknowledge_known_login_crash', workflow)
+        acknowledgement = workflow.split('      acknowledge_known_login_crash:', 1)[1].split('\npermissions:', 1)[0]
+        self.assertIn('        default: false', acknowledgement)
+        signing = workflow.split('  sign-and-share-test:', 1)[1].split('    needs:', 1)[0]
+        self.assertIn('if: ${{ false }}', signing)
     def test_ephemeral_gradle_only_changes_requested_settings(self):
         original = (ROOT / 'xlox/app/build.gradle').read_text()
         updated = test_gradle(original)

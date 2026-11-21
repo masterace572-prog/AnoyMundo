@@ -1,15 +1,17 @@
-name: One-time Anoy Mundo SDK36 test
+name: QUARANTINED - Anoy Mundo SDK36 test
 
-# Isolated opt-in test. Never replaces the original AAR or normal release.
-# Input uploads alone do not trigger this workflow. The normal dual-APK
-# workflow does not watch these test-only paths.
+# User reports Login crash and unexpected third-party attribution.
+# No automatic rebuilds. A manual unsigned diagnostic build requires explicit
+# acknowledgement. Signing/publication below stays disabled pending diagnosis.
+# The original AAR, normal build and all existing APK files remain untouched.
 on:
   workflow_dispatch:
-  push:
-    branches: [arena/dda4cc57-anoymundo]
-    paths:
-      - '.github/workflows/anoy-mundo-test.yml'
-      - 'test-inputs/mundo/anoy_test.py'
+    inputs:
+      acknowledge_known_login_crash:
+        description: 'Diagnostic only: this exact AAR has a reported Login crash and unexpected attribution'
+        type: boolean
+        required: true
+        default: false
 
 permissions:
   contents: read
@@ -21,6 +23,7 @@ concurrency:
 
 jobs:
   build-unsigned:
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.acknowledge_known_login_crash }}
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     steps:
@@ -122,6 +125,9 @@ jobs:
           if-no-files-found: ignore
 
   sign-and-share-test:
+    # Quarantined after the reported runtime failure. Retain historical build
+    # steps for reproducibility, but do not sign or publish more of this input.
+    if: ${{ false }}
     needs: build-unsigned
     runs-on: ubuntu-24.04
     timeout-minutes: 15
