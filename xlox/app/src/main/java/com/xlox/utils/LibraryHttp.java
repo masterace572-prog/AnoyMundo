@@ -14,7 +14,7 @@ public final class LibraryHttp {
     private LibraryHttp() { }
 
     public static HttpURLConnection open(String start, String accept, String userAgent,
-                                         boolean metadata, UpdateRequest request) throws IOException {
+                                         boolean fresh, UpdateRequest request) throws IOException {
         URL url = new URL(start);
         for (int hop = 0; hop <= MAX_REDIRECTS; hop++) {
             request.check();
@@ -29,14 +29,14 @@ public final class LibraryHttp {
                 connection.setInstanceFollowRedirects(false);
                 connection.setConnectTimeout(request.timeout(CONNECT_MS));
                 connection.setReadTimeout(request.timeout(READ_MS));
-                connection.setUseCaches(!metadata);
+                connection.setUseCaches(!fresh);
                 connection.setRequestProperty("User-Agent", userAgent);
                 connection.setRequestProperty("Accept", accept);
                 connection.setRequestProperty("Accept-Encoding", "identity");
-                // Metadata must be fresh. A hash-verified binary may use its
+                // Metadata/unchecked links must be fresh. A pinned binary may use its
                 // Storage/CDN cache: forcing no-cache on every hop made cold
                 // downloads needlessly hit the origin again.
-                if (metadata) connection.setRequestProperty("Cache-Control", "no-cache");
+                if (fresh) connection.setRequestProperty("Cache-Control", "no-cache");
                 request.attach(connection);
                 int code = connection.getResponseCode();
                 request.check();

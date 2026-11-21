@@ -114,6 +114,8 @@ class AndroidWiring(unittest.TestCase):
         self.assertIn('CHECK_BUDGET_MS = 20_000L', client)
         self.assertIn('DOWNLOAD_BUDGET_MS = 90_000L', client)
         self.assertIn('expectedSha.equalsIgnoreCase(actualSha)', client)
+        self.assertIn('USER_AGENT, release.sha256.isEmpty(), request)', client)
+        self.assertNotIn('lastReported', client)
         self.assertIn('LibManager.saveInstalled', client)
         self.assertIn('MAX_ATTEMPTS = 2', client)
 

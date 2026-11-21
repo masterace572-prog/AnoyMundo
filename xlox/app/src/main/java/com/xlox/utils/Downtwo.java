@@ -310,7 +310,10 @@ public final class Downtwo {
         try {
             if (progress != null) progress.onConnecting();
             long connectedAt = android.os.SystemClock.elapsedRealtime();
-            connection = LibraryHttp.open(downloadUrl(), "application/zip, application/octet-stream", USER_AGENT, false, request);
+            // Only a pinned manifest checksum makes cached bytes safe. Legacy
+            // link-only releases without a checksum retain their fresh fetch.
+            connection = LibraryHttp.open(downloadUrl(), "application/zip, application/octet-stream",
+                    USER_AGENT, release.sha256.isEmpty(), request);
             Log.i(TAG, "Library response headers received after "
                     + (android.os.SystemClock.elapsedRealtime() - connectedAt) + " ms");
             int code = connection.getResponseCode();
