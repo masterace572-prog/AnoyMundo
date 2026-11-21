@@ -1,13 +1,48 @@
 # Liquid native Android UI — verification
 
-**Status: first complete two-API run passed; final rendered-review refinements
-need their own successful run. No Liquid release has been published yet.**
+**Status: final signed build, both emulator walkthroughs and selected
+rendered-screen review passed. Signed APKs are available in the workflow bundle.
+GitHub denied release creation; no Liquid release was published.**
 
-Verified source: `71f8bba349051c5402dcbe975e027838479a96ff`, in `liquid/`.
-[Build and emulator run](https://github.com/masterace572-prog/AnoyMundo/actions/runs/44921824876)
-passed the signed build, API 23 (56 captures / 299 checks) and API 33
-(57 captures / 304 checks). The refinements below are newer than that source;
-this historical result does not certify them.
+Verified Android source: `157b480e259c65c9d7d979b8704af211b57f0d0b`, in `liquid/`.
+[Final build and emulator run](https://github.com/masterace572-prog/AnoyMundo/actions/runs/44923539867)
+passed all three jobs, including the last rendered-review refinements:
+
+| Android | Actual native captures | Passed checks | Failed checks |
+| --- | ---: | ---: | ---: |
+| 6 / API 23 | 57 | 311 | 0 |
+| 13 / API 33 | 58 | 316 | 0 |
+| **Total** | **115** | **627** | **0** |
+
+Later publication-workflow/documentation-only commits do not change the tested
+Android source. Publication refuses subsequent `liquid/` or build-workflow
+changes, incomplete evidence, missing API results or a failed source run.
+
+## APK delivery
+
+[Download the signed Liquid-APKs bundle](https://github.com/masterace572-prog/AnoyMundo/actions/runs/44923539867/artifacts/14714912053)
+(10.6 MB ZIP; GitHub sign-in may be required):
+
+- `Anoy-Liquid.apk` — `com.xlox`.
+- `KennyPvt-Liquid.apk` — `com.kennypvt`.
+- `SHA256SUMS.txt` — verify extracted files with `sha256sum -c SHA256SUMS.txt`.
+
+GitHub reports expiry **2026-12-05 16:18 UTC**. This is a retained build artifact,
+not a permanent release URL. The sandbox's direct artifact download was blocked
+by a network EOF, so no local APK download/hash verification is claimed; both
+APK signatures and hashes were checked on the GitHub runner.
+
+Release sharing is separately guarded. The manual dispatch API returned HTTP
+403. The reviewed-request alternative passed all source/UI guards, downloaded
+the actual APK/evidence artifacts, rechecked hashes and the original signing
+certificate, and generated the screenshot archive/contact sheet. GitHub still
+rejected release creation with **HTTP 403: Resource not accessible by
+integration** in [sharing run 44925313389](https://github.com/masterace572-prog/AnoyMundo/actions/runs/44925313389).
+No Liquid release/assets were created. The one-shot request and unused tag were
+removed, leaving no pending publication. All five retained releases and their
+14 original assets match the before-sharing inventory; latest remains 2.4.3.
+The publication gate has **17** offline regression tests. Permanent release
+links require GitHub release-write permissions to be repaired.
 
 ## Preserved boundaries
 
@@ -48,7 +83,23 @@ and zero-prefixed without changing their geometry; regression tests cover it.
 
 ## Rendered emulator evidence
 
-Final source run pending. The walkthrough covers both brands and:
+Twelve selected complete downscaled JPEGs from the final successful run were
+independently reconstructed, JPEG-integrity-checked and visually reviewed:
+
+- API 23: Kenny startup, Anoy sign-in, keyboard, home, Settings and tablet sign-in.
+- API 33: library sheet, APK update, 200% home/sign-in/Settings and tablet home.
+
+Earlier review identified a missing API-23 Back glyph and awkward large-type
+home heading; code inspection also found nested tablet padding and an oversized
+idle APK footer. The final screenshots confirm the compat-loaded explicit Back
+glyph, stacked large-type heading, single login width cap, bounded actual
+floating surfaces and compact idle update controls. The final harness also
+passes visible-Back-glyph, tablet action-width and 200% APK/library-control
+assertions. Conservative primary ripple-plus-sheen contrast is gated;
+focus/hover use the darker fill and keyboard focus has an explicit outline.
+These are reviewed native renders, not generated UI concepts or web mockups.
+
+The walkthrough covers both brands and:
 
 - splash plus four real phase-mapped motion frames;
 - licence sign-in, key visibility, keyboard and error/loading/success states;

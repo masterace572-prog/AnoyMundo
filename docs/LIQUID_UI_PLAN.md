@@ -161,14 +161,15 @@ source history; deleting a release does not require rewriting repository history
   Deliver the APK(s), checksums, source path and a short account of completed
   checks and any remaining real-device verification.
 
-Status: source `71f8bba` passed the signed builds, lint and both emulator jobs in
-[run 44921824876](https://github.com/masterace572-prog/AnoyMundo/actions/runs/44921824876):
-API 33 completed 57 captures / 304 checks, API 23 completed 56 / 299. Complete
-selected native frames were decoded and reviewed. That review prompted final
-refinements to the API-23 Back glyph, 200% home heading, idle APK footer, tablet
-surface widths and focused-button contrast. These refinements require a fresh
-successful build and both emulator jobs before delivery. See
-[`LIQUID_UI_QA.md`](LIQUID_UI_QA.md) for evidence and honest device limitations.
+Status: final Android source `157b480` passed signed builds, lint and both
+emulator jobs in [run 44923539867](https://github.com/masterace572-prog/AnoyMundo/actions/runs/44923539867):
+API 23 completed 57 native captures / 311 checks and API 33 completed 58 / 316,
+with no failures. Twelve selected complete native frames were independently
+reviewed, confirming the final API-23 Back glyph, 200% home heading, idle APK
+footer and tablet surface refinements. The signed APK bundle is available as a
+retained workflow artifact; GitHub denied release creation. See
+[`LIQUID_UI_QA.md`](LIQUID_UI_QA.md) for the download, evidence and honest device
+limitations.
 Authorized obsolete-test cleanup is complete; see
 [`OBSOLETE_TEST_CLEANUP.md`](OBSOLETE_TEST_CLEANUP.md). Stable releases and the
 live panel selection are unchanged.
