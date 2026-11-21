@@ -65,7 +65,8 @@ jobs:
           echo "ANDROID_HOME=$SDK" >> "$GITHUB_ENV"
           echo "ANDROID_SDK_ROOT=$SDK" >> "$GITHUB_ENV"
           yes | "$SM" --sdk_root="$SDK" --licenses >/dev/null 2>&1 || true
-          "$SM" --sdk_root="$SDK" --install 'platforms;android-37' 'build-tools;36.0.0' 'ndk;24.0.8215888' > /tmp/mundo-sdk.log 2>&1
+          "$SM" --sdk_root="$SDK" --list --channel=3 > /tmp/mundo-sdk-catalog.log 2>&1
+          "$SM" --sdk_root="$SDK" --install --channel=3 'platforms;android-37' 'build-tools;36.0.0' 'ndk;24.0.8215888' > /tmp/mundo-sdk.log 2>&1
       - name: Prepare only this runner's Anoy test build
         run: python3 test-inputs/mundo/anoy_test.py prepare
       - name: Build and lint Anoy only (no signing secrets in this job)
@@ -91,6 +92,10 @@ jobs:
         run: |
           python3 - <<'PY'
           from pathlib import Path
+          catalog = Path('/tmp/mundo-sdk-catalog.log')
+          if catalog.exists():
+              platforms = '\n'.join(line.strip() for line in catalog.read_text(errors='replace').splitlines() if 'platforms;android-' in line)[-6000:]
+              print('::notice title=Available Android SDK platforms::' + platforms.replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A'))
           for name in ('sdk', 'build', 'lint'):
               log = Path('/tmp/mundo-' + name + '.log')
               if log.exists():
