@@ -1,0 +1,171 @@
+name: Liquid Android — manually share verified preview
+
+# Publication is opt-in and separate from the read-only build. A push only
+# registers/validates this definition; it can NEVER publish anything.
+on:
+  workflow_dispatch:
+    inputs:
+      source_run:
+        description: 'Successful Liquid build + BOTH emulator jobs run ID'
+        required: true
+        type: string
+      source_sha:
+        description: 'Full 40-character commit built by that successful run'
+        required: true
+        type: string
+      confirm_preview:
+        description: 'Share a non-latest UI PREVIEW only; do not select it in the live panel'
+        required: true
+        type: boolean
+        default: false
+  push:
+    branches: [arena/dda4cc57-anoymundo]
+    paths: ['.github/workflows/publish-liquid-preview.yml']
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: liquid-preview-publication
+  cancel-in-progress: false
+
+jobs:
+  definition:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Confirm that source build remains isolated
+        run: python3 liquid/scripts/check_isolation.py
+
+  verify-request:
+    if: github.event_name == 'workflow_dispatch' && inputs.confirm_preview && github.ref == 'refs/heads/arena/dda4cc57-anoymundo'
+    needs: definition
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      SOURCE_RUN: ${{ inputs.source_run }}
+      SOURCE_SHA: ${{ inputs.source_sha }}
+    steps:
+      - name: Refuse untested runs, changed source or any other branch
+        run: |
+          python3 - <<'PY'
+          import json, os, re, subprocess
+          run, sha = os.environ['SOURCE_RUN'], os.environ['SOURCE_SHA']
+          assert re.fullmatch(r'[0-9]+', run), 'Invalid run ID'
+          assert re.fullmatch(r'[0-9a-f]{40}', sha), 'Full source SHA required'
+          def api(path):
+              return json.loads(subprocess.check_output(['gh', 'api', 'repos/' + os.environ['GH_REPO'] + path]))
+          built = api('/actions/runs/' + run)
+          assert built['path'] == '.github/workflows/build-liquid.yml', 'Not the Liquid build workflow'
+          assert built['head_sha'] == sha and built['head_branch'] == 'arena/dda4cc57-anoymundo'
+          assert built['status'] == 'completed' and built['conclusion'] == 'success', 'All build and emulator jobs must pass'
+          jobs = api('/actions/runs/' + run + '/jobs')['jobs']
+          for name in ('build', 'visual-qa (23)', 'visual-qa (33)'):
+              assert any(j['name'] == name and j['conclusion'] == 'success' for j in jobs), 'Missing successful job: ' + name
+          diff = api('/compare/' + sha + '...' + os.environ['GITHUB_SHA'])
+          assert diff['status'] in ('ahead', 'identical') and diff['behind_by'] == 0
+          assert not any(f['filename'].startswith('liquid/') or f['filename'] == '.github/workflows/build-liquid.yml' for f in diff.get('files', [])), 'Liquid source changed since tested build'
+          print('PASS: exact Liquid source, branch, signed build and both emulator jobs verified')
+          PY
+
+  publish:
+    if: github.event_name == 'workflow_dispatch' && inputs.confirm_preview
+    needs: verify-request
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: write
+      actions: read
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      SOURCE_RUN: ${{ inputs.source_run }}
+      SOURCE_SHA: ${{ inputs.source_sha }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: actions/download-artifact@v7
+        with:
+          name: Liquid-APKs
+          path: dist/liquid
+          run-id: ${{ inputs.source_run }}
+          github-token: ${{ github.token }}
+      - name: Independently verify untouched release assets and original certificate
+        env:
+          XLOX_STORE_PASSWORD: ${{ secrets.XLOX_STORE_PASSWORD }}
+        run: |
+          set -euo pipefail
+          python3 liquid/scripts/check_isolation.py
+          (cd dist/liquid && sha256sum -c SHA256SUMS.txt)
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install 'build-tools;34.0.0'
+          EXPECTED=$(keytool -exportcert -keystore xlox/app/xlox.jks -storepass:env XLOX_STORE_PASSWORD -alias key0 | sha256sum | cut -d' ' -f1)
+          test "${#EXPECTED}" -eq 64
+          for APK in dist/liquid/Anoy-Liquid.apk dist/liquid/KennyPvt-Liquid.apk; do
+            "$ANDROID_HOME/build-tools/34.0.0/apksigner" verify --verbose "$APK"
+            ACTUAL=$("$ANDROID_HOME/build-tools/34.0.0/apksigner" verify --print-certs "$APK" | sed -n 's/^Signer #1 certificate SHA-256 digest: //p')
+            test "$ACTUAL" = "$EXPECTED" || { echo '::error::Release certificate mismatch'; exit 1; }
+          done
+      - name: Share only the named non-latest preview; retain stable assets
+        run: |
+          set -euo pipefail
+          TAG="liquid-v2.5.0-21-${SOURCE_SHA:0:8}"
+          LATEST_BEFORE=$(gh api "repos/$GH_REPO/releases/latest" --jq .tag_name)
+          gh api "repos/$GH_REPO/releases?per_page=100" > /tmp/liquid-releases-before.json
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo '::error::That preview already exists; assets will never be overwritten.'
+            exit 1
+          fi
+          python3 - <<'PY'
+          from pathlib import Path
+          import os
+          text = '''# Liquid native Android UI preview
+
+          Both brands: **2.5.0-liquid / code 21**, arm64-v8a, min 21 / target 28.
+          Full native Java/XML UI redesign in `liquid/`; original `xlox/` unchanged.
+          Includes the new splash, typography, icons, sign-in, home, Settings,
+          glass/opaque appearance option, library/APK updates and shared sheets.
+
+          **Optional in-place update, not a side-by-side app.** Keep app/game data.
+          Uses the original signing certificate and existing package IDs. Do not
+          uninstall or clear data. Code 21 permits returning to retained 2.4.3/code 21;
+          Android normally blocks a downgrade to panel-linked 2.4.2/code 20.
+
+          Build, lint, signatures, branding, download/runtime regressions and API 23/33
+          offline emulator UI walkthroughs passed. Emulator tests use temporary,
+          re-signed ABI-neutral UI copies, not the distributed native APKs.
+          They do NOT prove physical-phone game/container operation, provider login,
+          OEM permissions, API-21 runtime or frame-rate/battery performance.
+          The cancelled login experiment is not fixed or resumed by this preview.
+
+          This is a **prerelease, not latest**. No live panel APK/library selection,
+          site, account, licence or production database is changed.
+          '''
+          text += '\nSource: `' + os.environ['SOURCE_SHA'] + '`\n'
+          text += 'Checks/screenshots: https://github.com/' + os.environ['GH_REPO'] + '/actions/runs/' + os.environ['SOURCE_RUN'] + '\n\n'
+          text += '```text\n' + Path('dist/liquid/SHA256SUMS.txt').read_text() + '```\n'
+          Path('/tmp/liquid-preview-notes.md').write_text(text)
+          PY
+          gh release create "$TAG" dist/liquid/Anoy-Liquid.apk dist/liquid/KennyPvt-Liquid.apk dist/liquid/SHA256SUMS.txt --target "$SOURCE_SHA" --title 'PREVIEW: Anoy + KennyPvt Liquid UI 2.5.0' --prerelease --latest=false --notes-file /tmp/liquid-preview-notes.md
+          test "$LATEST_BEFORE" = "$(gh api "repos/$GH_REPO/releases/latest" --jq .tag_name)"
+          gh api "repos/$GH_REPO/releases?per_page=100" > /tmp/liquid-releases-after.json
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          def stable(path):
+              releases = json.loads(Path(path).read_text())
+              return {r['id']: [(a['id'], a['name'], a['size'], a.get('digest')) for a in r['assets']] for r in releases if not r['prerelease']}
+          assert stable('/tmp/liquid-releases-before.json') == stable('/tmp/liquid-releases-after.json'), 'Stable assets changed'
+          print('PASS: stable release assets and latest pointer unchanged')
+          PY
+          echo "::notice title=Liquid preview shared::https://github.com/$GH_REPO/releases/tag/$TAG"
