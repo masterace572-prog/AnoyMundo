@@ -28,6 +28,3 @@ keys, production library objects or current release selections were removed.
   at `393e759`. In particular the required original Mundo AAR is unchanged.
 - No live panel publication, library replacement, deployment or database write
   was part of this cleanup.
-
-The new optional UI preview lives separately in `liquid/`; its workflow builds
-artifacts only and cannot automatically publish an APK or select it in the panel.

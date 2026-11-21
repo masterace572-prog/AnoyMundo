@@ -48,16 +48,3 @@ Thumbs.db
 .vscode/
 __pycache__/
 *.pyc
-
-# Isolated Liquid Android project; shares the existing signing identity only.
-liquid/.gradle/
-liquid/build/
-liquid/app/build/
-liquid/.cxx/
-liquid/.externalNativeBuild/
-liquid/local.properties
-liquid/**/.cxx/
-liquid/**/.externalNativeBuild/
-liquid/app/*.jks
-liquid/docs/ui-redesign/
-liquid/qa-output/
