@@ -45,12 +45,28 @@ referenced resource exists, format arguments match) and runs in every build.
 
 ## Reliability
 
-- **Downloads** (`utils/Downtwo`): manifest with legacy `/api/lib/version`
-  fallback; up to 3 attempts with back-off for retryable errors; free-space
-  check; 64 MB cap; streams to a temporary file; verifies size and SHA-256
-  from the manifest; checks ZIP and ELF magic; extracts into staging and swaps
-  the library in atomically; the installed version is recorded only after
-  everything succeeded. Cancelling or leaving the screen stops the download.
+- **Downloads** (`utils/Downtwo`, `LibraryHttp`, `UpdateRequest`): fresh manifest
+  with legacy `/api/lib/version` fallback; at most two attempts, a 20-second
+  total metadata budget and 90-second total transfer budget (8-second connect /
+  12-second idle-read limits). Closing the screen cancels queued work and its
+  active connection, including while waiting for headers. Silent checks have a
+  separate queue. The same manifest supplies the supported BGMI version; no
+  duplicate home-screen request. Verified binaries may use the Storage/CDN cache,
+  metadata may not. Retry after a failed transfer rechecks the manifest. Size,
+  SHA-256, free space, ZIP/ELF validation, staging/atomic installation and the
+  64 MB client cap remain in place. Local install time and response-header time
+  are logged separately, without signed URLs or login credentials.
+- **Game web-login returns** (`GameLoginCallbackActivity`, `utils/GameLoginRouter`):
+  the original Mundo AAR is unchanged. Known BGMI/Twitter callback schemes are
+  resolved only against exported activities of the running virtual BGMI (user 0)
+  and relayed through the SDK's public `launchIntent` API. No outside-game
+  launch, game restart, injected WebView, provider-token logging, or broad
+  HTTP(S) intent filter. Facebook retains the original intermediary. This repairs
+  a return-path gap; it does not force the game's browser choice or prove a real
+  Twitter login on every game/Android version. See [device QA](../docs/LOGIN_DOWNLOAD_QA.md).
+- **Regression checks:** `python3 scripts/test_runtime_fixes.py` compiles and runs
+  the production routing/transport classes on the JVM, plus Android wiring
+  guards. Passing APK paths also verifies the actual merged callback manifest.
 - **Errors** are mapped to short, readable messages (`utils/Net`,
   `utils/UpdateException`) — no raw exception text is shown to users.
 - **Threads:** network, unzip and OBB copy run on background executors;

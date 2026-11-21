@@ -156,6 +156,30 @@
             android:supportsPictureInPicture="true"
             tools:targetApi="n" />
 
+        <!-- Return to the virtual game, not the separately installed BGMI.
+             No HTTP(S) catch-all, login WebView, or credential interception. -->
+        <activity
+            android:name=".GameLoginCallbackActivity"
+            android:exported="true"
+            android:excludeFromRecents="true"
+            android:launchMode="singleTask"
+            android:noHistory="true"
+            android:theme="@android:style/Theme.NoDisplay">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="twittersdk" android:host="callback" />
+            </intent-filter>
+        </activity>
+        <!-- Retain the original alias/filters (fbconnect, imobile1450 and
+             tencent1106545419), but repair their bare browser-return handoff.
+             The bridge delegates fbconnect to Mundo's original activity. -->
+        <activity-alias
+            android:name="top.bienvenido.mundo.FBLoginAbility"
+            android:targetActivity="com.xlox.GameLoginCallbackActivity"
+            tools:replace="android:targetActivity" />
+
     </application>
 
 </manifest>

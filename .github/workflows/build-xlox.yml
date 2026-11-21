@@ -84,6 +84,9 @@ jobs:
             xlox/build.gradle
             xlox/app/build.gradle
 
+      - name: Game login routing and cancellable update transport regressions
+        run: python3 scripts/test_runtime_fixes.py
+
       - name: Install the SDK and pinned NDK
         run: |
           SDK="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-$HOME/android-sdk}}"
@@ -153,6 +156,9 @@ jobs:
 
       - name: Verify compiled package identities and visible branding in BOTH APKs
         run: python3 scripts/check_branding.py ../dist/Anoy-XLOX-loader.apk ../dist/KennyPvt-loader.apk
+
+      - name: Verify merged login callback routing in BOTH APKs
+        run: python3 scripts/test_runtime_fixes.py ../dist/Anoy-XLOX-loader.apk ../dist/KennyPvt-loader.apk
 
       - name: Verify supplied artwork pixels in the compiled Kenny APK
         run: python3 scripts/kenny_icons.py --check --apk ../dist/KennyPvt-loader.apk

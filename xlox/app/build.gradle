@@ -84,8 +84,9 @@ android {
         // 2.3.7: quiet Lottie status on splash, login key, preparing, library sheet.
         // 2.3.8: Lottie on the splash update check only (login, home, library sheet reverted).
         // 2.4.2: supplied Kenny artwork, rounded/round/adaptive icons and matching startup badge.
-        versionCode 20
-        versionName '2.4.2'
+        // 2.4.3: browser-to-virtual-game login return; cancellable, bounded library requests.
+        versionCode 21
+        versionName '2.4.3'
 
         vectorDrawables {
             useSupportLibrary true

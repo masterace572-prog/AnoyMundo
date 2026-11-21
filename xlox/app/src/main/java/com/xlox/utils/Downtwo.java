@@ -22,11 +22,9 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
-import java.net.URL;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Locale;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Pattern;
 
 /**
@@ -54,10 +52,9 @@ public final class Downtwo {
     private static final String USER_AGENT = BuildConfig.DISPLAY_BRAND + "/" + BuildConfig.VERSION_NAME + " (Android)";
     private static final String PART_NAME = "library-release.part";
 
-    private static final int CONNECT_TIMEOUT_MS = 15_000;
-    private static final int READ_TIMEOUT_MS = 30_000;
-    private static final int MAX_ATTEMPTS = 3;
-    private static final int MAX_REDIRECTS = 5;
+    private static final int MAX_ATTEMPTS = 2;
+    private static final long CHECK_BUDGET_MS = 20_000L;
+    private static final long DOWNLOAD_BUDGET_MS = 90_000L;
     private static final long MAX_DOWNLOAD_BYTES = 64L * 1024L * 1024L;
     private static final long MIN_FREE_BYTES = 8L * 1024L * 1024L;
     private static final Pattern VERSION_PATTERN = Pattern.compile("^[A-Za-z0-9._+-]{1,32}$");
@@ -142,6 +139,12 @@ public final class Downtwo {
         /** {@code total} is -1 when the server did not send a length. */
         void onProgress(long done, long total);
 
+        default void onConnecting() {
+        }
+
+        default void onRetry(int attempt, int maximum) {
+        }
+
         default void onInstalling() {
         }
     }
@@ -149,10 +152,25 @@ public final class Downtwo {
     // ----------------------------------------------------------------- check
 
     public static Status check(Context context) throws UpdateException {
+        return check(context, new UpdateRequest());
+    }
+
+    public static Status check(Context context, UpdateRequest request) throws UpdateException {
         Context app = context.getApplicationContext();
         if (!Net.isOnline(app)) throw new UpdateException(app.getString(R.string.net_offline), true);
-
-        Release release = fetchManifestWithRetry(app);
+        Release release;
+        long started = android.os.SystemClock.elapsedRealtime();
+        try {
+            request.begin(CHECK_BUDGET_MS);
+            release = fetchManifestWithRetry(app, request);
+            request.check();
+        } catch (IOException e) {
+            throw networkError(app, request, e);
+        } finally {
+            request.close();
+            Log.i(TAG, "Library metadata request finished in "
+                    + (android.os.SystemClock.elapsedRealtime() - started) + " ms");
+        }
         boolean usable = LibManager.isUsableLib(app);
         String local = LibManager.localVersion(app);
         String localSha = LibManager.localSha(app);
@@ -166,36 +184,39 @@ public final class Downtwo {
         return new Status(release, local, usable, required);
     }
 
-    private static Release fetchManifestWithRetry(Context app) throws UpdateException {
+    private static Release fetchManifestWithRetry(Context app, UpdateRequest request) throws UpdateException, IOException {
         UpdateException last = null;
         for (int attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
             try {
-                return fetchManifest(app);
+                request.check();
+                return fetchManifest(app, request);
             } catch (UpdateException e) {
                 last = e;
-                if (!e.retryable || attempt == MAX_ATTEMPTS) break;
-                sleepQuietly(700L * attempt);
+                if (!e.retryable || attempt == MAX_ATTEMPTS || request.isCancelled()
+                        || Thread.currentThread().isInterrupted()) break;
+                request.pause(350L * attempt);
             }
         }
         throw last;
     }
 
-    private static Release fetchManifest(Context app) throws UpdateException {
+    private static Release fetchManifest(Context app, UpdateRequest request) throws UpdateException {
         HttpURLConnection connection = null;
         try {
-            connection = open(manifestUrl(), "application/json");
+            connection = LibraryHttp.open(manifestUrl(), "application/json", USER_AGENT, true, request);
             int code = connection.getResponseCode();
             if (code == HttpURLConnection.HTTP_NOT_FOUND) {
                 // Older panel without the manifest endpoint.
+                request.detach(connection);
                 connection.disconnect();
                 connection = null;
-                return fetchLegacyVersion(app);
+                return fetchLegacyVersion(app, request);
             }
             if (code >= 500) throw new UpdateException(app.getString(R.string.update_unavailable), true);
             if (code != HttpURLConnection.HTTP_OK) {
                 throw new UpdateException(app.getString(R.string.net_http, code), false);
             }
-            JSONObject json = new JSONObject(readBody(connection, 64 * 1024));
+            JSONObject json = new JSONObject(readBody(connection, 64 * 1024, request));
             if (!json.optBoolean("ok", false)) {
                 throw new UpdateException(app.getString(R.string.update_unavailable), true);
             }
@@ -205,6 +226,7 @@ public final class Downtwo {
             }
             String sha = json.optString("sha256", "").trim();
             if (!SHA_PATTERN.matcher(sha).matches()) sha = "";
+            GameSupport.remember(app, json.optString("game_version", ""));
             return new Release(version, json.optBoolean("available", false),
                     json.optLong("size", 0L), sha.toLowerCase(Locale.US));
         } catch (JSONException e) {
@@ -212,66 +234,85 @@ public final class Downtwo {
             throw new UpdateException(app.getString(R.string.error_bad_response), true, e);
         } catch (IOException e) {
             Log.w(TAG, "Manifest request failed", e);
-            throw new UpdateException(Net.friendly(app, e), Net.isRetryable(e), e);
+            throw networkError(app, request, e);
         } finally {
-            if (connection != null) connection.disconnect();
+            if (connection != null) {
+                request.detach(connection);
+                connection.disconnect();
+            }
         }
     }
 
-    private static Release fetchLegacyVersion(Context app) throws UpdateException {
+    private static Release fetchLegacyVersion(Context app, UpdateRequest request) throws UpdateException {
         HttpURLConnection connection = null;
         try {
-            connection = open(versionUrl(), "text/plain");
+            connection = LibraryHttp.open(versionUrl(), "text/plain", USER_AGENT, true, request);
             int code = connection.getResponseCode();
             if (code >= 500) throw new UpdateException(app.getString(R.string.update_unavailable), true);
             if (code != HttpURLConnection.HTTP_OK) {
                 throw new UpdateException(app.getString(R.string.net_http, code), false);
             }
-            String body = readBody(connection, 1024).trim();
+            String body = readBody(connection, 1024, request).trim();
             String version = body.isEmpty() ? "" : body.split("[\\r\\n]")[0].trim();
             if (!VERSION_PATTERN.matcher(version).matches()) {
                 throw new UpdateException(app.getString(R.string.error_bad_response), true);
             }
             return new Release(version, true, 0L, "");
         } catch (IOException e) {
-            throw new UpdateException(Net.friendly(app, e), Net.isRetryable(e), e);
+            throw networkError(app, request, e);
         } finally {
-            if (connection != null) connection.disconnect();
+            if (connection != null) {
+                request.detach(connection);
+                connection.disconnect();
+            }
         }
     }
 
     // -------------------------------------------------------------- download
 
     public static void download(Context context, Release release, Progress progress,
-                                AtomicBoolean cancelled) throws UpdateException {
+                                UpdateRequest request) throws UpdateException {
         Context app = context.getApplicationContext();
         if (!Net.isOnline(app)) throw new UpdateException(app.getString(R.string.net_offline), true);
         ensureSpace(app, release.size);
-
-        UpdateException last = null;
-        for (int attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
-            if (cancelled.get()) throw new UpdateException(app.getString(R.string.net_interrupted), true);
-            try {
-                downloadOnce(app, release, progress, cancelled);
-                return;
-            } catch (UpdateException e) {
-                last = e;
-                Log.w(TAG, "Download attempt " + attempt + " failed: " + e.getMessage(), e.getCause());
-                if (!e.retryable || attempt == MAX_ATTEMPTS || cancelled.get()) break;
-                if (progress != null) progress.onProgress(0L, -1L);
-                sleepQuietly(1500L * attempt);
+        try {
+            request.begin(DOWNLOAD_BUDGET_MS);
+            UpdateException last = null;
+            for (int attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+                request.check();
+                try {
+                    downloadOnce(app, release, progress, request);
+                    return;
+                } catch (UpdateException e) {
+                    last = e;
+                    // Neither signed URLs nor response bodies/exception text
+                    // belong in diagnostics. Some providers embed credentials.
+                    Log.w(TAG, "Library download attempt " + attempt + " failed");
+                    if (!e.retryable || attempt == MAX_ATTEMPTS || request.isCancelled()
+                            || Thread.currentThread().isInterrupted()) break;
+                    if (progress != null) progress.onRetry(attempt + 1, MAX_ATTEMPTS);
+                    request.pause(700L * attempt);
+                }
             }
+            throw last;
+        } catch (IOException e) {
+            throw networkError(app, request, e);
+        } finally {
+            request.close();
         }
-        throw last;
     }
 
     private static void downloadOnce(Context app, Release release, Progress progress,
-                                     AtomicBoolean cancelled) throws UpdateException {
+                                     UpdateRequest request) throws UpdateException {
         File part = new File(app.getFilesDir(), PART_NAME);
         File staging = LibManager.stagingDir(app);
         HttpURLConnection connection = null;
         try {
-            connection = open(downloadUrl(), "application/zip, application/octet-stream");
+            if (progress != null) progress.onConnecting();
+            long connectedAt = android.os.SystemClock.elapsedRealtime();
+            connection = LibraryHttp.open(downloadUrl(), "application/zip, application/octet-stream", USER_AGENT, false, request);
+            Log.i(TAG, "Library response headers received after "
+                    + (android.os.SystemClock.elapsedRealtime() - connectedAt) + " ms");
             int code = connection.getResponseCode();
             if (code == HttpURLConnection.HTTP_NOT_FOUND) {
                 throw new UpdateException(app.getString(R.string.update_no_release), false);
@@ -290,27 +331,24 @@ public final class Downtwo {
 
             MessageDigest digest = sha256();
             long done = 0L;
-            long lastReported = -1L;
             if (progress != null) progress.onProgress(0L, total);
             try (InputStream in = new BufferedInputStream(connection.getInputStream());
                  FileOutputStream out = new FileOutputStream(part, false)) {
                 byte[] buffer = new byte[32 * 1024];
                 int read;
                 while ((read = in.read(buffer)) != -1) {
-                    if (cancelled.get()) {
-                        throw new UpdateException(app.getString(R.string.net_interrupted), true);
-                    }
+                    request.check();
                     out.write(buffer, 0, read);
                     digest.update(buffer, 0, read);
                     done += read;
                     if (done > MAX_DOWNLOAD_BYTES) {
                         throw new UpdateException(app.getString(R.string.update_invalid_file), false);
                     }
-                    if (progress != null && (done - lastReported >= 48 * 1024 || done == total)) {
-                        lastReported = done;
-                        progress.onProgress(done, total);
-                    }
+                    // The UI throttles drawing, but every received chunk
+                    // counts as movement, including less than one percent.
+                    if (progress != null) progress.onProgress(done, total);
                 }
+                request.check();
                 out.flush();
                 try {
                     out.getFD().sync();
@@ -329,12 +367,19 @@ public final class Downtwo {
                     : (headerSha != null && SHA_PATTERN.matcher(headerSha.trim()).matches()
                     ? headerSha.trim() : "");
             if (!expectedSha.isEmpty() && !expectedSha.equalsIgnoreCase(actualSha)) {
-                Log.w(TAG, "sha256 mismatch: expected " + expectedSha + " got " + actualSha);
-                throw new UpdateException(app.getString(R.string.update_corrupt), true);
+                // The current release may have changed since the manifest.
+                // Repeating this same stale manifest downloads the wrong file
+                // again. Let the retry action fetch fresh metadata instead.
+                Log.w(TAG, "Library checksum did not match the announced release");
+                throw new UpdateException(app.getString(R.string.update_corrupt), false);
             }
 
+            request.check();
             if (progress != null) progress.onInstalling();
+            long installingAt = android.os.SystemClock.elapsedRealtime();
             install(app, part, staging);
+            Log.i(TAG, "Library verification/install finished in "
+                    + (android.os.SystemClock.elapsedRealtime() - installingAt) + " ms");
 
             String version = release.version;
             String headerVersion = connection.getHeaderField("X-Release-Version");
@@ -344,9 +389,12 @@ public final class Downtwo {
             LibManager.saveInstalled(app, version, actualSha);
             Log.i(TAG, "Library " + version + " installed (" + done + " bytes, sha256 " + actualSha + ")");
         } catch (IOException e) {
-            throw new UpdateException(Net.friendly(app, e), Net.isRetryable(e), e);
+            throw networkError(app, request, e);
         } finally {
-            if (connection != null) connection.disconnect();
+            if (connection != null) {
+                request.detach(connection);
+                connection.disconnect();
+            }
             if (part.exists() && !part.delete()) Log.w(TAG, "Could not delete " + part);
             LibManager.deleteRecursive(staging);
         }
@@ -388,38 +436,23 @@ public final class Downtwo {
 
     // --------------------------------------------------------------- helpers
 
-    private static HttpURLConnection open(String start, String accept) throws IOException {
-        String current = start;
-        for (int hop = 0; hop <= MAX_REDIRECTS; hop++) {
-            URL url = new URL(current);
-            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-            connection.setInstanceFollowRedirects(false);
-            connection.setConnectTimeout(CONNECT_TIMEOUT_MS);
-            connection.setReadTimeout(READ_TIMEOUT_MS);
-            connection.setUseCaches(false);
-            connection.setRequestProperty("User-Agent", USER_AGENT);
-            connection.setRequestProperty("Accept", accept);
-            connection.setRequestProperty("Accept-Encoding", "identity");
-            connection.setRequestProperty("Cache-Control", "no-cache");
-            int code = connection.getResponseCode();
-            if (code == 301 || code == 302 || code == 303 || code == 307 || code == 308) {
-                String location = connection.getHeaderField("Location");
-                connection.disconnect();
-                if (location == null || location.isEmpty()) throw new java.net.ProtocolException("Redirect without location");
-                current = new URL(url, location).toString();
-                continue;
-            }
-            return connection;
+    private static UpdateException networkError(Context app, UpdateRequest request, IOException error) {
+        try {
+            request.check();
+        } catch (IOException stop) {
+            error = stop;
         }
-        throw new java.net.ProtocolException("Too many redirects");
+        return new UpdateException(Net.friendly(app, error),
+                !request.isCancelled() && !Thread.currentThread().isInterrupted() && Net.isRetryable(error), error);
     }
 
-    private static String readBody(HttpURLConnection connection, int limit) throws IOException {
+    private static String readBody(HttpURLConnection connection, int limit, UpdateRequest request) throws IOException {
         try (InputStream in = connection.getInputStream();
              ByteArrayOutputStream out = new ByteArrayOutputStream()) {
             byte[] buffer = new byte[4096];
             int read;
             while ((read = in.read(buffer)) != -1) {
+                request.check();
                 out.write(buffer, 0, read);
                 if (out.size() > limit) throw new java.net.ProtocolException("Response too large");
             }
@@ -474,11 +507,4 @@ public final class Downtwo {
         }
     }
 
-    private static void sleepQuietly(long ms) {
-        try {
-            Thread.sleep(ms);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-        }
-    }
 }

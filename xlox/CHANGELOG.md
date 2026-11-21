@@ -4,6 +4,21 @@ Screenshots, design notes (`docs/ui-redesign/…`) and the one-off generator
 scripts mentioned below were removed from the tree in the repo cleanup after
 2.3.2; they remain in git history.
 
+## 2.4.3 — Game login returns and library waits (versionCode 21)
+
+- Keep the original Mundo AAR; the quarantined replacement test is not used.
+- Receive known Twitter/BGMI browser-return schemes and forward the unchanged
+  URI to the running virtual BGMI, not the outside installed game. Facebook
+  continues through Mundo's original handler. No new login WebView or credential
+  logging. In-game browser selection and actual provider login still need device QA.
+- Cancel a closed screen's network connection and queued work; separate silent
+  library checks from interactive work. Bound retries/check time, use CDN caching
+  for hash-verified binary downloads, and fetch fresh metadata on manual retry.
+- Remove the duplicate BGMI-support manifest request. Slow text identifies server
+  wait, transfer stall, or installation; received bytes count even if percentage
+  has not changed. Integrity checks and existing installed data are retained.
+- Credential-free JVM regressions and compiled callback-manifest checks run in CI.
+
 ## 2.3.8 — Splash motion only (versionCode 17)
 
 - The Lottie animations stay only on the splash update check (quiet arc while

@@ -172,8 +172,6 @@ public class MAct extends AppCompatActivity {
     /** 2.3.5: "BGMI updated" warning (installed BGMI newer than the library supports). */
     private View gameUpdateCard;
     private TextView gameUpdateText;
-    private long gameSupportCheckedAt;
-    private boolean gameSupportChecking;
     private View licenceCard;
     private int statusLook = -1;
     private TextView statusValue;
@@ -537,7 +535,6 @@ public class MAct extends AppCompatActivity {
         if (launchErrorShown && containerRunning()) onGameLaunched(false);
         refreshLibrary();
         if (!preview) applyPanelStatus();
-        maybeCheckGameSupport();
         reportLoaderError();
         maybeRecheckLibrary();
         maybeRefreshLicence(false);
@@ -1333,29 +1330,6 @@ public class MAct extends AppCompatActivity {
 
     // ---------------------------------------- BGMI newer than the library
 
-    private static final long GAME_SUPPORT_MIN_MS = 10L * 60L * 1000L;
-
-    /** 2.3.5: ask the panel which BGMI the library works with (at most every 10 minutes). */
-    private void maybeCheckGameSupport() {
-        if (preview || gameSupportChecking) return;
-        long now = SystemClock.elapsedRealtime();
-        if (gameSupportCheckedAt != 0L && now - gameSupportCheckedAt < GAME_SUPPORT_MIN_MS) return;
-        gameSupportChecking = true;
-        gameSupportCheckedAt = now;
-        final Context app = getApplicationContext();
-        try {
-            ioExecutor.execute(() -> {
-                GameSupport.refresh(app);
-                main.post(() -> {
-                    gameSupportChecking = false;
-                    if (Ui.alive(this)) showGameSupport(installedVersionName(PKG_BGMI));
-                });
-            });
-        } catch (RejectedExecutionException e) {
-            gameSupportChecking = false;
-        }
-    }
-
     /** Shows the warning card when BGMI is newer than the library supports. Only a notice: Launch is unchanged. */
     private void showGameSupport(String installed) {
         if (gameUpdateCard == null) return;
@@ -1938,7 +1912,8 @@ public class MAct extends AppCompatActivity {
         if (gate != null) gate.dispose();
         UpdateGate.Listener onReady = () -> {
             refreshLibrary();
-            hideMessage();
+            showGameSupport(installedVersionName(PKG_BGMI));
+            if (!silent) hideMessage();
         };
         gate = silent ? UpdateGate.recheck(this, onReady) : UpdateGate.start(this, onReady);
     }

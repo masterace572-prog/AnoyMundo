@@ -30,6 +30,11 @@
     <string name="update_done_title">You\'re up to date</string>
     <string name="update_done_message">Library %1$s</string>
     <string name="update_slow">Taking longer than usual. Keep Anoy open.</string>
+    <string name="update_connecting">Connecting to the library server…</string>
+    <string name="update_check_slow">Still waiting for the update server…</string>
+    <string name="update_download_stalled">Waiting for more data from the server…</string>
+    <string name="update_install_slow">Still verifying and installing the library…</string>
+    <string name="update_retrying">Retrying the download (%1$d of %2$d)…</string>
     <string name="try_again">Try again</string>
 
     <!-- Login -->
