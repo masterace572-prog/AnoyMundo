@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/redownloadRoot"
+    style="@style/Sheet.Draggable">
+    <View style="@style/SheetHandle" />
+    <ImageView style="@style/SheetSymbol" app:srcCompat="@drawable/ic_download" />
+    <TextView
+        style="@style/Text.Kicker"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/row_library" />
+    <TextView
+        android:id="@+id/redownloadTitle"
+        style="@style/Text.TitleM"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/kicker_gap"
+        android:accessibilityHeading="true"
+        android:text="@string/redownload_title" />
+    <TextView
+        style="@style/Text.BodyS"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/space_8"
+        android:text="@string/redownload_message" />
+    <com.xlox.ui.GlassButton
+        android:id="@+id/redownloadConfirm"
+        style="@style/Widget.Anoy.Button.Sheet"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/space_24"
+        android:fontFeatureSettings="kern"
+        android:text="@string/redownload_action" />
+    <com.xlox.ui.GlassButton
+        android:id="@+id/redownloadCancel"
+        style="@style/Widget.Anoy.Button.Tonal"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/space_12"
+        android:text="@string/cancel" />
+</LinearLayout>

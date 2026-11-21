@@ -1,0 +1,14 @@
+*.iml
+.gradle/
+/local.properties
+/.idea/
+/build
+/captures
+.externalNativeBuild/
+.cxx/
+local.properties
+app/build/
+*.apk
+*.apk.idsig
+libbgmi.so
+xlox-loader.zip

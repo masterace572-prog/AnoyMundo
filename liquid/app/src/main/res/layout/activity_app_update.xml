@@ -1,0 +1,173 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/appUpdateRoot"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/background">
+    <ScrollView
+        android:id="@+id/appUpdateScroll"
+        style="@style/Scroll"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+        <LinearLayout
+            android:id="@+id/appUpdateContent"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingStart="@dimen/gutter_wide"
+            android:paddingTop="@dimen/space_24"
+            android:paddingEnd="@dimen/gutter_wide">
+            <FrameLayout
+                android:layout_width="@dimen/login_hero_size"
+                android:layout_height="@dimen/login_hero_size"
+                android:layout_marginBottom="@dimen/space_24"
+                android:importantForAccessibility="noHideDescendants">
+                <com.xlox.ui.GlassLensView android:layout_width="match_parent" android:layout_height="match_parent" />
+                <ImageView
+                    android:layout_width="@dimen/space_32"
+                    android:layout_height="@dimen/space_32"
+                    android:layout_gravity="center"
+                    android:src="@drawable/ic_download" />
+            </FrameLayout>
+            <TextView
+                android:id="@+id/appUpdateKicker"
+                style="@style/Text.Kicker"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/app_update_title" />
+            <TextView
+                android:id="@+id/appUpdateTitle"
+                style="@style/Text.TitleL"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/kicker_gap"
+                android:accessibilityHeading="true"
+                android:text="@string/app_update_headline" />
+            <TextView
+                android:id="@+id/appUpdateSubtitle"
+                style="@style/Text.Mono"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/space_12"
+                android:fontFeatureSettings="tnum"
+                android:textColor="@color/text_primary"
+                android:textSize="@dimen/text_mono_15"
+                app:lineHeight="22sp" />
+            <TextView
+                android:id="@+id/appUpdateNotesTitle"
+                style="@style/Text.Kicker"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/space_32"
+                android:accessibilityHeading="true"
+                android:text="@string/app_update_whats_new" />
+            <LinearLayout
+                android:id="@+id/appUpdateNotes"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical" />
+        </LinearLayout>
+    </ScrollView>
+    <LinearLayout
+        android:id="@+id/appUpdateBar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:background="@null"
+        android:orientation="vertical"
+        android:tag="snackbar_anchor"
+        android:paddingBottom="@dimen/space_12">
+        <View
+            android:id="@+id/appUpdateDivider"
+            style="@style/Divider"
+            android:visibility="invisible"
+            android:background="@color/transparent" />
+        <com.xlox.ui.GlassLayout
+            android:id="@+id/appUpdatePanel"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingStart="@dimen/space_16"
+            android:paddingTop="@dimen/space_16"
+            android:paddingEnd="@dimen/space_16"
+            android:paddingBottom="@dimen/space_16"
+            android:layout_marginStart="@dimen/screen_padding"
+            android:layout_marginEnd="@dimen/screen_padding">
+            <TextView
+                android:id="@+id/appUpdateStatus"
+                style="@style/Text.Caption"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="@dimen/space_12"
+                android:accessibilityLiveRegion="polite"
+                android:gravity="center"
+                android:visibility="invisible" />
+            <LinearLayout
+                android:id="@+id/appUpdateErrorBlock"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="@dimen/space_12"
+                android:background="@drawable/bg_error_block"
+                android:focusable="true"
+                android:orientation="vertical"
+                android:padding="@dimen/space_12"
+                android:visibility="gone">
+                <TextView
+                    android:id="@+id/appUpdateErrorTitle"
+                    style="@style/Text.BodyS.Medium"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/app_update_failed_title"
+                    android:textColor="@color/danger" />
+                <TextView
+                    android:id="@+id/appUpdateError"
+                    style="@style/Text.BodyS"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/space_2"
+                    android:accessibilityLiveRegion="polite" />
+            </LinearLayout>
+            <com.google.android.material.progressindicator.LinearProgressIndicator
+                android:id="@+id/appUpdateProgress"
+                style="@style/Widget.Anoy.Progress"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="@dimen/space_12"
+                android:importantForAccessibility="no"
+                android:visibility="invisible" />
+            <com.xlox.ui.GlassButton
+                android:id="@+id/appUpdatePrimary"
+                style="@style/Widget.Anoy.Button"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/app_update_now" />
+            <TextView
+                android:id="@+id/appUpdateProgressText"
+                style="@style/Text.Mono.Footer"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/space_12"
+                android:fontFeatureSettings="tnum"
+                android:gravity="center"
+                android:visibility="invisible" />
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/appUpdateLater"
+                style="@style/Widget.Anoy.Button.Text.Secondary"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/space_8"
+                android:text="@string/app_update_not_now" />
+            <TextView
+                android:id="@+id/appUpdateRequired"
+                style="@style/Text.Caption"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/space_12"
+                android:gravity="center"
+                android:text="@string/app_update_required_back"
+                android:visibility="gone" />
+        </com.xlox.ui.GlassLayout>
+    </LinearLayout>
+</FrameLayout>

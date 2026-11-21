@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- One 1.1s lens reveal. The status below is the real update check, not fake progress. -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/splashRoot"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/background">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical">
+
+        <Space
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="42" />
+
+        <LinearLayout
+            android:id="@+id/splashVisual"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_horizontal"
+            android:orientation="vertical">
+
+            <FrameLayout
+                android:layout_width="@dimen/splash_mark"
+                android:layout_height="@dimen/splash_mark">
+
+                <com.xlox.ui.GlassLensView
+                    android:id="@+id/splashLens"
+                    android:layout_width="@dimen/splash_lens_size"
+                    android:layout_height="@dimen/splash_lens_size"
+                    android:layout_gravity="center" />
+
+                <ImageView
+                    android:id="@+id/splashMark"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/splash_mark" />
+            </FrameLayout>
+
+            <TextView
+                android:id="@+id/splashName"
+                style="@style/Text.TitleM"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/space_8"
+                android:gravity="center"
+                android:paddingStart="@dimen/gutter_wide"
+                android:paddingEnd="@dimen/gutter_wide"
+                android:text="@string/brand_name" />
+
+            <TextView
+                android:id="@+id/splashTagline"
+                style="@style/Text.BodyS"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/space_8"
+                android:gravity="center"
+                android:paddingStart="@dimen/gutter_wide"
+                android:paddingEnd="@dimen/gutter_wide"
+                android:text="@string/splash_tagline" />
+        </LinearLayout>
+
+        <Space
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="58" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/splashVersion"
+        style="@style/Text.Mono.Footer"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top|end"
+        android:layout_marginTop="@dimen/gutter_wide"
+        android:layout_marginEnd="@dimen/gutter_wide"
+        android:background="@drawable/bg_version"
+        android:paddingStart="@dimen/space_12"
+        android:paddingTop="@dimen/space_8"
+        android:paddingEnd="@dimen/space_12"
+        android:paddingBottom="@dimen/space_8" />
+
+    <LinearLayout
+        android:id="@+id/splashStatusBar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:layout_marginBottom="@dimen/space_24"
+        android:gravity="center_horizontal"
+        android:orientation="vertical"
+        android:paddingStart="@dimen/gutter_wide"
+        android:paddingEnd="@dimen/gutter_wide">
+
+        <LinearLayout
+            android:id="@+id/splashStatusRow"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:minHeight="@dimen/touch_target"
+            android:orientation="horizontal">
+
+            <com.airbnb.lottie.LottieAnimationView
+                android:id="@+id/splashStatusMark"
+                android:layout_width="@dimen/lottie_status"
+                android:layout_height="@dimen/lottie_status"
+                android:layout_marginEnd="@dimen/space_4"
+                android:importantForAccessibility="no" />
+
+            <TextView
+                android:id="@+id/splashStatus"
+                style="@style/Text.Caption"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:accessibilityLiveRegion="polite"
+                android:drawablePadding="@dimen/space_8"
+                android:gravity="center_vertical"
+                android:text="@string/splash_status_init" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/splashStatusDetail"
+            style="@style/Text.BodyS"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/space_4"
+            android:gravity="center"
+            android:visibility="invisible" />
+
+        <com.xlox.ui.GlassButton
+            android:id="@+id/splashRetry"
+            style="@style/Widget.Anoy.Button.Tonal.OnBackground"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/space_16"
+            android:minWidth="@dimen/retry_min_width"
+            android:text="@string/splash_retry"
+            android:visibility="gone" />
+    </LinearLayout>
+</FrameLayout>
