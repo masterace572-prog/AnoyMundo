@@ -22,6 +22,7 @@ import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.TextView;
 
+import androidx.activity.OnBackPressedCallback;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.google.android.material.progressindicator.LinearProgressIndicator;
@@ -65,6 +66,13 @@ public final class GameWebLoginActivity extends AppCompatActivity {
         findViewById(R.id.gameWebClose).setOnClickListener(v -> closeToGame());
         web = findViewById(R.id.gameWebView);
         configureWebView();
+        getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
+            @Override
+            public void handleOnBackPressed() {
+                if (web.canGoBack()) web.goBack();
+                else closeToGame();
+            }
+        });
         Intent intent = getIntent();
         String url = intent == null ? null : intent.getDataString();
         if (state != null || intent == null || !GameWebPolicy.ACTION.equals(intent.getAction())
@@ -253,12 +261,6 @@ public final class GameWebLoginActivity extends AppCompatActivity {
             Log.w(TAG, "Could not foreground the existing virtual game");
         }
         finish();
-    }
-
-    @Override
-    public void onBackPressed() {
-        if (web != null && web.canGoBack()) web.goBack();
-        else closeToGame();
     }
 
     @Override

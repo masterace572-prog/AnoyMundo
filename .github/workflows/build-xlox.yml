@@ -139,7 +139,27 @@ jobs:
           exit "$rc"
 
       - name: Lint both variants
-        run: ./gradlew :app:lintAnoyRelease :app:lintKennyRelease --no-daemon
+        run: |
+          set +e
+          ./gradlew :app:lintAnoyRelease :app:lintKennyRelease --no-daemon > /tmp/lint.log 2>&1
+          rc=$?
+          cat /tmp/lint.log
+          if [ "$rc" -ne 0 ]; then
+            python3 - <<'PYLINT'
+          from pathlib import Path
+          reports = sorted(Path('app/build').rglob('lint-results*.txt'))
+          log = '\n'.join(Path('/tmp/lint.log').read_text(errors='replace').splitlines()[-100:])
+          messages = []
+          for report in reports:
+              text = report.read_text(errors='replace')
+              errors = [line for line in text.splitlines() if ': Error:' in line]
+              if errors:
+                  messages.extend(errors)
+          detail = '\n'.join(messages)[:6000] + '\n' + log[-6000:]
+          print('::error title=Android lint failed::' + detail.replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A'))
+          PYLINT
+          fi
+          exit "$rc"
 
       - name: Collect separately named APKs
         run: |

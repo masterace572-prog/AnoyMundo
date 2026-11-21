@@ -147,6 +147,8 @@ class AndroidWiring(unittest.TestCase):
         self.assertIn('MetaActivityManager.launchIntent(scoped, GameLoginRouter.USER)', browser)
         self.assertIn('!target.exported', browser)
         self.assertIn('GameWebNavigator.navigate', browser)
+        self.assertIn('getOnBackPressedDispatcher().addCallback', browser)
+        self.assertNotIn('public void onBackPressed()', browser)
         self.assertNotIn('setResult(RESULT_OK', browser)
         self.assertIn('if (returned && !isFinishing()) finish();', browser)
         self.assertLess(browser.index('prepareWebView();'), browser.index('setContentView('))
