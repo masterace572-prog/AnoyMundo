@@ -352,6 +352,11 @@ try:
     check(not crashes, 'No app-process fatal exceptions during rendered UI walkthrough')
     check(len(evidence['screens']) >= 50, 'Complete native screen/state/accessibility capture set')
 finally:
+    # Keep the failing rendered state too; assertions must not discard it.
+    try:
+        (args.out / 'last-screen.png').write_bytes(adb('exec-out', 'screencap', '-p', binary=True))
+    except (RuntimeError, subprocess.TimeoutExpired):
+        pass
     (args.out / 'results.json').write_text(json.dumps(evidence, indent=2) + '\n')
     (args.out / 'last-logcat.txt').write_text(adb('logcat', '-d', '-v', 'tag', check=False))
     shell('wm', 'size', 'reset', check=False)

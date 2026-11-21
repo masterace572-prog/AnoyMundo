@@ -1,7 +1,13 @@
 package com.xlox.ui;
 
 import android.app.Activity;
+import android.content.BroadcastReceiver;
 import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
+import android.database.ContentObserver;
+import android.os.Handler;
+import android.os.Looper;
 import android.os.PowerManager;
 import android.provider.Settings;
 import android.view.View;
@@ -52,11 +58,70 @@ public final class Liquid {
     public static void attach(Activity activity) {
         ViewGroup host = activity.findViewById(android.R.id.content);
         if (host == null || host.getChildCount() == 0) return;
+        // Runtime accessibility/battery changes must redraw idle screens too.
+        // Registration follows the view lifecycle, not a static Activity reference.
+        PolicyObserver policy = new PolicyObserver(activity, host);
+        host.addOnAttachStateChangeListener(policy);
+        if (host.isAttachedToWindow()) policy.onViewAttachedToWindow(host);
         host.getChildAt(0).setBackground(new LiquidBackdrop(activity));
         View settings = activity.findViewById(R.id.settingsPage);
         if (settings != null) settings.setBackground(new LiquidBackdrop(activity));
         bind(activity, R.id.actionPanel, R.id.mainScroll);
         bind(activity, R.id.appUpdatePanel, R.id.appUpdateScroll);
+    }
+
+    private static final class PolicyObserver implements View.OnAttachStateChangeListener {
+        private final Activity activity;
+        private final View root;
+        private boolean attached;
+        private boolean receiverRegistered;
+        private boolean contrastRegistered;
+        private final BroadcastReceiver battery = new BroadcastReceiver() {
+            @Override public void onReceive(Context context, Intent intent) { changed(); }
+        };
+        private final ContentObserver contrast = new ContentObserver(new Handler(Looper.getMainLooper())) {
+            @Override public void onChange(boolean selfChange) { changed(); }
+        };
+
+        PolicyObserver(Activity activity, View root) {
+            this.activity = activity;
+            this.root = root;
+        }
+
+        private void changed() {
+            policyCheckedAt = 0;
+            refresh(root);
+        }
+
+        @Override public void onViewAttachedToWindow(View view) {
+            if (attached) return;
+            attached = true;
+            try {
+                // A protected system broadcast, including on pre-Android-13 devices.
+                activity.registerReceiver(battery,
+                        new IntentFilter(PowerManager.ACTION_POWER_SAVE_MODE_CHANGED));
+                receiverRegistered = true;
+            } catch (RuntimeException ignored) { /* Keep the safe draw-time policy. */ }
+            try {
+                activity.getContentResolver().registerContentObserver(
+                        Settings.Secure.getUriFor("high_text_contrast_enabled"), false, contrast);
+                contrastRegistered = true;
+            } catch (RuntimeException ignored) { /* Settings access can be OEM-restricted. */ }
+            changed();
+        }
+
+        @Override public void onViewDetachedFromWindow(View view) {
+            attached = false;
+            if (receiverRegistered) {
+                try { activity.unregisterReceiver(battery); } catch (RuntimeException ignored) { }
+                receiverRegistered = false;
+            }
+            if (contrastRegistered) {
+                try { activity.getContentResolver().unregisterContentObserver(contrast); }
+                catch (RuntimeException ignored) { }
+                contrastRegistered = false;
+            }
+        }
     }
 
     private static void bind(Activity activity, int panelId, int sourceId) {

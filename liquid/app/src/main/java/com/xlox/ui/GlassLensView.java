@@ -38,6 +38,7 @@ public final class GlassLensView extends View {
     private int colour(int id) { return ContextCompat.getColor(getContext(), id); }
 
     @Override protected void onSizeChanged(int w, int h, int oldw, int oldh) {
+        super.onSizeChanged(w, h, oldw, oldh);
         float size = Math.min(w, h);
         float cx = w / 2f, cy = h / 2f;
         lens.set(cx - size * .37f, cy - size * .37f, cx + size * .37f, cy + size * .37f);

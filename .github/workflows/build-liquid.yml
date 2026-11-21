@@ -25,8 +25,8 @@ jobs:
       run:
         working-directory: liquid
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: '17'
@@ -35,7 +35,7 @@ jobs:
             liquid/gradle/wrapper/gradle-wrapper.properties
             liquid/build.gradle
             liquid/app/build.gradle
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
       - name: Install artwork checker (never bundled)
@@ -80,6 +80,9 @@ jobs:
         run: |
           set -o pipefail
           ./gradlew :app:lintAnoyRelease :app:lintKennyRelease :app:lintAnoyDebug --no-daemon 2>&1 | tee ../qa-logs/liquid-build/lint.log
+      - name: Report actionable build or lint findings
+        if: failure()
+        run: python3 scripts/ci_evidence.py lint
       - name: Collect brand-specific artifacts
         run: |
           set -eu
@@ -113,13 +116,13 @@ jobs:
             test "$ACTUAL" = "$EXPECTED" || { echo '::error::Original signing certificate mismatch'; exit 1; }
           done
           python3 scripts/check_isolation.py
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: Liquid-APKs
           path: dist/liquid/
           if-no-files-found: error
           retention-days: 14
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: Liquid-debug-APKs
           path: dist/liquid-debug/
@@ -127,7 +130,7 @@ jobs:
           retention-days: 7
       - name: Upload build / lint evidence
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: Liquid-build-reports
           path: |
@@ -145,20 +148,20 @@ jobs:
       matrix:
         api: [23, 33]
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: '17'
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
       - run: python3 -m pip install --disable-pip-version-check -r liquid/scripts/icon-requirements.txt
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v7
         with:
           name: Liquid-debug-APKs
           path: qa-apks
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v7
         with:
           name: Liquid-APKs
           path: qa-apks
@@ -176,9 +179,12 @@ jobs:
           disable-animations: true
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot -camera-back none -camera-front none -memory 2048
           script: python3 liquid/scripts/liquid_screenshots.py --apks qa-apks --out qa-logs/liquid-api-${{ matrix.api }} --api ${{ matrix.api }}
+      - name: Publish concise review images and UI results
+        if: always()
+        run: python3 liquid/scripts/ci_evidence.py ui --path qa-logs/liquid-api-${{ matrix.api }}
       - name: Upload actual emulator screenshots, view trees and results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: Liquid-UI-API-${{ matrix.api }}
           path: qa-logs/liquid-api-${{ matrix.api }}/
