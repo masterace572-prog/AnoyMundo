@@ -1,4 +1,11 @@
-# Contained game web login — original-Mundo candidate
+# Contained game web login — archived experiment
+
+**Cancelled by the user; not a working-login claim.** No further login changes
+or device-acceptance work are planned. The unverified `2.4.4-webtest` prerelease
+and its APK assets were removed during the authorized obsolete-test cleanup.
+Source and this historical technical record are retained; stable releases,
+original Mundo and live panel selections are unchanged. The sections below
+record the past experiment, not a recommendation to install or resume it.
 
 ## Corrected report / scope
 
@@ -97,8 +104,9 @@ virtual callback handler fails closed rather than leaking a return to real BGMI.
 - Earlier publication attempts stopped at lint; its `EllipsizeMaxLines` finding
   was corrected with `singleLine=true` for the origin display, and a local crash
   guard was added. Lint was not bypassed and no failed build was published.
-- [Candidate release](https://github.com/masterace572-prog/AnoyMundo/releases/tag/loaders-v2.4.4-webtest-21),
-  ID `453669457`: **prerelease, not latest**; both APKs plus checksum file.
+- Former candidate `loaders-v2.4.4-webtest-21`, ID `453669457`, was an
+  unverified, non-latest prerelease. Its release and APK assets have now been
+  removed at the user's request; the hashes below are historical only.
 - Anoy: 5,186,852 bytes; SHA-256
   `de88fcb5b1b9139e3af940ba24bf2d7b5f83e8ae650ea595dd1f145b74e93e4c`.
 - KennyPvt: 7,799,794 bytes; SHA-256
