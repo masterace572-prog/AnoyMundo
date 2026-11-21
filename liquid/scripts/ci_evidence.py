@@ -53,6 +53,15 @@ def ui(root):
         summary = {'api': result.get('api'), 'screens': len(result.get('screens', [])),
                    'checks': len(result.get('checks', [])), 'failures': failures}
         print('::notice title=Liquid UI results::' + escaped(json.dumps(summary)))
+    log = root / 'last-logcat.txt'
+    if log.exists():
+        lines = log.read_text(errors='replace').splitlines()
+        for index, line in enumerate(lines):
+            if 'FATAL EXCEPTION' not in line:
+                continue
+            block = '\n'.join(lines[index:index + 24])
+            if 'com.xlox' in block or 'com.kennypvt' in block:
+                print('::error title=Liquid UI app-process crash::' + escaped(block[:3900]))
     selected = [
         'anoy-splash', 'anoy-login', 'anoy-home', 'anoy-settings',
         'anoy-library-required', 'anoy-apk-update-normal', 'anoy-login-keyboard',
@@ -73,7 +82,11 @@ def ui(root):
                 break
             quality -= 7
         data = base64.b64encode(stream.getvalue()).decode('ascii')
-        print(f'::notice title=LIQUID_IMAGE {name}.jpg::{data}')
+        # GitHub truncates an annotation message at 4096 characters. Separate
+        # bounded chunks preserve the complete JPEG instead of a grey partial.
+        parts = [data[i:i + 3000] for i in range(0, len(data), 3000)]
+        for index, part in enumerate(parts, 1):
+            print(f'::notice title=LIQUID_IMAGE {name}.jpg {index}/{len(parts)}::{part}')
 
 
 if __name__ == '__main__':

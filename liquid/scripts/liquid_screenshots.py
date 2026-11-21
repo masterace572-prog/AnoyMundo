@@ -110,7 +110,7 @@ def capture(name, required=(), hierarchy=True):
     full = brand + '-' + name
     focus = shell('dumpsys', 'window')
     focused = next((line for line in focus.splitlines() if 'mCurrentFocus=' in line), '')
-    check(pkg in focused, f'{full}: loader is the foreground app')
+    check(pkg in focused, f'{full}: loader is the foreground app ({focused.strip()})')
     visible_text = []
     if hierarchy:
         doc, data = tree()
@@ -147,9 +147,18 @@ def home(*extras):
                    '--es', 'qa_note', 'Preview announcement. Your panel message appears here.', *extras))
 
 
+def hide_ime():
+    # ESC is Back when no keyboard is showing on some Android versions. Do
+    # not accidentally finish LogAct just to prepare a keyboard-free capture.
+    state = shell('dumpsys', 'input_method')
+    if re.search(r'\b(?:mInputShown|mIsInputViewShown|isInputViewShown)\s*=\s*true\b', state):
+        shell('input', 'keyevent', '111')
+        time.sleep(.5)
+
+
 def login(*extras):
     start('LogAct', ('--es', 'qa_gate', 'ready', *extras))
-    shell('input', 'keyevent', '111', check=False)  # Hide IME without navigating Back.
+    hide_ime()
     time.sleep(.4)
 
 
@@ -268,7 +277,7 @@ try:
             tap('userkey')
             shell('input', 'text', 'DEMO-7D-EXAMPLE')
             capture('login-keyboard', ('userkey', 'login'))
-            shell('input', 'keyevent', '111')
+            hide_ime()
             tap('toggleKey')
             capture('login-key-visible', ('userkey',))
 
