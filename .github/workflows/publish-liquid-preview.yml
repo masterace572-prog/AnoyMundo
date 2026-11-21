@@ -1,7 +1,8 @@
 name: Liquid Android — manually share verified preview
 
-# Publication is opt-in and separate from the read-only build. A push only
-# registers/validates this definition; it can NEVER publish anything.
+# Publication is opt-in and separate from the read-only build. Definition-only
+# pushes never publish. An explicitly changed, reviewed request file is the
+# auditable alternative when this connection cannot use workflow_dispatch.
 on:
   workflow_dispatch:
     inputs:
@@ -20,7 +21,7 @@ on:
         default: false
   push:
     branches: [arena/dda4cc57-anoymundo]
-    paths: ['.github/workflows/publish-liquid-preview.yml']
+    paths: ['.github/workflows/publish-liquid-preview.yml', '.github/liquid-preview-request.json']
 
 permissions:
   contents: read
@@ -40,42 +41,81 @@ jobs:
           persist-credentials: false
       - name: Confirm that source build remains isolated
         run: python3 liquid/scripts/check_isolation.py
+      - name: Check publication guards without network or release side effects
+        run: python3 .github/scripts/test_liquid_publication.py
 
   verify-request:
-    if: github.event_name == 'workflow_dispatch' && inputs.confirm_preview && github.ref == 'refs/heads/arena/dda4cc57-anoymundo'
+    if: github.ref == 'refs/heads/arena/dda4cc57-anoymundo'
     needs: definition
     runs-on: ubuntu-24.04
     timeout-minutes: 5
+    outputs:
+      approved: ${{ steps.request.outputs.approved }}
+      source_run: ${{ steps.request.outputs.source_run }}
+      source_sha: ${{ steps.request.outputs.source_sha }}
     env:
       GH_TOKEN: ${{ github.token }}
       GH_REPO: ${{ github.repository }}
-      SOURCE_RUN: ${{ inputs.source_run }}
-      SOURCE_SHA: ${{ inputs.source_sha }}
+      REQUEST_RUN: ${{ inputs.source_run }}
+      REQUEST_SHA: ${{ inputs.source_sha }}
+      REQUEST_CONFIRM: ${{ inputs.confirm_preview && 'true' || 'false' }}
+      PUSH_BEFORE: ${{ github.event.before }}
     steps:
-      - name: Refuse untested runs, changed source or any other branch
+      - name: Refuse unreviewed requests, untested runs, changed source or any other branch
+        id: request
         run: |
           python3 - <<'PY'
-          import json, os, re, subprocess
-          run, sha = os.environ['SOURCE_RUN'], os.environ['SOURCE_SHA']
-          assert re.fullmatch(r'[0-9]+', run), 'Invalid run ID'
-          assert re.fullmatch(r'[0-9a-f]{40}', sha), 'Full source SHA required'
+          import base64, json, os, re, subprocess
+          from pathlib import Path
           def api(path):
               return json.loads(subprocess.check_output(['gh', 'api', 'repos/' + os.environ['GH_REPO'] + path]))
-          built = api('/actions/runs/' + run)
-          assert built['path'] == '.github/workflows/build-liquid.yml', 'Not the Liquid build workflow'
-          assert built['head_sha'] == sha and built['head_branch'] == 'arena/dda4cc57-anoymundo'
-          assert built['status'] == 'completed' and built['conclusion'] == 'success', 'All build and emulator jobs must pass'
-          jobs = api('/actions/runs/' + run + '/jobs')['jobs']
-          for name in ('build', 'visual-qa (23)', 'visual-qa (33)'):
-              assert any(j['name'] == name and j['conclusion'] == 'success' for j in jobs), 'Missing successful job: ' + name
-          diff = api('/compare/' + sha + '...' + os.environ['GITHUB_SHA'])
-          assert diff['status'] in ('ahead', 'identical') and diff['behind_by'] == 0
-          assert not any(f['filename'].startswith('liquid/') or f['filename'] == '.github/workflows/build-liquid.yml' for f in diff.get('files', [])), 'Liquid source changed since tested build'
-          print('PASS: exact Liquid source, branch, signed build and both emulator jobs verified')
+          def main():
+              if os.environ['GITHUB_EVENT_NAME'] == 'push':
+                  before = os.environ['PUSH_BEFORE']
+                  assert re.fullmatch(r'[0-9a-f]{40}', before) and int(before, 16), 'Existing branch history required'
+                  changes = api('/compare/' + before + '...' + os.environ['GITHUB_SHA'])
+                  assert changes['status'] == 'ahead' and changes['behind_by'] == 0
+                  assert len(changes.get('files', [])) < 300 and changes['total_commits'] < 250, 'Refuse truncated comparisons'
+                  request_path = '.github/liquid-preview-request.json'
+                  if not any(f['filename'] == request_path and f['status'] != 'removed' for f in changes.get('files', [])):
+                      print('Definition-only push: no changed publication request; nothing will be published')
+                      return
+                  entry = api('/contents/' + request_path + '?ref=' + os.environ['GITHUB_SHA'])
+                  assert entry['encoding'] == 'base64'
+                  request = json.loads(base64.b64decode(entry['content']))
+                  assert set(request) == {'source_run', 'source_sha', 'confirm_preview', 'ui_reviewed'}
+                  assert request['confirm_preview'] is True and request['ui_reviewed'] is True, 'Explicit review and preview confirmation required'
+                  run, sha = str(request['source_run']), request['source_sha']
+              else:
+                  assert os.environ['GITHUB_EVENT_NAME'] == 'workflow_dispatch'
+                  if os.environ['REQUEST_CONFIRM'] != 'true':
+                      print('No preview confirmation: nothing will be published')
+                      return
+                  run, sha = os.environ['REQUEST_RUN'], os.environ['REQUEST_SHA']
+              assert re.fullmatch(r'[0-9]+', run), 'Invalid run ID'
+              assert isinstance(sha, str) and re.fullmatch(r'[0-9a-f]{40}', sha), 'Full source SHA required'
+              built = api('/actions/runs/' + run)
+              assert built['path'] == '.github/workflows/build-liquid.yml', 'Not the Liquid build workflow'
+              assert built['head_sha'] == sha and built['head_branch'] == 'arena/dda4cc57-anoymundo'
+              assert built['status'] == 'completed' and built['conclusion'] == 'success', 'All build and emulator jobs must pass'
+              jobs = api('/actions/runs/' + run + '/jobs')['jobs']
+              for name in ('build', 'visual-qa (23)', 'visual-qa (33)'):
+                  assert any(j['name'] == name and j['conclusion'] == 'success' for j in jobs), 'Missing successful job: ' + name
+              diff = api('/compare/' + sha + '...' + os.environ['GITHUB_SHA'])
+              assert diff['status'] in ('ahead', 'identical') and diff['behind_by'] == 0
+              assert len(diff.get('files', [])) < 300 and diff['total_commits'] < 250, 'Refuse truncated comparisons'
+              assert not any(f['filename'].startswith('liquid/') or f['filename'] == '.github/workflows/build-liquid.yml' for f in diff.get('files', [])), 'Liquid source changed since tested build'
+              artifacts = api('/actions/runs/' + run + '/artifacts')['artifacts']
+              for name in ('Liquid-APKs', 'Liquid-UI-API-23', 'Liquid-UI-API-33'):
+                  assert any(a['name'] == name and not a['expired'] and a['size_in_bytes'] > 0 for a in artifacts), 'Missing retained artifact: ' + name
+              with Path(os.environ['GITHUB_OUTPUT']).open('a') as output:
+                  output.write('approved=true\nsource_run=' + run + '\nsource_sha=' + sha + '\n')
+              print('PASS: explicit request, exact Liquid source, branch, signed build and both emulator jobs verified')
+          main()
           PY
 
   publish:
-    if: github.event_name == 'workflow_dispatch' && inputs.confirm_preview
+    if: needs.verify-request.outputs.approved == 'true'
     needs: verify-request
     runs-on: ubuntu-24.04
     timeout-minutes: 15
@@ -85,8 +125,8 @@ jobs:
     env:
       GH_TOKEN: ${{ github.token }}
       GH_REPO: ${{ github.repository }}
-      SOURCE_RUN: ${{ inputs.source_run }}
-      SOURCE_SHA: ${{ inputs.source_sha }}
+      SOURCE_RUN: ${{ needs.verify-request.outputs.source_run }}
+      SOURCE_SHA: ${{ needs.verify-request.outputs.source_sha }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -99,13 +139,13 @@ jobs:
         with:
           name: Liquid-APKs
           path: dist/liquid
-          run-id: ${{ inputs.source_run }}
+          run-id: ${{ needs.verify-request.outputs.source_run }}
           github-token: ${{ github.token }}
       - uses: actions/download-artifact@v7
         with:
           pattern: Liquid-UI-API-*
           path: qa-evidence
-          run-id: ${{ inputs.source_run }}
+          run-id: ${{ needs.verify-request.outputs.source_run }}
           github-token: ${{ github.token }}
       - uses: actions/setup-python@v6
         with:
