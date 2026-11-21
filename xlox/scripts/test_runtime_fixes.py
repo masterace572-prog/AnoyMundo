@@ -132,6 +132,10 @@ class AndroidWiring(unittest.TestCase):
         self.assertEqual(activity.findall('intent-filter'), [])
         self.assertIsNone(activity.get(ANDROID + 'process'))
         self.assertNotEqual(activity.get(ANDROID + 'noHistory'), 'true')
+        layout = ET.parse(ROOT / 'app/src/main/res/layout/activity_game_web_login.xml').getroot()
+        origin = next(e for e in layout.iter() if e.get(ANDROID + 'id') == '@+id/gameWebOrigin')
+        self.assertEqual(origin.get(ANDROID + 'singleLine'), 'true')
+        self.assertIsNone(origin.get(ANDROID + 'maxLines'))
 
     def test_webview_cannot_launch_an_outside_app_or_expose_a_native_js_bridge(self):
         browser = (JAVA / 'GameWebLoginActivity.java').read_text()

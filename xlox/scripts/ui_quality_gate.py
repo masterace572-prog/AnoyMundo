@@ -194,6 +194,9 @@ for f in xml_files:
         for c in node.childNodes:
             if c.nodeType != c.ELEMENT_NODE:
                 continue
+            if (c.getAttribute("android:ellipsize") in ("middle", "start")
+                    and c.getAttribute("android:maxLines") == "1"):
+                crashy.append(f"{rel(f)}: use singleLine=true, not maxLines=1, with middle/start ellipsize")
             if c.getAttribute("android:addStatesFromChildren") == "true":
                 for k in c.getElementsByTagName("*"):
                     if k.getAttribute("android:duplicateParentState") == "true":
