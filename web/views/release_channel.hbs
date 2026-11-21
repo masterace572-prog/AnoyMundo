@@ -1,0 +1,7 @@
+{{#if releaseChoices}}
+<nav class="page-actions" aria-label="Manage release channel" style="margin-bottom:20px">
+    {{#each releaseChoices}}
+    <a href="{{../releasePath}}?channel={{id}}" class="btn {{#if selected}}btn-primary{{else}}btn-secondary{{/if}}"{{#if selected}} aria-current="page"{{/if}}>{{name}}</a>
+    {{/each}}
+</nav>
+{{/if}}

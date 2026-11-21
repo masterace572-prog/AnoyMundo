@@ -1,7 +1,7 @@
 <div class="page-head" data-release-channel="{{releaseChannel}}">
     <div>
         <h1 class="page-title">Library</h1>
-        <p class="page-sub">{{releaseBrand}} only. Your library and APK updates are separate from the other owner.</p>
+        <p class="page-sub">{{releaseBrand}} library. Only this channel is changed when you publish.</p>
     </div>
     <div class="page-actions">
         <a href="/api/lib/download?channel={{releaseChannel}}" class="btn btn-secondary">{{icon "download"}}Download current</a>
@@ -9,6 +9,8 @@
 </div>
 
 {{> msgStatus}}
+{{> release_channel}}
+{{#if cleanupPending}}<p class="hint" role="status">Old files are queued for automatic cleanup. Current downloads have a short grace period.</p>{{/if}}
 
 <section class="card" style="margin-bottom:20px">
     <div class="hero">
@@ -46,7 +48,7 @@
 <section class="card publish-card" id="publish-card">
     <div class="card-head">
         <div class="tile">{{icon "upload"}}</div>
-        <div><h2 class="card-title">Publish a release</h2><div class="card-sub">A .so or .zip (max {{maxUploadMb}} MB), or an https:// link. Main library is saved as libbgmi.so.</div></div>
+        <div><h2 class="card-title">Publish a release</h2><div class="card-sub">A .so or .zip (max {{maxUploadMb}} MB), or an HTTPS link. Saved as libbgmi.so. Old files clear automatically.</div></div>
     </div>
     <form id="lib-form" class="form" novalidate>
         <div class="field">
@@ -94,6 +96,7 @@
 (function () {
     'use strict';
     var MAX = Number('{{maxUploadMb}}') * 1024 * 1024;
+    var channel = '{{releaseChannel}}';
     var byId = function (id) { return document.getElementById(id); };
 
     function say(box, text, ok) {
@@ -149,6 +152,7 @@
         });
     }
     function send(payload, onProgress) {
+        payload.channel = channel;
         return new Promise(function (resolve, reject) {
             var xhr = new XMLHttpRequest();
             xhr.open('POST', '/lib', true);
@@ -272,7 +276,7 @@
             }, function () {});
         }).then(function (data) {
             progress(100, 'Published', 'done');
-            say(result, 'Version ' + data.version + ' is live. Reloading…', true);
+            say(result, 'Version ' + data.version + ' is live.' + (data.cleanup_pending ? ' Old files will be cleaned automatically.' : ' Old stored files cleaned.') + ' Reloading…', true);
             setTimeout(function () { location.reload(); }, 1200);
         }).catch(function (err) {
             if (pendingUpload) send({ action: 'cancel_upload', upload_path: pendingUpload }, function () {}).catch(function () {});

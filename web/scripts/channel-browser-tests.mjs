@@ -23,8 +23,8 @@ export async function channelBrowserTests(browser, base, out, { kennyReferral })
     bytes.set([0x7f, 0x45, 0x4c, 0x46, 2, 1]); bytes[18] = 183;
     return bytes;
   };
-  const publish = async (page, name, bytes, version) => {
-    await page.goto(`${base}/lib`);
+  const publish = async (page, name, bytes, version, channel = null) => {
+    await page.goto(`${base}/lib${channel ? '?channel=' + channel : ''}`);
     await page.fill('#lib-version', version);
     await page.setInputFiles('#lib-file', { name, mimeType: 'application/octet-stream', buffer: bytes });
     const published = page.waitForResponse(response => {
@@ -79,7 +79,7 @@ export async function channelBrowserTests(browser, base, out, { kennyReferral })
     await shot(second, 'phone_referrals');
     await second.goto(`${base}/lib`);
     assert.equal(await second.locator('[data-release-channel]').getAttribute('data-release-channel'), 'kenny');
-    assert.match(await second.locator('.page-sub').textContent(), /KennyPvt only/);
+    assert.match(await second.locator('.page-sub').textContent(), /KennyPvt (?:library|APK updates)/);
     await shot(second, 'kenny_empty');
 
     // Browser uploads 10 MiB to a signed binary PUT, not a >4.5 MB panel JSON.
@@ -94,13 +94,42 @@ export async function channelBrowserTests(browser, base, out, { kennyReferral })
     assert.equal(a.version, '1.8'); assert.equal(k.version, '0.1');
     assert.notEqual(a.sha256, k.sha256);
     assert.equal((await secondCtx.request.post(`${base}/lib`, { data: { action: 'reset', channel: 'anoy' } })).status(), 403);
-    assert.equal((await ownerCtx.request.post(`${base}/app-update`, { data: { action: 'remove', channel: 'kenny' } })).status(), 403);
+    assert.equal((await secondCtx.request.post(`${base}/app-update`, { data: { action: 'remove', channel: 'anoy' } })).status(), 403);
+    await owner.goto(`${base}/lib?channel=kenny`);
+    assert.equal(await owner.locator('[data-release-channel]').getAttribute('data-release-channel'), 'kenny');
+    assert.equal(await owner.locator('[aria-label="Manage release channel"] a').count(), 2);
+    assert.match(await owner.locator('.who-sub').textContent(), /Real Owner/);
+    await shot(owner, 'real_owner_kenny_channel');
+    await publish(owner, 'real-owner-fixture.so', elf(768), '0.2', 'kenny');
+    assert.equal((await (await ownerCtx.request.get(`${base}/api/lib/manifest`)).json()).version, '1.8');
+    assert.equal((await (await ownerCtx.request.get(`${base}/api/lib/manifest?channel=kenny`)).json()).version, '0.2');
+    assert.match(await owner.locator('.list-row').filter({ hasText: 'Published by' }).textContent(), /Anoy/);
+    await owner.goto(`${base}/app-update?channel=kenny`);
+    const latestResponse = owner.waitForResponse(response => new URL(response.url()).pathname === '/app-update/latest-build');
+    await owner.click('#app-latest');
+    assert.equal(new URL((await latestResponse).url()).searchParams.get('channel'), 'kenny');
+    await owner.locator('#app-latest:not([disabled])').waitFor({ state: 'visible' });
+    assert.match(await owner.inputValue('#app-apk-url'), /KennyPvt-loader\.apk/);
+    await owner.fill('#app-changelog', 'Offline browser authority check');
+    const appPublished = owner.waitForResponse(response => new URL(response.url()).pathname === '/app-update' && response.request().method() === 'POST');
+    await owner.click('#app-submit');
+    const publishedApp = await appPublished;
+    assert.equal(publishedApp.status(), 200); assert.equal((await publishedApp.json()).channel, 'kenny');
+    await owner.locator('#app-remove').waitFor({ state: 'visible' });
+    assert.equal((await (await ownerCtx.request.get(`${base}/api/app/update`)).json()).available, false, 'Anoy APK selection remains unchanged');
+    const removedResponse = owner.waitForResponse(response => new URL(response.url()).pathname === '/app-update' && response.request().method() === 'POST');
+    await owner.click('#app-remove');
+    await owner.locator('.modal-backdrop.show').waitFor();
+    await owner.locator('.modal .btn-danger').click();
+    assert.equal((await removedResponse).status(), 200);
+    await owner.locator('#app-remove').waitFor({ state: 'detached' });
+    assert.equal((await (await ownerCtx.request.get(`${base}/api/app/update?channel=kenny`)).json()).available, false);
     await second.goto(`${base}/app-update`);
-    assert.match(await second.locator('.page-sub').textContent(), /KennyPvt only/);
+    assert.match(await second.locator('.page-sub').textContent(), /KennyPvt (?:library|APK updates)/);
     await shot(second, 'kenny_apk_channel');
     const overflow = await second.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
     assert.ok(overflow <= 1, 'Kenny release UI fits a phone');
     assert.deepEqual(errors, [], 'no browser script errors in invitation/upload flow');
-    console.log('PASS browser: clean referral UI, confirmed deletion, private one-time Owner signup, 10 MiB .so + ZIP upload, channel isolation');
+    console.log('PASS browser: clean referral UI, confirmed deletion, private one-time Owner signup, 10 MiB .so + ZIP, Real Owner cross-channel library/APK controls, Kenny isolation');
   } finally { await ownerCtx.close(); await secondCtx.close(); }
 }

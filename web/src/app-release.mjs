@@ -302,14 +302,14 @@ export async function appReleasePageData(channel = 'anoy') {
 }
 
 /**
- * POST /app-update (JSON). Owner channel is server-derived. Validate first,
+ * POST /app-update (JSON). Selected channel is authorized against the Owner identity. Validate first,
  * then use one per-channel SQL transaction; a failed insert cannot retire the
  * previous update. Errors come back per field.
  */
-export async function doAppReleasePost(req, res, body, user) {
-  const channel = assertWriteChannel(user, body);
+export async function doAppReleasePost(req, res, body, user, query = null) {
+  const channel = assertWriteChannel(user, body, query);
   if (!channel) {
-    return sendJson(res, { ok: false, error: 'Only an Owner can manage their own app update channel.' }, 403);
+    return sendJson(res, { ok: false, error: 'You cannot manage that app update channel.' }, 403);
   }
   const action = str(body.action) || 'publish';
 

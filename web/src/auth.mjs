@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 import bcrypt from 'bcryptjs';
 import { config } from './config.mjs';
-import { ownerChannel } from './channels.mjs';
+import { ownerChannel, isRealOwner } from './channels.mjs';
 import { getUserById, getUserByUsername } from './db.mjs';
 
 export const SESSION_COOKIE = 'am_session';
@@ -161,7 +161,8 @@ export function getClientIp(req) {
   return req.headers?.['x-real-ip'] || req.socket?.remoteAddress || '0.0.0.0';
 }
 
-export function levelName(level) {
+export function levelName(level, user = null) {
+  if (Number(level) === 1 && isRealOwner(user)) return 'Real Owner';
   return ({ 1: 'Owner', 2: 'Admin', 3: 'Reseller' })[Number(level)] || 'Unknown';
 }
 
@@ -240,9 +241,10 @@ export async function currentUser(req) {
     ...user,
     isAdmin: isOwner || Number(user.level) === 2,
     isOwner,
+    isRealOwner: isOwner && isRealOwner(user),
     notLevel2: Number(user.level) !== 2,
     displayName: displayName(user),
-    levelName: levelName(user.level),
+    levelName: levelName(user.level, user),
     session,
   };
 }

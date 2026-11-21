@@ -11,7 +11,8 @@ const ok = (value, message) => { assert.ok(value, message); checks++; console.lo
 const rejects = async (fn, message) => { await assert.rejects(fn); checks++; console.log('  PASS  ' + message); };
 try {
   await db.exec(`create role anon; create role authenticated; create role service_role;
-    create schema storage; create table storage.buckets(id text primary key, name text, public boolean, file_size_limit bigint);`);
+    create schema storage; create table storage.buckets(id text primary key, name text, public boolean, file_size_limit bigint);
+    create table storage.objects(bucket_id text, name text, created_at timestamptz default now());`);
   const base = (await fs.readFile(new URL('../../supabase/schema.sql', import.meta.url), 'utf8')).split('-- BEGIN TWO OWNER CHANNELS')[0].replace('create extension if not exists pgcrypto;', '');
   await db.exec(base);
   await db.exec('create unique index if not exists users_single_owner_idx on public.users(level) where level = 1;');
@@ -117,5 +118,125 @@ try {
   ok(!(await redeem(expired, 'ExpiredRegular')).ok, 'expired regular referral fails closed');
   ok(!(await redeem({ code: 'a'.repeat(32) }, 'ForgedOwner')).ok, 'regular registration RPC cannot redeem an Owner referral');
   ok(!(await call('revoke_referral', [kenny.id_users, 1])).ok, "Kenny cannot delete Anoy's Owner invitation");
+  // New site-only hierarchy/retention migration is additive to the preserved base.
+  const siteMigration = await fs.readFile(new URL('../sql/real_owner_library_retention.sql', import.meta.url), 'utf8');
+  const currentBefore = await rows('select id, channel, storage_path, content_base64 from public.client_release where is_current order by channel');
+  const appsBefore = await rows('select * from public.app_release where is_current order by channel');
+  await db.exec(siteMigration);
+  await db.exec(siteMigration);
+  ok(JSON.stringify(currentBefore) === JSON.stringify(await rows('select id, channel, storage_path, content_base64 from public.client_release where is_current order by channel')), 'new site migration installs without deleting/changing current libraries');
+  ok(JSON.stringify(appsBefore) === JSON.stringify(await rows('select * from public.app_release where is_current order by channel')), 'new site migration preserves both current app updates');
+  ok((await rows('select password from public.users where username=$1', ['Anoy']))[0].password === before, 'Real Owner capability does not reset credentials or numeric billing role');
+  ok(await call('authorized_release_channel', [anoy.id_users, '{}']) === 'anoy', 'old Real Owner scripts still default to Anoy');
+  ok(await call('authorized_release_channel', [anoy.id_users, '{"channel":"kenny"}']) === 'kenny', 'Real Owner may explicitly manage Kenny');
+  await rejects(() => call('authorized_release_channel', [kenny.id_users, '{"channel":"anoy"}']), 'delegated Owner cannot select the Real Owner channel');
+  for (const value of ['{"channel":null}', '{"channel":"third"}', '{"channel":["anoy"]}', '{"channel":"kenny","owner_channel":"anoy"}']) {
+    await rejects(() => call('authorized_release_channel', [anoy.id_users, value]), 'SQL refuses invalid/conflicting channel selectors');
+  }
+  const originalInline = (await rows("select content_base64 from public.client_release where channel='anoy' and is_current"))[0].content_base64;
+  ok(originalInline === 'preserve-existing-bytes', 'installing retention does not clear a current inline library');
+  const encodedFixture = 'anoy/releases/12345678-1234-1234-1234-123456789abc/libbgmi.zip';
+  const encodedUrl = 'https://storage.example/' + [...encodedFixture].map(c => '%' + c.charCodeAt(0).toString(16)).join('');
+  ok(await call('library_url_references_path', [encodedUrl, encodedFixture]) === true, 'percent-encoded managed download links remain protected');
+  const dry = await call('plan_library_storage_cleanup', [null, false]);
+  ok(dry.ok && !dry.applied && (await rows('select count(*)::int n from public.library_storage_cleanup'))[0].n === 0, 'maintenance plan is read-only by default');
+  const snapshotBeforeFailure = await rows('select id, is_current, content_base64 from public.client_release order by id');
+  await rejects(() => call('publish_library_release', [anoy.id_users, JSON.stringify({ channel:'anoy', version:'3.0', external_url:'https://example.com/new.so', game_version:'x'.repeat(200) })]), 'new publication still rolls back when insert fails after demotion');
+  ok(JSON.stringify(snapshotBeforeFailure) === JSON.stringify(await rows('select id, is_current, content_base64 from public.client_release order by id')), 'failed publish cannot clear old bytes or change active releases');
+  ok((await rows('select count(*)::int n from public.library_storage_cleanup'))[0].n === 0, 'failed publication creates no deletion jobs');
+  const kennyLive = (await rows("select storage_path from public.client_release where channel='kenny' and is_current"))[0].storage_path;
+  ok((await pub(anoy.id_users, 'kenny', '0.2')).ok, 'Real Owner can publish Kenny library in the SQL transaction');
+  ok((await rows('select count(*)::int n from public.library_storage_cleanup where storage_path=$1 and deleted_at is null', [kennyLive]))[0].n === 1, 'successful replacement enqueues the previous file only after the new current exists');
+  ok((await rows("select content_base64 from public.client_release where channel='anoy' and is_current"))[0].content_base64 === originalInline, 'Kenny cleanup preserves Anoy current inline bytes');
+  ok((await pub(anoy.id_users, 'anoy', '3.1')).ok, 'Real Owner can still publish Anoy');
+  ok((await rows("select count(*)::int n from public.client_release where not is_current and content_base64 is not null"))[0].n === 0, 'retired inline library payloads are cleared, audit rows retained');
+  ok((await rows('select count(*)::int n from public.client_release where is_current'))[0].n === 2, 'one active release per channel remains');
+  await rejects(() => db.query('update public.client_release set is_current=true where storage_path=$1', [kennyLive]), 'a retired file cannot be reactivated during cleanup');
+  await rejects(() => call('publish_library_release', [anoy.id_users, JSON.stringify({ channel:'kenny', version:'99', file_size:100, sha256:'a'.repeat(64), storage_path:kennyLive })]), 'a queued/old path cannot be republished');
+  await rejects(() => call('publish_library_release', [anoy.id_users, JSON.stringify({ channel:'anoy', version:'99', external_url:'https://storage.example/storage/v1/object/sign/loader-releases/' + kennyLive + '?token=fixture' })]), 'retired objects cannot be revived through an external URL in the other channel');
+  const livePaths = await rows('select storage_path from public.client_release where is_current');
+  const pendingPath = `anoy/pending/${crypto.randomUUID()}`;
+  const stalePath = `anoy/pending/${crypto.randomUUID()}`;
+  const orphanPath = `anoy/releases/${crypto.randomUUID()}/libbgmi.zip`;
+  await db.query("insert into storage.objects(bucket_id,name,created_at) values('loader-releases',$1,now()),('loader-releases',$2,now()-interval '2 days'),('loader-releases',$3,now()-interval '2 days'),('loader-releases','unrelated/private.txt',now()-interval '2 days'),('another-bucket',$2,now()-interval '2 days')", [pendingPath, stalePath, orphanPath]);
+  await call('plan_library_storage_cleanup', [null, true]);
+  ok((await rows('select * from public.library_storage_cleanup_batch(null,100)')).length === 0, 'newly retired files have a grace period longer than signed downloads');
+  ok((await rows("select bool_and(delete_after >= queued_at + interval '3 minutes') safe from public.library_storage_cleanup"))[0].safe, 'every queued deletion has the signed-download grace interval');
+  await db.exec("update public.library_storage_cleanup set delete_after=now()-interval '1 second'");
+  const batch = (await rows('select * from public.library_storage_cleanup_batch(null,100)')).map(row => row.storage_path);
+  ok(batch.includes(stalePath) && batch.includes(orphanPath), 'expired pending and orphan library objects are queued');
+  ok(!batch.includes(pendingPath) && !batch.includes('unrelated/private.txt'), 'fresh uploads and unrelated files/buckets are not garbage-collected');
+  ok(livePaths.every(row => !batch.includes(row.storage_path)), 'all current storage paths are excluded from deletion');
+  const currentKenny = livePaths.find(row => row.storage_path.startsWith('kenny/')).storage_path;
+  const externalReference = 'https://storage.example/storage/v1/object/sign/loader-releases/' + currentKenny;
+  ok((await call('publish_library_release', [anoy.id_users, JSON.stringify({channel:'anoy',version:'3.2',external_url:externalReference})])).ok, 'a live managed file may still be referenced by another active channel');
+  await pub(kenny.id_users,'kenny','0.3');
+  ok(!(await rows('select * from public.library_storage_cleanup_batch(null,100)')).some(row => row.storage_path===currentKenny), 'an active cross-channel external reference prevents physical deletion');
+  ok((await app(anoy.id_users,'kenny',2)).ok, 'Real Owner can publish Kenny APK update');
+  await rejects(() => app(kenny.id_users,'anoy',99), 'Kenny still cannot publish Anoy APK update');
+  await rejects(() => app(anoy.id_users,'kenny',2), 'cross-channel authority never bypasses increasing version codes');
+  const sitePermissions = await rows("select proname, has_function_privilege('anon',p.oid,'EXECUTE') a, has_function_privilege('authenticated',p.oid,'EXECUTE') u, has_function_privilege('service_role',p.oid,'EXECUTE') s from pg_proc p where proname in ('authorized_release_channel','plan_library_storage_cleanup','library_storage_cleanup_batch')");
+  ok(sitePermissions.length===3 && sitePermissions.every(p => !p.a && !p.u && p.s), 'new authorization/cleanup RPCs are service-role-only');
+  ok((await rows("select relrowsecurity from pg_class where oid='public.library_storage_cleanup'::regclass"))[0].relrowsecurity, 'cleanup queue is RLS-protected with no public policy');
+  await rejects(() => db.query("insert into public.library_storage_cleanup(storage_path,channel) values('anoy/../../private','anoy')"), 'queue constraint rejects paths outside managed libraries');
+  ok(await call('authorize_library_storage_worker', ['a'.repeat(64)]) === false, 'scheduled worker fails closed before its dedicated token is configured');
+  await db.query('insert into public.library_storage_worker_auth(singleton,token_sha256) values(true,$1)', ['a'.repeat(64)]);
+  ok(await call('authorize_library_storage_worker', ['a'.repeat(64)]) === true, 'scheduled worker verifies only its configured digest');
+  ok(await call('authorize_library_storage_worker', ['b'.repeat(64)]) === false, 'incorrect worker digest cannot authorize cleanup');
+  const authAcl = (await rows("select has_function_privilege('anon','public.authorize_library_storage_worker(text)','EXECUTE') a, has_function_privilege('authenticated','public.authorize_library_storage_worker(text)','EXECUTE') u, has_function_privilege('service_role','public.authorize_library_storage_worker(text)','EXECUTE') s"))[0];
+  ok(authAcl.s && !authAcl.a && !authAcl.u, 'only the backend can check worker authorization');
+  const workerAcl = (await rows("select has_table_privilege('anon','public.library_storage_worker_auth','SELECT') a, has_table_privilege('authenticated','public.library_storage_worker_auth','SELECT') u, has_table_privilege('service_role','public.library_storage_worker_auth','SELECT') s"))[0];
+  ok(!workerAcl.a && !workerAcl.u && !workerAcl.s, 'even the service role cannot read worker authorization hashes directly');
+  // Exercise our scheduler SQL with stubbed extension services: PostgreSQL
+  // control flow/privileges are real; no network, Vault or cron engine runs here.
+  await db.exec(`
+    create schema extensions; create schema vault; create schema net; create schema cron;
+    create function extensions.gen_random_bytes(integer) returns bytea language sql as $$ select decode(repeat('ab',32),'hex') $$;
+    create function extensions.digest(text,text) returns bytea language sql as $$ select decode(md5($1)||md5($1),'hex') $$;
+    create table vault.secrets(id uuid default gen_random_uuid(), name text unique, secret text);
+    create view vault.decrypted_secrets as select id,name,secret as decrypted_secret from vault.secrets;
+    create function vault.create_secret(new_secret text,new_name text,new_description text) returns uuid language plpgsql as $$ declare v_id uuid; begin insert into vault.secrets(name,secret) values(new_name,new_secret) returning id into v_id; return v_id; end $$;
+    create table cron.job(jobid bigserial primary key, jobname text unique, schedule text, command text, active boolean default true);
+    create table cron.job_run_details(jobid bigint,end_time timestamptz);
+    create function cron.schedule(p_name text,p_schedule text,p_command text) returns bigint language plpgsql as $$ declare v_id bigint; begin insert into cron.job(jobname,schedule,command) values(p_name,p_schedule,p_command) returning jobid into v_id; return v_id; end $$;
+    create function cron.alter_job(p_id bigint,active boolean) returns void language sql as $$ update cron.job set active=$2 where jobid=$1 $$;
+    create table net.offline_requests(id bigserial,url text,body jsonb,has_authorization boolean,timeout_ms integer);
+    create function net.http_post(url text,headers jsonb,body jsonb,timeout_milliseconds integer) returns bigint language plpgsql as $$ declare v_id bigint; begin insert into net.offline_requests(url,body,has_authorization,timeout_ms) values(url,body,headers->>'Authorization' like 'Bearer %',timeout_milliseconds) returning id into v_id; return v_id; end $$;
+  `);
+  const scheduleSql = (await fs.readFile(new URL('../sql/library_cleanup_schedule.sql', import.meta.url), 'utf8'))
+    .replace('create extension if not exists pg_net with schema extensions;', '').replace('create extension if not exists pg_cron;', '');
+  const releaseSnapshot = JSON.stringify(await rows('select * from public.client_release order by id'));
+  const accountSnapshot = JSON.stringify(await rows('select * from public.users order by id_users'));
+  const appSnapshot = JSON.stringify(await rows('select * from public.app_release order by id'));
+  await db.exec(scheduleSql);
+  await db.exec(scheduleSql);
+  ok((await rows('select count(*)::int n from cron.job'))[0].n === 1, 'scheduler installation is idempotent and creates exactly one dedicated job');
+  ok((await rows('select active from cron.job'))[0].active === false, 'new background cleanup is paused until live integrity checks pass');
+  ok((await rows('select count(*)::int n from vault.secrets'))[0].n === 1, 'scheduler reuses its dedicated Vault task token instead of rotating account/API keys');
+  await db.exec('select cron.alter_job(jobid,true) from cron.job'); await db.exec(scheduleSql);
+  ok((await rows('select active from cron.job'))[0].active === true, 'reapplying scheduler setup preserves an already enabled job');
+  const scheduleAcl = (await rows("select has_function_privilege('anon','public.request_library_storage_cleanup(text)','EXECUTE') a,has_function_privilege('authenticated','public.request_library_storage_cleanup(text)','EXECUTE') u,has_function_privilege('service_role','public.request_library_storage_cleanup(text)','EXECUTE') s"))[0];
+  ok(!scheduleAcl.a && !scheduleAcl.u && !scheduleAcl.s, 'only the database scheduler/operator can submit authenticated cleanup tasks');
+  const verifyRequest = await call('request_library_storage_cleanup',['verify']);
+  const queuedRequest = (await rows('select * from net.offline_requests where id=$1',[verifyRequest]))[0];
+  ok(queuedRequest.has_authorization && queuedRequest.body.action === 'verify' && queuedRequest.timeout_ms === 60000, 'scheduler sends an authenticated, bounded worker request without returning credentials');
+  await rejects(() => call('request_library_storage_cleanup',['delete-all']), 'scheduler refuses unknown actions');
+  await call('plan_library_storage_cleanup',[null,true]);
+  await db.exec('update public.library_storage_cleanup set deleted_at=now()');
+  const requestsBefore = (await rows('select count(*)::int n from net.offline_requests'))[0].n;
+  ok(await call('request_library_storage_cleanup',['cleanup']) === null, 'idle scheduler sends no HTTP request or repeated downloads');
+  ok((await rows('select count(*)::int n from net.offline_requests'))[0].n === requestsBefore, 'idle scheduling adds no Edge invocation or file egress');
+  const scheduledOrphan = `kenny/pending/${crypto.randomUUID()}`;
+  await db.query("insert into storage.objects(bucket_id,name,created_at) values('loader-releases',$1,now()-interval '2 days')",[scheduledOrphan]);
+  ok(await call('request_library_storage_cleanup',['cleanup']) === null, 'expired orphan is queued automatically but not deleted inside grace');
+  await db.query("update public.library_storage_cleanup set delete_after=now()-interval '1 second' where storage_path=$1",[scheduledOrphan]);
+  const autoRequest = await call('request_library_storage_cleanup',['cleanup']);
+  ok((await rows('select body from net.offline_requests where id=$1',[autoRequest]))[0].body.action === 'cleanup', 'due queued files trigger automatic cleanup without a logged-in browser');
+  await db.exec("insert into cron.job_run_details(jobid,end_time) select jobid,now()-interval '3 days' from cron.job; insert into cron.job_run_details(jobid,end_time) values(999999,now()-interval '3 days')");
+  await call('request_library_storage_cleanup',['cleanup']);
+  ok((await rows('select jobid from cron.job_run_details')).every(row => Number(row.jobid) === 999999), 'only this new job prunes its own old operational logs');
+  ok(JSON.stringify(await rows('select * from public.client_release order by id')) === releaseSnapshot
+    && JSON.stringify(await rows('select * from public.users order by id_users')) === accountSnapshot
+    && JSON.stringify(await rows('select * from public.app_release order by id')) === appSnapshot, 'scheduler setup and requests never change library metadata, accounts or APK selections');
   console.log(`\n${checks} PostgreSQL checks passed`);
 } finally { await db.close(); }

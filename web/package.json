@@ -13,10 +13,12 @@
     "check": "node scripts/check.mjs",
     "dev": "node scripts/dev-server.mjs",
     "start": "node scripts/dev-server.mjs",
-    "test": "npm run test:smoke && npm run test:channels && npm run test:db",
+    "test": "npm run test:smoke && npm run test:channels && npm run test:storage && npm run test:db",
     "test:smoke": "node scripts/smoke-test.mjs",
     "test:channels": "node --test scripts/channels-test.mjs",
-    "test:db": "node scripts/channel-db-test.mjs"
+    "test:db": "node scripts/channel-db-test.mjs",
+    "test:storage": "node --test scripts/library-storage-worker-test.mjs",
+    "storage:cleanup": "node scripts/cleanup-library-storage.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.49.0",

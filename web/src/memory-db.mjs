@@ -42,6 +42,7 @@ const seed = () => {
   _ftext: [{ id: 1, _status: 'Safe', _ftext: 'MOD STATUS :- 100% SAFE' }],
   client_release: [{ id: 1, channel: 'anoy', version: '1.0', file_name: 'no-release.zip', file_size: 0, sha256: '', content_base64: null, external_url: null, notes: 'Placeholder', game_version: null, is_current: true, uploaded_by: 'admin', created_at: new Date().toISOString() }],
   app_release: [],
+  library_storage_cleanup: [],
   auth_attempt: [],
   api_keys: [],
   key_orders: [],
@@ -165,6 +166,10 @@ class Query {
     }
 
     if (this._operation === 'update') {
+      if (table === 'client_release' && rows.some(row => {
+        const next = { ...row, ...this._payload };
+        return next.storage_path !== row.storage_path || (!row.is_current && next.is_current);
+      })) return { data: null, error: { message: 'Retired library storage is immutable' }, count: null };
       if (table === 'users' && rows.some(row => {
         const next = { ...row, ...this._payload };
         return Number(row.level) === 1

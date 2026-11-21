@@ -1,7 +1,8 @@
 import crypto from 'node:crypto';
-import { ownerChannel, CHANNELS, publicChannel } from './channels.mjs';
+import { ownerChannel, CHANNELS, publicChannel, releasePageContext } from './channels.mjs';
 import { registerFromReferral, revokeReferral } from './referrals.mjs';
 import { doLibUpload } from './library-release.mjs';
+import { cleanLibraryStorage } from './library-storage.mjs';
 import { config } from './config.mjs';
 import {
   db, getUserByUsername, listUsers, getKeyById, getKeyByUserKey,
@@ -10,7 +11,7 @@ import {
 import {
   currentUser, authenticate, hashPassword, codeHash, verifyPassword,
   setSession, clearSession, getClientIp, displayName, passwordIssue,
-  forgetSession, forgetAllSessions,
+  forgetSession, forgetAllSessions, levelName,
 } from './auth.mjs';
 import {
   renderPage, sendHtml, sendJson, sendText, buildSelect, sqlDateTime, parseIstDateTime,
@@ -993,7 +994,7 @@ export async function handle(req, res) {
       if (!user.isOwner) return redirect(res, '/dashboard', { msgWarning: 'You do not have access to that page.' });
       const userList = (await listUsers()).map((u) => ({
         ...u,
-        levelName: ({ 1: 'Owner', 2: 'Admin', 3: 'Reseller' })[Number(u.level)] || 'Unknown',
+        levelName: levelName(u.level, u),
         statusName: ({ 1: 'Active', 2: 'Banned', 3: 'Expired' })[Number(u.status)] || 'Unknown',
         saldoLabel: Number(u.level) === 1 ? 'Unlimited' : inr(u.saldo),
         expiresLabel: u.expiration_date ? humanDate(u.expiration_date) : 'Never',
@@ -1043,20 +1044,31 @@ export async function handle(req, res) {
     // ---------------------------- library / release ------------------------
     if (lp === '/lib') {
       if (!user.isOwner) return redirect(res, '/dashboard', { msgWarning: 'You do not have access to that page.' });
-      if (method === 'POST') return await doLibUpload(req, res, body, user);
-      const settings = await getSettings(ownerChannel(user));
-      return page(req, res, 'lib', { user, title: 'Library', maxUploadMb: config.maxUploadMb, ...serverData(settings) });
+      if (method === 'POST') return await doLibUpload(req, res, body, user, q);
+      const context = releasePageContext(user, q, '/lib');
+      if (!context) return sendJson(res, { ok: false, error: 'You cannot manage that release channel.' }, 403);
+      // Retry a failed post-publication cleanup on an authenticated library visit.
+      // No public GET or loader download can request deletion.
+      const cleanup = method === 'GET' ? await cleanLibraryStorage({ channel: context.releaseChannel }) : null;
+      const settings = await getSettings(context.releaseChannel);
+      return page(req, res, 'lib', { user, title: 'Library', maxUploadMb: config.maxUploadMb,
+        ...serverData(settings), ...context, cleanupPending: cleanup && (!cleanup.ok || !!cleanup.pending) });
     }
 
     // ------------------------- app (APK) update ----------------------------
     if (lp === '/app-update/latest-build') {
       if (!user.isOwner) return sendJson(res, { ok: false, error: 'Only an Owner can manage their own app update.' }, 403);
-      return await handleLatestBuild(res, ownerChannel(user));
+      const context = releasePageContext(user, q, '/app-update');
+      if (!context) return sendJson(res, { ok: false, error: 'You cannot manage that release channel.' }, 403);
+      return await handleLatestBuild(res, context.releaseChannel);
     }
     if (lp === '/app-update') {
       if (!user.isOwner) return redirect(res, '/dashboard', { msgWarning: 'You do not have access to that page.' });
-      if (method === 'POST') return await doAppReleasePost(req, res, body, user);
-      return page(req, res, 'app_update', { user, title: 'App update', ...(await appReleasePageData(ownerChannel(user))) });
+      if (method === 'POST') return await doAppReleasePost(req, res, body, user, q);
+      const context = releasePageContext(user, q, '/app-update');
+      if (!context) return sendJson(res, { ok: false, error: 'You cannot manage that release channel.' }, 403);
+      return page(req, res, 'app_update', { user, title: 'App update', ...context,
+        ...(await appReleasePageData(context.releaseChannel)) });
     }
 
     // -------------------------------- 404 -----------------------------------

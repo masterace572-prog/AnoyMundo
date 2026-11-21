@@ -45,6 +45,7 @@ Handlebars.registerHelper('icon', (name, cls) => new Handlebars.SafeString(
 
 Handlebars.registerPartial('header', templates.header);
 Handlebars.registerPartial('msgStatus', templates.msgStatus);
+Handlebars.registerPartial('release_channel', templates.release_channel);
 
 const compiled = new Map();
 function compile(name) {
@@ -255,7 +256,7 @@ export function renderPage(req, res, name, data = {}) {
     ? {
       ...user,
       initial: String(user.displayName || user.username || 'U').trim().charAt(0).toUpperCase(),
-      // The single Owner account has an unlimited balance.
+      // Both fixed Owner accounts have an unlimited balance.
       unlimited: !!user.isOwner,
       saldoLabel: Number(user.saldo || 0).toLocaleString('en-IN'),
     }

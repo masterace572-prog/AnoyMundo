@@ -20,6 +20,7 @@ Handlebars.registerHelper('alertClass', () => 'alert-info');
 const { templates } = await import('../src/templates.generated.mjs');
 Handlebars.registerPartial('header', templates.header);
 Handlebars.registerPartial('msgStatus', templates.msgStatus);
+Handlebars.registerPartial('release_channel', templates.release_channel);
 for (const [name, source] of Object.entries(templates)) {
   try {
     // Handlebars.compile is lazy, so parse explicitly to catch syntax errors.
@@ -35,7 +36,7 @@ for (const [name, source] of Object.entries(templates)) {
 for (const mod of ['../src/config.mjs', '../src/memory-db.mjs', '../src/db.mjs',
   '../src/auth.mjs', '../src/render.mjs', '../src/http.mjs',
   '../src/licensing.mjs', '../src/key-service.mjs', '../src/api-keys.mjs',
-  '../src/channels.mjs', '../src/owners.mjs', '../src/referrals.mjs', '../src/library-package.mjs', '../src/library-release.mjs',
+  '../src/channels.mjs', '../src/owners.mjs', '../src/referrals.mjs', '../src/library-package.mjs', '../src/library-release.mjs', '../src/library-storage.mjs', '../src/library-storage-core.mjs', '../src/library-storage-worker.mjs', '../src/library-link.mjs',
   '../src/app.mjs', '../api/index.js']) {
   try { await import(mod); process.stdout.write(`  ok  module ${mod}\n`); }
   catch (e) { errors.push(`module ${mod}: ${e.stack || e.message}`); }

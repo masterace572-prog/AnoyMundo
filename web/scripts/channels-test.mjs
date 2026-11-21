@@ -19,7 +19,9 @@ const { db } = await import('../src/db.mjs');
 const { hashPassword } = await import('../src/auth.mjs');
 const { createOwnerInvite } = await import('../src/owners.mjs');
 const { registerFromReferral } = await import('../src/referrals.mjs');
-const { publicChannel } = await import('../src/channels.mjs');
+const { publicChannel, assertWriteChannel } = await import('../src/channels.mjs');
+const { cleanLibraryStorage, libraryStoragePlan } = await import('../src/library-storage.mjs');
+const { verifyLibraryLink } = await import('../src/library-link.mjs');
 const { pickLatestBuild } = await import('../src/app-release.mjs');
 let base;
 let server;
@@ -228,7 +230,8 @@ test('a ZIP larger than the old upload cap publishes only to Kenny; invalid uplo
   assert.ok(archive.length > 3 * 1024 * 1024);
   const ticket = await prepare(kenny, archive, 'something.zip');
   const anoyBefore = await manifest('anoy');
-  const published = await kenny.post('/lib?channel=anoy', { action: 'upload', upload_path: ticket.upload_path, version: '7.1', notes: 'Kenny only' });
+  assert.equal((await kenny.post('/lib?channel=anoy', { action: 'upload', upload_path: ticket.upload_path, version: '7.1' })).status, 403);
+  const published = await kenny.post('/lib', { action: 'upload', upload_path: ticket.upload_path, version: '7.1', notes: 'Kenny only' });
   assert.equal(published.status, 200); assert.equal(published.data.channel, 'kenny');
   const health = await anon.request('/api/health');
   assert.equal(health.status, 200);
@@ -238,7 +241,7 @@ test('a ZIP larger than the old upload cap publishes only to Kenny; invalid uplo
   const kennyBefore = await manifest('kenny');
   assert.equal(kennyBefore.version, '7.1'); assert.equal(kennyBefore.file_name, 'libbgmi.so');
   assert.deepEqual(await manifest('anoy'), anoyBefore, 'query parameters cannot redirect an owner write');
-  assert.doesNotMatch((await kenny.request('/lib?channel=anoy')).data, /value="1\.1"/);
+  assert.equal((await kenny.request('/lib?channel=anoy')).status, 403);
   for (const actor of [anoy, kenny]) {
     const bad = await prepare(actor, Buffer.alloc(64));
     const r = await actor.post('/lib', { action: 'upload', upload_path: bad.upload_path, version: '100' });
@@ -249,9 +252,9 @@ test('a ZIP larger than the old upload cap publishes only to Kenny; invalid uplo
   assert.deepEqual(await manifest('kenny'), kennyBefore);
 });
 
-test('all library and APK writes reject a forged other-owner channel in BOTH directions', async () => {
+test('delegated Owner writes cannot target the Real Owner channel', async () => {
   const before = ['anoy', 'kenny'].map(c => ({ ...active('client_release', c) }));
-  for (const [actor, other] of [[anoy, 'kenny'], [kenny, 'anoy']]) {
+  for (const [actor, other] of [[kenny, 'anoy']]) {
     for (const action of ['prepare_upload', 'cancel_upload', 'upload', 'link', 'reset', 'game']) {
       for (const field of ['channel', 'owner_channel']) {
         assert.equal((await actor.post('/lib', { [field]: other, action, version: '99', file_size: 64, game_version: '99.9', external_url: 'https://example.com/a.so' })).status, 403);
@@ -279,7 +282,8 @@ test('APK publications, removals and latest-build assets are separate; old clien
   assert.equal(first.channel, 'anoy'); assert.equal(first.version_code, 18); assert.equal(first.update_available, true);
   assert.equal(secondUpdate.channel, 'kenny'); assert.equal(secondUpdate.version_code, 1); assert.equal(secondUpdate.update_available, false);
   assert.match((await anoy.request('/app-update/latest-build')).data.apk_url, /\/Anoy-XLOX-loader\.apk$/);
-  assert.match((await kenny.request('/app-update/latest-build?channel=anoy')).data.apk_url, /\/KennyPvt-loader\.apk$/);
+  assert.equal((await kenny.request('/app-update/latest-build?channel=anoy')).status, 403);
+  assert.match((await kenny.request('/app-update/latest-build')).data.apk_url, /\/KennyPvt-loader\.apk$/);
   const releases = [{ tag_name: 'loaders-v2.4.0-18', assets: [
     { name: 'Anoy-XLOX-loader.apk', browser_download_url: 'https://github.com/o/r/Anoy.apk' },
     { name: 'KennyPvt-loader.apk', browser_download_url: 'https://github.com/o/r/Kenny.apk' },
@@ -498,4 +502,237 @@ test('both Owner accounts remain permanent independently of invitation expiry', 
   await freshSession.login(second.username, 'OpaqueSignal93');
   assert.equal((await freshSession.request('/dashboard')).status, 200, 'Kenny account is not tied to the seven-day invitation');
   expiredInvite.invite_expires_at = original;
+});
+
+test('Real Owner authority comes only from the fixed identity, not a display name, flag or level field in a form', () => {
+  const main = users().find(user => user.owner_channel === 'anoy');
+  assert.equal(assertWriteChannel(main, {}), 'anoy');
+  assert.equal(assertWriteChannel(main, { channel: 'kenny' }), 'kenny');
+  assert.equal(assertWriteChannel(second, { channel: 'kenny' }), 'kenny');
+  for (const impostor of [{ ...main, level: 2 }, { ...main, owner_channel: null }, { ...main, status: 0 },
+    { ...second, username: 'Anoy', fullname: 'Real Owner', isRealOwner: true }]) {
+    assert.equal(assertWriteChannel(impostor, { channel: 'anoy' }), null);
+  }
+  for (const body of [{ channel: null }, { channel: '' }, { channel: [] }, { channel: {} },
+    { channel: 'third' }, { channel: '__proto__' }, { channel: 'kenny', owner_channel: 'anoy' }]) {
+    assert.equal(assertWriteChannel(main, body), null);
+  }
+  assert.equal(assertWriteChannel(main, { channel: 'kenny' }, new URLSearchParams('channel=anoy')), null);
+  assert.equal(assertWriteChannel(main, {}, new URLSearchParams('channel=anoy&channel=anoy')), null);
+});
+
+test('Real Owner has an explicit two-channel switch; delegated Owner cannot view or select Anoy releases', async () => {
+  for (const route of ['/lib', '/app-update']) {
+    const selected = await anoy.request(route + '?channel=kenny');
+    assert.equal(selected.status, 200);
+    assert.match(selected.data, /data-release-channel="kenny"/);
+    assert.match(selected.data, /Real Owner/);
+    assert.match(selected.data, /aria-label="Manage release channel"/);
+    assert.match(selected.data, /href="\/app-update\?channel=kenny"/);
+    assert.match(selected.data, /var channel = 'kenny'/);
+    for (const match of selected.data.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)) new Script(match[1]);
+    const own = await kenny.request(route);
+    assert.equal(own.status, 200);
+    assert.doesNotMatch(own.data, /aria-label="Manage release channel"|Real Owner/);
+    assert.equal((await kenny.request(route + '?channel=anoy')).status, 403);
+    assert.equal((await anoy.request(route + '?channel=third')).status, 403);
+    assert.equal((await anoy.request(route + '?channel=anoy&channel=kenny')).status, 403);
+  }
+  assert.equal((await anoy.post('/lib?channel=anoy', { action: 'reset', channel: 'kenny' })).status, 403);
+  assert.equal((await anoy.post('/app-update?channel=anoy', { action: 'remove', channel: 'kenny' })).status, 403);
+  assert.match((await anoy.request('/app-update/latest-build?channel=kenny')).data.apk_url, /KennyPvt-loader\.apk$/);
+  assert.equal((await kenny.request('/app-update/latest-build?channel=anoy')).status, 403);
+});
+
+test('Real Owner can upload and manage Kenny library and APK without modifying Anoy releases', async () => {
+  const before = await manifest('anoy');
+  const beforeApp = { ...active('app_release', 'anoy') };
+  const raw = elf(299, 7);
+  const ticket = await anoy.post('/lib', { action: 'prepare_upload', channel: 'kenny', file_size: raw.length });
+  assert.equal(ticket.status, 200);
+  assert.match(ticket.data.upload_path, /^kenny\/pending\//);
+  assert.equal((await anon.request(ticket.data.upload_url, { method: 'PUT', body: raw, raw: true })).status, 200);
+  const published = await anoy.post('/lib', { action: 'upload', channel: 'kenny', version: 'real-owner', upload_path: ticket.data.upload_path });
+  assert.equal(published.status, 200);
+  assert.equal(published.data.channel, 'kenny');
+  assert.equal(active('client_release', 'kenny').uploaded_by, 'Anoy');
+  assert.equal((await manifest('kenny')).sha256, sha(normalizeLibrary(raw)));
+  assert.deepEqual(await manifest('anoy'), before);
+  assert.equal((await anoy.post('/lib', { action: 'game', channel: 'kenny', game_version: '4.9.0' })).status, 200);
+  assert.equal((await anoy.post('/lib', { action: 'reset', owner_channel: 'kenny' })).status, 200);
+  assert.equal((await manifest('kenny')).game_version, '4.9.0');
+  assert.deepEqual(await manifest('anoy'), before);
+  const code = (active('app_release', 'kenny')?.version_code || 0) + 1;
+  const apk = await anoy.post('/app-update', { action: 'publish', channel: 'kenny', version_name: '2.5.0', version_code: code,
+    apk_url: 'https://github.com/o/r/releases/download/v1/KennyPvt-loader.apk', changelog: 'Real Owner publication' });
+  assert.equal(apk.status, 200);
+  assert.equal(active('app_release', 'kenny').published_by, 'Anoy');
+  assert.deepEqual(active('app_release', 'anoy'), beforeApp);
+  assert.equal((await anoy.post('/app-update', { action: 'remove', channel: 'kenny' })).status, 200);
+  assert.equal(active('app_release', 'kenny'), undefined);
+  assert.deepEqual(active('app_release', 'anoy'), beforeApp);
+});
+
+const matureQueued = (channel = null) => {
+  for (const row of db()._store.library_storage_cleanup) if (!channel || row.channel === channel) row.delete_after = new Date(Date.now() - 1).toISOString();
+};
+
+const publishFixture = (actor, version, channel) => actor.post('/lib', {
+  action: 'upload', ...(channel ? { channel } : {}), version, content_base64: elf(384, 13).toString('base64'),
+});
+
+test('a successful library replacement removes only retired bytes and keeps history metadata and both current libraries', async () => {
+  const first = await publishFixture(anoy, 'retention-first');
+  assert.equal(first.status, 200);
+  const old = { ...active('client_release', 'anoy') };
+  const other = { ...active('client_release', 'kenny') };
+  const secondPublish = await publishFixture(anoy, 'retention-second');
+  assert.equal(secondPublish.status, 200);
+  assert.equal(secondPublish.data.cleanup_pending, true);
+  const api = db().storage.from(LIBRARY_BUCKET);
+  assert.ok((await api.download(old.storage_path)).data, 'just-retired bytes remain during signed-download grace');
+  matureQueued('anoy');
+  const cleaned = await cleanLibraryStorage({ channel: 'anoy' });
+  assert.equal(cleaned.ok, true); assert.ok(cleaned.deleted >= 1);
+  assert.ok((await api.download(old.storage_path)).error, 'retired object physically removed via Storage API after grace');
+  const audit = db()._store.client_release.find(row => row.id === old.id);
+  assert.equal(audit.is_current, false);
+  assert.equal(audit.version, old.version);
+  assert.equal(audit.content_base64, null);
+  for (const row of [active('client_release', 'anoy'), other]) {
+    const downloaded = await api.download(row.storage_path);
+    assert.ok(downloaded.data);
+    assert.equal(sha(Buffer.from(await downloaded.data.arrayBuffer())), row.sha256);
+  }
+});
+
+test('a failed stored-object readback never retires the current library or starts old-file cleanup', async () => {
+  const before = await Promise.all(['anoy', 'kenny'].map(manifest));
+  const queueBefore = JSON.stringify(db()._store.library_storage_cleanup);
+  const storage = db().storage, from = storage.from;
+  let output;
+  storage.from = bucket => {
+    const api = from.call(storage, bucket);
+    return { ...api, async upload(path, ...args) { output = path; return api.upload(path, ...args); },
+      async download(path) { return path === output ? { data: new Blob([Buffer.from('corrupt fixture')]), error: null } : api.download(path); } };
+  };
+  try {
+    const response = await publishFixture(anoy, 'readback-failure');
+    assert.equal(response.status, 500);
+    assert.match(response.data.error, /previous release is still active/);
+  } finally { storage.from = from; }
+  assert.deepEqual(await Promise.all(['anoy', 'kenny'].map(manifest)), before);
+  assert.equal(JSON.stringify(db()._store.library_storage_cleanup), queueBefore);
+  assert.ok((await storage.from(LIBRARY_BUCKET).download(output)).error);
+});
+
+test('a resolved Storage deletion error leaves publication successful and retries cleanup on the next authorized page visit', async () => {
+  const old = { ...active('client_release', 'anoy') };
+  // Leave one due obsolete file to exercise a post-publication provider error.
+  await publishFixture(anoy, 'before-cleanup-retry');
+  matureQueued('anoy');
+  db().storage._failNext('remove', 'fixture error with https://private.invalid/?secret=do-not-log');
+  const published = await publishFixture(anoy, 'cleanup-retry');
+  assert.equal(published.status, 200);
+  assert.equal(published.data.ok, true);
+  assert.equal(published.data.cleanup_pending, true);
+  assert.equal((await manifest('anoy')).version, 'cleanup-retry');
+  assert.ok((await db().storage.from(LIBRARY_BUCKET).download(old.storage_path)).data, 'failed deletion did not claim success');
+  assert.ok(db()._store.library_storage_cleanup.some(row => row.storage_path === old.storage_path && !row.deleted_at));
+  assert.equal((await kenny.request('/lib?channel=anoy')).status, 403);
+  assert.ok((await db().storage.from(LIBRARY_BUCKET).download(old.storage_path)).data, 'unauthorized page request cannot run another channel cleanup');
+  matureQueued('anoy');
+  assert.equal((await anoy.request('/lib')).status, 200);
+  assert.ok((await db().storage.from(LIBRARY_BUCKET).download(old.storage_path)).error, 'next authenticated visit retries deletion');
+  assert.ok((await db().storage.from(LIBRARY_BUCKET).download(active('client_release', 'anoy').storage_path)).data);
+});
+
+test('cleanup never deletes fresh pending uploads, fresh outputs, current files, unrelated files or other buckets', async () => {
+  const store = db().storage;
+  const api = store.from(LIBRARY_BUCKET);
+  const fresh = `anoy/pending/${crypto.randomUUID()}`;
+  const freshOutput = `anoy/releases/${crypto.randomUUID()}/libbgmi.zip`;
+  const expired = `anoy/pending/${crypto.randomUUID()}`;
+  const orphan = `anoy/releases/${crypto.randomUUID()}/libbgmi.zip`;
+  const kennyExpired = `kenny/pending/${crypto.randomUUID()}`;
+  const other = 'unrelated/archive.zip';
+  const paths = [fresh, freshOutput, expired, orphan, kennyExpired, other];
+  for (const path of paths) await api.upload(path, elf());
+  for (const path of [expired, orphan, kennyExpired, other]) store._setCreatedAt(LIBRARY_BUCKET, path, '2000-01-01T00:00:00Z');
+  await store.from('another-bucket').upload(expired, elf());
+  store._setCreatedAt('another-bucket', expired, '2000-01-01T00:00:00Z');
+  const initial = store._inventory().length;
+  const queue = JSON.stringify(db()._store.library_storage_cleanup);
+  const plan = await libraryStoragePlan();
+  assert.equal(plan.applied, false);
+  assert.equal(store._inventory().length, initial);
+  assert.equal(JSON.stringify(db()._store.library_storage_cleanup), queue);
+  await libraryStoragePlan({ channel: 'anoy', apply: true });
+  matureQueued('anoy');
+  const cleaned = await cleanLibraryStorage({ channel: 'anoy' });
+  assert.equal(cleaned.ok, true);
+  for (const path of [expired, orphan]) assert.ok((await api.download(path)).error);
+  for (const path of [fresh, freshOutput, kennyExpired, other, active('client_release', 'anoy').storage_path, active('client_release', 'kenny').storage_path]) {
+    assert.ok((await api.download(path)).data, 'protected file remains');
+  }
+  assert.ok((await store.from('another-bucket').download(expired)).data);
+  await libraryStoragePlan({ channel: 'kenny', apply: true });
+  matureQueued('kenny');
+  await cleanLibraryStorage({ channel: 'kenny' });
+  assert.ok((await api.download(kennyExpired)).error);
+});
+
+test('a cleanup acknowledgement failure can be retried idempotently without deleting the active release', async () => {
+  const old = { ...active('client_release', 'anoy') };
+  await publishFixture(anoy, 'before-ack-retry');
+  matureQueued('anoy');
+  const database = db(), from = database.from;
+  let fail = true;
+  database.from = table => {
+    const query = from.call(database, table);
+    if (table === 'library_storage_cleanup' && fail) {
+      const update = query.update;
+      query.update = function (patch) {
+        fail = false;
+        update.call(this, patch);
+        this.execute = () => ({ data: null, error: { message: 'fixture acknowledgement failed' } });
+        return this;
+      };
+    }
+    return query;
+  };
+  try {
+    const published = await publishFixture(anoy, 'ack-retry');
+    assert.equal(published.status, 200);
+    assert.equal(published.data.cleanup_pending, true);
+  } finally { database.from = from; }
+  assert.ok((await database.storage.from(LIBRARY_BUCKET).download(old.storage_path)).error);
+  assert.equal((await cleanLibraryStorage({ channel: 'anoy' })).ok, true);
+  assert.ok((await database.storage.from(LIBRARY_BUCKET).download(active('client_release', 'anoy').storage_path)).data);
+});
+
+test('external-library verification accepts real arm64/ZIP content but rejects broken/HTML/oversized links before retirement', async () => {
+  const verify = (url, fetchImpl, options = {}) => verifyLibraryLink(url, { fetchImpl, ...options });
+  assert.equal((await verify('https://cdn.example/lib.so', async () => new Response(elf(128)))).ok, true);
+  assert.equal((await verify('https://cdn.example/lib.zip', async () => new Response(normalizeLibrary(elf(128))))).ok, true);
+  for (const response of [new Response('<html>download page</html>'), new Response('not found', { status: 404 }),
+    new Response(elf(128), { headers: { 'content-length': String(10 * 1024 * 1024 + 1) } }),
+    new Response(new Uint8Array(10 * 1024 * 1024 + 1))]) {
+    assert.equal((await verify('https://cdn.example/library', async () => response)).ok, false);
+  }
+  assert.equal((await verify('https://cdn.example/library', async () => new Response(null, { status: 302, headers: { location: 'http://unsafe.example/lib.so' } }))).ok, false);
+  assert.equal((await verify('https://cdn.example/library', async () => new Response(null, { status: 302, headers: { location: '/loop' } }))).ok, false);
+  for (const url of ['https://panel.example/api/lib/download', 'https://127.0.0.1/lib', 'https://10.0.0.1/lib', 'https://localhost/lib', 'https://a.vercel.app/lib']) {
+    assert.equal((await verify(url, () => { throw new Error('Must not fetch this host'); }, { selfHosts: ['panel.example'] })).ok, false);
+  }
+  const timeout = await verify('https://cdn.example/lib', (_url, { signal }) => new Promise((_, reject) => {
+    signal.addEventListener('abort', () => reject(new Error('fixture timeout')), { once: true });
+  }), { timeoutMs: 5 });
+  assert.equal(timeout.ok, false);
+  const before = await Promise.all(['anoy', 'kenny'].map(manifest));
+  const queued = JSON.stringify(db()._store.library_storage_cleanup);
+  const failed = await anoy.post('/lib', { action: 'link', version: 'bad-link', external_url: 'https://cdn.example/bad-library.so' });
+  assert.equal(failed.status, 400);
+  assert.deepEqual(await Promise.all(['anoy', 'kenny'].map(manifest)), before);
+  assert.equal(JSON.stringify(db()._store.library_storage_cleanup), queued);
 });
