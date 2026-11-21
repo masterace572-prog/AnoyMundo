@@ -1,4 +1,4 @@
-name: One-time Anoy Mundo test
+name: One-time Anoy Mundo SDK36 test
 
 # Isolated opt-in test. Never replaces the original AAR or normal release.
 # Input uploads alone do not trigger this workflow. The normal dual-APK
@@ -47,7 +47,7 @@ jobs:
             xlox/gradle/wrapper/gradle-wrapper.properties
             xlox/build.gradle
             xlox/app/build.gradle
-      - name: Install compile SDK 37 and pinned NDK
+      - name: Install SDK 36 for the explicitly marked compatibility test
         shell: bash
         run: |
           SDK="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-$HOME/android-sdk}}"
@@ -66,15 +66,17 @@ jobs:
           echo "ANDROID_SDK_ROOT=$SDK" >> "$GITHUB_ENV"
           yes | "$SM" --sdk_root="$SDK" --licenses >/dev/null 2>&1 || true
           "$SM" --sdk_root="$SDK" --list --channel=3 > /tmp/mundo-sdk-catalog.log 2>&1
-          "$SM" --sdk_root="$SDK" --install --channel=3 'platforms;android-37' 'build-tools;36.0.0' 'ndk;24.0.8215888' > /tmp/mundo-sdk.log 2>&1
-      - name: Prepare only this runner's Anoy test build
-        run: python3 test-inputs/mundo/anoy_test.py prepare
+          "$SM" --sdk_root="$SDK" --install 'platforms;android-36' 'build-tools;36.0.0' 'ndk;24.0.8215888' > /tmp/mundo-sdk.log 2>&1
+      - name: Prepare only this runner's Anoy compatibility test
+        run: |
+          echo "::warning title=SDK 36 compatibility experiment::SDK 37 is unavailable. Only this isolated test excludes the AAR-metadata task; the uploaded AAR is unchanged. This is not SDK-37-validated."
+          python3 test-inputs/mundo/anoy_test.py prepare
       - name: Build and lint Anoy only (no signing secrets in this job)
         working-directory: xlox
         run: |
           chmod +x gradlew
-          ./gradlew :app:assembleAnoyRelease --no-daemon > /tmp/mundo-build.log 2>&1
-          ./gradlew :app:lintAnoyRelease --no-daemon > /tmp/mundo-lint.log 2>&1
+          ./gradlew :app:assembleAnoyRelease -x :app:checkAnoyReleaseAarMetadata --no-daemon > /tmp/mundo-build.log 2>&1
+          ./gradlew :app:lintAnoyRelease -x :app:checkAnoyReleaseAarMetadata --no-daemon > /tmp/mundo-lint.log 2>&1
       - name: Collect and verify the unsigned test APK
         run: |
           python3 - <<'PY'
@@ -82,10 +84,10 @@ jobs:
           import shutil
           apks = list(Path('xlox/app/build/outputs/apk/anoy/release').glob('*.apk'))
           assert len(apks) == 1, 'Expected exactly one Anoy APK'
-          shutil.copyfile(apks[0], 'dist/Anoy-Mundo-LV10-test-unsigned.apk')
+          shutil.copyfile(apks[0], 'dist/Anoy-Mundo-LV10-SDK36-test-unsigned.apk')
           PY
-          python3 test-inputs/mundo/anoy_test.py verify-apk dist/Anoy-Mundo-LV10-test-unsigned.apk
-          (cd xlox && python3 scripts/check_apk_permissions.py ../dist/Anoy-Mundo-LV10-test-unsigned.apk)
+          python3 test-inputs/mundo/anoy_test.py verify-apk dist/Anoy-Mundo-LV10-SDK36-test-unsigned.apk
+          (cd xlox && python3 scripts/check_apk_permissions.py ../dist/Anoy-Mundo-LV10-SDK36-test-unsigned.apk)
           python3 test-inputs/mundo/anoy_test.py inspect
       - name: Readable build failure annotations
         if: failure()
@@ -106,7 +108,7 @@ jobs:
         with:
           name: Anoy-Mundo-test-unsigned
           path: |
-            dist/Anoy-Mundo-LV10-test-unsigned.apk
+            dist/Anoy-Mundo-LV10-SDK36-test-unsigned.apk
             dist/MUNDO-TEST-INPUTS.json
           retention-days: 7
           if-no-files-found: error
@@ -152,8 +154,8 @@ jobs:
           path: dist
       - name: Recheck unsigned input before accessing signing credentials
         run: |
-          python3 test-inputs/mundo/anoy_test.py verify-apk dist/Anoy-Mundo-LV10-test-unsigned.apk
-          "$ANDROID_SDK_ROOT/build-tools/36.0.0/zipalign" -P 16 -f 4 dist/Anoy-Mundo-LV10-test-unsigned.apk dist/Anoy-Mundo-LV10-test-aligned.apk
+          python3 test-inputs/mundo/anoy_test.py verify-apk dist/Anoy-Mundo-LV10-SDK36-test-unsigned.apk
+          "$ANDROID_SDK_ROOT/build-tools/36.0.0/zipalign" -P 16 -f 4 dist/Anoy-Mundo-LV10-SDK36-test-unsigned.apk dist/Anoy-Mundo-LV10-SDK36-test-aligned.apk
       - name: Sign with the existing Anoy key (never regenerate)
         env:
           XLOX_STORE_PASSWORD: ${{ secrets.XLOX_STORE_PASSWORD }}
@@ -164,17 +166,17 @@ jobs:
           "$ANDROID_SDK_ROOT/build-tools/36.0.0/apksigner" sign \
             --ks xlox/app/xlox.jks --ks-key-alias key0 \
             --ks-pass env:XLOX_STORE_PASSWORD --key-pass env:XLOX_EFFECTIVE_KEY_PASSWORD \
-            --out dist/Anoy-Mundo-LV10-test.apk dist/Anoy-Mundo-LV10-test-aligned.apk
+            --out dist/Anoy-Mundo-LV10-SDK36-test.apk dist/Anoy-Mundo-LV10-SDK36-test-aligned.apk
       - name: Verify signed APK, alignment and unchanged Anoy signer
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
           TOOL="$ANDROID_SDK_ROOT/build-tools/36.0.0"
-          "$TOOL/apksigner" verify --verbose --print-certs dist/Anoy-Mundo-LV10-test.apk > /tmp/mundo-test-signer.txt
-          "$TOOL/zipalign" -P 16 -c 4 dist/Anoy-Mundo-LV10-test.apk
-          python3 test-inputs/mundo/anoy_test.py verify-apk dist/Anoy-Mundo-LV10-test.apk
-          (cd xlox && python3 scripts/check_apk_permissions.py ../dist/Anoy-Mundo-LV10-test.apk)
+          "$TOOL/apksigner" verify --verbose --print-certs dist/Anoy-Mundo-LV10-SDK36-test.apk > /tmp/mundo-test-signer.txt
+          "$TOOL/zipalign" -P 16 -c 4 dist/Anoy-Mundo-LV10-SDK36-test.apk
+          python3 test-inputs/mundo/anoy_test.py verify-apk dist/Anoy-Mundo-LV10-SDK36-test.apk
+          (cd xlox && python3 scripts/check_apk_permissions.py ../dist/Anoy-Mundo-LV10-SDK36-test.apk)
           mkdir -p /tmp/mundo-stable-reference
           gh release download loaders-v2.4.2-20 --pattern Anoy-XLOX-loader.apk --dir /tmp/mundo-stable-reference
           "$TOOL/apksigner" verify --print-certs /tmp/mundo-stable-reference/Anoy-XLOX-loader.apk > /tmp/mundo-stable-signer.txt
@@ -188,12 +190,12 @@ jobs:
           assert signer('/tmp/mundo-test-signer.txt') == signer('/tmp/mundo-stable-signer.txt'), 'Anoy signing certificate changed'
           print('PASS: test APK and stable Anoy have the same verified signing certificate')
           PY
-          (cd dist && sha256sum Anoy-Mundo-LV10-test.apk > SHA256SUMS.txt)
+          (cd dist && sha256sum Anoy-Mundo-LV10-SDK36-test.apk > SHA256SUMS.txt)
       - uses: actions/upload-artifact@v7
         with:
-          name: Anoy-Mundo-LV10-test
+          name: Anoy-Mundo-LV10-SDK36-test
           path: |
-            dist/Anoy-Mundo-LV10-test.apk
+            dist/Anoy-Mundo-LV10-SDK36-test.apk
             dist/MUNDO-TEST-INPUTS.json
             dist/SHA256SUMS.txt
           retention-days: 14
@@ -204,21 +206,22 @@ jobs:
           GH_REPO: ${{ github.repository }}
         run: |
           set -eu
-          TEST_TAG="anoy-mundo-lv10-test-${GITHUB_SHA:0:8}"
+          TEST_TAG="anoy-mundo-lv10-sdk36-test-${GITHUB_SHA:0:8}"
           STABLE_BEFORE=$(gh api "repos/$GH_REPO/releases/latest" --jq .tag_name)
           printf '%s\n' \
-            'ONE-TIME ANOY TEST ONLY — not a production update.' '' \
+            'EXPERIMENTAL SDK 36 COMPATIBILITY TEST ONLY — not a production update.' '' \
             'Uses the uploaded mundo-release-lv10_cracked.aar without changing/deleting the original AAR.' \
             'Input SHA-256: 404536acf645805c4843aefce5061b43d32c82e6e4bd6d32219bb43047c67473' \
-            'Package: com.xlox; version: 2.4.2-mundo-lv10-test (20); compile SDK 37, minimum 21, target 28.' \
+            'Package: com.xlox; version: 2.4.2-mundo-lv10-sdk36-test (20); compile SDK 36, minimum 21, target 28.' \
+            'The AAR declares SDK 37, unavailable in both SDK catalogs. Only this test excludes checkAnoyReleaseAarMetadata. Neither AAR is modified. NOT SDK-37-validated.' \
             'Signed with the unchanged Anoy certificate. Installing replaces Anoy on that phone; this is not a side-by-side package.' \
             'Use a spare test device. Static/build verification is not a malware audit or a physical-device test.' \
             'No panel library or live APK-update selection is changed. Stable releases and Kenny are untouched.' \
             "Source commit: $GITHUB_SHA" '' > /tmp/mundo-test-release-notes.md
           cat dist/SHA256SUMS.txt >> /tmp/mundo-test-release-notes.md
           gh release create "$TEST_TAG" \
-            dist/Anoy-Mundo-LV10-test.apk dist/MUNDO-TEST-INPUTS.json dist/SHA256SUMS.txt \
-            --target "$GITHUB_SHA" --title 'TEST ONLY: Anoy with Mundo LV10' \
+            dist/Anoy-Mundo-LV10-SDK36-test.apk dist/MUNDO-TEST-INPUTS.json dist/SHA256SUMS.txt \
+            --target "$GITHUB_SHA" --title 'TEST ONLY: Anoy / Mundo LV10 (SDK36 compatibility)' \
             --prerelease --latest=false --notes-file /tmp/mundo-test-release-notes.md
           STABLE_AFTER=$(gh api "repos/$GH_REPO/releases/latest" --jq .tag_name)
           test "$STABLE_BEFORE" = "$STABLE_AFTER" || { echo '::error::Stable latest release changed unexpectedly'; exit 1; }

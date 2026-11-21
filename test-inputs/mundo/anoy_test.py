@@ -26,7 +26,7 @@ ORIGINAL = ROOT / 'xlox/app/libs/mundo-release.aar'
 UPLOADED = ROOT / 'test-inputs/mundo/mundo-release-lv10_cracked.aar'
 ORIGINAL_SHA256 = '368293d93076aea5db252d307614ba10a23bae84eb298830e6dab42aa3f90ba0'
 UPLOADED_SHA256 = '404536acf645805c4843aefce5061b43d32c82e6e4bd6d32219bb43047c67473'
-TEST_VERSION = '2.4.2-mundo-lv10-test'
+TEST_VERSION = '2.4.2-mundo-lv10-sdk36-test'
 TEST_CODE = 20
 ANDROID = '{http://schemas.android.com/apk/res/android}'
 
@@ -75,7 +75,9 @@ def inputs() -> dict:
             require(not any(name.startswith('META-INF/services/') for name in jar.namelist()), 'Unreviewed build-time service provider')
     return {'original_sha256': ORIGINAL_SHA256, 'uploaded_sha256': UPLOADED_SHA256,
             'native_sha256': native, 'package': 'com.xlox', 'version_name': TEST_VERSION,
-            'version_code': TEST_CODE, 'compile_sdk': 37, 'min_sdk': 21, 'target_sdk': 28}
+            'version_code': TEST_CODE, 'compile_sdk': 36, 'min_sdk': 21, 'target_sdk': 28,
+            'aar_declared_min_compile_sdk': 37, 'aar_metadata_check_bypassed_for_test': True,
+            'compatibility_note': 'SDK 37 unavailable in stable and preview catalogs; isolated SDK 36 experiment, not SDK-37-validated'}
 
 
 def replace_once(text: str, old: str, new: str) -> str:
@@ -84,7 +86,7 @@ def replace_once(text: str, old: str, new: str) -> str:
 
 
 def test_gradle(text: str) -> str:
-    text = replace_once(text, '    compileSdk 36\n', '    compileSdk 37\n    buildToolsVersion \'36.0.0\'\n' + PACKAGING)
+    text = replace_once(text, '    compileSdk 36\n', '    compileSdk 36\n    buildToolsVersion \'36.0.0\'\n' + PACKAGING)
     text = replace_once(text, "        versionName '2.4.2'", f"        versionName '{TEST_VERSION}'")
     text = replace_once(text, OLD_DEPENDENCY, TEST_DEPENDENCY)
     require('        minSdk 21\n' in text and '        targetSdk 28\n' in text, 'Runtime SDK contract changed')
@@ -97,17 +99,15 @@ def prepare() -> None:
     require(os.environ.get('GITHUB_ACTIONS') == 'true', 'prepare is restricted to an ephemeral GitHub Actions checkout')
     evidence = inputs()
     gradle = ROOT / 'xlox/app/build.gradle'
-    properties = ROOT / 'xlox/gradle.properties'
-    # Validate everything before writing either temporary build file.
+    # Only dependency/version/packaging settings change in this runner.
+    # Neither AAR nor the SDK metadata inside it is rewritten.
     updated_gradle = test_gradle(gradle.read_text())
-    updated_properties = replace_once(properties.read_text(), 'android.suppressUnsupportedCompileSdk=36', 'android.suppressUnsupportedCompileSdk=37')
     gradle.write_text(updated_gradle)
-    properties.write_text(updated_properties)
     evidence_dir = ROOT / 'dist'
     evidence_dir.mkdir(exist_ok=True)
     (evidence_dir / 'MUNDO-TEST-INPUTS.json').write_text(json.dumps(evidence, indent=2) + '\n')
     require(sha256(ORIGINAL.read_bytes()) == ORIGINAL_SHA256, 'Original AAR must remain intact')
-    print('PASS: ephemeral Anoy-only test settings prepared; original AAR retained, SDKs 37 / 21 / 28')
+    print('PASS: ephemeral Anoy-only test settings prepared; original AAR retained, SDKs 36 / 21 / 28; AAR metadata check explicitly excluded for this test')
 
 
 def sdk_value(manifest: str, name: str) -> int | None:
@@ -139,7 +139,7 @@ def verify_apk(path: Path) -> None:
     badging = aapt('badging')
     require("package: name='com.xlox'" in badging and "application-label:'Anoy'" in badging, 'Test APK is not Anoy/com.xlox')
     require(f"versionName='{TEST_VERSION}'" in badging and f"versionCode='{TEST_CODE}'" in badging, 'Test APK version marker/code incorrect')
-    require("compileSdkVersion='37'" in badging, 'Test APK was not compiled against SDK 37')
+    require("compileSdkVersion='36'" in badging, 'Test APK must truthfully report the SDK 36 compatibility build')
     manifest = aapt('xmltree', '--file', 'AndroidManifest.xml')
     require(sdk_value(manifest, 'minSdkVersion') == 21 and sdk_value(manifest, 'targetSdkVersion') == 28, 'Test APK must retain min SDK 21 / target SDK 28')
     resources = aapt('resources')
@@ -157,16 +157,23 @@ def verify_apk(path: Path) -> None:
                 extracted = elf_dir / Path(name).name
                 extracted.write_bytes(archive.read(name))
                 subprocess.run([sys.executable, str(ROOT / 'xlox/scripts/check_elf_alignment.py'), '--fail-on-unaligned', str(extracted)], check=True)
-    print('PASS: Anoy identity/contact/version, SDK 37/21/28, original AAR exclusion, exact uploaded native bytes and all native alignments')
+    print('PASS: Anoy identity/contact/version, experimental SDK 36/21/28, original AAR exclusion, exact uploaded native bytes and all native alignments')
 
 
 class StaticTests(unittest.TestCase):
     def test_pinned_inputs(self):
         self.assertEqual(inputs()['min_sdk'], 21)
+    def test_sdk_exception_is_explicit_and_not_in_normal_workflow(self):
+        evidence = inputs()
+        self.assertEqual(evidence['compile_sdk'], 36)
+        self.assertEqual(evidence['aar_declared_min_compile_sdk'], 37)
+        self.assertTrue(evidence['aar_metadata_check_bypassed_for_test'])
+        self.assertIn('sdk36-test', evidence['version_name'])
+        self.assertNotIn('-x :app:checkAnoyReleaseAarMetadata', (ROOT / '.github/workflows/build-xlox.yml').read_text())
     def test_ephemeral_gradle_only_changes_requested_settings(self):
         original = (ROOT / 'xlox/app/build.gradle').read_text()
         updated = test_gradle(original)
-        restored = updated.replace('    compileSdk 37\n    buildToolsVersion \'36.0.0\'\n' + PACKAGING, '    compileSdk 36\n')
+        restored = updated.replace('    compileSdk 36\n    buildToolsVersion \'36.0.0\'\n' + PACKAGING, '    compileSdk 36\n')
         restored = restored.replace(f"versionName '{TEST_VERSION}'", "versionName '2.4.2'")
         restored = restored.replace(TEST_DEPENDENCY, OLD_DEPENDENCY)
         self.assertEqual(restored, original)

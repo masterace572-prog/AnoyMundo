@@ -14,9 +14,17 @@ The binary has only been statically inspected; use a spare test device.
 - Only an ephemeral CI checkout excludes that original file from the dependency
   list and links the uploaded test AAR. The unrelated permission AAR remains.
 - Only Anoy is assembled: `com.xlox`, Anoy label/channel/JNI/contact, existing
-  signing certificate, min SDK 21 and target SDK 28. Compilation uses SDK 37 to
-  satisfy the new AAR metadata. No library/SDK activation logic is changed.
-- The test version is `2.4.2-mundo-lv10-test` with code 20. Keeping the same code
+  signing certificate, min SDK 21 and target SDK 28. No library/SDK activation
+  logic is changed.
+- **SDK compatibility exception:** the input declares minimum compile SDK 37,
+  but neither the stable nor preview SDK catalogs offered `platforms;android-37`
+  in the checked CI runs (44894340660 / 44894562838). This experimental build
+  compiles with the available **SDK 36**, excluding only the
+  `:app:checkAnoyReleaseAarMetadata` task in the two test build/lint commands.
+  **The AAR itself, including its metadata, remains unchanged.** This does not
+  satisfy or validate the library's declared SDK-37 requirement. The exception
+  does not apply to the normal workflow and is recorded in the test evidence.
+- The test version is `2.4.2-mundo-lv10-sdk36-test` with code 20. Keeping the same code
   as stable 2.4.2 allows reinstalling that stable APK without a code downgrade.
   **Installing this test updates the Anoy app on that phone; it is NOT a
   side-by-side application.** Back up anything important before testing.
@@ -33,9 +41,9 @@ it also supports manual runs. The unsigned build job receives no signing
 password. A separate job verifies, aligns and signs with Anoy's existing key,
 then compares its signer to the verified stable 2.4.2 APK.
 
-The output is `Anoy-Mundo-LV10-test.apk`, shared as a distinctly named
-**prerelease**, explicitly **not latest**, with an `anoy-mundo-lv10-test-...`
-tag. Existing releases are never overwritten or removed. The panel's latest
+The output is `Anoy-Mundo-LV10-SDK36-test.apk`, shared as a distinctly named
+**prerelease**, explicitly **not latest**, with an
+`anoy-mundo-lv10-sdk36-test-...` tag. Existing releases are never overwritten or removed. The panel's latest
 build selector ignores prereleases and also requires normal release tags and
 normal APK filenames, so this test cannot be automatically selected there.
 No database, invitation, credentials, live panel library or APK-update choice
