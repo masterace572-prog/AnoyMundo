@@ -2,13 +2,13 @@
 <!-- Lucide, ISC; upstream revision and paths: artwork/liquid-icons.json. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp" android:height="24dp" android:viewportWidth="24" android:viewportHeight="24">
-    <path android:pathData="M2 12a10 10 0 1 0 20 0a10 10 0 1 0 -20 0Z" android:fillColor="@color/transparent"
+    <path android:pathData="M 2 12 a 10 10 0 1 0 20 0 a 10 10 0 1 0 -20 0 Z" android:fillColor="@color/transparent"
         android:strokeColor="@color/white" android:strokeWidth="2"
         android:strokeLineCap="round" android:strokeLineJoin="round" />
-    <path android:pathData="M9 9.5a3 2.5 0 016 0c0 2-2 2-3 3.5" android:fillColor="@color/transparent"
+    <path android:pathData="M 9 9.5 a 3 2.5 0 0 1 6 0 c 0 2 -2 2 -3 3.5" android:fillColor="@color/transparent"
         android:strokeColor="@color/white" android:strokeWidth="2"
         android:strokeLineCap="round" android:strokeLineJoin="round" />
-    <path android:pathData="M12 17h.01" android:fillColor="@color/transparent"
+    <path android:pathData="M 12 17 h 0.01" android:fillColor="@color/transparent"
         android:strokeColor="@color/white" android:strokeWidth="2"
         android:strokeLineCap="round" android:strokeLineJoin="round" />
 </vector>

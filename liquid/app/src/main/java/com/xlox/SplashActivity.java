@@ -142,7 +142,10 @@ public class SplashActivity extends AppCompatActivity {
             });
         } catch (RuntimeException error) {
             Log.e("SplashActivity", "Splash layout failed", error);
-            openLogin();
+            // onStart performs the safe foreground handoff even if inflation
+            // stopped after only part of the decorative hierarchy was bound.
+            filmDone = true;
+            check = Check.CURRENT;
             return;
         }
         if (frame >= 0 || hold) {
@@ -424,7 +427,7 @@ public class SplashActivity extends AppCompatActivity {
     @Override protected void onStop() {
         foreground = false;
         if (film != null) film.cancel();
-        if (mark != null) applyTime(FILM_MS);
+        if (mark != null && lens != null && name != null && tagline != null) applyTime(FILM_MS);
         filmDone = true;
         if (statusMark != null) statusMark.pauseAnimation();
         super.onStop();

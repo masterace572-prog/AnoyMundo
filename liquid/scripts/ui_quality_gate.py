@@ -7,6 +7,7 @@ from pathlib import Path
 import re
 import sys
 import xml.etree.ElementTree as ET
+from normalize_vector_paths import normalize_path
 
 ROOT = Path(__file__).resolve().parents[1]
 RES = ROOT / 'app/src/main/res'
@@ -171,8 +172,12 @@ for path in RES.glob('drawable/ic_*.xml'):
     for el in root.findall('path'):
         if el.get(A + 'strokeWidth') and el.get(A + 'strokeWidth') != '2':
             errors.append(path.name + ': inconsistent stroke')
-        if not re.match(r'\s*[Mm]', el.get(A + 'pathData', '')):
-            errors.append(path.name + ': malformed vector path')
+        try:
+            data = el.get(A + 'pathData', '')
+            if normalize_path(data) != data:
+                errors.append(path.name + ': unsafe compact/leading-dot Android path')
+        except ValueError as error:
+            errors.append(path.name + ': ' + str(error))
 for needed in ('LUCIDE-ISC.txt', 'OFL-Inter.txt', 'OFL-JetBrainsMono.txt', 'LOTTIE.md'):
     if not (ROOT / 'app/src/main/assets/licenses' / needed).is_file(): errors.append(needed)
 gate('Consistent 24px / 2px icon family and bundled asset licences', errors)

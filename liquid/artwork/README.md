@@ -33,7 +33,7 @@ fade/typography film, update checks and timings are unchanged.
 
 ## Reproduce and verify
 
-From `xlox/`, with Python 3.10+:
+From `liquid/`, with Python 3.10+:
 
 ```sh
 python3 -m pip install -r scripts/icon-requirements.txt
@@ -43,7 +43,7 @@ python3 scripts/test_kenny_icons.py
 python3 scripts/ui_quality_gate.py
 python3 scripts/check_branding.py
 # Also check all 20 packaged PNGs after assembly (ANDROID_SDK_ROOT + aapt2):
-python3 scripts/kenny_icons.py --check --apk ../dist/KennyPvt-loader.apk
+python3 scripts/kenny_icons.py --check --apk ../dist/liquid/KennyPvt-Liquid.apk
 ```
 
 The historical `scripts/brand_wordmark.py` command now delegates to this
@@ -65,3 +65,11 @@ these reproducible checks.
 Android 2.4.2 (20) uses a new dual-brand release tag; old releases are retained.
 Building/publishing APK downloads never changes either Owner's live panel
 library or APK-update selection.
+
+## Liquid interface vectors
+
+`liquid-icons.json` pins the Lucide source revision and original SVG paths under
+ISC. Android XML uses the same geometry with explicit arc flags, separated
+parameters and zero-prefixed decimals for the API-21 PathParser. Validate with
+`python3 scripts/normalize_vector_paths.py --check` and
+`python3 scripts/test_vector_paths.py`. No brand path is changed by this tool.
