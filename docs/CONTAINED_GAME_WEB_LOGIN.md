@@ -86,6 +86,34 @@ must not spoof/bypass it. If a URL is not a game HTTPS VIEW launch, the new
 handler does not silently rewrite unrelated traffic. An unrecognized/absent
 virtual callback handler fails closed rather than leaking a return to real BGMI.
 
+## Verified candidate artifact (not phone-login proof)
+
+- Source: `1e1acfa4e708b4945cd2982fc426ea65bf5605bb`.
+- [CI 44902857805](https://github.com/masterace572-prog/AnoyMundo/actions/runs/44902857805):
+  **success**. Both APK builds/lint tasks, actual merged private-browser/callback
+  manifests, release signatures, permissions, branding, Kenny artwork and native
+  alignment checks all executed and passed. Both credential-free JVM suites and
+  the 12 wiring/API/parser guards passed.
+- Earlier publication attempts stopped at lint; its `EllipsizeMaxLines` finding
+  was corrected with `singleLine=true` for the origin display, and a local crash
+  guard was added. Lint was not bypassed and no failed build was published.
+- [Candidate release](https://github.com/masterace572-prog/AnoyMundo/releases/tag/loaders-v2.4.4-webtest-21),
+  ID `453669457`: **prerelease, not latest**; both APKs plus checksum file.
+- Anoy: 5,186,852 bytes; SHA-256
+  `de88fcb5b1b9139e3af940ba24bf2d7b5f83e8ae650ea595dd1f145b74e93e4c`.
+- KennyPvt: 7,799,794 bytes; SHA-256
+  `05e37bb7751bf48771b2907cafe642c0e8f7f4836e0f6a97f1513a20e6f2b60f`.
+- GitHub APK digests match the build checksums in the release notes. Stable latest
+  remains `loaders-v2.4.3-21`. Its notes now explicitly record the tester's Twitter
+  failure. Stable 2.4.3/2.4.2 release IDs and all APK asset IDs/names/sizes/digests
+  were compared before/after and preserved. Both AAR hashes are unchanged.
+- No original/replacement AAR, old APK, signing key, JNI, backend, database, live
+  panel selection, brand artwork/contact or library-download implementation was
+  altered for this candidate.
+
+**Actual provider login on the affected phone is still unverified.** The candidate
+is not promoted to stable merely because CI passed.
+
 ## Device acceptance (pending)
 
 1. Install the original-Mundo webtest over the existing loader, without clearing
