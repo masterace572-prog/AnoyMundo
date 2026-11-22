@@ -56,11 +56,6 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-          cache: gradle
-          cache-dependency-path: |
-            gptsuggestion/gradle/wrapper/gradle-wrapper.properties
-            gptsuggestion/build.gradle
-            gptsuggestion/app/build.gradle
 
       - name: Existing JVM and Android wiring regressions
         run: python3 scripts/test_runtime_fixes.py

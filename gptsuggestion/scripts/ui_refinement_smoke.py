@@ -70,6 +70,14 @@ class UiSmoke:
         if not condition:
             raise AssertionError(message)
 
+    @staticmethod
+    def diagnostic_chunks(title: str, prefix: str, payload: str):
+        # Checks annotations are truncated to 4096 characters by the runner.
+        # Keep each diagnostic bounded; the full PNG/JSON is also an artifact.
+        chunks = [payload[i:i + 3000] for i in range(0, len(payload), 3000)]
+        for i, chunk in enumerate(chunks, 1):
+            print(f"::notice title={title} {i}/{len(chunks)}::{prefix}{chunk}", flush=True)
+
     def invalidate(self):
         self.cache = None
 
@@ -106,8 +114,23 @@ class UiSmoke:
                 self.invalidate()
         raise AssertionError(f"Visible control missing: {name}")
 
+    def full_control(self, name: str) -> ET.Element:
+        for _ in range(8):
+            node = self.node(name, scroll=True)
+            x1, y1, x2, y2 = bounds(node)
+            if x2 - x1 >= 47 * self.scale and y2 - y1 >= 47 * self.scale:
+                return node
+            # UIAutomator reports CLIPPED bounds for a partially visible row.
+            # Scroll it fully into view before measuring/tapping, never accept
+            # a smaller actual control as a passing 48dp target.
+            start, end = (.35, .72) if y1 < self.height * .4 else (.78, .30)
+            self.shell("input", "swipe", str(self.width // 2), str(int(self.height * start)),
+                       str(self.width // 2), str(int(self.height * end)), "220")
+            self.invalidate()
+        raise AssertionError(f"Control cannot expose a full 48dp target: {name}, last bounds={bounds(node)}")
+
     def tap(self, name: str, scroll: bool = False):
-        x1, y1, x2, y2 = bounds(self.node(name, scroll))
+        x1, y1, x2, y2 = bounds(self.full_control(name) if scroll else self.node(name))
         self.shell("input", "tap", str((x1 + x2) // 2), str((y1 + y2) // 2))
         self.invalidate()
         time.sleep(.25)
@@ -116,6 +139,17 @@ class UiSmoke:
         self.shell("input", "keyevent", str(keycode))
         self.invalidate()
         time.sleep(.25)
+
+    def hide_keyboard(self):
+        # Escape is not consistently handled by every API/IME. Send Back ONLY
+        # when dumpsys confirms the IME is open, so it cannot close the app.
+        for _ in range(2):
+            state = self.shell("dumpsys", "input_method")
+            if not re.search(r"(?:mInputShown|mIsInputViewShown|isInputViewShown)=true", state):
+                return
+            self.key(4)
+            time.sleep(.3)
+        self.invalidate()
 
     def wait_text(self, name: str, expected: str, seconds: float = 12):
         until = time.monotonic() + seconds
@@ -148,6 +182,7 @@ class UiSmoke:
     def login(self, **extras):
         self.start("LogAct", qa_gate="skip", **extras)  # Existing qaPreview default calls onReady.
         self.node("userkey")
+        self.hide_keyboard()
 
     def shot(self, name: str, hierarchy: bool = True):
         from PIL import Image
@@ -170,7 +205,7 @@ class UiSmoke:
             preview.save(stream, format="JPEG", quality=76, optimize=True)
             payload = base64.b64encode(stream.getvalue()).decode("ascii")
             if len(payload) < 60000:
-                print(f"::notice title=UI review {name}::UI_REVIEW_JPEG_BASE64:{payload}", flush=True)
+                self.diagnostic_chunks(f"UI review {name}", "UI_REVIEW_JPEG_BASE64:", payload)
         return image
 
     def configure(self, width: int = 360, height: int = 760, font: float = 1):
@@ -184,7 +219,7 @@ class UiSmoke:
 
     def touch_targets(self, *names: str):
         for name in names:
-            x1, y1, x2, y2 = bounds(self.node(name))
+            x1, y1, x2, y2 = bounds(self.full_control(name))
             self.check(x2 - x1 >= 47 * self.scale and y2 - y1 >= 47 * self.scale,
                        name + " retains a 48dp touch target")
 
@@ -296,7 +331,7 @@ class UiSmoke:
         self.tap("userkey")
         self.shell("input", "keyevent", "123", *(["67"] * 64))
         self.invalidate()
-        self.key(111)
+        self.hide_keyboard()
         self.tap("pasteKey")
         self.tap("toggleKey")
         self.check(self.node("userkey").get("text") == SAMPLE_KEY, "Clipboard icon pastes the exact copied key")
@@ -304,6 +339,7 @@ class UiSmoke:
         self.shot("login_pasted_visible")
         self.tap("toggleKey")
         self.check(self.node("toggleKey").get("content-desc") == "Show licence key", "Eye label switches back to Show")
+        self.hide_keyboard()
         self.shot("login")
         self.touch_targets("toggleKey", "pasteKey", "login", "getKey")
         self.tap("userkey")
@@ -312,7 +348,7 @@ class UiSmoke:
         self.check(self.maybe_node("versionFooter") is None, "Keyboard hides the footer instead of overlapping it")
         self.node("login", scroll=True)
         self.check(bounds(self.node("login"))[3] <= self.height, "Sign in remains within the resized viewport")
-        self.key(111)
+        self.hide_keyboard()
         self.login(qa_result="empty")
         self.node("keyError")
         self.shot("login_empty_error")
@@ -342,8 +378,18 @@ class UiSmoke:
         self.login()
         self.adb("logcat", "-c")
         self.tap("getKey", scroll=True)
+        time.sleep(.7)
         launch_log = self.adb("logcat", "-d", "-s", "ActivityTaskManager:I", "ActivityManager:I", "Ui:W", "*:S")
-        self.check("https://t.me/libAkAudioVisiual" in launch_log, "Buy now keeps the original Telegram VIEW destination")
+        # Some platform builds redact URI paths from START log messages. The
+        # shell's ActivityManager task dump retains the actual public Intent.
+        activities = self.shell("dumpsys", "activity", "activities")
+        public_lines = [line for line in (launch_log + activities).splitlines()
+                        if "t.me/" in line or "No activity for" in line]
+        public_evidence = "\n".join(public_lines)
+        (self.out / "telegram-view.log").write_text(public_evidence)
+        for line in public_lines[:4]:
+            print("::notice title=Telegram VIEW evidence::" + line.replace("%", "%25"), flush=True)
+        self.check("https://t.me/libAkAudioVisiual" in public_evidence, "Buy now keeps the original Telegram VIEW destination")
         (self.out / "telegram-destination.json").write_text(json.dumps({"destination_verified": True, "url": "https://t.me/libAkAudioVisiual", "browser_authentication_tested": False}, indent=2))
 
     def settings_actions(self):
@@ -400,7 +446,7 @@ class UiSmoke:
             self.node("signOutForget", scroll=True)
             self.tap("signOutCancel", scroll=True)
             self.login()
-            self.key(111)
+            self.hide_keyboard()
             self.node("login", scroll=True)
             x1, _, x2, _ = bounds(self.node("login"))
             minimum = 360 if width >= 600 else width - 56
@@ -444,8 +490,15 @@ class UiSmoke:
                                   "No live licence/provider authentication or real BGMI/OBB execution",
                                   "Real-device signing/upgrade/OEM permission and performance checks remain required"]}
         (self.out / "results.json").write_text(json.dumps(report, indent=2) + "\n")
-        compact = json.dumps(report, separators=(",", ":")).replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A")
-        print(f"::{'error' if error else 'notice'} title=Offline UI smoke report::{compact}", flush=True)
+        summary = {"emulator_api": report["emulator_api"], "result": report["result"],
+                   "failure": error[-1800:] if error else None,
+                   "checks_passed": sum(item["passed"] for item in self.checks),
+                   "checks_failed": sum(not item["passed"] for item in self.checks),
+                   "captures": len(self.captures), "limitations": report["limitations"]}
+        compact = json.dumps(summary, separators=(",", ":")).replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A")
+        print(f"::{'error' if error else 'notice'} title=Offline UI smoke summary::{compact}", flush=True)
+        payload = base64.b64encode(json.dumps(report, separators=(",", ":")).encode()).decode("ascii")
+        self.diagnostic_chunks("Offline UI smoke report", "UI_REPORT_JSON_BASE64:", payload)
         if error:
             raise AssertionError(error)
 

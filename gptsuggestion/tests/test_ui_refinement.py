@@ -7,12 +7,15 @@ These are source checks, not a substitute for APK/emulator/physical-device QA.
 """
 from __future__ import annotations
 
+import contextlib
 import hashlib
+import io
 import json
 from pathlib import Path
 import re
 import sys
 import unittest
+from unittest.mock import Mock, patch
 import xml.etree.ElementTree as ET
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -290,6 +293,55 @@ class Presentation(unittest.TestCase):
         self.assertIn(":app:assembleAnoyRelease", workflow)
         self.assertIn(":app:assembleKennyRelease", workflow)
         self.assertIn("gptsuggestion/qa-output/", workflow)
+
+
+class SmokeHarness(unittest.TestCase):
+    @staticmethod
+    def runner():
+        sys.path.insert(0, str(ROOT / "scripts"))
+        from ui_refinement_smoke import UiSmoke
+        return UiSmoke.__new__(UiSmoke)
+
+    def test_diagnostics_fit_runner_annotation_limits_without_data_loss(self):
+        payload = "A" * 10001
+        stream = io.StringIO()
+        with contextlib.redirect_stdout(stream):
+            self.runner().diagnostic_chunks("Test", "PAYLOAD:", payload)
+        lines = stream.getvalue().splitlines()
+        self.assertEqual(len(lines), 4)
+        self.assertTrue(all(len(line) < 4096 for line in lines))
+        self.assertEqual("".join(line.split("PAYLOAD:", 1)[1] for line in lines), payload)
+
+    def test_back_is_sent_only_when_keyboard_is_confirmed_open(self):
+        runner = self.runner()
+        runner.shell = Mock(side_effect=["mInputShown=true", "mInputShown=false"])
+        runner.key = Mock()
+        with patch("ui_refinement_smoke.time.sleep"):
+            runner.hide_keyboard()
+        runner.key.assert_called_once_with(4)
+        runner.shell = Mock(return_value="mInputShown=false")
+        runner.key.reset_mock()
+        runner.hide_keyboard()
+        runner.key.assert_not_called()
+
+    def test_partial_bounds_are_scrolled_before_touch_target_measurement(self):
+        runner = self.runner()
+        runner.width, runner.height, runner.scale = 720, 1520, 2
+        partial = ET.Element("node", {"bounds": "[400,1320][700,1370]"})
+        full = ET.Element("node", {"bounds": "[400,1100][700,1196]"})
+        runner.node = Mock(side_effect=[partial, full])
+        runner.shell, runner.invalidate = Mock(), Mock()
+        self.assertIs(runner.full_control("getKey"), full)
+        runner.shell.assert_called_once()
+        runner.invalidate.assert_called_once()
+
+    def test_genuinely_small_control_never_passes_after_scrolling(self):
+        runner = self.runner()
+        runner.width, runner.height, runner.scale = 720, 1520, 2
+        runner.node = Mock(return_value=ET.Element("node", {"bounds": "[400,1100][700,1180]"}))
+        runner.shell, runner.invalidate = Mock(), Mock()
+        with self.assertRaisesRegex(AssertionError, "cannot expose a full 48dp target"):
+            runner.full_control("tooSmall")
 
 
 if __name__ == "__main__":
