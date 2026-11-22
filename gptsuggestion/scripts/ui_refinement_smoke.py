@@ -21,6 +21,7 @@ import time
 import traceback
 import xml.etree.ElementTree as ET
 from zipfile import ZipFile
+import zlib
 
 PKG = "com.xlox"
 GAME = "com.pubg.imobile"
@@ -33,10 +34,26 @@ def bounds(node: ET.Element) -> tuple[int, int, int, int]:
     return values
 
 
+def emit_review_preview(path: Path, name: str):
+    """Run as a separate CI step per view (runner allows ten notices/step)."""
+    from PIL import Image
+    if not path.is_file():
+        return
+    preview = Image.open(path).convert("RGB")
+    preview.thumbnail((360, 900))
+    for quality in (72, 64, 56, 48, 40):
+        stream = BytesIO()
+        preview.save(stream, format="JPEG", quality=quality, optimize=True)
+        if len(stream.getvalue()) <= 23000:
+            break
+    payload = base64.b64encode(stream.getvalue()).decode("ascii")
+    assert len(payload) <= 35000, "Review preview exceeds the per-step annotation budget"
+    UiSmoke.diagnostic_chunks(f"UI review {name}", "UI_REVIEW_JPEG_BASE64:", payload)
+
+
 class UiSmoke:
-    def __init__(self, apk: Path, output: Path, emit_review_previews: bool = False):
+    def __init__(self, apk: Path, output: Path):
         self.apk = apk.resolve()
-        self.emit_review_previews = emit_review_previews
         self.out = output.resolve()
         self.out.mkdir(parents=True, exist_ok=True)
         self.fixture = self.out.parent / "fixture"
@@ -74,7 +91,7 @@ class UiSmoke:
     def diagnostic_chunks(title: str, prefix: str, payload: str):
         # Checks annotations are truncated to 4096 characters by the runner.
         # Keep each diagnostic bounded; the full PNG/JSON is also an artifact.
-        chunks = [payload[i:i + 3000] for i in range(0, len(payload), 3000)]
+        chunks = [payload[i:i + 3500] for i in range(0, len(payload), 3500)]
         for i, chunk in enumerate(chunks, 1):
             print(f"::notice title={title} {i}/{len(chunks)}::{prefix}{chunk}", flush=True)
 
@@ -141,15 +158,14 @@ class UiSmoke:
         time.sleep(.25)
 
     def hide_keyboard(self):
-        # Escape is not consistently handled by every API/IME. Send Back ONLY
-        # when dumpsys confirms the IME is open, so it cannot close the app.
-        for _ in range(2):
-            state = self.shell("dumpsys", "input_method")
-            if not re.search(r"(?:mInputShown|mIsInputViewShown|isInputViewShown)=true", state):
-                return
-            self.key(4)
-            time.sleep(.3)
-        self.invalidate()
+        # mInputShown is a REQUEST flag and can remain true after dismissal.
+        # Only the IME_VISIBLE window bit proves that Back will hide a keyboard.
+        # Send at most ONE Back; never retry it and accidentally leave the app.
+        state = self.shell("dumpsys", "input_method")
+        match = re.search(r"mImeWindowVis=(0x[0-9a-fA-F]+|\d+)", state)
+        visible = match is not None and int(match[1], 0) & 2
+        self.key(4 if visible else 111)
+        time.sleep(.8)
 
     def wait_text(self, name: str, expected: str, seconds: float = 12):
         until = time.monotonic() + seconds
@@ -184,28 +200,38 @@ class UiSmoke:
         self.node("userkey")
         self.hide_keyboard()
 
+    @staticmethod
+    def logical_image(image, width: int, height: int):
+        # wm overrides can letterbox a logical UI inside the emulator's fixed
+        # physical framebuffer. Remove ONLY that known display transform so
+        # screenshots and UIAutomator/input coordinates use the same pixels.
+        from PIL import Image
+        if image.size == (width, height):
+            return image
+        factor = min(image.width / width, image.height / height)
+        left, top = (image.width - width * factor) / 2, (image.height - height * factor) / 2
+        rect = (round(left), round(top), round(left + width * factor), round(top + height * factor))
+        return image.crop(rect).resize((width, height), Image.Resampling.LANCZOS)
+
     def shot(self, name: str, hierarchy: bool = True):
         from PIL import Image
-        image = self.adb("exec-out", "screencap", "-p", binary=True)
-        decoded = Image.open(BytesIO(image))
-        decoded.verify()
+        raw = self.adb("exec-out", "screencap", "-p", binary=True)
+        decoded = Image.open(BytesIO(raw))
+        decoded.load()
+        original_size = decoded.size
+        decoded = self.logical_image(decoded, self.width, self.height)
+        stream = BytesIO()
+        decoded.save(stream, format="PNG")
+        image = stream.getvalue()
         self.check(len(image) > 3500, name + " is a nonblank PNG")
         (self.out / (name + ".png")).write_bytes(image)
+        (self.out / (name + "-display.json")).write_text(json.dumps({
+            "physical_capture": original_size, "logical_size": [self.width, self.height],
+            "transform": "WM auto-scaling letterbox crop/resize only; actual native render",
+        }, indent=2) + "\n")
         self.captures.append(name)
         if hierarchy:
             (self.out / (name + ".xml")).write_bytes(ET.tostring(self.tree(fresh=True), encoding="utf-8", xml_declaration=True))
-        if self.emit_review_previews and name in ("home", "settings", "login"):
-            # Compact, genuine-render diagnostics remain readable via GitHub's
-            # Checks API when artifact-storage downloads are unavailable.
-            # The full-resolution PNG/XML remains in the normal QA artifact.
-            # This emulator contains only the synthetic offline fixture key.
-            preview = Image.open(BytesIO(image)).convert("RGB")
-            preview.thumbnail((360, 900))
-            stream = BytesIO()
-            preview.save(stream, format="JPEG", quality=76, optimize=True)
-            payload = base64.b64encode(stream.getvalue()).decode("ascii")
-            if len(payload) < 60000:
-                self.diagnostic_chunks(f"UI review {name}", "UI_REVIEW_JPEG_BASE64:", payload)
         return image
 
     def configure(self, width: int = 360, height: int = 760, font: float = 1):
@@ -328,12 +354,12 @@ class UiSmoke:
     def login_actions(self):
         # Clipboard contains the fixture copied using Settings' real handler.
         self.login()
-        self.tap("userkey")
+        self.tap("userkey", scroll=True)
         self.shell("input", "keyevent", "123", *(["67"] * 64))
         self.invalidate()
         self.hide_keyboard()
-        self.tap("pasteKey")
-        self.tap("toggleKey")
+        self.tap("pasteKey", scroll=True)
+        self.tap("toggleKey", scroll=True)
         self.check(self.node("userkey").get("text") == SAMPLE_KEY, "Clipboard icon pastes the exact copied key")
         self.check(self.node("toggleKey").get("content-desc") == "Hide licence key", "Eye label switches to Hide")
         self.shot("login_pasted_visible")
@@ -342,7 +368,7 @@ class UiSmoke:
         self.hide_keyboard()
         self.shot("login")
         self.touch_targets("toggleKey", "pasteKey", "login", "getKey")
-        self.tap("userkey")
+        self.tap("userkey", scroll=True)
         time.sleep(.8)
         self.shot("login_keyboard")
         self.check(self.maybe_node("versionFooter") is None, "Keyboard hides the footer instead of overlapping it")
@@ -497,8 +523,8 @@ class UiSmoke:
                    "captures": len(self.captures), "limitations": report["limitations"]}
         compact = json.dumps(summary, separators=(",", ":")).replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A")
         print(f"::{'error' if error else 'notice'} title=Offline UI smoke summary::{compact}", flush=True)
-        payload = base64.b64encode(json.dumps(report, separators=(",", ":")).encode()).decode("ascii")
-        self.diagnostic_chunks("Offline UI smoke report", "UI_REPORT_JSON_BASE64:", payload)
+        payload = base64.b64encode(zlib.compress(json.dumps(report, separators=(",", ":")).encode(), 9)).decode("ascii")
+        self.diagnostic_chunks("Offline UI smoke report", "UI_REPORT_ZLIB_BASE64:", payload)
         if error:
             raise AssertionError(error)
 
@@ -507,10 +533,8 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--apk", type=Path, required=True)
     parser.add_argument("--out", type=Path, required=True)
-    parser.add_argument("--emit-review-previews", action="store_true",
-                        help="Expose three small synthetic-fixture screen previews in Checks diagnostics")
     args = parser.parse_args()
-    runner = UiSmoke(args.apk, args.out, args.emit_review_previews)
+    runner = UiSmoke(args.apk, args.out)
     error = None
     try:
         runner.prepare()

@@ -306,7 +306,45 @@ jobs:
           disable-animations: true
           emulator-options: -no-window -no-snapshot -noaudio -no-boot-anim -gpu swiftshader_indirect
           working-directory: gptsuggestion
-          script: python3 scripts/ui_refinement_smoke.py --apk qa-output/debug/Anoy-UI-debug.apk --out qa-output/emulator-api${{ matrix.api }} --emit-review-previews
+          script: python3 scripts/ui_refinement_smoke.py --apk qa-output/debug/Anoy-UI-debug.apk --out qa-output/emulator-api${{ matrix.api }}
+
+      # Runner diagnostics allow ten notices per step. Keep each real screen's
+      # bounded preview separate; full-resolution PNG/XML remains an artifact.
+      - name: Actual Home render preview
+        if: always()
+        run: |
+          PYTHONPATH=qa-output/python:scripts python3 - <<'PY'
+          from pathlib import Path
+          from ui_refinement_smoke import emit_review_preview
+          emit_review_preview(Path('qa-output/emulator-api${{ matrix.api }}/home.png'), 'home')
+          PY
+
+      - name: Actual Settings render preview
+        if: always()
+        run: |
+          PYTHONPATH=qa-output/python:scripts python3 - <<'PY'
+          from pathlib import Path
+          from ui_refinement_smoke import emit_review_preview
+          emit_review_preview(Path('qa-output/emulator-api${{ matrix.api }}/settings.png'), 'settings')
+          PY
+
+      - name: Actual Sign in render preview
+        if: always()
+        run: |
+          PYTHONPATH=qa-output/python:scripts python3 - <<'PY'
+          from pathlib import Path
+          from ui_refinement_smoke import emit_review_preview
+          emit_review_preview(Path('qa-output/emulator-api${{ matrix.api }}/login.png'), 'login')
+          PY
+
+      - name: Actual failure screen if a UI assertion failed
+        if: always()
+        run: |
+          PYTHONPATH=qa-output/python:scripts python3 - <<'PY'
+          from pathlib import Path
+          from ui_refinement_smoke import emit_review_preview
+          emit_review_preview(Path('qa-output/emulator-api${{ matrix.api }}/failure.png'), 'failure')
+          PY
 
       - name: Upload actual emulator captures and checks, never fixture keys/APKs
         if: always()

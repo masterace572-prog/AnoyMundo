@@ -308,21 +308,26 @@ class SmokeHarness(unittest.TestCase):
         with contextlib.redirect_stdout(stream):
             self.runner().diagnostic_chunks("Test", "PAYLOAD:", payload)
         lines = stream.getvalue().splitlines()
-        self.assertEqual(len(lines), 4)
+        self.assertEqual(len(lines), 3)
         self.assertTrue(all(len(line) < 4096 for line in lines))
         self.assertEqual("".join(line.split("PAYLOAD:", 1)[1] for line in lines), payload)
 
-    def test_back_is_sent_only_when_keyboard_is_confirmed_open(self):
+    def test_back_is_sent_once_only_when_ime_window_is_visible(self):
         runner = self.runner()
-        runner.shell = Mock(side_effect=["mInputShown=true", "mInputShown=false"])
+        runner.shell = Mock(return_value="mInputShown=true mImeWindowVis=0x3")
         runner.key = Mock()
         with patch("ui_refinement_smoke.time.sleep"):
             runner.hide_keyboard()
         runner.key.assert_called_once_with(4)
-        runner.shell = Mock(return_value="mInputShown=false")
-        runner.key.reset_mock()
-        runner.hide_keyboard()
-        runner.key.assert_not_called()
+        runner.shell.assert_called_once()
+
+    def test_stale_input_request_cannot_send_back_and_close_the_app(self):
+        runner = self.runner()
+        runner.shell = Mock(return_value="mInputShown=true mImeWindowVis=0x1")
+        runner.key = Mock()
+        with patch("ui_refinement_smoke.time.sleep"):
+            runner.hide_keyboard()
+        runner.key.assert_called_once_with(111)
 
     def test_partial_bounds_are_scrolled_before_touch_target_measurement(self):
         runner = self.runner()
