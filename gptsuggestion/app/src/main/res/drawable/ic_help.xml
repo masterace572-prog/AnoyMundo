@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- help: ISC (Lucide); 24-unit outline adapted to the app's rounded 1.75 stroke.
+     Source: https://github.com/lucide-icons/lucide/blob/main/icons/circle-question-mark.svg -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:fillColor="@android:color/transparent"
+        android:pathData="M2 12A10 10 0 1 0 22 12A10 10 0 1 0 2 12Z"
+        android:strokeColor="@color/white"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:strokeWidth="1.75" />
+    <path
+        android:fillColor="@android:color/transparent"
+        android:pathData="M9 9.5a3 2.5 0 0 1 6 0c0 2-2 2-3 3.5"
+        android:strokeColor="@color/white"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:strokeWidth="1.75" />
+    <path
+        android:fillColor="@android:color/transparent"
+        android:pathData="M12 17h.01"
+        android:strokeColor="@color/white"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:strokeWidth="1.75" />
+</vector>

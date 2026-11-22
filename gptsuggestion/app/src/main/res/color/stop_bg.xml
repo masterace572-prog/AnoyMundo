@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Restrained destructive action: neutral at rest, low-chroma red on press. -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:color="@color/surface_2" android:state_enabled="false" />
+    <item android:color="@color/danger_tint" android:state_pressed="true" />
+    <item android:color="@color/surface_2" />
+</selector>

@@ -1,0 +1,264 @@
+name: Isolated AMOLED UI build and QA
+
+# The only authorized file outside gptsuggestion/. Builds that copy only.
+# Read-only repository permissions, artifact delivery, no publication/deployment.
+on:
+  workflow_dispatch:
+  push:
+    branches: [arena/dda4cc57-anoymundo]
+    paths:
+      - 'gptsuggestion/**'
+      - '.github/workflows/build-gptsuggestion.yml'
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: gptsuggestion-ui-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    if: github.ref == 'refs/heads/arena/dda4cc57-anoymundo'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 65
+    defaults:
+      run:
+        shell: bash
+        working-directory: gptsuggestion
+    env:
+      PYTHONPATH: ${{ github.workspace }}/gptsuggestion/qa-output/python
+      GRADLE_USER_HOME: ${{ github.workspace }}/gptsuggestion/qa-output/gradle-home
+      PERMISSIONS_LOG_DIR: ${{ github.workspace }}/gptsuggestion/qa-output/reports
+    steps:
+      - name: Checkout the current working branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Prepare isolated output directories
+        run: |
+          mkdir -p qa-output/{python,tmp,reports,apks,debug}
+          echo "TMPDIR=$PWD/qa-output/tmp" >> "$GITHUB_ENV"
+          python3 -m pip install --disable-pip-version-check --target qa-output/python -r scripts/icon-requirements.txt
+
+      - name: UI, preservation, branding and artwork source gates
+        run: |
+          python3 scripts/ui_quality_gate.py
+          python3 -m unittest discover -s tests -p 'test_ui_*.py' -v
+          python3 scripts/check_branding.py
+          python3 scripts/kenny_icons.py --check
+          python3 scripts/test_kenny_icons.py
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880 # v6
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+          cache-dependency-path: |
+            gptsuggestion/gradle/wrapper/gradle-wrapper.properties
+            gptsuggestion/build.gradle
+            gptsuggestion/app/build.gradle
+
+      - name: Existing JVM and Android wiring regressions
+        run: python3 scripts/test_runtime_fixes.py
+
+      - name: Install the unchanged Android SDK and NDK requirements
+        run: |
+          set -euo pipefail
+          SDK="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-$HOME/android-sdk}}"
+          if [ -x "$SDK/cmdline-tools/latest/bin/sdkmanager" ]; then
+            SM="$SDK/cmdline-tools/latest/bin/sdkmanager"
+          elif command -v sdkmanager >/dev/null 2>&1; then
+            SM="$(command -v sdkmanager)"
+          else
+            echo '::error::Android command-line tools are missing from this runner.'
+            exit 1
+          fi
+          echo "ANDROID_HOME=$SDK" >> "$GITHUB_ENV"
+          echo "ANDROID_SDK_ROOT=$SDK" >> "$GITHUB_ENV"
+          # sdkmanager can close its input early once licences are accepted.
+          set +o pipefail
+          yes | "$SM" --sdk_root="$SDK" --licenses > /dev/null 2>&1
+          set -o pipefail
+          "$SM" --sdk_root="$SDK" --install 'platform-tools' 'platforms;android-36' 'build-tools;34.0.0' 'ndk;24.0.8215888'
+
+      - name: Check the existing release signer without copying or replacing it
+        id: signing
+        env:
+          XLOX_STORE_PASSWORD: ${{ secrets.XLOX_STORE_PASSWORD }}
+        run: |
+          set -euo pipefail
+          if [ -n "$XLOX_STORE_PASSWORD" ]; then
+            test -f "$GITHUB_WORKSPACE/xlox/app/xlox.jks"
+            keytool -list -keystore "$GITHUB_WORKSPACE/xlox/app/xlox.jks" -storepass:env XLOX_STORE_PASSWORD -alias key0 > /dev/null
+            echo 'state=signed' >> "$GITHUB_OUTPUT"
+          else
+            echo '::warning::Release signing is unavailable. Release artifacts will be explicitly UNSIGNED and are not installable; no replacement release key is generated.'
+            echo 'state=unsigned' >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Assemble both brands and the debug UI test build
+        env:
+          XLOX_STORE_FILE: ${{ github.workspace }}/xlox/app/xlox.jks
+          XLOX_STORE_PASSWORD: ${{ secrets.XLOX_STORE_PASSWORD }}
+          XLOX_KEY_PASSWORD: ${{ secrets.XLOX_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          ./gradlew :app:assembleAnoyRelease :app:assembleKennyRelease :app:assembleAnoyDebug --no-daemon 2>&1 | tee qa-output/reports/assemble.log
+
+      - name: Android Lint for both brands and the debug UI
+        run: |
+          set -euo pipefail
+          ./gradlew :app:lintAnoyRelease :app:lintKennyRelease :app:lintAnoyDebug --no-daemon 2>&1 | tee qa-output/reports/lint.log
+
+      - name: Collect clearly named test artifacts and build metadata
+        env:
+          SIGNATURE_STATE: ${{ steps.signing.outputs.state }}
+        run: |
+          set -euo pipefail
+          ANOY=$(find app/build/outputs/apk/anoy/release -maxdepth 1 -name '*.apk' -print -quit)
+          KENNY=$(find app/build/outputs/apk/kenny/release -maxdepth 1 -name '*.apk' -print -quit)
+          test -n "$ANOY" && test -n "$KENNY"
+          cp "$ANOY" qa-output/apks/Anoy-AMOLED-test.apk
+          cp "$KENNY" qa-output/apks/KennyPvt-AMOLED-test.apk
+          cp app/build/outputs/apk/anoy/debug/app-anoy-debug.apk qa-output/debug/Anoy-UI-debug.apk
+          python3 - <<'PY'
+          import hashlib, json, os
+          from pathlib import Path
+          folder = Path('qa-output/apks')
+          apks = sorted(folder.glob('*.apk'))
+          sums = {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in apks}
+          (folder / 'SHA256SUMS.txt').write_text(''.join(f'{v}  {k}\n' for k, v in sums.items()))
+          (folder / 'BUILD-INFO.json').write_text(json.dumps({
+              'source_commit': os.environ['GITHUB_SHA'], 'source_project': 'gptsuggestion/',
+              'signature_state': os.environ['SIGNATURE_STATE'],
+              'unsigned_warning': 'Unsigned APKs are not installable; no alternative release key was generated.',
+              'production_selections_changed': False,
+              'device_validation': 'Real ARM64 licence/authentication, game, OEM permissions and upgrade tests are still required.',
+              'sha256': sums,
+          }, indent=2) + '\n')
+          PY
+
+      - name: Verify compiled permissions, brands, callback wiring and Kenny artwork
+        run: |
+          set -euo pipefail
+          APK_A=qa-output/apks/Anoy-AMOLED-test.apk
+          APK_K=qa-output/apks/KennyPvt-AMOLED-test.apk
+          python3 scripts/check_apk_permissions.py "$APK_A" "$APK_K"
+          python3 scripts/check_branding.py "$APK_A" "$APK_K"
+          python3 scripts/test_runtime_fixes.py "$APK_A" "$APK_K"
+          python3 scripts/kenny_icons.py --check --apk "$APK_K"
+          python3 - <<'PY'
+          from pathlib import Path
+          import subprocess, zipfile
+          for apk in sorted(Path('qa-output/apks').glob('*.apk')):
+              target = Path('qa-output/reports') / (apk.stem + '-libXloX.so')
+              with zipfile.ZipFile(apk) as archive:
+                  target.write_bytes(archive.read('lib/arm64-v8a/libXloX.so'))
+              subprocess.run(['python3', 'scripts/check_elf_alignment.py', '--fail-on-unaligned', str(target)], check=True)
+          PY
+
+      - name: Verify original release signatures
+        if: steps.signing.outputs.state == 'signed'
+        run: |
+          set -euo pipefail
+          SIGNER="$ANDROID_SDK_ROOT/build-tools/34.0.0/apksigner"
+          "$SIGNER" verify --verbose qa-output/apks/Anoy-AMOLED-test.apk
+          "$SIGNER" verify --verbose qa-output/apks/KennyPvt-AMOLED-test.apk
+
+      - name: Upload test APKs only
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: gptsuggestion-test-apks-${{ steps.signing.outputs.state }}
+          path: gptsuggestion/qa-output/apks/
+          retention-days: 7
+          if-no-files-found: error
+
+      - name: Upload debug build for emulator jobs, not for phone upgrades
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: gptsuggestion-debug-ui-only
+          path: gptsuggestion/qa-output/debug/Anoy-UI-debug.apk
+          retention-days: 3
+          if-no-files-found: error
+
+      - name: Upload build and lint reports
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: gptsuggestion-build-reports
+          path: |
+            gptsuggestion/qa-output/reports/*.log
+            gptsuggestion/qa-output/reports/*.txt
+            gptsuggestion/app/build/reports/lint-results-*
+          retention-days: 7
+          if-no-files-found: ignore
+
+  emulator:
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        api: [23, 33]
+    defaults:
+      run:
+        shell: bash
+        working-directory: gptsuggestion
+    steps:
+      - name: Checkout the same UI source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Set up JDK 17 for emulator-only fixture signing
+        uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880 # v6
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Download the debug UI build
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: gptsuggestion-debug-ui-only
+          path: gptsuggestion/qa-output/debug/
+
+      - name: Prepare image checks and KVM
+        run: |
+          mkdir -p qa-output/{python,tmp,fixture}
+          python3 -m pip install --disable-pip-version-check --target qa-output/python -r scripts/icon-requirements.txt
+          if [ -e /dev/kvm ]; then sudo chmod 666 /dev/kvm; fi
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" 'build-tools;34.0.0' 'platforms;android-36'
+
+      - name: Offline UI actions, large type, compact phone and tablet captures
+        uses: reactivecircus/android-emulator-runner@4c44018e59b437e86cdfc41da381398f93ed8808 # v2
+        env:
+          PYTHONPATH: ${{ github.workspace }}/gptsuggestion/qa-output/python
+          TMPDIR: ${{ github.workspace }}/gptsuggestion/qa-output/tmp
+        with:
+          api-level: ${{ matrix.api }}
+          target: google_apis
+          arch: x86_64
+          profile: pixel_2
+          emulator-boot-timeout: 600
+          disable-animations: true
+          emulator-options: -no-window -no-snapshot -noaudio -no-boot-anim -gpu swiftshader_indirect
+          working-directory: gptsuggestion
+          script: python3 scripts/ui_refinement_smoke.py --apk qa-output/debug/Anoy-UI-debug.apk --out qa-output/emulator-api${{ matrix.api }}
+
+      - name: Upload actual emulator captures and checks, never fixture keys/APKs
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: gptsuggestion-ui-api${{ matrix.api }}
+          path: |
+            gptsuggestion/qa-output/emulator-api${{ matrix.api }}/**/*.png
+            gptsuggestion/qa-output/emulator-api${{ matrix.api }}/**/*.xml
+            gptsuggestion/qa-output/emulator-api${{ matrix.api }}/**/*.json
+            gptsuggestion/qa-output/emulator-api${{ matrix.api }}/**/*.log
+          retention-days: 7
+          if-no-files-found: error
