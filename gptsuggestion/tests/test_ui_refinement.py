@@ -218,6 +218,17 @@ class Presentation(unittest.TestCase):
                     self.assertEqual(node.get(ANDROID + "strokeLineCap"), "round")
                     self.assertEqual(node.get(ANDROID + "strokeLineJoin"), "round")
 
+    def test_vector_numeric_tokens_are_safe_for_older_android_parsers(self):
+        number = r"[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?"
+        for file in (RES / "drawable").glob("ic_*.xml"):
+            if file.name.startswith("ic_launcher"):
+                continue
+            for path in ET.parse(file).getroot().iter("path"):
+                for token in re.findall(number, path.get(ANDROID + "pathData", "")):
+                    with self.subTest(icon=file.name, number=token):
+                        self.assertIsNone(re.match(r"^[+-]?\.", token),
+                                          "Expand SVG shorthand decimals for Android 21 compatibility")
+
     def test_telegram_and_clipboard_are_recognizable_vector_controls(self):
         screen = layout("activity_login.xml")
         paste = by_id(screen, "pasteKey")

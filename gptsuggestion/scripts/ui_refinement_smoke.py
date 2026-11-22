@@ -9,6 +9,7 @@ publication or live download is used. Real ARM64/device tests remain required.
 from __future__ import annotations
 
 import argparse
+import base64
 from io import BytesIO
 import json
 import os
@@ -33,8 +34,9 @@ def bounds(node: ET.Element) -> tuple[int, int, int, int]:
 
 
 class UiSmoke:
-    def __init__(self, apk: Path, output: Path):
+    def __init__(self, apk: Path, output: Path, emit_review_previews: bool = False):
         self.apk = apk.resolve()
+        self.emit_review_previews = emit_review_previews
         self.out = output.resolve()
         self.out.mkdir(parents=True, exist_ok=True)
         self.fixture = self.out.parent / "fixture"
@@ -157,6 +159,18 @@ class UiSmoke:
         self.captures.append(name)
         if hierarchy:
             (self.out / (name + ".xml")).write_bytes(ET.tostring(self.tree(fresh=True), encoding="utf-8", xml_declaration=True))
+        if self.emit_review_previews and name in ("home", "settings", "login"):
+            # Compact, genuine-render diagnostics remain readable via GitHub's
+            # Checks API when artifact-storage downloads are unavailable.
+            # The full-resolution PNG/XML remains in the normal QA artifact.
+            # This emulator contains only the synthetic offline fixture key.
+            preview = Image.open(BytesIO(image)).convert("RGB")
+            preview.thumbnail((360, 900))
+            stream = BytesIO()
+            preview.save(stream, format="JPEG", quality=76, optimize=True)
+            payload = base64.b64encode(stream.getvalue()).decode("ascii")
+            if len(payload) < 60000:
+                print(f"::notice title=UI review {name}::UI_REVIEW_JPEG_BASE64:{payload}", flush=True)
         return image
 
     def configure(self, width: int = 360, height: int = 760, font: float = 1):
@@ -430,6 +444,8 @@ class UiSmoke:
                                   "No live licence/provider authentication or real BGMI/OBB execution",
                                   "Real-device signing/upgrade/OEM permission and performance checks remain required"]}
         (self.out / "results.json").write_text(json.dumps(report, indent=2) + "\n")
+        compact = json.dumps(report, separators=(",", ":")).replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A")
+        print(f"::{'error' if error else 'notice'} title=Offline UI smoke report::{compact}", flush=True)
         if error:
             raise AssertionError(error)
 
@@ -438,8 +454,10 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--apk", type=Path, required=True)
     parser.add_argument("--out", type=Path, required=True)
+    parser.add_argument("--emit-review-previews", action="store_true",
+                        help="Expose three small synthetic-fixture screen previews in Checks diagnostics")
     args = parser.parse_args()
-    runner = UiSmoke(args.apk, args.out)
+    runner = UiSmoke(args.apk, args.out, args.emit_review_previews)
     error = None
     try:
         runner.prepare()

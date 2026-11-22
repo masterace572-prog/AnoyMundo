@@ -158,14 +158,18 @@ jobs:
           apks = sorted(folder.glob('*.apk'))
           sums = {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in apks}
           (folder / 'SHA256SUMS.txt').write_text(''.join(f'{v}  {k}\n' for k, v in sums.items()))
-          (folder / 'BUILD-INFO.json').write_text(json.dumps({
+          info = {
               'source_commit': os.environ['GITHUB_SHA'], 'source_project': 'gptsuggestion/',
               'signature_state': os.environ['SIGNATURE_STATE'],
-              'unsigned_warning': 'Unsigned APKs are not installable; no alternative release key was generated.',
+              'unsigned_warning': ('Unsigned APKs are not installable; no alternative release key was generated.'
+                                   if os.environ['SIGNATURE_STATE'] == 'unsigned' else None),
               'production_selections_changed': False,
               'device_validation': 'Real ARM64 licence/authentication, game, OEM permissions and upgrade tests are still required.',
               'sha256': sums,
-          }, indent=2) + '\n')
+              'size_bytes': {p.name: p.stat().st_size for p in apks},
+          }
+          (folder / 'BUILD-INFO.json').write_text(json.dumps(info, indent=2) + '\n')
+          print('::notice title=APK build metadata::' + json.dumps(info, separators=(',', ':')))
           PY
 
       - name: Verify compiled permissions, brands, callback wiring and Kenny artwork
@@ -189,11 +193,24 @@ jobs:
 
       - name: Verify original release signatures
         if: steps.signing.outputs.state == 'signed'
+        env:
+          XLOX_STORE_PASSWORD: ${{ secrets.XLOX_STORE_PASSWORD }}
         run: |
-          set -euo pipefail
-          SIGNER="$ANDROID_SDK_ROOT/build-tools/34.0.0/apksigner"
-          "$SIGNER" verify --verbose qa-output/apks/Anoy-AMOLED-test.apk
-          "$SIGNER" verify --verbose qa-output/apks/KennyPvt-AMOLED-test.apk
+          python3 - <<'PY'
+          import hashlib, os, re, subprocess
+          from pathlib import Path
+          certificate = subprocess.check_output([
+              'keytool', '-exportcert', '-keystore', os.environ['GITHUB_WORKSPACE'] + '/xlox/app/xlox.jks',
+              '-storepass:env', 'XLOX_STORE_PASSWORD', '-alias', 'key0',
+          ])
+          expected = hashlib.sha256(certificate).hexdigest()
+          signer = Path(os.environ['ANDROID_SDK_ROOT']) / 'build-tools/34.0.0/apksigner'
+          for apk in sorted(Path('qa-output/apks').glob('*.apk')):
+              result = subprocess.check_output([str(signer), 'verify', '--verbose', '--print-certs', str(apk)], text=True)
+              actual = re.search(r'Signer #1 certificate SHA-256 digest: ([0-9a-fA-F]+)', result)
+              assert actual and actual[1].lower() == expected, 'Original signing certificate mismatch: ' + apk.name
+              print(f'::notice title=Original signing identity::{apk.name}: original certificate SHA-256 {expected}; APK signature verified')
+          PY
 
       # v7 supports raw single-file artifacts: the download is the actual APK,
       # not an artifact ZIP. No release/prerelease or repository write is used.
@@ -294,7 +311,7 @@ jobs:
           disable-animations: true
           emulator-options: -no-window -no-snapshot -noaudio -no-boot-anim -gpu swiftshader_indirect
           working-directory: gptsuggestion
-          script: python3 scripts/ui_refinement_smoke.py --apk qa-output/debug/Anoy-UI-debug.apk --out qa-output/emulator-api${{ matrix.api }}
+          script: python3 scripts/ui_refinement_smoke.py --apk qa-output/debug/Anoy-UI-debug.apk --out qa-output/emulator-api${{ matrix.api }} --emit-review-previews
 
       - name: Upload actual emulator captures and checks, never fixture keys/APKs
         if: always()

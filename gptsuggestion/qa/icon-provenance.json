@@ -3,42 +3,42 @@
     "url": "https://github.com/lucide-icons/lucide/blob/main/icons/circle-question-mark.svg",
     "git_blob": "1d9c17584d7c9b89ac44eecefd4f96f5d9e82fe0",
     "license": "ISC (Lucide)",
-    "adaptation": "24 x 24 vector; rounded 1.75 stroke; theme-tinted; primitive shapes converted to Android paths"
+    "adaptation": "24 x 24 vector; rounded 1.75 stroke; theme-tinted; primitive shapes converted to Android paths; SVG number tokens expanded for Android 21 parser compatibility"
   },
   "ic_clipboard_paste.xml": {
     "url": "https://github.com/lucide-icons/lucide/blob/main/icons/clipboard-paste.svg",
     "git_blob": "6ac593359c8fdf1d334954cb098ef7900b5521cb",
     "license": "ISC (Lucide)",
-    "adaptation": "24 x 24 vector; rounded 1.75 stroke; theme-tinted; primitive shapes converted to Android paths"
+    "adaptation": "24 x 24 vector; rounded 1.75 stroke; theme-tinted; primitive shapes converted to Android paths; SVG number tokens expanded for Android 21 parser compatibility"
   },
   "ic_copy.xml": {
     "url": "https://github.com/lucide-icons/lucide/blob/main/icons/copy.svg",
     "git_blob": "f62ce99c1f34989a5f70cd15192f8adf9140f4ed",
     "license": "ISC (Lucide)",
-    "adaptation": "24 x 24 vector; rounded 1.75 stroke; theme-tinted; primitive shapes converted to Android paths"
+    "adaptation": "24 x 24 vector; rounded 1.75 stroke; theme-tinted; primitive shapes converted to Android paths; SVG number tokens expanded for Android 21 parser compatibility"
   },
   "ic_download.xml": {
     "url": "https://github.com/lucide-icons/lucide/blob/main/icons/download.svg",
     "git_blob": "5c75527bde1fe8259efb72c5b590bedfae28c05e",
     "license": "ISC (Lucide)",
-    "adaptation": "24 x 24 vector; rounded 1.75 stroke; theme-tinted; primitive shapes converted to Android paths"
+    "adaptation": "24 x 24 vector; rounded 1.75 stroke; theme-tinted; primitive shapes converted to Android paths; SVG number tokens expanded for Android 21 parser compatibility"
   },
   "ic_refresh_cw.xml": {
     "url": "https://github.com/lucide-icons/lucide/blob/main/icons/refresh-cw.svg",
     "git_blob": "c27b3a9677e35fb2353167b01553d3d4cc4e3091",
     "license": "ISC (Lucide)",
-    "adaptation": "24 x 24 vector; rounded 1.75 stroke; theme-tinted; primitive shapes converted to Android paths"
+    "adaptation": "24 x 24 vector; rounded 1.75 stroke; theme-tinted; primitive shapes converted to Android paths; SVG number tokens expanded for Android 21 parser compatibility"
   },
   "ic_log_out.xml": {
     "url": "https://github.com/lucide-icons/lucide/blob/main/icons/log-out.svg",
     "git_blob": "fe772e6692db987dd1a1c4f6670e8c2d49b20b94",
     "license": "ISC (Lucide)",
-    "adaptation": "24 x 24 vector; rounded 1.75 stroke; theme-tinted; primitive shapes converted to Android paths"
+    "adaptation": "24 x 24 vector; rounded 1.75 stroke; theme-tinted; primitive shapes converted to Android paths; SVG number tokens expanded for Android 21 parser compatibility"
   },
   "ic_telegram.xml": {
     "url": "https://github.com/tabler/tabler-icons/blob/main/icons/outline/brand-telegram.svg",
     "git_blob": "0b5ce512cc10ff42c5fbb215d56b27da45dfa60d",
     "license": "MIT (Tabler)",
-    "adaptation": "24 x 24 vector; rounded 1.75 stroke; theme-tinted; primitive shapes converted to Android paths"
+    "adaptation": "24 x 24 vector; rounded 1.75 stroke; theme-tinted; primitive shapes converted to Android paths; SVG number tokens expanded for Android 21 parser compatibility"
   }
 }
