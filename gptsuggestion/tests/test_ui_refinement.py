@@ -312,22 +312,30 @@ class SmokeHarness(unittest.TestCase):
         self.assertTrue(all(len(line) < 4096 for line in lines))
         self.assertEqual("".join(line.split("PAYLOAD:", 1)[1] for line in lines), payload)
 
-    def test_back_is_sent_once_only_when_ime_window_is_visible(self):
+    def test_back_is_sent_once_only_from_login_with_ime_hidden_footer(self):
         runner = self.runner()
-        runner.shell = Mock(return_value="mInputShown=true mImeWindowVis=0x3")
+        runner.invalidate = Mock()
+        runner.maybe_node = Mock(side_effect=[None, ET.Element("node")])
         runner.key = Mock()
         with patch("ui_refinement_smoke.time.sleep"):
             runner.hide_keyboard()
         runner.key.assert_called_once_with(4)
-        runner.shell.assert_called_once()
 
-    def test_stale_input_request_cannot_send_back_and_close_the_app(self):
+    def test_visible_footer_cannot_send_back_and_close_the_app(self):
         runner = self.runner()
-        runner.shell = Mock(return_value="mInputShown=true mImeWindowVis=0x1")
+        runner.invalidate = Mock()
+        runner.maybe_node = Mock(return_value=ET.Element("node"))
         runner.key = Mock()
-        with patch("ui_refinement_smoke.time.sleep"):
-            runner.hide_keyboard()
-        runner.key.assert_called_once_with(111)
+        runner.hide_keyboard()
+        runner.key.assert_not_called()
+
+    def test_unknown_screen_cannot_receive_a_keyboard_back_press(self):
+        runner = self.runner()
+        runner.invalidate = Mock()
+        runner.maybe_node = Mock(return_value=None)
+        runner.key = Mock()
+        runner.hide_keyboard()
+        runner.key.assert_not_called()
 
     def test_partial_bounds_are_scrolled_before_touch_target_measurement(self):
         runner = self.runner()

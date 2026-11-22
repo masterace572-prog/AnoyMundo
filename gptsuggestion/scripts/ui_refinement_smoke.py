@@ -60,6 +60,7 @@ class UiSmoke:
         self.fixture.mkdir(parents=True, exist_ok=True)
         self.checks: list[dict] = []
         self.captures: list[str] = []
+        self.stages: list[dict] = []
         self.cache = None
         self.width, self.height, self.scale = 720, 1520, 2.0
         self.sdk = Path(os.environ.get("ANDROID_SDK_ROOT") or os.environ["ANDROID_HOME"])
@@ -158,13 +159,16 @@ class UiSmoke:
         time.sleep(.25)
 
     def hide_keyboard(self):
-        # mInputShown is a REQUEST flag and can remain true after dismissal.
-        # Only the IME_VISIBLE window bit proves that Back will hide a keyboard.
-        # Send at most ONE Back; never retry it and accidentally leave the app.
-        state = self.shell("dumpsys", "input_method")
-        match = re.search(r"mImeWindowVis=(0x[0-9a-fA-F]+|\d+)", state)
-        visible = match is not None and int(match[1], 0) & 2
-        self.key(4 if visible else 111)
+        # Legacy IME service flags disagree with actual visibility across these
+        # emulator images. The app's pinned footer is present iff its real
+        # insets callback says the keyboard is closed. Only dismiss from the
+        # confirmed Login view with that footer hidden, and never repeat Back.
+        self.invalidate()
+        if self.maybe_node("versionFooter") is not None:
+            return
+        if self.maybe_node("userkey") is None:
+            return
+        self.key(4)
         time.sleep(.8)
 
     def wait_text(self, name: str, expected: str, seconds: float = 12):
@@ -511,7 +515,7 @@ class UiSmoke:
             pass
         report = {"emulator_api": self.shell("getprop", "ro.build.version.sdk", check=False).strip(),
                   "result": "failed" if error else "passed", "failure": error,
-                  "checks": self.checks, "captures": self.captures,
+                  "checks": self.checks, "captures": self.captures, "stages": self.stages,
                   "limitations": ["x86 UI fixture only, not the delivered ARM64 APK",
                                   "No live licence/provider authentication or real BGMI/OBB execution",
                                   "Real-device signing/upgrade/OEM permission and performance checks remain required"]}
@@ -520,7 +524,7 @@ class UiSmoke:
                    "failure": error[-1800:] if error else None,
                    "checks_passed": sum(item["passed"] for item in self.checks),
                    "checks_failed": sum(not item["passed"] for item in self.checks),
-                   "captures": len(self.captures), "limitations": report["limitations"]}
+                   "captures": len(self.captures), "stages": self.stages, "limitations": report["limitations"]}
         compact = json.dumps(summary, separators=(",", ":")).replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A")
         print(f"::{'error' if error else 'notice'} title=Offline UI smoke summary::{compact}", flush=True)
         payload = base64.b64encode(zlib.compress(json.dumps(report, separators=(",", ":")).encode(), 9)).decode("ascii")
@@ -535,23 +539,36 @@ def main():
     parser.add_argument("--out", type=Path, required=True)
     args = parser.parse_args()
     runner = UiSmoke(args.apk, args.out)
-    error = None
+    errors = []
     try:
         runner.prepare()
-        runner.home_and_settings()
-        runner.login_actions()
-        runner.settings_actions()
-        runner.responsive()
-        runner.motion_and_theme()
     except Exception:
-        error = traceback.format_exc()
+        errors.append(traceback.format_exc())
+    if not errors:
+        # An isolated failure must not prevent independent Settings, responsive
+        # or motion/theme checks from running on freshly reopened QA screens.
+        stages = (("home", runner.home_and_settings), ("login", runner.login_actions),
+                  ("settings", runner.settings_actions), ("responsive", runner.responsive),
+                  ("motion_theme", runner.motion_and_theme))
+        for name, stage in stages:
+            try:
+                stage()
+                runner.stages.append({"stage": name, "passed": True})
+            except Exception:
+                failure = traceback.format_exc()
+                errors.append(name + ":\n" + failure)
+                runner.stages.append({"stage": name, "passed": False,
+                                      "error": failure.strip().splitlines()[-1]})
+                (runner.out / ("failure_" + name + ".log")).write_text(failure)
+                try:
+                    runner.shot("failure_" + name, hierarchy=False)
+                    (runner.out / "failure.png").write_bytes((runner.out / ("failure_" + name + ".png")).read_bytes())
+                except Exception:
+                    pass
+    error = "\n\n".join(errors) if errors else None
+    if error:
         (runner.out / "failure.log").write_text(error)
-        try:
-            runner.shot("failure", hierarchy=False)
-        except Exception:
-            pass
-    finally:
-        runner.finish(error)
+    runner.finish(error)
 
 
 if __name__ == "__main__":
