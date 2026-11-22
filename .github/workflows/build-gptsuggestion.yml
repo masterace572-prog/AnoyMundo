@@ -110,9 +110,35 @@ jobs:
           ./gradlew :app:assembleAnoyRelease :app:assembleKennyRelease :app:assembleAnoyDebug --no-daemon 2>&1 | tee qa-output/reports/assemble.log
 
       - name: Android Lint for both brands and the debug UI
+        id: lint
         run: |
           set -euo pipefail
           ./gradlew :app:lintAnoyRelease :app:lintKennyRelease :app:lintAnoyDebug --no-daemon 2>&1 | tee qa-output/reports/lint.log
+
+      - name: Expose actionable lint findings through the Checks API
+        if: always() && steps.lint.outcome != 'skipped'
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import xml.etree.ElementTree as ET
+          def escape(value):
+              return str(value).replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A')
+          seen = set()
+          for report in sorted(Path('app/build/reports').glob('lint-results-*.xml')):
+              for issue in ET.parse(report).getroot().findall('issue'):
+                  if issue.get('severity') not in ('Error', 'Fatal'):
+                      continue
+                  location = issue.find('location')
+                  file = location.get('file', '') if location is not None else ''
+                  line = location.get('line', '1') if location is not None else '1'
+                  message = issue.get('message', '')
+                  key = (issue.get('id'), file, line, message)
+                  if key in seen:
+                      continue
+                  seen.add(key)
+                  print(f"::error title={escape(issue.get('id'))}::{escape(file)}:{line}: {escape(message)}")
+          print(f"::notice title=Lint diagnostic count::{len(seen)} distinct lint errors in available XML reports")
+          PY
 
       - name: Collect clearly named test artifacts and build metadata
         env:
@@ -169,11 +195,31 @@ jobs:
           "$SIGNER" verify --verbose qa-output/apks/Anoy-AMOLED-test.apk
           "$SIGNER" verify --verbose qa-output/apks/KennyPvt-AMOLED-test.apk
 
-      - name: Upload test APKs only
+      # v7 supports raw single-file artifacts: the download is the actual APK,
+      # not an artifact ZIP. No release/prerelease or repository write is used.
+      - name: Upload the direct Anoy test APK
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
-          name: gptsuggestion-test-apks-${{ steps.signing.outputs.state }}
-          path: gptsuggestion/qa-output/apks/
+          path: gptsuggestion/qa-output/apks/Anoy-AMOLED-test.apk
+          archive: false
+          retention-days: 7
+          if-no-files-found: error
+
+      - name: Upload the direct KennyPvt test APK
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          path: gptsuggestion/qa-output/apks/KennyPvt-AMOLED-test.apk
+          archive: false
+          retention-days: 7
+          if-no-files-found: error
+
+      - name: Upload checksums and signing/build information
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: gptsuggestion-test-apk-information
+          path: |
+            gptsuggestion/qa-output/apks/BUILD-INFO.json
+            gptsuggestion/qa-output/apks/SHA256SUMS.txt
           retention-days: 7
           if-no-files-found: error
 
