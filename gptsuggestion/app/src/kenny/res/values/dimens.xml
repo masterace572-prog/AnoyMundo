@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The longer name + Loader must fit the same narrow-phone lockup. -->
+    <dimen name="text_wordmark">32dp</dimen>
+    <dimen name="line_wordmark">36dp</dimen>
+</resources>

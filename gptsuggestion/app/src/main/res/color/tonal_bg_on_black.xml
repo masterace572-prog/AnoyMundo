@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Tonal button on the black background: surface-2, pressed surface-3. -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:color="@color/surface_3" android:state_pressed="true" />
+    <item android:color="@color/surface_2" />
+</selector>

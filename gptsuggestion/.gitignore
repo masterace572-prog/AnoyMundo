@@ -1,0 +1,25 @@
+*.iml
+.gradle/
+/local.properties
+/.idea/
+/build
+/captures
+.externalNativeBuild/
+.cxx/
+local.properties
+app/build/
+*.apk
+*.apk.idsig
+libbgmi.so
+xlox-loader.zip
+
+# This isolated copy never stores signing credentials or generated test APKs.
+*.jks
+*.keystore
+*.aab
+.env
+.env.*
+qa-output/
+__pycache__/
+*.py[cod]
+.pytest_cache/
