@@ -1,0 +1,22 @@
+*.iml
+.gradle/
+/local.properties
+/.idea/
+/build
+/captures
+.externalNativeBuild/
+.cxx/
+local.properties
+app/build/
+*.apk
+*.apk.idsig
+libbgmi.so
+xlox-loader.zip
+
+# Isolated redesign workspace: generated output and signing material stay out.
+/qa-output/
+*.jks
+*.keystore
+*.p12
+*.pfx
+*.pem
