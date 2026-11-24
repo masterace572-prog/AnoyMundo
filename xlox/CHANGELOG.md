@@ -6,6 +6,9 @@ scripts mentioned below were removed from the tree in the repo cleanup after
 
 ## 2.4.3 loader-UI follow-up — verification only (versionCode 21)
 
+- Match the announcement background and no-stroke treatment to the game cards;
+  keep its heading/icon blue and make the server-fetched message explicitly white.
+  Server fetching and all other card colors/behavior stay unchanged.
 - Extend the accepted Home design to Login and Splash with static Manrope,
   consistent gutters, black surfaces and blue actions/final Hax word.
 - Replace Login's Paste text button with a clipboard icon. Keep two 48dp icon

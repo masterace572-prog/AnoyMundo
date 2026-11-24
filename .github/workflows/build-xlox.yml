@@ -235,14 +235,14 @@ jobs:
           print(summary)
           with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as out:
               out.write(summary + '\n')
-          expected = {'com.xlox.ui.HomeSettingsNavigationTest': 54,
+          expected = {'com.xlox.ui.HomeSettingsNavigationTest': 56,
                       'com.xlox.ui.LoginSplashUiTest': 18,
                       'com.xlox.utils.AppManagerObbStateTest': 16}
           for variant in ('testAnoyDebugUnitTest', 'testKennyDebugUnitTest'):
               for name, count in expected.items():
                   actual = suites.get((variant, name))
                   assert actual is not None and actual['tests'] >= count, (variant, name, actual)
-          assert totals['tests'] >= 176, 'Both brands must run all 27 navigation + 9 login/splash + 8 OBB tests on Android 21 and 28.'
+          assert totals['tests'] >= 180, 'Both brands must run all 28 navigation/presentation + 9 login/splash + 8 OBB tests on Android 21 and 28.'
           assert totals['failures'] == totals['errors'] == totals['skipped'] == 0, summary
           print('::notice title=Android host test totals::' + summary)
           PYNAV

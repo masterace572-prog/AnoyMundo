@@ -14,13 +14,16 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ScrollView;
 import android.widget.TextView;
+import android.widget.ImageView;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 import androidx.core.content.res.ResourcesCompat;
+import androidx.core.widget.ImageViewCompat;
 import androidx.viewpager.widget.ViewPager;
 
 import com.google.android.material.button.MaterialButton;
+import com.google.android.material.card.MaterialCardView;
 import com.xlox.R;
 
 import java.time.Duration;
@@ -466,6 +469,34 @@ public class HomeSettingsNavigationTest {
         assertEquals("Coming soon", activity.<TextView>findViewById(R.id.airPrimaryAction).getText().toString());
         assertFalse(activity.findViewById(R.id.airPrimaryAction).isEnabled());
         assertEquals(View.GONE, activity.findViewById(R.id.airGameStateValue).getVisibility());
+    }
+
+    @Test
+    public void announcementMatchesGameCardsAndKeepsBlueAccentsWithAWhiteServerMessage() {
+        MaterialCardView note = activity.findViewById(R.id.panelNoteCard);
+        MaterialCardView bgmi = activity.findViewById(R.id.gameCard);
+        MaterialCardView air = activity.findViewById(R.id.airGameCard);
+        TextView heading = activity.findViewById(R.id.panelNoteKicker);
+        TextView message = activity.findViewById(R.id.panelNote);
+        ImageView icon = activity.findViewById(R.id.panelNoteIcon);
+        // Use the same plain-text assignment as the server-note presentation;
+        // no live fetch, account or native session is needed for color checks.
+        message.setText("Example announcement from the server.");
+        note.setVisibility(View.VISIBLE);
+        layout(360, 800);
+        assertEquals(bgmi.getCardBackgroundColor().getDefaultColor(),
+                note.getCardBackgroundColor().getDefaultColor());
+        assertEquals(air.getCardBackgroundColor().getDefaultColor(),
+                note.getCardBackgroundColor().getDefaultColor());
+        assertEquals(bgmi.getStrokeWidth(), note.getStrokeWidth());
+        assertEquals(0, note.getStrokeWidth());
+        assertEquals(ContextCompat.getColor(activity, R.color.accent), heading.getCurrentTextColor());
+        assertNotNull(ImageViewCompat.getImageTintList(icon));
+        assertEquals(ContextCompat.getColor(activity, R.color.accent),
+                ImageViewCompat.getImageTintList(icon).getDefaultColor());
+        assertEquals(ContextCompat.getColor(activity, R.color.white), message.getCurrentTextColor());
+        message.setText("A different message from the server.");
+        assertEquals(ContextCompat.getColor(activity, R.color.white), message.getCurrentTextColor());
     }
 
     @Test

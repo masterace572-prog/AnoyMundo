@@ -740,11 +740,8 @@
         <item name="lineHeight">21sp</item>
     </style>
 
-    <style name="Widget.Anoy.Card.Announcement" parent="Widget.Anoy.Card">
-        <item name="cardBackgroundColor">@color/accent_tint</item>
-        <item name="strokeColor">@color/accent_border</item>
-        <item name="strokeWidth">@dimen/hairline</item>
-    </style>
+    <!-- Same surface and border treatment as the game cards; blue stays in the heading/icon. -->
+    <style name="Widget.Anoy.Card.Announcement" parent="Widget.Anoy.Card" />
     <style name="Widget.Anoy.Group.Dashboard" parent="Widget.Anoy.Group">
         <item name="cardCornerRadius">@dimen/radius_card</item>
         <item name="shapeAppearance">@style/ShapeAppearance.Anoy.Card</item>

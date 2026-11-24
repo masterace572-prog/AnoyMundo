@@ -124,6 +124,7 @@
                     android:orientation="horizontal"
                     android:padding="@dimen/space_16">
                     <ImageView
+                        android:id="@+id/panelNoteIcon"
                         android:layout_width="@dimen/icon_inline"
                         android:layout_height="@dimen/icon_inline"
                         android:importantForAccessibility="no"
@@ -145,6 +146,7 @@
                         <TextView
                             android:id="@+id/panelNote"
                             style="@style/Text.Dashboard.Notice"
+                            android:textColor="@color/white"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="@dimen/space_4"

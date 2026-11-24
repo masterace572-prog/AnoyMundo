@@ -34,6 +34,10 @@ replace the already-published release.
 - Only the blue decoration is inset by **2dp on each edge**. Label hit targets
   remain at least 48dp. Indicator travel is the full tab pitch, not its narrower
   visual width. Both pages remain opaque and retained.
+- Announcement cards share the game cards' background and no-stroke treatment.
+  Their heading and megaphone stay blue; the server-fetched message is explicitly
+  white. Fetching, sanitization, empty-note visibility and accessibility text are
+  unchanged. The game-update warning card keeps its separate warning colors.
 - Unchanged status renders reuse their text and tinted dot; redundant text/color
   updates are skipped. No file/network work is added to gesture or frame paths.
 
@@ -47,8 +51,8 @@ stayed on Home on host Android 21 and 28. The older page-swipe checks passed;
 they had not exercised dragging the bottom control. This does not prove that it
 was the only cause on the user's physical phone.
 
-The expanded host suite has 27 navigation, 9 Login/Splash and 8 read-only OBB
-cases per Android version and brand: **176 checks total** across API 21/28 and
+The expanded host suite has 28 navigation/presentation, 9 Login/Splash and 8 read-only OBB
+cases per Android version and brand: **180 checks total** across API 21/28 and
 Anoy/KennyPvt. It covers root-dispatched gestures, partial tracking, cancellation,
 vertical scroll/button safety, both tap/drag directions, 2dp selector geometry,
 header wrapping, icon hit targets, long keys/large fonts, visibility semantics,

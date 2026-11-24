@@ -129,6 +129,21 @@ class NavigationWiring(unittest.TestCase):
         self.assertEqual(indicator.find('solid').get(A + 'color'), '@color/accent')
         self.assertIn('R.color.on_accent', (JAVA / 'ui/HomeSettingsNavigation.java').read_text())
 
+    def test_announcement_matches_card_surface_with_blue_heading_icon_and_white_message(self):
+        home = ids('page_home.xml')
+        styles = {e.get('name'): e for e in ET.parse(RES / 'values/styles.xml').getroot().findall('style')}
+        card = styles['Widget.Anoy.Card.Announcement']
+        self.assertEqual(card.get('parent'), 'Widget.Anoy.Card')
+        base = {item.get('name'): item.text for item in styles['Widget.Anoy.Card']}
+        overrides = {item.get('name'): item.text for item in card}
+        for name in ('cardBackgroundColor', 'strokeWidth'):
+            self.assertEqual(overrides.get(name, base[name]), base[name])
+        self.assertEqual(home['@+id/panelNote'].get(A + 'textColor'), '@color/white')
+        heading = styles['Text.Dashboard.AnnouncementTitle']
+        self.assertEqual(next(e.text for e in heading if e.get('name') == 'android:textColor'), '@color/accent')
+        icon = home['@+id/panelNoteCard'].find('.//ImageView')
+        self.assertEqual(icon.get('{http://schemas.android.com/apk/res-auto}tint'), '@color/accent')
+
     def test_swipes_arbitrate_actual_events_before_child_scroll_interception(self):
         pager = (JAVA / 'ui/HomeSettingsPager.java').read_text()
         for required in ('dispatchTouchEvent(MotionEvent event)', 'onInterceptTouchEvent(MotionEvent event)',
