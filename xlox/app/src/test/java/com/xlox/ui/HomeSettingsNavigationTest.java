@@ -302,6 +302,40 @@ public class HomeSettingsNavigationTest {
     }
 
     @Test
+    public void aSecondFingerCancelsTheCapsuleDragWithoutChangingPageOrClicking() {
+        CapsuleNavigation capsule = activity.findViewById(R.id.bottomCapsule);
+        Rect box = bounds(capsule);
+        float start = box.centerX() - capsule.getSegmentWidth() / 2f;
+        float moved = start + capsule.getSegmentWidth() * .6f;
+        long down = SystemClock.uptimeMillis();
+        touch(down, MotionEvent.ACTION_DOWN, start, box.centerY());
+        touch(down, MotionEvent.ACTION_MOVE, moved, box.centerY());
+        assertTrue(pager.isFakeDragging());
+        MotionEvent.PointerProperties[] properties = new MotionEvent.PointerProperties[2];
+        MotionEvent.PointerCoords[] coords = new MotionEvent.PointerCoords[2];
+        for (int i = 0; i < 2; i++) {
+            properties[i] = new MotionEvent.PointerProperties();
+            properties[i].id = i;
+            properties[i].toolType = MotionEvent.TOOL_TYPE_FINGER;
+            coords[i] = new MotionEvent.PointerCoords();
+            coords[i].x = moved + i * 12;
+            coords[i].y = box.centerY();
+            coords[i].pressure = coords[i].size = 1f;
+        }
+        MotionEvent second = MotionEvent.obtain(down, SystemClock.uptimeMillis(),
+                MotionEvent.ACTION_POINTER_DOWN | (1 << MotionEvent.ACTION_POINTER_INDEX_SHIFT),
+                2, properties, coords, 0, 0, 1f, 1f, 0, 0, android.view.InputDevice.SOURCE_TOUCHSCREEN, 0);
+        root.dispatchTouchEvent(second);
+        second.recycle();
+        assertFalse(pager.isFakeDragging());
+        touch(down, MotionEvent.ACTION_CANCEL, moved, box.centerY());
+        settle();
+        assertEquals(HomeSettingsPager.HOME, activity.navigation.currentPage());
+        assertEquals(0, pager.getScrollX());
+        assertEquals(0, activity.gameClicks);
+    }
+
+    @Test
     public void insetSelectorKeepsFullTabPitchAndAccessibleTargetsAtBothEnds() {
         CapsuleNavigation capsule = activity.findViewById(R.id.bottomCapsule);
         View indicator = activity.findViewById(R.id.navigationIndicator);
@@ -466,11 +500,17 @@ public class HomeSettingsNavigationTest {
         StatusText.set(server, "Server under maintenance", R.color.warning, R.color.text_secondary);
         active.setTextSize(24f);
         server.setTextSize(24f);
+        // Host legacy graphics does not provide device-accurate glyph widths.
+        // Explicit intrinsic minima exercise the real wrap/layout branch on
+        // both APIs rather than relying on that rasterizer's font metrics.
+        active.setMinWidth(Ui.dp(activity, 100));
+        server.setMinWidth(Ui.dp(activity, 100));
         layout(320, 800);
         Rect first = bounds(active);
         Rect second = bounds(server);
         Rect column = bounds(activity.findViewById(R.id.headerAccount));
-        assertTrue(second.top >= first.bottom);
+        assertTrue("Statuses must wrap: " + first + " / " + second + " within " + column,
+                second.top >= first.bottom);
         assertEquals(column.right, first.right);
         assertEquals(column.right, second.right);
         assertTrue(first.left >= column.left);

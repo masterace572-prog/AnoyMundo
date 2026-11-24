@@ -28,6 +28,7 @@ public final class CapsuleNavigation extends FrameLayout {
     private float downY;
     private float lastX;
     private boolean dragging;
+    private boolean axisChosen;
     private boolean vertical;
 
     public CapsuleNavigation(Context context) {
@@ -88,6 +89,7 @@ public final class CapsuleNavigation extends FrameLayout {
         pointerId = event.getPointerId(0);
         downX = lastX = event.getX();
         downY = event.getY();
+        axisChosen = false;
         vertical = false;
     }
 
@@ -95,13 +97,14 @@ public final class CapsuleNavigation extends FrameLayout {
         int index = event.findPointerIndex(pointerId);
         if (index < 0 || event.getPointerCount() != 1) {
             finishDrag(true);
-            vertical = true;
+            axisChosen = vertical = true;
             return false;
         }
         float x = event.getX(index);
         float dx = x - downX;
         float dy = event.getY(index) - downY;
-        if (!dragging && !vertical && Math.max(Math.abs(dx), Math.abs(dy)) > touchSlop) {
+        if (!axisChosen && Math.max(Math.abs(dx), Math.abs(dy)) > touchSlop) {
+            axisChosen = true;
             vertical = Math.abs(dy) >= Math.abs(dx);
             if (!vertical && dragListener != null) {
                 dragging = dragListener.onDragStart();
@@ -123,10 +126,10 @@ public final class CapsuleNavigation extends FrameLayout {
             case MotionEvent.ACTION_MOVE:
                 // Returning true lets Android CANCEL the label's click. Merely
                 // listening on a label would leave clicks alive after a drag.
-                return move(event) || vertical;
+                return move(event) || axisChosen;
             case MotionEvent.ACTION_POINTER_DOWN:
                 finishDrag(true);
-                vertical = true;
+                axisChosen = vertical = true;
                 return true;
             case MotionEvent.ACTION_UP:
             case MotionEvent.ACTION_CANCEL:
@@ -149,11 +152,11 @@ public final class CapsuleNavigation extends FrameLayout {
             case MotionEvent.ACTION_POINTER_DOWN:
             case MotionEvent.ACTION_CANCEL:
                 finishDrag(true);
-                vertical = true;
+                axisChosen = vertical = true;
                 return true;
             case MotionEvent.ACTION_UP:
                 if (dragging) finishDrag(false);
-                else if (!vertical) performClick();
+                else if (!axisChosen) performClick();
                 pointerId = -1;
                 return true;
             default:
