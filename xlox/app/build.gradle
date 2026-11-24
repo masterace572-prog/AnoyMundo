@@ -147,6 +147,11 @@ android {
 
     testOptions {
         unitTests.includeAndroidResources = true
+        unitTests.all {
+            // Use Gradle's canonical Maven Central host for host-only Android runtimes;
+            // Robolectric's legacy repo1 default is not reachable on every CI runner.
+            systemProperty 'robolectric.dependency.repo.url', 'https://repo.maven.apache.org/maven2'
+        }
     }
 
     compileOptions {

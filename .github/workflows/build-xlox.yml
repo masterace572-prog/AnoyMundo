@@ -206,7 +206,10 @@ jobs:
               print('Navigation test report:', report, counts)
               for case in suite.findall('testcase'):
                   for failure in list(case.findall('failure')) + list(case.findall('error')):
-                      detail = case.get('name', '') + ': ' + (failure.get('message') or failure.text or '')[:2000]
+                      trace = failure.text or ''
+                      causes = '\n'.join(line for line in trace.splitlines() if 'Caused by:' in line or 'https://' in line)
+                      detail = case.get('name', '') + ': ' + (failure.get('message') or '')[:600]
+                      detail += '\n' + causes[:1800] + '\n' + trace[-1400:]
                       print('::error title=Android navigation test::' + detail.replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A'))
           summary = 'Android navigation tests (Anoy + KennyPvt, host Android 21 / 28): ' + str(totals)
           print(summary)
