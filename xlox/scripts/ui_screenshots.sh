@@ -185,11 +185,11 @@ open_home() {
     sleep 1.5
 }
 
-# Home preview, then the Settings icon in the header (2.2.0).
+# Home preview, then Settings in the persistent bottom capsule (2.4.3).
 open_settings() {
     # shellcheck disable=SC2068
     open_home $@
-    tap_id settingsButton || true
+    tap_id navigationSettings || true
     wait_for_id settingsPage 6 || log "WARN: settings page missing"
     sleep 0.8
 }
@@ -936,7 +936,7 @@ open_home
 sleep 1.5
 log "help_first second: $(has_id helpRoot && echo shown || echo none)"
 log "help_first log: $(help_log)"
-open_home --es qa_action error
+open_settings --es qa_action error
 tap_id helpButton || true
 sleep 1.2
 shot help_sheet

@@ -85,7 +85,7 @@
     <string name="update_no_space">Not enough free storage. Free at least %1$s and try again.</string>
 
     <!-- Home -->
-    <string name="home_title">Welcome back</string>
+    <string name="home_title">Home</string>
     <string name="sign_out">Sign out</string>
     <string name="section_licence">Licence</string>
     <string name="section_game">Game</string>
@@ -99,6 +99,27 @@
     <string name="row_library">Library</string>
     <string name="row_server">Server</string>
     <string name="game_name">BGMI</string>
+    <string name="game_air_name">BGMI Air</string>
+    <string name="game_air_library">libbgmilite.so</string>
+    <string name="coming_soon">Coming soon</string>
+    <string name="game_air_coming_soon_action">BGMI Air · Coming soon</string>
+    <string name="game_air_coming_soon_detail">BGMI Air unlocks after a library update adds its support. BGMI remains available separately.</string>
+    <string name="game_launch_bgmi">Launch BGMI</string>
+    <string name="game_launch_named">Launch %1$s</string>
+    <string name="game_stop_named">Stop %1$s</string>
+    <string name="game_install_named">Install %1$s</string>
+    <string name="game_version_named">%1$s v%2$s</string>
+    <string name="game_library_file">%1$s · Library %2$s</string>
+    <string name="game_stopped_named">%1$s stopped.</string>
+    <string name="game_error_obb_missing">Game files not found. Open %1$s normally once to download its game files, then try again.</string>
+    <string name="game_library_error">%1$s library: %2$s</string>
+    <string name="game_libraries_in_use">Stop both games before updating or re-downloading libraries.</string>
+    <string name="concurrent_games_kicker">Two games</string>
+    <string name="concurrent_games_title">Launch a second game?</string>
+    <string name="concurrent_games_message">%1$s is already running. Launching %2$s alongside it uses more RAM and CPU/GPU resources. This can cause lag, overheating, higher battery use, or crashes in either game or the loader. Android may close a game when memory is low.\n\nFor better stability, cancel and stop the running game first. Wait 10 seconds, then confirm only if you want to run both. Nothing launches automatically.</string>
+    <string name="concurrent_games_wait">Launch anyway in %1$d s</string>
+    <string name="concurrent_games_confirm">OK, launch anyway</string>
+
     <string name="active">Active</string>
     <string name="expired">Expired</string>
     <string name="time_left_value">%1$dd %2$02dh %3$02dm %4$02ds</string>
@@ -336,4 +357,5 @@
         <item quantity="one">%d minute</item>
         <item quantity="other">%d minutes</item>
     </plurals>
+    <string name="navigation_home">Home</string>
 </resources>

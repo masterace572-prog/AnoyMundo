@@ -403,7 +403,7 @@ public final class Downtwo {
         }
     }
 
-    /** Extracts a ZIP (or accepts a raw ELF) and installs the library atomically. */
+    /** Extracts the release, retaining optional game libraries under their exact names. */
     private static void install(Context app, File file, File staging) throws UpdateException {
         LibManager.deleteRecursive(staging);
         if (!staging.mkdirs() && !staging.isDirectory()) {
@@ -432,7 +432,7 @@ public final class Downtwo {
             throw new UpdateException(app.getString(R.string.update_invalid_file), false);
         }
         if (found == null) throw new UpdateException(app.getString(R.string.update_no_library), false);
-        if (!LibManager.installLib(app, found) || !LibManager.isUsableLib(app)) {
+        if (!LibManager.installRelease(app, staging) || !LibManager.isUsableLib(app)) {
             throw new UpdateException(app.getString(R.string.update_install_failed), false);
         }
     }

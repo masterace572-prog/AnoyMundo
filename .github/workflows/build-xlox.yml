@@ -2,7 +2,8 @@ name: Build Anoy and KennyPvt APKs
 
 # One workflow, two separately installable branded APKs. Publishing an APK to
 # GitHub NEVER changes either owner's panel library or live APK-update choice.
-# Keep all old releases/tags: either channel may still point at one of them.
+# No automatic pruning: either channel may still point at an older release/tag.
+# The explicit 2.4.3 backup input archives assets only; it never replaces a release.
 on:
   workflow_dispatch:
     inputs:
@@ -10,6 +11,10 @@ on:
         description: 'Attach both signed APKs to a GitHub release'
         type: boolean
         default: true
+      backup_replaced_243:
+        description: 'Build-only: archive the old 2.4.3 (21) assets before its owner-requested replacement'
+        type: boolean
+        default: false
   push:
     branches: [main, arena/dda4cc57-anoymundo]
     paths:
@@ -64,6 +69,49 @@ jobs:
           python3 scripts/check_branding.py
           python3 scripts/kenny_icons.py --check
           python3 scripts/test_kenny_icons.py
+
+      - name: Back up old 2.4.3 assets (explicit build-only request)
+        if: github.event_name == 'workflow_dispatch' && inputs.backup_replaced_243
+        working-directory: ${{ github.workspace }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PUBLISH_REQUESTED: ${{ inputs.publish_release }}
+        run: |
+          set -eu
+          [ "$PUBLISH_REQUESTED" = false ] || { echo '::error::Backup mode must be build-only.'; exit 1; }
+          mkdir -p prior-release-backup
+          gh api repos/${{ github.repository }}/releases/tags/loaders-v2.4.3-21 > prior-release-backup/release.json
+          gh api repos/${{ github.repository }}/git/ref/tags/loaders-v2.4.3-21 > prior-release-backup/tag.json
+          python3 - <<'PYBACKUP'
+          import json
+          from pathlib import Path
+          release = json.loads(Path('prior-release-backup/release.json').read_text())
+          assert release['id'] == 453635973, 'Old release changed; stop for review.'
+          assert {asset['name'] for asset in release['assets']} == {
+              'Anoy-XLOX-loader.apk', 'KennyPvt-loader.apk', 'SHA256SUMS.txt'}
+          PYBACKUP
+          gh release download loaders-v2.4.3-21 --dir prior-release-backup
+          python3 - <<'PYBACKUP'
+          import hashlib, json
+          from pathlib import Path
+          backup = Path('prior-release-backup')
+          release = json.loads((backup / 'release.json').read_text())
+          for asset in release['assets']:
+              path = backup / asset['name']
+              digest = 'sha256:' + hashlib.sha256(path.read_bytes()).hexdigest()
+              assert path.stat().st_size == asset['size'], asset['name'] + ': size mismatch'
+              assert digest == asset['digest'], asset['name'] + ': checksum mismatch'
+              print('Verified old release backup:', asset['name'], digest)
+          PYBACKUP
+
+      - name: Retain verified prior-release backup (no source or release changes)
+        if: github.event_name == 'workflow_dispatch' && inputs.backup_replaced_243
+        uses: actions/upload-artifact@v7
+        with:
+          name: prior-release-2.4.3-21-backup
+          path: prior-release-backup/
+          retention-days: 90
+          if-no-files-found: error
 
       - name: Read the common version
         run: |
@@ -138,6 +186,45 @@ jobs:
           fi
           exit "$rc"
 
+      - name: Android navigation view regressions for BOTH brands
+        run: |
+          set +e
+          ./gradlew :app:testAnoyDebugUnitTest :app:testKennyDebugUnitTest --no-daemon > /tmp/navigation-tests.log 2>&1
+          rc=$?
+          cat /tmp/navigation-tests.log
+          python3 - <<'PYNAV'
+          import os
+          from pathlib import Path
+          import xml.etree.ElementTree as ET
+          totals = {'tests': 0, 'failures': 0, 'errors': 0, 'skipped': 0}
+          for report in sorted(Path('app/build/test-results').rglob('TEST-*.xml')):
+              suite = ET.parse(report).getroot()
+              counts = {key: int(suite.get(key, '0')) for key in totals}
+              for key in totals:
+                  totals[key] += counts[key]
+              print('Navigation test report:', report, counts)
+              for case in suite.findall('testcase'):
+                  for failure in list(case.findall('failure')) + list(case.findall('error')):
+                      detail = case.get('name', '') + ': ' + (failure.get('message') or failure.text or '')[:2000]
+                      print('::error title=Android navigation test::' + detail.replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A'))
+          summary = 'Android navigation tests (Anoy + KennyPvt, host Android 21 / 28): ' + str(totals)
+          print(summary)
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as out:
+              out.write(summary + '\n')
+          assert totals['tests'] >= 44, 'Both brands must run all 11 tests on Android 21 and 28.'
+          assert totals['failures'] == totals['errors'] == totals['skipped'] == 0, summary
+          PYNAV
+          nav_rc=$?
+          if [ "$rc" -eq 0 ]; then rc=$nav_rc; fi
+          if [ "$rc" -ne 0 ]; then
+            python3 - <<'PYNAVLOG'
+          from pathlib import Path
+          log = '\n'.join(Path('/tmp/navigation-tests.log').read_text(errors='replace').splitlines()[-100:])
+          print('::error title=Android navigation Gradle failure::' + log[-6500:].replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A'))
+          PYNAVLOG
+          fi
+          exit "$rc"
+
       - name: Lint both variants
         run: |
           set +e
@@ -195,10 +282,26 @@ jobs:
 
       - name: Verify both release signatures
         if: env.XLOX_SIGNED == 'true'
+        env:
+          XLOX_STORE_PASSWORD: ${{ secrets.XLOX_STORE_PASSWORD }}
         run: |
           APKSIGNER=$(find "$ANDROID_SDK_ROOT/build-tools" -name apksigner | sort | tail -1)
-          "$APKSIGNER" verify --verbose ../dist/Anoy-XLOX-loader.apk
-          "$APKSIGNER" verify --verbose ../dist/KennyPvt-loader.apk
+          export APKSIGNER
+          # Compare the actual APK signer to the original key, not just "a valid signature".
+          keytool -exportcert -keystore app/xlox.jks -storepass:env XLOX_STORE_PASSWORD -alias key0 > /tmp/original-signer.der
+          python3 - <<'PYSIGN'
+          import hashlib, os, re, subprocess
+          from pathlib import Path
+          expected = hashlib.sha256(Path('/tmp/original-signer.der').read_bytes()).hexdigest()
+          apks = [Path('../dist/Anoy-XLOX-loader.apk'), Path('../dist/KennyPvt-loader.apk')]
+          apks += sorted(Path('../prior-release-backup').glob('*.apk'))
+          for apk in apks:
+              result = subprocess.run([os.environ['APKSIGNER'], 'verify', '--verbose', '--print-certs', str(apk)],
+                                      check=True, capture_output=True, text=True)
+              signers = re.findall(r'Signer #\d+ certificate SHA-256 digest: ([0-9a-fA-F]+)', result.stdout)
+              assert signers == [expected], apk.name + ': unexpected signer'
+              print('Verified original signer:', apk.name, expected)
+          PYSIGN
 
       - uses: actions/upload-artifact@v7
         with:
@@ -212,6 +315,18 @@ jobs:
           path: dist/KennyPvt-loader.apk
           retention-days: 14
           if-no-files-found: error
+      - name: Upload Android navigation test reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: Android-navigation-tests
+          path: |
+            xlox/app/build/reports/tests/
+            xlox/app/build/test-results/
+            /tmp/navigation-tests.log
+          retention-days: 14
+          if-no-files-found: ignore
+
       - name: Upload lint reports
         if: always()
         uses: actions/upload-artifact@v7
@@ -233,9 +348,18 @@ jobs:
             '- Anoy: com.xlox (existing package and signing key preserved)' \
             '- KennyPvt: com.kennypvt (separate app, library and APK-update channel)' \
             '- One shared panel and licence database; each Owner publishes only their own releases.' \
+            '- BGMI keeps libbgmi.so; BGMI Air / Lite (com.krafton.bgmilite) uses its own libbgmilite.so and supplied icon.' \
+            '- Air stays Coming soon until its own library is installed from the Owner bundle.' \
+            '- Independent Launch / Stop; a second game requires a ten-second warning and explicit confirmation.' \
+            '- Bottom Home / Settings capsule supports taps and real horizontal swipes; Help is in Settings, with centered red Sign out.' \
+            '- Real-device Air launch, assets and provider compatibility remain unverified; no game library is bundled in these APKs.' \
             '- These downloads do not automatically change either live panel release.' \
             "- Source commit: ${{ github.sha }}" '' > /tmp/release-notes.md
           cat dist/SHA256SUMS.txt >> /tmp/release-notes.md
+          if [ "$APP_VERSION_NAME" = 2.4.3 ] && [ "$APP_VERSION_CODE" = 21 ]; then
+            printf '\n%s\n' \
+              'Owner-requested replacement 2.4.3 (21). Installed code-20 builds can update; installed code-21 builds do not see an equal-code OTA upgrade and need a manual same-signer APK update. Do not uninstall or clear app/container data.' >> /tmp/release-notes.md
+          fi
           PRE_RELEASE=false
           case "$APP_VERSION_NAME" in
             *-webtest*|*-test*|*-rc*) PRE_RELEASE=true ;;

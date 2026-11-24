@@ -5,6 +5,7 @@ import android.content.Context;
 import android.util.Log;
 
 import com.xlox.utils.LibManager;
+import com.xlox.utils.GameTarget;
 import com.xlox.utils.GameWebRouting;
 
 import java.io.File;
@@ -18,7 +19,6 @@ public class BoxApplication extends Application
 
     private static final String TAG = "BoxApplication";
     private static final String LOAD_TAG = "Load";
-    private static final String GAME_PROCESS = "com.pubg.imobile";
     private boolean virtualGameProcess;
 
     static {
@@ -70,34 +70,39 @@ public class BoxApplication extends Application
     public void onCreate(String processName, String processName2) {
         Log.i(LOAD_TAG, "Virtual process started: " + processName + " / " + processName2
                 + " — " + LibManager.diagnostics(this));
-        if (!isGameProcess(processName) && !isGameProcess(processName2)) {
+        final GameTarget game = GameTarget.forProcess(processName, processName2);
+        if (game == null) {
             Log.d(LOAD_TAG, "Ignoring non-game process: " + processName);
             return;
         }
 
-        virtualGameProcess = true;
-        installGameWebRouting(false);
+        // The existing OAuth/callback router is BGMI-specific. Do not route
+        // Air authentication into com.pubg.imobile when both games are open.
+        virtualGameProcess = game == GameTarget.BGMI;
+        if (virtualGameProcess) installGameWebRouting(false);
         ENABLE_IMGUI = false;
         Context ctx = gApp != null ? gApp : this;
         try {
             File loaderDir = LibManager.loaderDir(ctx);
-            File lib = LibManager.libFile(ctx);
-            if (!LibManager.isElf(lib)) {
+            File lib = LibManager.libFile(ctx, game);
+            if (game == GameTarget.BGMI && !LibManager.isElf(lib)) {
+                // Legacy BGMI recovery only. Air must be installed canonically
+                // by the bundle installer; never revive a withdrawn nested Air file.
                 // Handles releases wrapped in a folder or uploaded as lib.so.
-                File nested = LibManager.findLib(loaderDir);
+                File nested = LibManager.findLib(loaderDir, game);
                 if (nested != null && !nested.getAbsolutePath().equals(lib.getAbsolutePath())) {
-                    LibManager.installLib(ctx, nested);
-                    lib = LibManager.libFile(ctx);
+                    LibManager.installLib(ctx, nested, game);
+                    lib = LibManager.libFile(ctx, game);
                 }
             }
 
-            Log.i(LOAD_TAG, "Loader diagnostics: " + LibManager.diagnostics(ctx));
+            Log.i(LOAD_TAG, "Loader diagnostics: " + LibManager.diagnostics(ctx, game));
 
             if (!LibManager.isElf(lib)) {
-                String message = "libbgmi.so NOT FOUND or invalid at " + lib.getAbsolutePath()
+                String message = game.libraryName + " NOT FOUND or invalid at " + lib.getAbsolutePath()
                         + " — open the app once so it can download the panel release";
                 Log.e(LOAD_TAG, message);
-                LibManager.recordLoadError(ctx, message);
+                LibManager.recordLoadError(ctx, game, message);
                 return;
             }
 
@@ -116,16 +121,16 @@ public class BoxApplication extends Application
             }
 
             System.load(lib.getAbsolutePath());
-            Log.i(LOAD_TAG, "libbgmi.so LOADED from " + lib.getAbsolutePath());
-            LibManager.recordLoadSuccess(ctx, lib.getAbsolutePath());
+            Log.i(LOAD_TAG, game.libraryName + " LOADED from " + lib.getAbsolutePath());
+            LibManager.recordLoadSuccess(ctx, game, lib.getAbsolutePath());
         } catch (UnsatisfiedLinkError e) {
-            String message = describeLoadFailure(ctx, e);
+            String message = describeLoadFailure(ctx, game, e);
             Log.e(LOAD_TAG, message, e);
-            LibManager.recordLoadError(ctx, message);
+            LibManager.recordLoadError(ctx, game, message);
         } catch (Throwable e) {
-            String message = "libbgmi.so load error: " + e;
+            String message = game.libraryName + " load error: " + e;
             Log.e(LOAD_TAG, message, e);
-            LibManager.recordLoadError(ctx, message);
+            LibManager.recordLoadError(ctx, game, message);
         }
     }
 
@@ -144,28 +149,16 @@ public class BoxApplication extends Application
         }
     }
 
-    /**
-     * Some newer Android builds report the virtualised game process with a
-     * suffix or a rewritten name. Accept those variants so the library is
-     * still injected; unrelated processes are still ignored.
-     */
-    private static boolean isGameProcess(String name) {
-        if (name == null) return false;
-        return name.equals(GAME_PROCESS)
-                || name.startsWith(GAME_PROCESS + ":")
-                || name.contains("pubg.imobile");
-    }
-
     /** Turn the raw linker error into an actionable, user-facing reason. */
-    private String describeLoadFailure(Context ctx, UnsatisfiedLinkError error) {
+    private String describeLoadFailure(Context ctx, GameTarget game, UnsatisfiedLinkError error) {
         String raw = error == null ? "" : String.valueOf(error.getMessage());
-        File lib = LibManager.libFile(ctx);
+        File lib = LibManager.libFile(ctx, game);
         String alignment = LibManager.alignmentProblem(lib);
         if (alignment != null) return alignment + " (linker: " + raw + ")";
         if (raw.contains("writable")) {
             return "Android 17 refused a writable native library. Update to the "
-                    + "latest loader build (it marks libbgmi.so read-only). Linker: " + raw;
+                    + "latest loader build (it marks " + game.libraryName + " read-only). Linker: " + raw;
         }
-        return "libbgmi.so could not be dlopen'd: " + raw;
+        return game.libraryName + " could not be dlopen'd: " + raw;
     }
 }

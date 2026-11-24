@@ -107,4 +107,6 @@
     <dimen name="text_paste">13sp</dimen>
     <!-- Splash kicker: fixed like the wordmark (a brand lockup on one line). -->
     <dimen name="text_splash_kicker">11dp</dimen>
+    <dimen name="nav_capsule_width">280dp</dimen>
+    <dimen name="nav_capsule_radius">28dp</dimen>
 </resources>

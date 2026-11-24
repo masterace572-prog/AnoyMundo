@@ -21,8 +21,23 @@ SplashActivity ──► (AppUpdateActivity) ──► LogAct ──► MAct
 | **App update** | `AppUpdateActivity`, `activity_app_update`, `item_changelog` | Changelog, **Update now** (and **Not now** unless mandatory). `AppUpdater` downloads over https (redirects https-only, retries for 5xx/408/429), checks the APK matches the running app's package (`com.xlox` or `com.kennypvt`) with the announced, higher version code, then commits it to a `PackageInstaller` session. Errors are shown inline with **Try again**. |
 | **Library gate** | `ui/UpdateGate`, `dialog_update` (bottom sheet) | Checks `GET /api/lib/manifest`. When a newer library exists, or none is installed, the only action is **Update now**; Back closes the app; sign in stays blocked until the download is verified (size + SHA-256) and installed. Also re-runs silently when the app returns to the foreground, and backs Settings → Re-download library. |
 | **Sign in** | `LogAct`, `activity_login` | Takes the licence key (`ANOY-7D-GKFHJ`); the native code calls `POST /connect` and verifies the token. Readable errors for unknown / expired / blocked keys, device limit, clock, maintenance, offline, timeout, VPN. |
-| **Home** | `MAct`, `activity_main` | Licence expiry card (IST countdown), game card (bundled BGMI icon, library, state, server), announcement, one primary action: **Launch** / **Stop** / **Install game** / **Sign in again**. Launch copies the OBB (`utils/AppManager`) and starts the game inside the container. |
-| **Settings** | `MAct.openSettings`, sheets `sheet_*` | Licence (masked key, status, expiry), Updates (check for app updates, re-download library), device, support info, Telegram report, Sign out / Forget. Permissions are requested through `ui/PermissionSheet` (`sheet_permission`). |
+| **Home** | `MAct`, `activity_main`, `page_home` | Bottom Home / Settings capsule with tap and real horizontal swipe navigation. Licence expiry card (IST countdown), separate BGMI/BGMI Air cards with bundled icons and independent Launch/Stop/Install actions. Air is **Coming soon** without `libbgmilite.so`. Launch copies only the selected package's OBB (`utils/AppManager`) and starts it in the container. Launching a second running game requires the 10-second warning and explicit confirmation. |
+| **Settings** | `HomeSettingsNavigation`, `page_settings`, sheets `sheet_*` | Licence (masked key, status, expiry), Updates (check for app updates, re-download library), device, Help (`?`), support info, Telegram report, centered red Sign out / Forget. Permissions are requested through `ui/PermissionSheet` (`sheet_permission`). |
+
+## BGMI Air in 2.4.3 (21)
+
+- BGMI: `com.pubg.imobile` → `libbgmi.so`.
+- BGMI Air: `com.krafton.bgmilite` → `libbgmilite.so` (not `libbgmiair.so`).
+- Include **both files together at the ZIP root** when enabling Air. Until that
+  bundle is downloaded and installed, Air stays **Coming soon**. Normal game
+  installation, licence, permission and container requirements still apply.
+- Starting a second game is allowed only after ten seconds and **OK, launch
+  anyway**. Cancel/Back/backgrounding never starts it. Stop affects only its game.
+- [Bundle requirements, compatibility boundaries and device QA](BGMI-AIR.md).
+  This is the owner-requested **2.4.3 / code 21 replacement**. Existing code-21
+  installations need a manual same-signer APK update; the in-app updater only
+  accepts a higher code. Live panel/library/APK selections are not changed.
+- [Navigation, release scope and verification](RELEASE-2.4.3.md).
 
 ## Design
 
@@ -36,8 +51,13 @@ Lottie for two small splash-status animations (`res/raw/anoy_arc.json`,
 | `res/values/colors.xml` | every colour token (raw colours appear only here) |
 | `res/values/styles.xml` | `AppTheme`, `Text.*` type scale, `Widget.Anoy.*` buttons / cards / sheets / progress, rows |
 | `res/values/dimens.xml`, `motion.xml`, `strings.xml` | spacing, motion timings, every user-visible string |
-| `res/layout/` | 5 activities (`activity_*`), 5 bottom sheets (`sheet_*`, `dialog_update`), 2 list items |
+| `res/layout/` | activity layouts (`activity_*`), retained Home / Settings pages (`page_*`), sheet/dialog layouts and list items |
 | `java/com/xlox/ui/Ui.java` | helpers: busy buttons, reveal animation, haptics, byte formatting |
+
+Home / Settings uses AndroidX ViewPager 1.0.0 (minSdk-compatible; no SDK,
+Fragment, Material, AppCompat or native dependency upgrade). Its default physical
+scroll places the full-width pages side by side, without an alpha transformer.
+JUnit / Robolectric are host-test-only and are not packaged in either loader.
 
 `scripts/ui_quality_gate.py` enforces the rules statically (palette-only
 colours, styled MaterialButtons, no Toast / default ProgressBar, every
@@ -67,11 +87,11 @@ referenced resource exists, format arguments match) and runs in every build.
   user-agent spoofing, token logging, global browser filter or game restart.
   The old callback alias remains a fallback for already-external flows. See
   [contained-login QA and limits](../docs/CONTAINED_GAME_WEB_LOGIN.md).
-- **Candidate publication:** `-webtest`, `-test`, and `-rc` versions are published
-  as non-latest prereleases, ignored by the panel's latest-stable helper. This
-  webtest retains versionCode 21 so manual return to 2.4.3 needs no uninstall.
-  Both original AARs and older APKs remain untouched; actual phone login must
-  still be verified before promoting a stable release.
+- **Version/publication:** `-webtest`, `-test`, and `-rc` versions use non-latest
+  prereleases. The owner-requested replacement is named 2.4.3 (21) and includes
+  the existing contained-login candidate; this does not establish real-phone
+  provider compatibility. Both original AARs and the original signer are retained.
+  Preserve 2.4.2 and older releases; one-time replacement is not automated pruning.
 - **Regression checks:** `python3 scripts/test_runtime_fixes.py` compiles and runs
   the production routing/transport classes on the JVM, plus Android wiring
   guards. Passing APK paths also verifies the actual merged callback manifest.

@@ -42,7 +42,7 @@ public final class LibManager {
 
     public static final String LOADER_DIR_NAME = "loader";
     public static final String STAGING_DIR_NAME = "loader_staging";
-    public static final String LIB_NAME = "libbgmi.so";
+    public static final String LIB_NAME = GameTarget.BGMI.libraryName;
 
     // A plain file, not SharedPreferences: the virtual game process writes the
     // failure and the main UI process reads it, and SharedPreferences caches
@@ -52,11 +52,6 @@ public final class LibManager {
     public static final long PAGE_4K = 4096L;
     public static final long PAGE_16K = 16384L;
 
-    /** Also accept the legacy panel filename lib.so. */
-    private static final String[] LIB_ALIASES = {LIB_NAME, "lib.so"};
-
-    private static final long MIN_LIB_BYTES = 64L;
-    private static final int MAX_SCAN_DEPTH = 6;
     private static final int PT_LOAD = 1;
 
     private LibManager() {
@@ -71,7 +66,11 @@ public final class LibManager {
     }
 
     public static File libFile(Context context) {
-        return new File(loaderDir(context), LIB_NAME);
+        return libFile(context, GameTarget.BGMI);
+    }
+
+    public static File libFile(Context context, GameTarget game) {
+        return new File(loaderDir(context), game.libraryName);
     }
 
     public static SharedPreferences prefs(Context context) {
@@ -88,7 +87,11 @@ public final class LibManager {
 
     /** Version label for the UI, or null when no usable library is installed. */
     public static String installedVersion(Context context) {
-        return isUsableLib(context) ? localVersion(context) : null;
+        return installedVersion(context, GameTarget.BGMI);
+    }
+
+    public static String installedVersion(Context context, GameTarget game) {
+        return isUsableLib(context, game) ? localVersion(context) : null;
     }
 
     /** Persist the installed release only after the library is verified usable. */
@@ -103,69 +106,44 @@ public final class LibManager {
 
     /** True only when the library is present, readable and a real ELF binary. */
     public static boolean isUsableLib(Context context) {
-        return isElf(libFile(context));
+        return isUsableLib(context, GameTarget.BGMI);
+    }
+
+    public static boolean isUsableLib(Context context, GameTarget game) {
+        return isElf(libFile(context, game));
     }
 
     public static boolean isElf(File file) {
-        if (file == null || !file.isFile() || !file.canRead() || file.length() < MIN_LIB_BYTES) {
-            return false;
-        }
-        InputStream in = null;
-        try {
-            in = new FileInputStream(file);
-            byte[] magic = new byte[4];
-            if (in.read(magic) != 4) return false;
-            return (magic[0] & 0xFF) == 0x7F && magic[1] == 'E'
-                    && magic[2] == 'L' && magic[3] == 'F';
-        } catch (IOException e) {
-            Log.w(TAG, "Cannot read " + file + ": " + e.getMessage());
-            return false;
-        } finally {
-            closeQuietly(in);
-        }
+        return GameLibraryFiles.isElf(file);
     }
 
-    /** Recursively locate the loader library inside an extracted release ZIP. */
+    /** BGMI retains its legacy aliases; Air is always selected by its own name. */
     public static File findLib(File root) {
-        if (root == null || !root.exists()) return null;
-        // 1. exact names at the ZIP root
-        for (String alias : LIB_ALIASES) {
-            File direct = new File(root, alias);
-            if (isElf(direct)) return direct;
-        }
-        // 2. exact names inside a wrapping folder (e.g. Xlox/libbgmi.so)
-        File named = scan(root, 0, true);
-        if (named != null) return named;
-        // 3. last resort: any ELF .so in the archive
-        return scan(root, 0, false);
+        return findLib(root, GameTarget.BGMI);
     }
 
-    private static File scan(File dir, int depth, boolean namedOnly) {
-        if (depth > MAX_SCAN_DEPTH || dir == null || !dir.isDirectory()) return null;
-        File[] children = dir.listFiles();
-        if (children == null) return null;
-        File best = null;
-        long bestSize = 0L;
-        for (File child : children) {
-            if (child.isDirectory()) {
-                File nested = scan(child, depth + 1, namedOnly);
-                if (nested != null && nested.length() > bestSize) {
-                    best = nested;
-                    bestSize = nested.length();
-                }
-            } else if (child.getName().endsWith(".so") && isElf(child)
-                    && (!namedOnly || isAlias(child.getName()))
-                    && child.length() > bestSize) {
-                best = child;
-                bestSize = child.length();
-            }
-        }
-        return best;
+    public static File findLib(File root, GameTarget game) {
+        return GameLibraryFiles.find(root, game);
     }
 
-    private static boolean isAlias(String name) {
-        for (String alias : LIB_ALIASES) if (alias.equalsIgnoreCase(name)) return true;
-        return false;
+    /**
+     * Install one bundle. BGMI is required, Air optional. An omitted/invalid
+     * Air payload removes old Air support only after the BGMI install succeeds,
+     * so a later BGMI-only release returns Air to Coming soon.
+     */
+    public static boolean installRelease(Context context, File extractedRoot) {
+        File bgmi = findLib(extractedRoot, GameTarget.BGMI);
+        if (bgmi == null) return false;
+        File air = findLib(extractedRoot, GameTarget.BGMI_AIR);
+        if (!installLib(context, bgmi, GameTarget.BGMI)) return false;
+        if (air != null) return installLib(context, air, GameTarget.BGMI_AIR);
+        File oldAir = libFile(context, GameTarget.BGMI_AIR);
+        if (oldAir.exists() && !oldAir.delete()) {
+            Log.e(TAG, "Could not remove the withdrawn BGMI Air library");
+            return false;
+        }
+        clearLoadError(context, GameTarget.BGMI_AIR);
+        return true;
     }
 
     /**
@@ -174,7 +152,13 @@ public final class LibManager {
      * leave a half-written library behind.
      */
     public static boolean installLib(Context context, File found) {
-        if (found == null || !isElf(found)) {
+        return installLib(context, found, GameTarget.BGMI);
+    }
+
+    public static boolean installLib(Context context, File found, GameTarget game) {
+        if (found == null || !isElf(found)
+                || (game == GameTarget.BGMI_AIR && !game.libraryName.equalsIgnoreCase(found.getName()))
+                || (game == GameTarget.BGMI && GameTarget.BGMI_AIR.libraryName.equalsIgnoreCase(found.getName()))) {
             Log.e(TAG, "Release ZIP did not contain a usable ELF library");
             return false;
         }
@@ -190,20 +174,20 @@ public final class LibManager {
             if (siblings != null) {
                 for (File sibling : siblings) {
                     if (!sibling.isFile() || !sibling.getName().endsWith(".so")) continue;
-                    // libbgmi.so is installed below as the canonical target.
-                    if (sibling.getName().equals(LIB_NAME)) continue;
+                    // Game payloads are installed explicitly, never as each other's dependencies.
+                    if (GameTarget.isGameLibrary(sibling.getName()) || !isElf(sibling)) continue;
                     if (!sibling.getAbsolutePath().equals(new File(dir, sibling.getName()).getAbsolutePath())) {
-                        copy(sibling, new File(dir, sibling.getName()));
+                        if (!copy(sibling, new File(dir, sibling.getName()))) return false;
                     }
                 }
             }
         }
 
-        File target = libFile(context);
+        File target = libFile(context, game);
         if (!found.getAbsolutePath().equals(target.getAbsolutePath())) {
             if (!copy(found, target)) return false;
         }
-        if (!isUsableLib(context)) {
+        if (!isUsableLib(context, game)) {
             Log.e(TAG, "Installed library failed ELF validation at " + target);
             return false;
         }
@@ -355,7 +339,11 @@ public final class LibManager {
 
     /** One-line dump for logcat / support tickets. */
     public static String diagnostics(Context context) {
-        File lib = libFile(context);
+        return diagnostics(context, GameTarget.BGMI);
+    }
+
+    public static String diagnostics(Context context, GameTarget game) {
+        File lib = libFile(context, game);
         String abi = Build.SUPPORTED_ABIS != null && Build.SUPPORTED_ABIS.length > 0
                 ? Build.SUPPORTED_ABIS[0] : "unknown";
         return "sdk=" + Build.VERSION.SDK_INT
@@ -364,23 +352,32 @@ public final class LibManager {
                 + " lib=" + (lib.isFile() ? lib.length() + "B" : "missing")
                 + " align=" + minLoadAlignment(lib)
                 + " writable=" + (lib.isFile() && lib.canWrite())
-                + " lastError=" + lastLoadError(context);
+                + " game=" + game.packageName
+                + " lastError=" + lastLoadError(context, game);
     }
 
-    private static File errorFile(Context context) {
-        return new File(context.getFilesDir(), ERROR_FILE);
+    private static File errorFile(Context context, GameTarget game) {
+        return new File(context.getFilesDir(), game == GameTarget.BGMI ? ERROR_FILE : "loader_air_error.txt");
     }
 
     public static void recordLoadSuccess(Context context, String path) {
+        recordLoadSuccess(context, GameTarget.BGMI, path);
+    }
+
+    public static void recordLoadSuccess(Context context, GameTarget game, String path) {
         Log.i(TAG, "Loader load succeeded: " + path);
-        clearLoadError(context);
+        clearLoadError(context, game);
     }
 
     public static void recordLoadError(Context context, String message) {
+        recordLoadError(context, GameTarget.BGMI, message);
+    }
+
+    public static void recordLoadError(Context context, GameTarget game, String message) {
         if (message == null) message = "unknown error";
         OutputStream out = null;
         try {
-            out = new FileOutputStream(errorFile(context), false);
+            out = new FileOutputStream(errorFile(context, game), false);
             out.write(message.getBytes("UTF-8"));
             out.flush();
         } catch (Exception e) {
@@ -391,7 +388,11 @@ public final class LibManager {
     }
 
     public static String lastLoadError(Context context) {
-        File file = errorFile(context);
+        return lastLoadError(context, GameTarget.BGMI);
+    }
+
+    public static String lastLoadError(Context context, GameTarget game) {
+        File file = errorFile(context, game);
         if (!file.isFile() || file.length() > 8192) return "";
         InputStream in = null;
         try {
@@ -407,7 +408,11 @@ public final class LibManager {
     }
 
     public static void clearLoadError(Context context) {
-        File file = errorFile(context);
+        clearLoadError(context, GameTarget.BGMI);
+    }
+
+    public static void clearLoadError(Context context, GameTarget game) {
+        File file = errorFile(context, game);
         if (file.exists() && !file.delete()) {
             Log.w(TAG, "Could not clear " + ERROR_FILE);
         }

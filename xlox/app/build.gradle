@@ -85,10 +85,10 @@ android {
         // 2.3.8: Lottie on the splash update check only (login, home, library sheet reverted).
         // 2.4.2: supplied Kenny artwork, rounded/round/adaptive icons and matching startup badge.
         // 2.4.3: browser-to-virtual-game login return; cancellable, bounded library requests.
-        // Web-login candidate: keep code 21 so manual rollback to 2.4.3 needs no uninstall.
-        // This named prerelease is not selected by the panel's latest-stable helper.
+        // Owner-requested replacement 2.4.3 (21): BGMI Air + sliding Home/Settings.
+        // Existing code-21 installations require a manual same-signer APK update.
         versionCode 21
-        versionName '2.4.4-webtest'
+        versionName '2.4.3'
 
         vectorDrawables {
             useSupportLibrary true
@@ -145,6 +145,10 @@ android {
         buildConfig true
     }
 
+    testOptions {
+        unitTests.includeAndroidResources = true
+    }
+
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8
         targetCompatibility JavaVersion.VERSION_1_8
@@ -176,6 +180,8 @@ dependencies {
     // Material 1.13.0 is the newest release that still supports minSdk 21
     // (1.14 needs 23). It requires appcompat 1.7.0.
     implementation 'androidx.appcompat:appcompat:1.7.0'
+    // Two opaque pages, real touch-driven offset, minSdk-compatible; no Fragment rewrite.
+    implementation 'androidx.viewpager:viewpager:1.0.0'
     implementation 'com.google.android.material:material:1.13.0'
     // Lottie 6.7.1 (minSdk 16) for the three in-house animations in res/raw.
     implementation 'com.airbnb.android:lottie:6.7.1'
@@ -190,4 +196,7 @@ dependencies {
     // older androidx artifacts still pull the 1.6 -jdk7/-jdk8 jars. Align them
     // to avoid duplicate kotlin.* classes.
     implementation platform('org.jetbrains.kotlin:kotlin-bom:1.8.22')
+    // Host-only UI regressions; not included in either APK.
+    testImplementation 'junit:junit:4.13.2'
+    testImplementation 'org.robolectric:robolectric:4.14.1'
 }

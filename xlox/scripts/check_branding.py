@@ -140,8 +140,14 @@ gate('app.getPackageName().equals(info.packageName)' in app_client
      and 'BuildConfig.APPLICATION_ID + ".APP_INSTALL_STATUS"' in app_client,
      'APK package validation and installer callbacks are isolated by application ID')
 gate('BuildConfig.DISPLAY_BRAND' in (java / 'MAct.java').read_text(), 'support info uses the correct display brand')
-gate('public static final String LIB_NAME = "libbgmi.so"' in (java / 'utils/LibManager.java').read_text(),
-     'installed main library is always libbgmi.so')
+game_targets = (java / 'utils/GameTarget.java').read_text()
+lib_manager = (java / 'utils/LibManager.java').read_text()
+gate('BGMI("com.pubg.imobile", "libbgmi.so", "BGMI")' in game_targets
+     and 'BGMI_AIR("com.krafton.bgmilite", "libbgmilite.so", "BGMI Air")' in game_targets
+     and 'public static final String LIB_NAME = GameTarget.BGMI.libraryName;' in lib_manager
+     and 'return libFile(context, GameTarget.BGMI);' in lib_manager
+     and 'new File(loaderDir(context), game.libraryName)' in lib_manager,
+     'both brands retain separate BGMI and BGMI Air package/library identities')
 workflow = (ROOT.parent / '.github/workflows/build-xlox.yml').read_text()
 gate(all(task in workflow for task in (':app:assembleAnoyRelease', ':app:assembleKennyRelease',
                                       'dist/Anoy-XLOX-loader.apk', 'dist/KennyPvt-loader.apk'))
@@ -170,6 +176,10 @@ if len(sys.argv) > 1:
              f'{brand}: compiled APK has the correct package and app label')
         if f"package: name='{package}'" not in badging or f"application-label:'{brand}'" not in badging:
             annotation(summary)
+        expected_name = re.search(r"(?m)^\s*versionName\s+'([^']+)'", gradle)[1]
+        expected_code = re.search(r'(?m)^\s*versionCode\s+(\d+)', gradle)[1]
+        gate(f"versionCode='{expected_code}'" in badging and f"versionName='{expected_name}'" in badging,
+             f'{brand}: compiled version is {expected_name} ({expected_code})')
         # Check the authoritative compiled uses-sdk attributes. aapt2's
         # badging labels vary across build-tools; resource XML integer values
         # are stable and must be EXACTLY 21 / 28 for container compatibility.

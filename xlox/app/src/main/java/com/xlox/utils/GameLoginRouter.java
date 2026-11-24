@@ -13,7 +13,7 @@ public final class GameLoginRouter {
     public static final String USER = "0"; // The existing loader launches the default container user.
     public static final String VIEW = "android.intent.action.VIEW";
 
-    public enum Result { FORWARDED, LEGACY, IGNORED, NO_RUNNING_GAME, NO_HANDLER }
+    public enum Result { FORWARDED, LEGACY, IGNORED, NO_RUNNING_GAME, NO_HANDLER, AMBIGUOUS_GAME }
 
     public static final class Target {
         public final String packageName;
@@ -31,6 +31,8 @@ public final class GameLoginRouter {
 
     public interface Container {
         boolean isRunning();
+        /** A bare external callback has no trustworthy package/transaction binding. */
+        default boolean isOtherGameRunning() { return false; }
         Target resolve(String uri);
         void launch(Target target, String uri);
     }
@@ -53,6 +55,10 @@ public final class GameLoginRouter {
             return Result.IGNORED;
         }
         if (!container.isRunning()) return Result.NO_RUNNING_GAME;
+        // Air's OAuth contracts are not guessed from BGMI's. If both run,
+        // reject this unbound legacy return rather than send Air data to BGMI.
+        // BGMI's private, explicitly scoped WebView return path is unaffected.
+        if (container.isOtherGameRunning()) return Result.AMBIGUOUS_GAME;
         Target target = container.resolve(value);
         if (target == null || !GAME.equals(target.packageName) || target.className == null
                 || target.className.isEmpty() || !target.enabled || !target.exported) {

@@ -9,6 +9,7 @@ import android.os.Bundle;
 import android.util.Log;
 
 import com.xlox.utils.GameLoginRouter;
+import com.xlox.utils.GameTarget;
 
 import net_62v.external.MetaActivityManager;
 import net_62v.external.MetaPackageManager;
@@ -44,6 +45,11 @@ public final class GameLoginCallbackActivity extends Activity {
                 @Override
                 public boolean isRunning() {
                     return MetaActivityManager.isAppRunning(GameLoginRouter.GAME, GameLoginRouter.USER);
+                }
+
+                @Override
+                public boolean isOtherGameRunning() {
+                    return MetaActivityManager.isAppRunning(GameTarget.BGMI_AIR.packageName, GameLoginRouter.USER);
                 }
 
                 @Override

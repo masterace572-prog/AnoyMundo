@@ -8,7 +8,7 @@ Gates
   1. Every resource referenced from Java / XML exists.
   2. Format strings get the right number of arguments in getString().
   3. Shared/Anoy UI stays wordmark-only: no ic_anoy / logo images or bitmap
-     resources except the bundled BGMI game icon. Kenny-only launcher/splash
+     resources except the two bundled game icons. Kenny-only launcher/splash
      artwork has a separate, exact 20-file bitmap allowlist (owner request).
   4. Colours only come from the palette in values/colors.xml.
   5. Text never gets a filled background (2.3.0: no chips at all; only the
@@ -210,15 +210,16 @@ logo = []
 for p in MAIN.rglob("*"):
     if p.is_file() and re.search(r"ic_anoy|logo", p.name, re.I):
         logo.append(rel(p))
-    # 2.3.1: the one allowed bitmap is the bundled BGMI game icon (the game's
-    # own artwork from Wikipedia, fetched by scripts/fetch_game_icon.py).
+    # Game-art-only exceptions: original BGMI and the owner-supplied BGMI Air icon.
+    # This does not permit shared application/launcher branding bitmaps.
     if p.is_file() and p.suffix.lower() in {".png", ".jpg", ".jpeg", ".webp"} and "res" in p.parts \
-            and p.name != "ic_game_bgmi.png":
+            and p.relative_to(RES).as_posix() not in {
+                "drawable-nodpi/ic_game_bgmi.png", "drawable-nodpi/ic_game_bgmi_air.png"}:
         logo.append(f"bitmap resource {rel(p)}")
 for f in xml_files + java_files:
     if re.search(r"ic_anoy|@drawable/logo|R\.drawable\.logo|@mipmap/", f.read_text()):
         logo.append(f"{rel(f)} references a logo/mipmap")
-gate("Shared/Anoy UI remains wordmark-only (BGMI game icon excepted)", logo)
+gate("Shared/Anoy UI remains wordmark-only (two game icons excepted)", logo)
 
 # Owner-requested exception: Kenny's supplied launcher/system-splash artwork
 # lives ONLY in its flavor. Do not broaden the shared/Anoy bitmap exception.
@@ -247,8 +248,9 @@ gate("Colours come only from values/colors.xml", raw_colour)
 
 # --------------------------------------------- 5. no background behind text
 text_bg = []
-# 2.3.0: the error block (danger tint, r16) and the 32 dp hairline "?" circle.
-TEXT_BG_ALLOWED = ("@drawable/bg_error_block", "@drawable/bg_help_circle")
+# Error block, Help control and the owner-requested bottom navigation controls.
+# bg_nav_focus is a keyboard/press affordance, not a background on content text.
+TEXT_BG_ALLOWED = ("@drawable/bg_error_block", "@drawable/bg_help_circle", "@drawable/bg_nav_focus")
 text_tags = ("TextView", "EditText", "CheckedTextView")
 for f in layouts:
     doc = minidom.parse(str(f))

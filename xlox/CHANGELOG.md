@@ -4,7 +4,38 @@ Screenshots, design notes (`docs/ui-redesign/…`) and the one-off generator
 scripts mentioned below were removed from the tree in the repo cleanup after
 2.3.2; they remain in git history.
 
-## 2.4.4-webtest — Contained game web login (candidate, versionCode 21)
+## 2.4.3 replacement — BGMI Air and sliding navigation (versionCode 21)
+
+- Add BGMI Air (`com.krafton.bgmilite`) with the supplied game icon and its own
+  Launch/Stop action. BGMI retains `com.pubg.imobile` / `libbgmi.so`; Air loads
+  only `libbgmilite.so` and remains Coming soon when it is unavailable.
+- Install optional Air support from the same library bundle. A later BGMI-only
+  bundle removes old Air support; an Air-only archive cannot stand in for BGMI.
+- Allow simultaneous running only after a fresh RAM/heat/crash warning, a full
+  ten-second wait, and explicit confirmation. Cancel never launches anything.
+- Scope OBB preparation, launch/stop, running reconciliation, load diagnostics
+  and permission/restart continuation to the selected game. Block Home library
+  updates while either game is running. Keep existing licence/JNI/build contracts.
+- Add credential-free dual-game JVM regressions and source wiring checks.
+  Actual Air/container/linker/provider compatibility requires device QA.
+- Replace the Settings overlay with native, opaque Home / Settings pages and a
+  persistent bottom capsule. Tap either label or swipe horizontally; at midpoint,
+  half of each page is visible. Page state, scroll position and Home's actions
+  are retained; reduced-motion taps switch immediately.
+- Name the loader page Home; move the `?` Help control to Settings and center
+  Sign out with a red label. Keep its existing confirmation / Forget behavior.
+- Re-mask the licence key on page movement/backgrounding; tie Back and the Home
+  countdown to the selected/settled page, not retained-page visibility. Reserve
+  system navigation/gesture insets below the capsule once.
+- Owner explicitly requested version **2.4.3 / code 21**, replacing the earlier
+  release after 2.4.2. An existing code-21 install needs a manual same-signer APK
+  update: equal codes are not newer OTA versions. Never uninstall/clear data for
+  this replacement. Panel, database and live library/APK choices are unchanged.
+- Add host Android 21/28 view-inflation, tap, touch-swipe, half-page geometry,
+  accessibility, reduced-motion and recreation regressions for both brands.
+  [Release scope and verification](RELEASE-2.4.3.md).
+
+## Earlier 2.4.4-webtest source candidate — Contained game web login (versionCode 21)
 
 - Tester confirmed 2.4.3 did not fix login: stock BGMI keeps web login in-game;
   the loader opens it outside and the successful return targets real BGMI.
@@ -19,7 +50,7 @@ scripts mentioned below were removed from the tree in the repo cleanup after
   an in-place return to 2.4.3 without deleting app/container data. Old APKs and
   both AARs are retained. Existing library-download fixes are unchanged.
 
-## 2.4.3 — Game login returns and library waits (versionCode 21)
+## Original 2.4.3 — Game login returns and library waits (versionCode 21; superseded)
 
 **Tester follow-up: Twitter's reported flow is still not fixed by this version.**
 

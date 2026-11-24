@@ -99,8 +99,9 @@ class AndroidWiring(unittest.TestCase):
         android_create = app.split('public void onCreate() {', 1)[1].split('public void onCreate(String', 1)[0]
         self.assertNotIn('GameWebRouting.install', android_create)
         guest_create = app.split('public void onCreate(String', 1)[1].split('public void onInitialized()', 1)[0]
-        self.assertIn('virtualGameProcess = true;', guest_create)
-        self.assertIn('installGameWebRouting(false);', guest_create)
+        self.assertIn('virtualGameProcess = game == GameTarget.BGMI;', guest_create)
+        self.assertIn('if (virtualGameProcess) installGameWebRouting(false);', guest_create)
+        self.assertIn('GameTarget.forProcess(processName, processName2)', guest_create)
         self.assertIn('if (virtualGameProcess) installGameWebRouting(true);', app)
         routing = (JAVA / 'utils/GameWebRouting.java').read_text()
         self.assertIn('MetaCore.addServiceInterpreter(service, method, handler)', routing)
@@ -271,6 +272,10 @@ def main() -> None:
         subprocess.run([*compiler, '-d', output, *map(str, sources)], check=True)
         for test in ('RuntimeFixesTest', 'GameWebFlowTest'):
             subprocess.run([java, '-ea', '-cp', output, 'com.xlox.tests.' + test], check=True, timeout=30)
+    # SDK-free structural checks (host Android UI behavior runs separately in Gradle).
+    subprocess.run([sys.executable, '-B', str(ROOT / 'scripts/test_navigation.py')], check=True)
+    # Package/library isolation, warning countdown and restart-target regressions.
+    subprocess.run([sys.executable, '-B', str(ROOT / 'scripts/test_dual_game.py')], check=True)
 
 
 if __name__ == '__main__':
