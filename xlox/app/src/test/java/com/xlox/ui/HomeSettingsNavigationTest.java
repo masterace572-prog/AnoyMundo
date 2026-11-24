@@ -17,6 +17,7 @@ import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
+import androidx.core.content.res.ResourcesCompat;
 import androidx.viewpager.widget.ViewPager;
 
 import com.google.android.material.button.MaterialButton;
@@ -45,12 +46,14 @@ public class HomeSettingsNavigationTest {
         HomeSettingsNavigation navigation;
         int pageChanges;
         int motionChanges;
+        int gameClicks;
 
         @Override
         protected void onCreate(Bundle state) {
             setTheme(R.style.AppTheme);
             super.onCreate(state);
             setContentView(R.layout.activity_main);
+            findViewById(R.id.primaryAction).setOnClickListener(v -> gameClicks++);
             navigation = new HomeSettingsNavigation(findViewById(R.id.mainRoot),
                     new HomeSettingsNavigation.Listener() {
                         @Override
@@ -113,6 +116,8 @@ public class HomeSettingsNavigationTest {
         assertNotNull(fresh.findViewById(R.id.primaryAction));
         assertNotNull(fresh.findViewById(R.id.airPrimaryAction));
         assertNotNull(fresh.findViewById(R.id.licenceKeyValue));
+        assertNotNull(fresh.findViewById(R.id.airStatusMessage));
+        assertNotNull(fresh.findViewById(R.id.airTaskProgress));
         assertEquals(2, fresh.getAdapter().getCount());
         assertEquals(1, fresh.getOffscreenPageLimit());
     }
@@ -216,11 +221,188 @@ public class HomeSettingsNavigationTest {
             float x = (start + (end - start) * i / 12f) * pager.getWidth();
             MotionEvent event = MotionEvent.obtain(down, down + i * 20L, action,
                     x, y * pager.getHeight(), 0);
-            pager.dispatchTouchEvent(event);
+            root.dispatchTouchEvent(event);
             event.recycle();
             Shadows.shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(20));
         }
         settle();
+    }
+
+    @Test
+    public void diagonalSwipeStartingOnLaunchCancelsTheButtonAndTapStillWorks() {
+        View action = activity.findViewById(R.id.primaryAction);
+        Rect box = bounds(action);
+        drag(box.right - 20, box.centerY(), box.left + 12,
+                box.centerY() + (box.width() - 32) * 0.6f, MotionEvent.ACTION_UP);
+        assertEquals(HomeSettingsPager.SETTINGS, activity.navigation.currentPage());
+        assertEquals(0, activity.gameClicks);
+        assertFalse(action.isPressed());
+        activity.navigation.select(HomeSettingsPager.HOME, false);
+        tap(action);
+        assertEquals(1, activity.gameClicks);
+    }
+
+    @Test
+    public void verticalSwipeOverSettingsRowScrollsWithoutChangingPageOrClicking() {
+        activity.navigation.select(HomeSettingsPager.SETTINGS, false);
+        View row = activity.findViewById(R.id.licenceKeyRow);
+        int[] clicks = {0};
+        row.setOnClickListener(v -> clicks[0]++);
+        Rect box = bounds(row);
+        drag(box.left + 30, box.centerY(), box.left + 60, 24, MotionEvent.ACTION_UP);
+        assertEquals(HomeSettingsPager.SETTINGS, activity.navigation.currentPage());
+        assertTrue(activity.<ScrollView>findViewById(R.id.settingsScroll).getScrollY() > 0);
+        assertEquals(0, clicks[0]);
+        assertFalse(row.isPressed());
+    }
+
+    @Test
+    public void verticalSwipeStartingOnGameButtonKeepsItsScrollAndNeverLaunches() {
+        TextView note = activity.findViewById(R.id.panelNote);
+        StringBuilder longNote = new StringBuilder();
+        for (int i = 0; i < 60; i++) longNote.append("A longer announcement for scrolling.\n");
+        note.setText(longNote);
+        activity.findViewById(R.id.panelNoteCard).setVisibility(View.VISIBLE);
+        layout(360, 800);
+        ScrollView scroll = activity.findViewById(R.id.mainScroll);
+        scroll.scrollTo(0, activity.findViewById(R.id.gameCard).getTop());
+        int before = scroll.getScrollY();
+        assertTrue(before > 0);
+        Rect box = bounds(activity.findViewById(R.id.primaryAction));
+        assertTrue(box.centerY() < pager.getBottom());
+        drag(box.left + 30, box.centerY(), box.left + 65, box.centerY() + 120, MotionEvent.ACTION_UP);
+        assertTrue(scroll.getScrollY() < before);
+        assertEquals(HomeSettingsPager.HOME, activity.navigation.currentPage());
+        assertEquals(0, activity.gameClicks);
+    }
+
+    @Test
+    public void realTouchHalfwayShowsBothPagesAndCancelledStrokeReturnsHome() {
+        long down = SystemClock.uptimeMillis();
+        touch(down, MotionEvent.ACTION_DOWN, 320, 180);
+        touch(down, MotionEvent.ACTION_MOVE, 298, 185);
+        touch(down, MotionEvent.ACTION_MOVE, 220, 215);
+        touch(down, MotionEvent.ACTION_MOVE, 124, 250);
+        int offset = pager.getScrollX();
+        assertTrue("Finger movement must move pixels before release", offset > pager.getWidth() / 3);
+        assertTrue(offset < pager.getWidth() * 2 / 3);
+        View home = activity.findViewById(R.id.homePage);
+        View settings = activity.findViewById(R.id.settingsPage);
+        assertEquals(-offset, home.getLeft() - offset);
+        assertEquals(pager.getWidth() - offset, settings.getLeft() - offset);
+        assertEquals(1f, home.getAlpha(), 0f);
+        assertEquals(1f, settings.getAlpha(), 0f);
+        View highlight = activity.findViewById(R.id.navigationIndicator);
+        assertEquals(highlight.getWidth() * offset / (float) pager.getWidth(), highlight.getTranslationX(), 1f);
+        touch(down, MotionEvent.ACTION_CANCEL, 124, 250);
+        settle();
+        assertEquals(HomeSettingsPager.HOME, activity.navigation.currentPage());
+        assertEquals(0, pager.getScrollX());
+        assertEquals(0, activity.gameClicks);
+        tap(activity.findViewById(R.id.primaryAction));
+        assertEquals(1, activity.gameClicks);
+    }
+
+    @Test
+    public void aVerticalGestureCannotBecomeAPageSwipeMidStroke() {
+        activity.navigation.select(HomeSettingsPager.SETTINGS, false);
+        long down = SystemClock.uptimeMillis();
+        touch(down, MotionEvent.ACTION_DOWN, 80, 350);
+        touch(down, MotionEvent.ACTION_MOVE, 84, 290);
+        touch(down, MotionEvent.ACTION_MOVE, 160, 250);
+        touch(down, MotionEvent.ACTION_MOVE, 300, 245);
+        touch(down, MotionEvent.ACTION_UP, 300, 245);
+        settle();
+        assertEquals(HomeSettingsPager.SETTINGS, activity.navigation.currentPage());
+        assertEquals(pager.getWidth(), pager.getScrollX());
+        assertTrue(activity.<ScrollView>findViewById(R.id.settingsScroll).getScrollY() > 0);
+    }
+
+    @Test
+    public void eachCardOwnsItsActionFeedbackAndOnlyGameSpecificState() {
+        View bgmi = activity.findViewById(R.id.gameCard);
+        View air = activity.findViewById(R.id.airGameCard);
+        assertNotNull(bgmi.findViewById(R.id.gameTile));
+        assertNotNull(bgmi.findViewById(R.id.gameVersion));
+        assertNotNull(bgmi.findViewById(R.id.gameStateValue));
+        assertNotNull(bgmi.findViewById(R.id.primaryAction));
+        assertNotNull(bgmi.findViewById(R.id.statusMessage));
+        assertNotNull(bgmi.findViewById(R.id.taskProgress));
+        assertNull(bgmi.findViewById(R.id.airPrimaryAction));
+        assertNull(bgmi.findViewById(R.id.serverValue));
+        assertNull(bgmi.findViewById(R.id.statusValue));
+        assertNotNull(air.findViewById(R.id.airPrimaryAction));
+        assertNotNull(air.findViewById(R.id.airStatusMessage));
+        assertNotNull(air.findViewById(R.id.airTaskProgress));
+        assertNull(air.findViewById(R.id.primaryAction));
+        assertNull(air.findViewById(R.id.serverValue));
+        assertEquals("Coming soon", activity.<TextView>findViewById(R.id.airPrimaryAction).getText().toString());
+        assertFalse(activity.findViewById(R.id.airPrimaryAction).isEnabled());
+        assertEquals(View.GONE, activity.findViewById(R.id.airGameStateValue).getVisibility());
+    }
+
+    @Test
+    public void compactExpiryAndGlobalStatusesStayInTheTopRightHeader() {
+        View header = activity.findViewById(R.id.mainHeader);
+        Rect title = bounds(activity.findViewById(R.id.homeTitle));
+        Rect expiry = bounds(activity.findViewById(R.id.timeLeftValue));
+        Rect status = bounds(activity.findViewById(R.id.statusValue));
+        Rect server = bounds(activity.findViewById(R.id.serverValue));
+        assertNotNull(header.findViewById(R.id.licenceSummary));
+        assertNotNull(header.findViewById(R.id.serverValue));
+        assertTrue(expiry.left >= title.right);
+        assertTrue(status.top >= expiry.bottom);
+        assertTrue(server.top >= status.bottom);
+        assertTrue(bounds(activity.findViewById(R.id.gameCard)).top >= bounds(header).bottom);
+        assertTrue(activity.<TextView>findViewById(R.id.timeLeftValue).getTextSize()
+                < activity.<TextView>findViewById(R.id.homeTitle).getTextSize());
+    }
+
+    @Test
+    public void staticDashboardFontsLoadOnSupportedAndroidAndTabsUseWhiteOnBlueText() {
+        assertNotNull(ResourcesCompat.getFont(activity, R.font.manrope_regular));
+        assertNotNull(ResourcesCompat.getFont(activity, R.font.manrope_medium));
+        assertNotNull(ResourcesCompat.getFont(activity, R.font.manrope_semibold));
+        assertEquals(22f, activity.<TextView>findViewById(R.id.homeTitle).getTextSize(), 0.1f);
+        assertEquals(13f, activity.<TextView>findViewById(R.id.timeLeftValue).getTextSize(), 0.1f);
+        assertEquals(ContextCompat.getColor(activity, R.color.on_accent),
+                activity.<TextView>findViewById(R.id.navigationHome).getCurrentTextColor());
+        activity.navigation.select(HomeSettingsPager.SETTINGS, false);
+        assertEquals(ContextCompat.getColor(activity, R.color.on_accent),
+                activity.<TextView>findViewById(R.id.navigationSettings).getCurrentTextColor());
+        assertEquals(ContextCompat.getColor(activity, R.color.text_secondary),
+                activity.<TextView>findViewById(R.id.navigationHome).getCurrentTextColor());
+    }
+
+    private Rect bounds(View view) {
+        Rect box = new Rect();
+        view.getDrawingRect(box);
+        root.offsetDescendantRectToMyCoords(view, box);
+        return box;
+    }
+
+    private void touch(long down, int action, float x, float y) {
+        MotionEvent event = MotionEvent.obtain(down, SystemClock.uptimeMillis(), action, x, y, 0);
+        root.dispatchTouchEvent(event);
+        event.recycle();
+        Shadows.shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(20));
+    }
+
+    private void drag(float x1, float y1, float x2, float y2, int terminal) {
+        long down = SystemClock.uptimeMillis();
+        for (int i = 0; i <= 12; i++) {
+            int action = i == 0 ? MotionEvent.ACTION_DOWN : i == 12 ? terminal : MotionEvent.ACTION_MOVE;
+            touch(down, action, x1 + (x2 - x1) * i / 12f, y1 + (y2 - y1) * i / 12f);
+        }
+        settle();
+    }
+
+    private void tap(View view) {
+        Rect box = bounds(view);
+        long down = SystemClock.uptimeMillis();
+        touch(down, MotionEvent.ACTION_DOWN, box.centerX(), box.centerY());
+        touch(down, MotionEvent.ACTION_UP, box.centerX(), box.centerY());
+        Shadows.shadowOf(Looper.getMainLooper()).idle();
     }
 
     @Test
@@ -233,7 +415,7 @@ public class HomeSettingsNavigationTest {
         assertEquals(Gravity.CENTER, signOut.getGravity());
         assertEquals(ContextCompat.getColor(activity, R.color.danger), signOut.getCurrentTextColor());
         assertEquals(activity.getString(R.string.sign_out), signOut.getText().toString());
-        assertEquals("Home", ((TextView) home.findViewById(R.id.homeTitle)).getText().toString());
+        assertEquals("Welcome back", ((TextView) home.findViewById(R.id.homeTitle)).getText().toString());
     }
 
     @Test
@@ -246,9 +428,12 @@ public class HomeSettingsNavigationTest {
         activity.navigation.select(HomeSettingsPager.HOME, false);
         activity.navigation.select(HomeSettingsPager.SETTINGS, false);
         assertEquals(position, scroll.getScrollY());
-        View actionBar = activity.findViewById(R.id.actionBar);
-        assertSame(activity.findViewById(R.id.homePage), actionBar.getParent());
-        assertEquals(View.VISIBLE, actionBar.getVisibility());
+        View bgmi = activity.findViewById(R.id.primaryAction);
+        View air = activity.findViewById(R.id.airPrimaryAction);
+        assertSame(bgmi, activity.findViewById(R.id.gameCard).findViewById(R.id.primaryAction));
+        assertSame(air, activity.findViewById(R.id.airGameCard).findViewById(R.id.airPrimaryAction));
+        assertEquals(View.VISIBLE, bgmi.getVisibility());
+        assertEquals(View.VISIBLE, air.getVisibility());
     }
 
     @Test

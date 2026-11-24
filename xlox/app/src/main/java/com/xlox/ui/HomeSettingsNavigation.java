@@ -39,7 +39,7 @@ public final class HomeSettingsNavigation extends ViewPager.SimpleOnPageChangeLi
         settings = root.findViewById(R.id.navigationSettings);
         homePage = root.findViewById(R.id.homePage);
         settingsPage = root.findViewById(R.id.settingsPage);
-        activeColor = ContextCompat.getColor(root.getContext(), R.color.text_primary);
+        activeColor = ContextCompat.getColor(root.getContext(), R.color.on_accent);
         inactiveColor = ContextCompat.getColor(root.getContext(), R.color.text_secondary);
         home.setOnClickListener(v -> {
             Ui.tap(v);

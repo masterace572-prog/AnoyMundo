@@ -85,7 +85,7 @@
     <string name="update_no_space">Not enough free storage. Free at least %1$s and try again.</string>
 
     <!-- Home -->
-    <string name="home_title">Home</string>
+    <string name="home_title">Welcome back</string>
     <string name="sign_out">Sign out</string>
     <string name="section_licence">Licence</string>
     <string name="section_game">Game</string>
@@ -102,8 +102,7 @@
     <string name="game_air_name">BGMI Air</string>
     <string name="game_air_library">libbgmilite.so</string>
     <string name="coming_soon">Coming soon</string>
-    <string name="game_air_coming_soon_action">BGMI Air · Coming soon</string>
-    <string name="game_air_coming_soon_detail">BGMI Air unlocks after a library update adds its support. BGMI remains available separately.</string>
+    <string name="game_air_coming_soon_action">Coming soon</string>
     <string name="game_launch_bgmi">Launch BGMI</string>
     <string name="game_launch_named">Launch %1$s</string>
     <string name="game_stop_named">Stop %1$s</string>
@@ -124,6 +123,11 @@
     <string name="expired">Expired</string>
     <string name="time_left_value">%1$dd %2$02dh %3$02dm %4$02ds</string>
     <string name="state_ready">Ready</string>
+    <string name="state_obb_missing">OBB not found</string>
+    <string name="state_files_access">Files access needed</string>
+    <string name="state_checking_files">Checking files…</string>
+    <string name="state_check_files">Check game files</string>
+    <string name="state_library_needed">Library needed</string>
     <!-- BGMI is installed, but the library, a permission or the container is not ready yet. -->
     <string name="state_installed">Installed</string>
     <!-- Access row: the three permissions the game-files copy needs. -->

@@ -73,6 +73,37 @@ public final class AppManager {
 
     // ------------------------------------------------------------ public API
 
+    /** Read-only source availability for a game card; not a verified container copy. */
+    public enum ObbState { UNKNOWN, AVAILABLE, MISSING, ACCESS_REQUIRED }
+
+    /** Run off the main thread. Uses the very same package-specific lookup as copyObbAsync. */
+    public ObbState inspectObb(String pkg) {
+        try {
+            return inspectObb(pkg, sourceDirs(pkg));
+        } catch (SecurityException e) {
+            return ObbState.ACCESS_REQUIRED;
+        } catch (RuntimeException e) {
+            Log.w(TAG, "Couldn't resolve game-file roots for " + pkg, e);
+            return ObbState.UNKNOWN;
+        }
+    }
+
+    // Package-private directory seam for host Android tests; never changes the
+    // production search roots and never creates, copies or deletes game files.
+    ObbState inspectObb(String pkg, List<File> dirs) {
+        try {
+            String[] error = {null};
+            if (findSource(pkg, dirs, error) != null) return ObbState.AVAILABLE;
+            return ctx.getString(R.string.obb_folder_blocked).equals(error[0])
+                    ? ObbState.ACCESS_REQUIRED : ObbState.MISSING;
+        } catch (SecurityException e) {
+            return ObbState.ACCESS_REQUIRED;
+        } catch (RuntimeException e) {
+            Log.w(TAG, "Couldn't inspect game files for " + pkg, e);
+            return ObbState.UNKNOWN;
+        }
+    }
+
     /**
      * Makes sure the container has a verified copy of the game's OBB files,
      * copying with progress where needed. {@code success} is true only after a
@@ -250,9 +281,13 @@ public final class AppManager {
      * does not let this app list it) and returns null.
      */
     private Source findSource(String pkg, String[] error) {
+        return findSource(pkg, sourceDirs(pkg), error);
+    }
+
+    private Source findSource(String pkg, List<File> dirs, String[] error) {
         boolean anyFolder = false;
         boolean blocked = false;
-        for (File dir : sourceDirs(pkg)) {
+        for (File dir : dirs) {
             if (!dir.isDirectory()) continue;
             anyFolder = true;
             if (dir.listFiles() == null) {

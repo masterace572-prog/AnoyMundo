@@ -214,9 +214,11 @@ jobs:
           from pathlib import Path
           import xml.etree.ElementTree as ET
           totals = {'tests': 0, 'failures': 0, 'errors': 0, 'skipped': 0}
+          suites = {}
           for report in sorted(Path('app/build/test-results').rglob('TEST-*.xml')):
               suite = ET.parse(report).getroot()
               counts = {key: int(suite.get(key, '0')) for key in totals}
+              suites[(report.parent.name, suite.get('name'))] = counts
               for key in totals:
                   totals[key] += counts[key]
               print('Navigation test report:', report, counts)
@@ -227,11 +229,17 @@ jobs:
                       detail = case.get('name', '') + ': ' + (failure.get('message') or '')[:600]
                       detail += '\n' + causes[:1800] + '\n' + trace[-1400:]
                       print('::error title=Android navigation test::' + detail.replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A'))
-          summary = 'Android navigation tests (Anoy + KennyPvt, host Android 21 / 28): ' + str(totals)
+          summary = 'Android UI/OBB tests (Anoy + KennyPvt, host Android 21 / 28): ' + str(totals)
           print(summary)
           with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as out:
               out.write(summary + '\n')
-          assert totals['tests'] >= 44, 'Both brands must run all 11 tests on Android 21 and 28.'
+          expected = {'com.xlox.ui.HomeSettingsNavigationTest': 40,
+                      'com.xlox.utils.AppManagerObbStateTest': 16}
+          for variant in ('testAnoyDebugUnitTest', 'testKennyDebugUnitTest'):
+              for name, count in expected.items():
+                  actual = suites.get((variant, name))
+                  assert actual is not None and actual['tests'] >= count, (variant, name, actual)
+          assert totals['tests'] >= 112, 'Both brands must run all 20 UI + 8 OBB tests on Android 21 and 28.'
           assert totals['failures'] == totals['errors'] == totals['skipped'] == 0, summary
           PYNAV
           nav_rc=$?

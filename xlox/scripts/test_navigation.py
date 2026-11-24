@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """SDK-free structural guards; Android behavior is tested separately by Robolectric."""
+import hashlib
 from pathlib import Path
+import struct
 import unittest
 import xml.etree.ElementTree as ET
 
@@ -38,7 +40,7 @@ class NavigationWiring(unittest.TestCase):
             self.assertNotIn(root.get(A + 'visibility'), ('gone', 'invisible'))
         home = ids('page_home.xml')
         settings = ids('page_settings.xml')
-        for key in ('primaryAction', 'airPrimaryAction', 'actionBar', 'gameCard', 'airGameCard'):
+        for key in ('primaryAction', 'airPrimaryAction', 'gameCard', 'airGameCard'):
             self.assertIn('@+id/' + key, home)
             self.assertNotIn('@+id/' + key, settings)
         self.assertNotIn('@+id/helpButton', home)
@@ -89,7 +91,87 @@ class NavigationWiring(unittest.TestCase):
         self.assertIn('Ui.padBottom(bottomNavigation, bars.bottom)', main)
         self.assertNotIn('Ui.padBottom(settingsContent, bars.bottom)', main)
         self.assertNotIn('Ui.padBottom(actionPanel, bars.bottom)', main)
-        self.assertIn('int needed = (b - t) + Ui.dp(this, 8)', main)
+        self.assertNotIn('R.id.actionBar', main)
+        self.assertNotIn('R.id.actionPanel', main)
+        self.assertNotIn('addOnLayoutChangeListener', main.split('private void setupInsets()', 1)[1].split('private void confirmSignOut()', 1)[0])
+
+    def test_game_controls_and_feedback_are_inside_their_own_scrolling_cards(self):
+        home = ids('page_home.xml')
+        for card, children in (
+                ('gameCard', ('primaryAction', 'gameStateValue', 'statusMessage', 'taskProgress')),
+                ('airGameCard', ('airPrimaryAction', 'airGameStateValue', 'airStatusMessage', 'airTaskProgress'))):
+            descendants = {e.get(A + 'id') for e in home['@+id/' + card].iter()}
+            for child in children:
+                self.assertIn('@+id/' + child, descendants)
+            self.assertNotIn('@+id/serverValue', descendants)
+            self.assertNotIn('@+id/statusValue', descendants)
+            self.assertIn(home['@+id/' + card], list(home['@+id/mainScroll'].iter()))
+        self.assertNotIn('@+id/actionBar', home)
+        self.assertNotIn('@+id/actionPanel', home)
+        self.assertNotIn('@+id/airComingSoonDetail', home)
+        self.assertNotIn('@+id/libraryValue', home)
+        self.assertNotIn('@+id/airLibraryValue', home)
+        strings = {e.get('name'): e.text for e in ET.parse(RES / 'values/strings.xml').getroot()}
+        self.assertEqual(strings['home_title'], 'Welcome back')
+        self.assertEqual(strings['game_air_coming_soon_action'], 'Coming soon')
+        self.assertNotIn('game_air_coming_soon_detail', strings)
+        self.assertEqual(home['@+id/airGameStateValue'].get(A + 'visibility'), 'gone')
+
+    def test_expiry_and_global_status_are_in_header_and_active_segment_is_blue(self):
+        home = ids('page_home.xml')
+        header_ids = {e.get(A + 'id') for e in home['@+id/mainHeader'].iter()}
+        for name in ('licenceSummary', 'timeLeftValue', 'statusValue', 'serverValue'):
+            self.assertIn('@+id/' + name, header_ids)
+        self.assertNotIn('@+id/licenceCard', home)
+        self.assertNotIn('@+id/expiresValue', home)
+        self.assertIn('@+id/licenceExpiresValue', ids('page_settings.xml'))
+        indicator = ET.parse(RES / 'drawable/bg_nav_indicator.xml').getroot()
+        self.assertEqual(indicator.find('solid').get(A + 'color'), '@color/accent')
+        self.assertIn('R.color.on_accent', (JAVA / 'ui/HomeSettingsNavigation.java').read_text())
+
+    def test_swipes_arbitrate_actual_events_before_child_scroll_interception(self):
+        pager = (JAVA / 'ui/HomeSettingsPager.java').read_text()
+        for required in ('dispatchTouchEvent(MotionEvent event)', 'onInterceptTouchEvent(MotionEvent event)',
+                         'requestDisallowInterceptTouchEvent(boolean disallowIntercept)',
+                         'direction = dx > dy ? HORIZONTAL : VERTICAL',
+                         'direction != HORIZONTAL', 'direction == VERTICAL',
+                         'MotionEvent.ACTION_CANCEL', 'super.onTouchEvent(event)'):
+            self.assertIn(required, pager)
+        self.assertNotIn('beginFakeDrag(', pager)
+        self.assertNotIn('setOnTouchListener(', pager)
+        host = (ROOT / 'app/src/test/java/com/xlox/ui/HomeSettingsNavigationTest.java').read_text()
+        self.assertIn('root.dispatchTouchEvent(event)', host)
+        self.assertIn('diagonalSwipeFromScrolledSettingsContentReachesHome', host)
+        self.assertIn('diagonalSwipeStartingOnLaunchCancelsTheButtonAndTapStillWorks', host)
+        self.assertIn('verticalSwipeStartingOnGameButtonKeepsItsScrollAndNeverLaunches', host)
+
+    def test_static_dashboard_fonts_are_licensed_pinned_and_not_variable(self):
+        fonts = {
+            'regular': (400, '2602c71d1f36c96da0022706f15da7d51102d19d10510b77b5a39bf861122807'),
+            'medium': (500, '729037f5dc28daa949c5ce8e69d945bf14faf2649db737e6eb085c120c778dd0'),
+            'semibold': (600, '2b2ab8c077256d2849465199657f042e36588a7b88d345acd2ab4e5807ebef99'),
+        }
+        for style, (weight, digest) in fonts.items():
+            data = (RES / 'font' / ('manrope_' + style + '.ttf')).read_bytes()
+            self.assertEqual(hashlib.sha256(data).hexdigest(), digest)
+            self.assertEqual(data[:4], b'\x00\x01\x00\x00')
+            count = struct.unpack_from('>H', data, 4)[0]
+            tables = {}
+            for i in range(count):
+                tag, _, offset, size = struct.unpack_from('>4sIII', data, 12 + i * 16)
+                self.assertLessEqual(offset + size, len(data))
+                tables[tag] = (offset, size)
+            self.assertNotIn(b'fvar', tables)  # Android 21 cannot use variable fonts.
+            self.assertEqual(struct.unpack_from('>H', data, tables[b'OS/2'][0] + 4)[0], weight)
+            for required in (b'glyf', b'cmap', b'name', b'hmtx'):
+                self.assertIn(required, tables)
+        licence = (ROOT / 'app/src/main/assets/licenses/OFL-Manrope.txt').read_text()
+        self.assertIn('SIL OPEN FONT LICENSE Version 1.1', licence)
+        styles = (RES / 'values/styles.xml').read_text()
+        self.assertIn('<style name="Text.Dashboard" parent="Text">', styles)
+        self.assertIn('@font/manrope_regular', styles)
+        self.assertIn('@font/manrope_medium', styles)
+        self.assertIn('@font/manrope_semibold', styles)
 
     def test_source_version_and_compatible_runtime_pins(self):
         gradle = (ROOT / 'app/build.gradle').read_text()

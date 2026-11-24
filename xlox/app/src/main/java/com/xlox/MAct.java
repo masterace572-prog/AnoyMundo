@@ -123,8 +123,6 @@ public class MAct extends AppCompatActivity {
     private static final long KEY_COPIED_MS = 1200L;
     /** Debug: Settings > Check for app updates answers current | available | failed. */
     static final String EXTRA_QA_APP_CHECK = "qa_app_check";
-    /** The countdown line follows the font scale up to 1.3x. */
-    private static final float COUNTDOWN_MAX_FONT_SCALE = 1.3f;
     /** Licence refresh: on return to home at most this often... */
     private static final long LICENCE_REFRESH_MIN_MS = 60_000L;
     /** ...and quietly this often while home stays open. */
@@ -176,11 +174,11 @@ public class MAct extends AppCompatActivity {
     /** 2.3.5: "BGMI updated" warning (installed BGMI newer than the library supports). */
     private View gameUpdateCard;
     private TextView gameUpdateText;
-    private View licenceCard;
+    private View licenceSummary;
     private int statusLook = -1;
     private TextView statusValue;
-    private TextView expiresValue;
-    /** Countdown (2.3.1): one line, "29d 23h 59m 58s", "Expired" or "—". */
+    private String formattedExpiry;
+    /** Compact header expiry; the exact IST date remains in Settings and TalkBack. */
     private TextView timeLeftValue;
     private TextView gameVersionText;
     private TextView gameStateValue;
@@ -189,7 +187,7 @@ public class MAct extends AppCompatActivity {
     private boolean homeStarted;
     private TextView gameTitle;
     private OnBackPressedCallback settingsBack;
-    /** OBB state and the game icon are read off the main thread. */
+    /** Read-only OBB inspection never blocks touch/scroll dispatch. */
     private final ExecutorService ioExecutor =
             Executors.newSingleThreadExecutor(r -> new Thread(r, "anoy-home-io"));
     /** Settings > Licence (2.3.1). */
@@ -218,10 +216,7 @@ public class MAct extends AppCompatActivity {
     private ExecutorService appCheckExecutor;
     private UpdateGate redownloadGate;
     private BottomSheetDialog helpSheet;
-    private TextView libraryValue;
     private TextView serverValue;
-    private TextView statusMessage;
-    private LinearProgressIndicator taskProgress;
     private MaterialButton primaryAction;
 
     private static final class GameSession {
@@ -230,7 +225,11 @@ public class MAct extends AppCompatActivity {
         TextView title;
         TextView version;
         TextView state;
-        TextView library;
+        TextView message;
+        LinearProgressIndicator progress;
+        AppManager.ObbState obbState = AppManager.ObbState.UNKNOWN;
+        boolean checkingObb;
+        int obbRequest;
         MaterialButton action;
         boolean installed;
         long qaLaunchAt;
@@ -301,8 +300,8 @@ public class MAct extends AppCompatActivity {
     private Runnable prepShow;
     private final Runnable prepSlow = () -> {
         if (!Ui.alive(this) || !this.busy) return;
-        if (this.statusMessage.getVisibility() == View.VISIBLE) {
-            Ui.swapText(this.statusMessage, getString(R.string.preparing_slow));
+        if (launchTarget.message.getVisibility() == View.VISIBLE) {
+            Ui.swapText(launchTarget.message, getString(R.string.preparing_slow));
         } else {
             showMessage(getString(R.string.preparing_slow), false);
         }
@@ -370,29 +369,25 @@ public class MAct extends AppCompatActivity {
         panelNoteCard = findViewById(R.id.panelNoteCard);
         gameUpdateCard = findViewById(R.id.gameUpdateCard);
         gameUpdateText = findViewById(R.id.gameUpdateText);
-        licenceCard = findViewById(R.id.licenceCard);
+        licenceSummary = findViewById(R.id.licenceSummary);
         statusValue = findViewById(R.id.statusValue);
-        expiresValue = findViewById(R.id.expiresValue);
         timeLeftValue = findViewById(R.id.timeLeftValue);
-        // One countdown line: it follows the font scale up to 1.3x, then holds (it can't wrap).
-        Ui.capFontScale(timeLeftValue, COUNTDOWN_MAX_FONT_SCALE);
         gameVersionText = findViewById(R.id.gameVersion);
         gameStateValue = findViewById(R.id.gameStateValue);
-        libraryValue = findViewById(R.id.libraryValue);
         serverValue = findViewById(R.id.serverValue);
-        statusMessage = findViewById(R.id.statusMessage);
-        taskProgress = findViewById(R.id.taskProgress);
+        bgmi.message = findViewById(R.id.statusMessage);
+        bgmi.progress = findViewById(R.id.taskProgress);
+        air.message = findViewById(R.id.airStatusMessage);
+        air.progress = findViewById(R.id.airTaskProgress);
         primaryAction = findViewById(R.id.primaryAction);
         bgmi.action = primaryAction;
         bgmi.title = findViewById(R.id.gameValue);
         bgmi.version = gameVersionText;
         bgmi.state = gameStateValue;
-        bgmi.library = libraryValue;
         air.action = findViewById(R.id.airPrimaryAction);
         air.title = findViewById(R.id.airGameValue);
         air.version = findViewById(R.id.airGameVersion);
         air.state = findViewById(R.id.airGameStateValue);
-        air.library = findViewById(R.id.airLibraryValue);
         if (preview) {
             qaLaunchTarget = sessionFor(GameTarget.fromPackage(getIntent().getStringExtra(EXTRA_QA_GAME)));
             launchTarget = qaLaunchTarget;
@@ -472,41 +467,16 @@ public class MAct extends AppCompatActivity {
             }, HOME_STORAGE_ASK_DELAY_MS);
         }
         setupNavigation(savedInstanceState);
-        // Login -> home is the activity transition (anim/fade_in: 280 ms, 8 dp up).
-        setupActionDivider();
     }
 
-    /** The pinned Launch bar gets its hairline only while content is under it. */
-    private void setupActionDivider() {
-        View scroll = findViewById(R.id.mainScroll);
-        View divider = findViewById(R.id.actionDivider);
-        if (scroll == null || divider == null) return;
-        Runnable update = () -> divider.setVisibility(
-                scroll.canScrollVertically(1) ? View.VISIBLE : View.INVISIBLE);
-        scroll.getViewTreeObserver().addOnScrollChangedListener(update::run);
-        scroll.getViewTreeObserver().addOnGlobalLayoutListener(update::run);
-    }
-
-    /** Status bar above both pages; navigation/gesture inset below the capsule. */
+    /** Status bar above both pages; only navigation owns the bottom inset. */
     private void setupInsets() {
         View root = findViewById(R.id.mainRoot);
-        View content = findViewById(R.id.mainContent);
-        View actionBar = findViewById(R.id.actionBar);
-        View actionPanel = findViewById(R.id.actionPanel);
-        Ui.maxWidth(content, 600);
-        Ui.maxWidth(actionPanel, 600);
+        Ui.maxWidth(findViewById(R.id.mainContent), 600);
         View bottomNavigation = findViewById(R.id.bottomNavigationHost);
         Ui.onInsets(root, (bars, bottom, ime) -> {
             root.setPadding(bars.left, bars.top, bars.right, 0);
             Ui.padBottom(bottomNavigation, bars.bottom);
-        });
-        // Content can always scroll clear of the pinned action bar.
-        actionBar.addOnLayoutChangeListener((v, l, t, r, b, ol, ot, or, ob) -> {
-            int needed = (b - t) + Ui.dp(this, 8);
-            if (content.getPaddingBottom() != needed) {
-                content.setPadding(content.getPaddingLeft(), content.getPaddingTop(),
-                        content.getPaddingRight(), needed);
-            }
         });
     }
 
@@ -571,6 +541,7 @@ public class MAct extends AppCompatActivity {
         // A launch reported as failed, but the game is up after all: drop the stale error.
         if (launchErrorShown && containerRunning()) onGameLaunched(false);
         refreshLibrary();
+        refreshGameFiles();
         if (!preview) applyPanelStatus();
         reportLoaderError();
         maybeRecheckLibrary();
@@ -670,6 +641,7 @@ public class MAct extends AppCompatActivity {
         launchAfterStorage = false;
         askedThisRound = 0;
         Log.d(TAG, "Permissions granted" + (launch ? ": continuing the launch" : ""));
+        refreshGameFiles();
         refreshPrimary();
         if (!launch) return;
         if (qaPermissionsThenCopy) {
@@ -1016,13 +988,13 @@ public class MAct extends AppCompatActivity {
         main.post(ticker);
     }
 
-    /** New expiry from the panel: the card, the countdown and Launch follow it. */
+    /** New expiry from the panel: header, Settings and Launch follow it. */
     private void setExpiry(String expiry) {
         expiryMillis = parseExpiryMillis(expiry);
         if (expiryMillis > 0) {
-            expiresValue.setTag(expiryFormat.format(new Date(expiryMillis)));
+            formattedExpiry = expiryFormat.format(new Date(expiryMillis));
         } else if (hasExpiry(expiry)) {
-            expiresValue.setTag(expiry);
+            formattedExpiry = expiry;
         }
         lastA11yMinute = Long.MIN_VALUE;
         if (expired && expiryMillis > System.currentTimeMillis()) {
@@ -1077,12 +1049,8 @@ public class MAct extends AppCompatActivity {
     private void renderCountdown() {
         if (timeLeftValue == null) return;
         boolean loading = preview && getIntent().getBooleanExtra(EXTRA_QA_LOADING, false);
-        Object raw = expiresValue.getTag();
-        // Row 3: the IST expiry date alone ("12 Dec 2026, 6:30 PM IST").
-        expiresValue.setText(raw != null ? String.valueOf(raw) : "");
-        expiresValue.setVisibility(raw != null ? View.VISIBLE : View.GONE);
         if (licenceExpiresValue != null) {
-            String settingsExpiry = raw != null ? String.valueOf(raw) : getString(R.string.dash);
+            String settingsExpiry = formattedExpiry != null ? formattedExpiry : getString(R.string.dash);
             if (!settingsExpiry.contentEquals(licenceExpiresValue.getText())) licenceExpiresValue.setText(settingsExpiry);
         }
         if (expiryMillis <= 0 || loading) {
@@ -1129,11 +1097,11 @@ public class MAct extends AppCompatActivity {
         }
     }
 
-    /** "29d 23h 59m 58s"; under a day "23h 59m 58s". Always ticking. */
+    /** Two useful units fit the header; exact expiry is available in Settings. */
     static String formatCountdown(long days, long hours, long minutes, long seconds) {
-        return days > 0
-                ? String.format(Locale.US, "%dd %02dh %02dm %02ds", days, hours, minutes, seconds)
-                : String.format(Locale.US, "%dh %02dm %02ds", hours, minutes, seconds);
+        if (days > 0) return String.format(Locale.US, "%dd %02dh", days, hours);
+        if (hours > 0) return String.format(Locale.US, "%dh %02dm", hours, minutes);
+        return String.format(Locale.US, "%dm %02ds", minutes, seconds);
     }
 
     private void showCountdownText(String text, int colourRes) {
@@ -1141,11 +1109,11 @@ public class MAct extends AppCompatActivity {
         timeLeftValue.setTextColor(ContextCompat.getColor(this, colourRes));
     }
 
-    /** TalkBack reads the licence card as one sentence; updated once a minute. */
+    /** TalkBack reads the compact expiry summary as one sentence, once a minute. */
     private void announce(String sentence, long minuteKey) {
         if (minuteKey == lastA11yMinute) return;
         lastA11yMinute = minuteKey;
-        licenceCard.setContentDescription(sentence);
+        licenceSummary.setContentDescription(sentence);
     }
 
     private static final int LOOK_UNKNOWN = 0;
@@ -1342,11 +1310,7 @@ public class MAct extends AppCompatActivity {
 
     // ----------------------------------------------------------- game state
 
-    /**
-     * Game chip: Not installed, Running, Ready (everything Launch needs is in
-     * place) or Installed (BGMI is there, but the library, a permission or the
-     * container is still missing - Launch sorts those out or explains).
-     */
+    /** One concise package-specific state; no server/library metadata in game cards. */
     private void refreshGameState() {
         for (GameSession game : games) {
             game.installed = isInstalled(game.target.packageName) || (qaLaunch != null && game == qaLaunchTarget);
@@ -1361,19 +1325,59 @@ public class MAct extends AppCompatActivity {
             if (game.runtime.isRunning()) {
                 setDot(game.state, getString(R.string.state_running), R.color.success, R.color.text_primary);
             } else if (game == air && !available) {
-                setDot(game.state, getString(R.string.coming_soon), 0, R.color.text_tertiary);
+                // Its disabled button is the ONLY "Coming soon" copy on Home.
+                game.state.setText("");
+                game.state.setVisibility(View.GONE);
             } else if (!game.installed) {
-                setDot(game.state, getString(R.string.state_not_installed), R.color.warning, R.color.text_primary);
+                setDot(game.state, getString(R.string.state_not_installed), 0, R.color.text_secondary);
+            } else if (!available) {
+                setDot(game.state, getString(R.string.state_library_needed), R.color.warning, R.color.text_secondary);
+            } else if (StorageAccess.firstMissing(this) != null
+                    || game.obbState == AppManager.ObbState.ACCESS_REQUIRED) {
+                setDot(game.state, getString(R.string.state_files_access), R.color.warning, R.color.text_secondary);
+            } else if (game.obbState == AppManager.ObbState.MISSING) {
+                setDot(game.state, getString(R.string.state_obb_missing), R.color.warning, R.color.text_secondary);
             } else if (readyToLaunch(game)) {
                 setDot(game.state, getString(R.string.state_ready), R.color.success, R.color.text_primary);
+            } else if (game.checkingObb) {
+                setDot(game.state, getString(R.string.state_checking_files), 0, R.color.text_secondary);
+            } else if (game.obbState == AppManager.ObbState.UNKNOWN) {
+                setDot(game.state, getString(R.string.state_check_files), 0, R.color.text_secondary);
             } else {
-                setDot(game.state, getString(R.string.state_installed), R.color.warning, R.color.text_primary);
+                setDot(game.state, getString(R.string.state_installed), 0, R.color.text_secondary);
             }
         }
-        findViewById(R.id.airComingSoonDetail).setVisibility(
-                !libraryAvailable(air) && !air.runtime.isRunning() ? View.VISIBLE : View.GONE);
         showGameSupport(installedVersionName(PKG_BGMI));
         refreshPrimary();
+    }
+
+    /** Refresh on resume/access/library changes, never on a countdown tick or touch event. */
+    private void refreshGameFiles() {
+        for (GameSession game : games) {
+            final int request = ++game.obbRequest;
+            game.checkingObb = false;
+            game.obbState = AppManager.ObbState.UNKNOWN;
+            if (!game.installed || !libraryAvailable(game) || StorageAccess.firstMissing(this) != null) continue;
+            if (preview) {
+                game.obbState = AppManager.ObbState.AVAILABLE;
+                continue;
+            }
+            game.checkingObb = true;
+            try {
+                ioExecutor.execute(() -> {
+                    AppManager.ObbState state = new AppManager(MAct.this).inspectObb(game.target.packageName);
+                    main.post(() -> {
+                        if (!Ui.alive(MAct.this) || game.obbRequest != request) return;
+                        game.checkingObb = false;
+                        game.obbState = state;
+                        refreshGameState();
+                    });
+                });
+            } catch (RejectedExecutionException ignored) {
+                game.checkingObb = false; // Activity is shutting down; do not claim readiness.
+            }
+        }
+        refreshGameState();
     }
 
     private GameSession sessionFor(GameTarget game) {
@@ -1533,7 +1537,8 @@ public class MAct extends AppCompatActivity {
         b.append("Android: ").append(Build.VERSION.RELEASE).append(" (API ").append(Build.VERSION.SDK_INT).append(")\n");
         b.append("Device: ").append(deviceName()).append('\n');
         for (GameSession game : games) {
-            b.append(game.target.displayName).append(": ").append(game.state.getText())
+            b.append(game.target.displayName).append(": ").append(game.state.getVisibility() == View.GONE
+                            ? getString(R.string.coming_soon) : game.state.getText())
                     .append("; ").append(game.target.libraryName).append(" ")
                     .append(LibManager.isUsableLib(this, game.target) ? "installed" : "not installed").append('\n');
         }
@@ -1551,8 +1556,11 @@ public class MAct extends AppCompatActivity {
         b.append("Licence status: ").append(lookWord()).append('\n');
         b.append("Expires (IST): ").append(expiryMillis > 0
                 ? istFormat("d MMM yyyy, h:mm a").format(new Date(expiryMillis)) : "unknown");
-        if (statusMessage.getVisibility() == View.VISIBLE && statusMessage.getText().length() > 0) {
-            b.append("\nStatus: ").append(redactStatus(statusMessage.getText().toString()));
+        for (GameSession game : games) {
+            if (game.message.getVisibility() == View.VISIBLE && game.message.getText().length() > 0) {
+                b.append("\n").append(gameName(game)).append(" status: ")
+                        .append(redactStatus(game.message.getText().toString()));
+            }
         }
         return b.toString();
     }
@@ -1570,9 +1578,9 @@ public class MAct extends AppCompatActivity {
         return s;
     }
 
-    /** Library installed, the three permissions granted and the container activated. */
+    /** Read-only readiness hint. Launch still performs the full, verified OBB preparation. */
     private boolean readyToLaunch(GameSession game) {
-        if (!libraryAvailable(game)) return false;
+        if (!libraryAvailable(game) || game.obbState != AppManager.ObbState.AVAILABLE) return false;
         if (StorageAccess.firstMissing(this) != null) return false;
         if (preview) return true; // The preview is not a native/container integration test.
         try {
@@ -1600,19 +1608,8 @@ public class MAct extends AppCompatActivity {
     }
 
     private void refreshLibrary() {
-        for (GameSession game : games) {
-            String version = LibManager.installedVersion(this, game.target);
-            if (game == bgmi) {
-                game.library.setText(version != null ? getString(R.string.library_version, version)
-                        : getString(R.string.library_not_installed));
-            } else {
-                game.library.setText(version != null
-                        ? getString(R.string.game_library_file, game.target.libraryName, version)
-                        : getString(R.string.game_air_library));
-            }
-            game.library.setTextColor(ContextCompat.getColor(this,
-                    version != null || game == air ? R.color.text_tertiary : R.color.warning));
-        }
+        // Detailed library metadata belongs in Settings, not the game cards.
+        refreshLibraryVersion();
     }
 
     private boolean isInstalled(String pkg) {
@@ -1652,6 +1649,8 @@ public class MAct extends AppCompatActivity {
                 game.action.setIconPadding(Ui.dp(this, 8));
                 game.action.setIconTint(ContextCompat.getColorStateList(this,
                         stop ? R.color.danger_text : R.color.button_text));
+            } else {
+                game.action.setIcon(null);
             }
         }
     }
@@ -1660,7 +1659,7 @@ public class MAct extends AppCompatActivity {
         busy = value;
         if (!value) {
             cancelPrepTimers();
-            if (statusMessage.getVisibility() == View.INVISIBLE) statusMessage.setVisibility(View.GONE);
+            if (launchTarget.message.getVisibility() == View.INVISIBLE) launchTarget.message.setVisibility(View.GONE);
         } else {
             MaterialButton action = launchTarget.action;
             action.setEnabled(true);
@@ -1708,7 +1707,6 @@ public class MAct extends AppCompatActivity {
         }
         if (launchTarget == air && !libraryAvailable(air)) {
             refreshGameState();
-            showMessage(getString(R.string.game_air_coming_soon_detail), false);
             return;
         }
         if (!isInstalled(launchTarget.target.packageName)) {
@@ -1805,7 +1803,7 @@ public class MAct extends AppCompatActivity {
         // first 400 ms, then the line. The very first copy explains itself;
         // 15 s without a new percent says it is still going.
         cancelPrepTimers();
-        statusMessage.setVisibility(View.INVISIBLE);
+        launchTarget.message.setVisibility(View.INVISIBLE);
         final GameSession preparingGame = launchTarget;
         final String preparedKey = preparingGame == bgmi ? PREF_OBB_PREPARED
                 : PREF_OBB_PREPARED + "_" + preparingGame.target.packageName;
@@ -1834,6 +1832,15 @@ public class MAct extends AppCompatActivity {
             public void onCopyCompleted(boolean success, String error) {
                 if (!Ui.alive(MAct.this) || launchTarget != preparingGame) return;
                 cancelPrepTimers();
+                preparingGame.obbRequest++;
+                preparingGame.checkingObb = false;
+                preparingGame.obbState = success ? AppManager.ObbState.AVAILABLE
+                        : getString(R.string.main_obb_not_found).equals(error)
+                                || getString(R.string.obb_folder_not_found).equals(error)
+                                ? AppManager.ObbState.MISSING
+                                : getString(R.string.obb_folder_blocked).equals(error)
+                                        ? AppManager.ObbState.ACCESS_REQUIRED : AppManager.ObbState.UNKNOWN;
+                refreshGameState();
                 if (success) new Prefs(MAct.this).setSt(preparedKey, OBB_PREPARED_YES);
                 hideProgress();
                 if (!success && getString(R.string.obb_folder_blocked).equals(error)
@@ -2079,7 +2086,7 @@ public class MAct extends AppCompatActivity {
         UpdateGate.Listener onReady = () -> {
             refreshLibrary();
             refreshLibraryVersion();
-            refreshGameState();
+            refreshGameFiles();
             if (!silent) hideMessage();
         };
         gate = silent ? UpdateGate.recheck(this, onReady) : UpdateGate.start(this, onReady);
@@ -2089,7 +2096,7 @@ public class MAct extends AppCompatActivity {
         for (GameSession game : games) {
             String error = LibManager.lastLoadError(this, game.target);
             if (error != null && !error.isEmpty()) {
-                showMessage(getString(R.string.game_library_error, gameName(game), error), true);
+                showMessage(game, getString(R.string.game_library_error, gameName(game), error), true);
                 LibManager.clearLoadError(this, game.target);
                 return;
             }
@@ -2097,7 +2104,7 @@ public class MAct extends AppCompatActivity {
             if (lib.isFile()) {
                 String problem = LibManager.alignmentProblem(lib);
                 if (problem != null) {
-                    showMessage(getString(R.string.game_library_error, gameName(game), problem), true);
+                    showMessage(game, getString(R.string.game_library_error, gameName(game), problem), true);
                     return;
                 }
             }
@@ -2106,16 +2113,20 @@ public class MAct extends AppCompatActivity {
 
     // ---------------------------------------------------------------- status
 
-    /** Caption above Launch; errors are danger text with a REJECT haptic. */
+    /** Each game keeps its own inline feedback; errors retain the REJECT haptic. */
     private void showMessage(String text, boolean error) {
+        showMessage(launchTarget, text, error);
+    }
+
+    private void showMessage(GameSession game, String text, boolean error) {
         launchErrorShown = false;
-        statusMessage.animate().cancel();
-        statusMessage.setAlpha(1f);
-        statusMessage.setTag(R.id.tag_swap_text, null);
-        statusMessage.setText(text);
-        statusMessage.setTextColor(ContextCompat.getColor(this, error ? R.color.danger : R.color.text_secondary));
-        if (error) Ui.rejectHaptic(statusMessage);
-        Ui.fade(statusMessage, true);
+        game.message.animate().cancel();
+        game.message.setAlpha(1f);
+        game.message.setTag(R.id.tag_swap_text, null);
+        game.message.setText(text);
+        game.message.setTextColor(ContextCompat.getColor(this, error ? R.color.danger : R.color.text_secondary));
+        if (error) Ui.rejectHaptic(game.message);
+        Ui.fade(game.message, true);
     }
 
     /** While a task runs the line keeps its space (INVISIBLE), so nothing jumps. */
@@ -2123,23 +2134,23 @@ public class MAct extends AppCompatActivity {
         launchErrorShown = false;
         cancelPrepTimers();
         if (busy) {
-            Ui.fadeReserved(statusMessage, false);
+            Ui.fadeReserved(launchTarget.message, false);
         } else {
-            Ui.fade(statusMessage, false);
+            Ui.fade(launchTarget.message, false);
         }
     }
 
     private void showProgress(int percent, boolean indeterminate) {
-        if (taskProgress.isIndeterminate() != indeterminate) {
-            taskProgress.setVisibility(View.INVISIBLE);
-            taskProgress.setIndeterminate(indeterminate);
+        if (launchTarget.progress.isIndeterminate() != indeterminate) {
+            launchTarget.progress.setVisibility(View.INVISIBLE);
+            launchTarget.progress.setIndeterminate(indeterminate);
         }
-        taskProgress.setVisibility(View.VISIBLE);
-        if (!indeterminate) taskProgress.setProgressCompat(percent, !Ui.reducedMotion(this));
+        launchTarget.progress.setVisibility(View.VISIBLE);
+        if (!indeterminate) launchTarget.progress.setProgressCompat(percent, !Ui.reducedMotion(this));
     }
 
     private void hideProgress() {
-        taskProgress.setVisibility(View.GONE);
+        launchTarget.progress.setVisibility(View.GONE);
     }
 
     private String deviceName() {
@@ -2167,7 +2178,7 @@ public class MAct extends AppCompatActivity {
 
     // --------------------------------------------------------- header + icon
 
-    /** The loader page is named Home; the kicker retains each flavor's wordmark. */
+    /** A smaller greeting; the kicker retains each flavor's wordmark. */
     private void setupHeader() {
         ((TextView) findViewById(R.id.homeTitle)).setText(R.string.home_title);
     }
@@ -2463,7 +2474,7 @@ public class MAct extends AppCompatActivity {
             // Installed or not (a failure keeps the old library): show what is there now.
             refreshLibraryVersion();
             refreshLibrary();
-            refreshGameState();
+            refreshGameFiles();
         });
     }
 
