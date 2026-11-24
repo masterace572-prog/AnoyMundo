@@ -7,10 +7,13 @@ scripts mentioned below were removed from the tree in the repo cleanup after
 ## 2.4.3 — short release changelog (versionCode 21)
 
 [Simple 2.4.2 → 2.4.3 changelog](CHANGELOG-2.4.3.md).
-The owner-approved replacement includes the verified loader-UI and announcement
-follow-ups below. APK/test inputs are unchanged from accepted source `cfc442e`;
-publication repeats both brands' build/lint/test/signature gates. Replace only
-the older internal 2.4.3 GitHub test artifacts; preserve 2.4.2 and older releases.
+The [first user-facing 2.4.3 release](https://github.com/masterace572-prog/AnoyMundo/releases/tag/loaders-v2.4.3-21) includes the verified
+loader-UI and announcement follow-ups below. Publication source `f8f5884` /
+[run 45443061179](https://github.com/masterace572-prog/AnoyMundo/actions/runs/45443061179)
+repeated both brands' build/lint/compiled/signature gates and **180/180** host
+checks. App/test inputs are unchanged from accepted source `cfc442e`. Only the
+older internal 2.4.3 GitHub test artifacts were replaced; all four releases
+through 2.4.2 and their exact refs/assets remain unchanged.
 **2.4.2 (20) is the last version distributed to users.** Earlier 2.4.3 builds were
 internal tests only. Users upgrade normally to **2.4.3 (21)** in place, without
 uninstalling or clearing app/container data.

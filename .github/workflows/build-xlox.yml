@@ -13,7 +13,7 @@ on:
         type: boolean
         default: true
       backup_replaced_243:
-        description: 'Build-only: archive the old 2.4.3 (21) assets before its owner-requested replacement'
+        description: 'Build-only: archive the current 2.4.3 (21) release assets before further testing'
         type: boolean
         default: false
   push:
@@ -87,17 +87,17 @@ jobs:
           import json
           from pathlib import Path
           release = json.loads(Path('prior-release-backup/release.json').read_text())
-          # This refresh replaces the accepted compact-dashboard release,
-          # not either of the historical releases archived in earlier passes.
-          assert release['id'] == 456953450, 'Current 2.4.3 release changed; stop for review.'
-          expected_source = '96356a51a9861c3762151d0b3798e1f7b26d42a7'
+          # Pin the first user-facing 2.4.3 release for later build-only backups.
+          # The preceding 2.4.3 GitHub artifacts were internal tests only.
+          assert release['id'] == 457073966, 'Current 2.4.3 release changed; stop for review.'
+          expected_source = 'f8f58847a8e9eebac008913700cd0ff343122016'
           assert release['target_commitish'] == expected_source, 'Release source changed.'
           tag = json.loads(Path('prior-release-backup/tag.json').read_text())
           assert tag['object']['type'] == 'commit' and tag['object']['sha'] == expected_source, 'Tag changed.'
           expected = {
-              'Anoy-XLOX-loader.apk': (5432329, 'fe1d572c16be02f15dc71ee274a763146d7e1fe7597955f18efa1039be48bb94'),
-              'KennyPvt-loader.apk': (8044808, '237ba38ca90a4a3bf3c0370e25a947bae2ab1c527f076ca9081f6364a57f710c'),
-              'SHA256SUMS.txt': (173, '7c6e5ae83f98517a1bdcd98c5c5ed81a7717ed3384a2e2158d8e6ab54f5b4e80'),
+              'Anoy-XLOX-loader.apk': (5438227, '7342e7fb67c0f127b51bafdbfde077a0af80101c5d47fc036c250b056b44489e'),
+              'KennyPvt-loader.apk': (8050635, '0c1c11737776a49c66b7ffe7607b504fc7c71df9a30f1fa39b187d5a28a7c438'),
+              'SHA256SUMS.txt': (173, '25acbc67927904ea6eb4316b11df7a41f71c08072c48957c59df66114d609f18'),
           }
           assert {asset['name'] for asset in release['assets']} == set(expected), 'Asset set changed.'
           for asset in release['assets']:

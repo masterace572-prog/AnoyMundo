@@ -1,19 +1,18 @@
 # 2.4.3 — user update from 2.4.2 (versionCode 21)
 
-> **2.4.2 (20) is the last version distributed to users.** Earlier 2.4.3 APKs
-> were internal tests only. This is the first user-facing **2.4.3 (21)** release.
-> The latest UI refresh is approved for publication. Accepted source **cfc442e** /
-> [run 45436589864](https://github.com/masterace572-prog/AnoyMundo/actions/runs/45436589864)
-> passed 180 host checks and both brands' build/lint/compiled/signature gates.
-> Publication changes only documentation/release-note generation, then repeats
-> all APK gates. Replace only **456953450**, tag `loaders-v2.4.3-21`; four older
-> releases and exact refs remain protected. Backup **14941666853** archives that
-> predecessor's actual APKs/source96356a5, with hashes and original signers checked.
-> See the [short 2.4.2 → 2.4.3 changelog](CHANGELOG-2.4.3.md).
->
-> The older Home-only internal GitHub test artifacts below used **456953450** /
-> source **96356a5**. Its backup **14934004032** archives **456878910**, not 456953450.
-> [UI verification and device limits](LOADER-UI-QA.md) records the subsequent work.
+> **Published: 2.4.2 (20) → 2.4.3 (21).** 2.4.2 is the last version previously
+> distributed to users; earlier 2.4.3 APKs were internal tests only.
+> [Release 457073966](https://github.com/masterace572-prog/AnoyMundo/releases/tag/loaders-v2.4.3-21), source **`f8f58847a8e9eebac008913700cd0ff343122016`**,
+> [publication run 45443061179](https://github.com/masterace572-prog/AnoyMundo/actions/runs/45443061179).
+> Both brands passed **180/180 host Android checks**, release build/lint,
+> compiled APK and original-signature gates. App/test inputs are unchanged from
+> accepted **cfc442e / run 45436589864**; only release documentation/notes changed.
+> Only the older internal 2.4.3 GitHub artifacts (456953450/source96356a5) were
+> replaced. All four releases through 2.4.2, their assets and exact tag refs are
+> unchanged. Their live panel/library/APK selections were not changed.
+> Predecessor backup **14941666853** retains the actual internal APKs plus
+> release/tag metadata, with full checksums and original signers verified in CI.
+> [Short changelog](CHANGELOG-2.4.3.md) · [UI/device QA limits](LOADER-UI-QA.md).
 
 ## Requested scope (completed publication)
 
@@ -24,6 +23,27 @@
 - Replace **only the older internal 2.4.3 (21) GitHub test artifacts** with
   this first user-facing 2.4.3 update. Preserve 2.4.2 and every older release.
   This is not a release-pruning policy. Live panel library/APK choices are unchanged.
+
+## Published downloads
+
+| Brand | Package | Signed APK |
+|---|---|---|
+| Anoy | `com.xlox` | [Anoy-XLOX-loader.apk](https://github.com/masterace572-prog/AnoyMundo/releases/download/loaders-v2.4.3-21/Anoy-XLOX-loader.apk) |
+| KennyPvt | `com.kennypvt` | [KennyPvt-loader.apk](https://github.com/masterace572-prog/AnoyMundo/releases/download/loaders-v2.4.3-21/KennyPvt-loader.apk) |
+
+[SHA256SUMS.txt](https://github.com/masterace572-prog/AnoyMundo/releases/download/loaders-v2.4.3-21/SHA256SUMS.txt):
+
+```text
+7342e7fb67c0f127b51bafdbfde077a0af80101c5d47fc036c250b056b44489e  Anoy-XLOX-loader.apk
+0c1c11737776a49c66b7ffe7607b504fc7c71df9a30f1fa39b187d5a28a7c438  KennyPvt-loader.apk
+```
+
+GitHub's uploaded asset digests match the build's release checksums. CI's
+structured verifier confirmed the original certificate for both APKs:
+`77f05d53ce8bf1855caef38ce87f13a8bb2b1b2cdd2d48da9d3ba897eac4549e`.
+The retained backup was downloaded/verified by CI; this sandbox's separate
+artifact-download attempts were blocked at external storage. No local APK
+verification, installation, physical-device gesture test or measured FPS claim.
 
 ## Navigation
 
@@ -128,11 +148,13 @@ place. That technical note does not describe the user upgrade path.
 
 Local SDK-free checks executed during preparation:
 
-- 14 UI/resource gates and 20 branding/channel source gates.
-- 12 existing Android wiring checks; 15 runtime and 15 contained-web JVM groups.
-- 6 Air wiring checks and 17 dual-game production-class JVM groups.
-- 11 navigation/dashboard structure, gesture wiring and static-font integrity checks.
-- Java 8 syntax parsing, XML/Python parsing and whitespace checks.
+- 15 navigation/presentation wiring checks, 14 UI gates and 20 branding gates.
+- 15 runtime/transport, 15 contained-web-login and 17 dual-game JVM groups.
+- 7 offline host-runtime preparation fixtures and 7 frame-parser fixtures
+  (the parser fixtures are not phone frame-time measurements).
+- 4 release-note/CLI fixtures, including normal 2.4.2 upgrade wording and
+  refusing to clobber a release that belongs to a different source commit.
+- Workflow YAML/shell syntax and whitespace checks.
 
 CI builds and lints **both release variants**, executes actual Android view
 inflation/geometry/tap/touch-swipe tests for both brands on host Android 21/28,
@@ -146,7 +168,7 @@ Use manual `publish_release=false, backup_replaced_243=true`, or a branch push
 whose commit message contains `[verify-2.4.3]`. That push marker also disables
 publication, allowing verification when manual workflow dispatch is not permitted.
 
-### Completed Home-refinement acceptance — before the Login/Splash follow-up
+### Historical internal Home-refinement acceptance — before Login/Splash
 
 [Build-only run 45422161757](https://github.com/masterace572-prog/AnoyMundo/actions/runs/45422161757)
 passed on source **`aa28b2b07f5645132d1434f55bd441ac939f9fa5`**; publication was

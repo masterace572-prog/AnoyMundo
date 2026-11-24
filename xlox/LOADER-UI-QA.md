@@ -77,11 +77,30 @@ export XLOX_ROBOLECTRIC_DIR="$(cd ../.cache/xlox-robolectric && pwd)"
 ```
 
 A `[verify-2.4.3]` push runs both brands' tests/build/lint/compiled APK/signature
-gates without publication. Its backup guard now pins release **456953450**, tag
-`loaders-v2.4.3-21`, source **96356a5** and that release's exact APK digests. The
-older backup of release 456878910 is not a backup of release 456953450. The UI
-verification itself did not delete or replace releases. The later publication
-uses the accepted announcement build and the fresh backup identified below.
+gates without publication. After the first user-facing release, its backup guard
+now pins **457073966**, tag `loaders-v2.4.3-21`, source **f8f5884** and that
+release's exact APK digests. It still refuses an unreviewed source/asset change.
+Before publication it pinned internal test release **456953450/source96356a5**;
+backup **14941666853** archives that predecessor. Older backup **14934004032**
+archives **456878910** instead. These are distinct archives, not interchangeable.
+The UI verification itself did not delete or replace releases.
+
+## First user-facing publication completed
+
+[Release 457073966](https://github.com/masterace572-prog/AnoyMundo/releases/tag/loaders-v2.4.3-21),
+source **`f8f58847a8e9eebac008913700cd0ff343122016`** /
+[run 45443061179](https://github.com/masterace572-prog/AnoyMundo/actions/runs/45443061179),
+passed **180/180** host checks and both release-build/lint/compiled/signature gates.
+Its app/test inputs are unchanged from accepted `cfc442e`. Public notes describe
+**2.4.2 (20) → 2.4.3 (21)**; they do not assume an existing user code-21 population.
+The superseded publication attempt 45442509778 was cancelled by branch concurrency
+before publishing, so the incorrect same-version update wording was not released.
+
+Only internal test release 456953450 and its same-version tag were replaced.
+The four older releases, all their assets/metadata (except download counts) and
+exact tag refs were verified unchanged. No live panel/library/APK selection was
+changed. Full release checksums and original-certificate identity are recorded
+in [release scope](RELEASE-2.4.3.md).
 
 ## Final announcement build accepted for publication
 
