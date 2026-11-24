@@ -145,6 +145,52 @@ class NavigationWiring(unittest.TestCase):
         self.assertIn('diagonalSwipeStartingOnLaunchCancelsTheButtonAndTapStillWorks', host)
         self.assertIn('verticalSwipeStartingOnGameButtonKeepsItsScrollAndNeverLaunches', host)
 
+    def test_capsule_drags_use_one_tab_pitch_and_keep_visual_insets_separate(self):
+        capsule = (JAVA / 'ui/CapsuleNavigation.java').read_text()
+        nav = (JAVA / 'ui/HomeSettingsNavigation.java').read_text()
+        self.assertIn('onInterceptTouchEvent(MotionEvent event)', capsule)
+        self.assertIn('MotionEvent.ACTION_CANCEL', capsule)
+        self.assertIn('nav_indicator_inset', capsule)
+        self.assertIn('progress * segmentWidth', capsule)
+        self.assertNotIn('progress * indicator.getWidth()', capsule)
+        for required in ('capsule.setDragListener(', 'pager.beginFakeDrag()',
+                         'pager.fakeDragBy(-dx * pager.getWidth() / capsule.getSegmentWidth())',
+                         'pager.endFakeDrag()', 'select(capsuleStartPage, true)',
+                         'capsule.setDragListener(null)'):
+            self.assertIn(required, nav)
+
+    def test_login_icon_controls_and_masking_do_not_reset_the_input_type(self):
+        login = ids('activity_login.xml')
+        self.assertEqual(login['@+id/pasteKey'].tag, 'ImageButton')
+        self.assertNotIn(A + 'text', login['@+id/pasteKey'].attrib)
+        self.assertEqual(login['@+id/pasteKey'].get(A + 'contentDescription'), '@string/paste_key_description')
+        self.assertEqual(login['@+id/userkey'].get(A + 'scrollHorizontally'), 'true')
+        visibility = (JAVA / 'ui/LicenceKeyVisibility.java').read_text()
+        self.assertIn('PasswordTransformationMethod.getInstance()', visibility)
+        self.assertIn('HideReturnsTransformationMethod.getInstance()', visibility)
+        self.assertNotIn('setInputType(', visibility)
+        self.assertNotIn('getFont(', visibility)
+        self.assertIn('ViewCompat.setStateDescription', visibility)
+        log = (JAVA / 'LogAct.java').read_text()
+        self.assertIn('keyVisibility.hide()', log)
+        self.assertIn('keyInput.setFilters(new InputFilter[]{new KeyFilter()', log)
+        self.assertIn('gate = UpdateGate.start(this, this::onGatePassed)', log)
+        self.assertIn('result = Check(context, key)', log)
+
+    def test_splash_animation_changes_render_properties_not_text_or_layout_per_frame(self):
+        splash = (JAVA / 'SplashActivity.java').read_text()
+        frame = splash.split('private void applyTime(long t)', 1)[1].split('private void setTextLayers', 1)[0]
+        for forbidden in ('setText(', 'setLayoutParams(', 'requestLayout(', 'new ValueAnimator'):
+            self.assertNotIn(forbidden, frame)
+        self.assertIn('loader.setTranslationY(', frame)
+        self.assertIn('hax.setTranslationY(', frame)
+        self.assertIn('film.removeAllListeners()', splash)
+        self.assertIn('film.removeAllUpdateListeners()', splash)
+        self.assertIn('if (!filmDone || hold || handingOff) return false', splash)
+        self.assertIn('check = Check.FAILED', splash)
+        home = ids('page_home.xml')
+        self.assertEqual(home['@+id/headerStatuses'].tag, 'com.xlox.ui.StatusPairLayout')
+
     def test_static_dashboard_fonts_are_licensed_pinned_and_not_variable(self):
         fonts = {
             'regular': (400, '2602c71d1f36c96da0022706f15da7d51102d19d10510b77b5a39bf861122807'),

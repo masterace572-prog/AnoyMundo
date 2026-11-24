@@ -30,6 +30,7 @@ public final class HomeSettingsNavigation extends ViewPager.SimpleOnPageChangeLi
     private final int activeColor;
     private final int inactiveColor;
     private int scrollState = ViewPager.SCROLL_STATE_IDLE;
+    private int capsuleStartPage;
 
     public HomeSettingsNavigation(View root, Listener listener) {
         this.listener = listener;
@@ -60,6 +61,32 @@ public final class HomeSettingsNavigation extends ViewPager.SimpleOnPageChangeLi
         ViewCompat.setAccessibilityDelegate(home, tab);
         ViewCompat.setAccessibilityDelegate(settings, tab);
         pager.addOnPageChangeListener(this);
+        capsule.setDragListener(new CapsuleNavigation.DragListener() {
+            @Override
+            public boolean onDragStart() {
+                // Never run two gesture engines at once. Page swipes can still
+                // interrupt a settle; a new capsule drag starts when it is idle.
+                if (scrollState != ViewPager.SCROLL_STATE_IDLE || pager.getWidth() == 0
+                        || capsule.getSegmentWidth() == 0) return false;
+                capsuleStartPage = pager.getCurrentItem();
+                return pager.beginFakeDrag();
+            }
+
+            @Override
+            public void onDrag(float dx) {
+                if (!pager.isFakeDragging()) return;
+                // Drag the selector towards the desired tab: right -> Settings,
+                // left -> Home. One tab pitch moves exactly one full page.
+                pager.fakeDragBy(-dx * pager.getWidth() / capsule.getSegmentWidth());
+            }
+
+            @Override
+            public void onDragEnd(boolean cancelled) {
+                if (!pager.isFakeDragging()) return;
+                pager.endFakeDrag();
+                if (cancelled) select(capsuleStartPage, true);
+            }
+        });
         updateSelection();
         updateProgress(pager.getCurrentItem());
     }
@@ -101,8 +128,10 @@ public final class HomeSettingsNavigation extends ViewPager.SimpleOnPageChangeLi
     private void updateProgress(float position) {
         float progress = Math.max(0f, Math.min(1f, position));
         capsule.setProgress(progress);
-        home.setTextColor(ColorUtils.blendARGB(activeColor, inactiveColor, progress));
-        settings.setTextColor(ColorUtils.blendARGB(inactiveColor, activeColor, progress));
+        int homeColor = ColorUtils.blendARGB(activeColor, inactiveColor, progress);
+        int settingsColor = ColorUtils.blendARGB(inactiveColor, activeColor, progress);
+        if (home.getCurrentTextColor() != homeColor) home.setTextColor(homeColor);
+        if (settings.getCurrentTextColor() != settingsColor) settings.setTextColor(settingsColor);
     }
 
     private void updateSelection() {
@@ -120,6 +149,7 @@ public final class HomeSettingsNavigation extends ViewPager.SimpleOnPageChangeLi
     }
 
     public void dispose() {
+        capsule.setDragListener(null);
         pager.removeOnPageChangeListener(this);
         home.setOnClickListener(null);
         settings.setOnClickListener(null);

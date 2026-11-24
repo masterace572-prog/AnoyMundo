@@ -144,7 +144,7 @@ public class HomeSettingsNavigationTest {
     public void halfwayDragShowsHalfOfEachOpaquePageAndMovesTheCapsule() {
         View home = activity.findViewById(R.id.homePage);
         View settings = activity.findViewById(R.id.settingsPage);
-        View capsule = activity.findViewById(R.id.bottomCapsule);
+        CapsuleNavigation capsule = activity.findViewById(R.id.bottomCapsule);
         View highlight = activity.findViewById(R.id.navigationIndicator);
         int capsuleTop = capsule.getTop();
         assertTrue(pager.beginFakeDrag());
@@ -156,7 +156,7 @@ public class HomeSettingsNavigationTest {
         assertEquals(View.VISIBLE, settings.getVisibility());
         assertEquals(1f, home.getAlpha(), 0f);
         assertEquals(1f, settings.getAlpha(), 0f);
-        assertEquals(highlight.getWidth() / 2f, highlight.getTranslationX(), 1f);
+        assertEquals(capsule.getSegmentWidth() / 2f, highlight.getTranslationX(), 1f);
         assertEquals(capsuleTop, capsule.getTop());
         pager.endFakeDrag();
         settle();
@@ -242,6 +242,85 @@ public class HomeSettingsNavigationTest {
     }
 
     @Test
+    public void capsuleTracksPixelsMidDragAndCancellationRestoresTheStartingPage() {
+        CapsuleNavigation capsule = activity.findViewById(R.id.bottomCapsule);
+        Rect box = bounds(capsule);
+        float start = box.centerX() - capsule.getSegmentWidth() / 2f;
+        long down = SystemClock.uptimeMillis();
+        touch(down, MotionEvent.ACTION_DOWN, start, box.centerY());
+        touch(down, MotionEvent.ACTION_MOVE, start + capsule.getSegmentWidth() * .45f, box.centerY());
+        assertTrue(pager.isFakeDragging());
+        assertEquals(pager.getWidth() * .45f, pager.getScrollX(), 2f);
+        assertEquals(capsule.getSegmentWidth() * .45f,
+                activity.findViewById(R.id.navigationIndicator).getTranslationX(), 2f);
+        touch(down, MotionEvent.ACTION_MOVE, start + capsule.getSegmentWidth() * .8f, box.centerY());
+        touch(down, MotionEvent.ACTION_CANCEL, start + capsule.getSegmentWidth() * .8f, box.centerY());
+        settle();
+        assertFalse(pager.isFakeDragging());
+        assertEquals(HomeSettingsPager.HOME, activity.navigation.currentPage());
+        assertEquals(0, pager.getScrollX());
+        assertEquals(0, activity.gameClicks);
+    }
+
+    @Test
+    public void capsuleGesturesCancelLabelClicksButRealTapsStillSelectBothPages() {
+        View home = activity.findViewById(R.id.navigationHome);
+        View settings = activity.findViewById(R.id.navigationSettings);
+        tap(settings);
+        settle();
+        assertEquals(HomeSettingsPager.SETTINGS, activity.navigation.currentPage());
+        tap(home);
+        settle();
+        assertEquals(HomeSettingsPager.HOME, activity.navigation.currentPage());
+        int[] clicks = {0};
+        home.setOnClickListener(v -> clicks[0]++);
+        settings.setOnClickListener(v -> clicks[0]++);
+        Rect box = bounds(activity.findViewById(R.id.bottomCapsule));
+        drag(box.centerX() - box.width() / 4f, box.centerY(),
+                box.centerX() + box.width() / 4f, box.centerY(), MotionEvent.ACTION_UP);
+        assertEquals(HomeSettingsPager.SETTINGS, activity.navigation.currentPage());
+        assertEquals(0, clicks[0]);
+        tap(home);
+        assertEquals(1, clicks[0]);
+    }
+
+    @Test
+    public void verticalCapsuleMotionDoesNotTurnIntoATabClickOrPageSwipe() {
+        View home = activity.findViewById(R.id.navigationHome);
+        int[] clicks = {0};
+        home.setOnClickListener(v -> clicks[0]++);
+        Rect box = bounds(home);
+        long down = SystemClock.uptimeMillis();
+        touch(down, MotionEvent.ACTION_DOWN, box.centerX(), box.centerY() - 8);
+        touch(down, MotionEvent.ACTION_MOVE, box.centerX() + 1, box.centerY() + 10);
+        touch(down, MotionEvent.ACTION_UP, box.centerX() + 2, box.centerY() + 10);
+        settle();
+        assertEquals(0, clicks[0]);
+        assertFalse(home.isPressed());
+        assertFalse(pager.isFakeDragging());
+        assertEquals(0, pager.getScrollX());
+    }
+
+    @Test
+    public void insetSelectorKeepsFullTabPitchAndAccessibleTargetsAtBothEnds() {
+        CapsuleNavigation capsule = activity.findViewById(R.id.bottomCapsule);
+        View indicator = activity.findViewById(R.id.navigationIndicator);
+        View home = activity.findViewById(R.id.navigationHome);
+        View settings = activity.findViewById(R.id.navigationSettings);
+        int inset = activity.getResources().getDimensionPixelSize(R.dimen.nav_indicator_inset);
+        assertEquals(Ui.dp(activity, 2), inset);
+        assertEquals(capsule.getPaddingLeft() + inset, indicator.getLeft());
+        assertEquals(home.getHeight() - 2 * inset, indicator.getHeight());
+        assertEquals(capsule.getSegmentWidth() - 2 * inset, indicator.getWidth());
+        assertTrue(home.getHeight() >= Ui.dp(activity, 48));
+        assertTrue(settings.getHeight() >= Ui.dp(activity, 48));
+        activity.navigation.select(HomeSettingsPager.SETTINGS, false);
+        assertEquals(capsule.getSegmentWidth(), indicator.getTranslationX(), .1f);
+        assertEquals(capsule.getWidth() - capsule.getPaddingRight() - inset,
+                indicator.getRight() + indicator.getTranslationX(), 1f);
+    }
+
+    @Test
     public void diagonalSwipeStartingOnLaunchCancelsTheButtonAndTapStillWorks() {
         View action = activity.findViewById(R.id.primaryAction);
         Rect box = bounds(action);
@@ -306,7 +385,8 @@ public class HomeSettingsNavigationTest {
         assertEquals(1f, home.getAlpha(), 0f);
         assertEquals(1f, settings.getAlpha(), 0f);
         View highlight = activity.findViewById(R.id.navigationIndicator);
-        assertEquals(highlight.getWidth() * offset / (float) pager.getWidth(), highlight.getTranslationX(), 1f);
+        assertEquals(activity.<CapsuleNavigation>findViewById(R.id.bottomCapsule).getSegmentWidth()
+                * offset / (float) pager.getWidth(), highlight.getTranslationX(), 1f);
         touch(down, MotionEvent.ACTION_CANCEL, 124, 250);
         settle();
         assertEquals(HomeSettingsPager.HOME, activity.navigation.currentPage());
@@ -356,19 +436,47 @@ public class HomeSettingsNavigationTest {
 
     @Test
     public void compactExpiryAndGlobalStatusesStayInTheTopRightHeader() {
+        TextView active = activity.findViewById(R.id.statusValue);
+        TextView safe = activity.findViewById(R.id.serverValue);
+        StatusText.set(active, "Active", R.color.success, R.color.text_secondary);
+        StatusText.set(safe, "Safe", R.color.success, R.color.text_secondary);
+        layout(360, 800);
         View header = activity.findViewById(R.id.mainHeader);
         Rect title = bounds(activity.findViewById(R.id.homeTitle));
         Rect expiry = bounds(activity.findViewById(R.id.timeLeftValue));
-        Rect status = bounds(activity.findViewById(R.id.statusValue));
-        Rect server = bounds(activity.findViewById(R.id.serverValue));
+        Rect status = bounds(active);
+        Rect server = bounds(safe);
         assertNotNull(header.findViewById(R.id.licenceSummary));
-        assertNotNull(header.findViewById(R.id.serverValue));
+        assertNotNull(header.findViewById(R.id.headerStatuses));
         assertTrue(expiry.left >= title.right);
         assertTrue(status.top >= expiry.bottom);
-        assertTrue(server.top >= status.bottom);
+        assertEquals(status.top + active.getBaseline(), server.top + safe.getBaseline());
+        assertTrue(server.left > status.right);
+        assertEquals(expiry.right, server.right);
         assertTrue(bounds(activity.findViewById(R.id.gameCard)).top >= bounds(header).bottom);
         assertTrue(activity.<TextView>findViewById(R.id.timeLeftValue).getTextSize()
                 < activity.<TextView>findViewById(R.id.homeTitle).getTextSize());
+    }
+
+    @Test
+    public void longHeaderStatusesWrapInsideTheirColumnInsteadOfColliding() {
+        TextView active = activity.findViewById(R.id.statusValue);
+        TextView server = activity.findViewById(R.id.serverValue);
+        StatusText.set(active, "Expires soon", R.color.warning, R.color.text_secondary);
+        StatusText.set(server, "Server under maintenance", R.color.warning, R.color.text_secondary);
+        active.setTextSize(24f);
+        server.setTextSize(24f);
+        layout(320, 800);
+        Rect first = bounds(active);
+        Rect second = bounds(server);
+        Rect column = bounds(activity.findViewById(R.id.headerAccount));
+        assertTrue(second.top >= first.bottom);
+        assertEquals(column.right, first.right);
+        assertEquals(column.right, second.right);
+        assertTrue(first.left >= column.left);
+        assertTrue(second.left >= column.left);
+        assertTrue(bounds(activity.findViewById(R.id.gameCard)).top
+                >= bounds(activity.findViewById(R.id.mainHeader)).bottom);
     }
 
     @Test

@@ -111,4 +111,9 @@
     <dimen name="text_dashboard_game">18sp</dimen>
     <dimen name="nav_capsule_width">280dp</dimen>
     <dimen name="nav_capsule_radius">28dp</dimen>
+    <!-- Visual inset only: the two navigation targets remain at least 48dp. -->
+    <dimen name="nav_indicator_inset">2dp</dimen>
+    <dimen name="login_top_space">48dp</dimen>
+    <dimen name="text_login_key">15sp</dimen>
+    <dimen name="text_splash_wordmark">36dp</dimen>
 </resources>

@@ -182,7 +182,9 @@ jobs:
           fi
 
       - name: Host runtime preparation regressions (offline fixtures)
-        run: python3 -B scripts/test_prepare_robolectric.py
+        run: |
+          python3 -B scripts/test_prepare_robolectric.py
+          python3 -B scripts/test_profile_loader_ui.py
 
       - name: Restore pinned host Android runtimes
         id: host-runtime-cache
@@ -233,13 +235,14 @@ jobs:
           print(summary)
           with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as out:
               out.write(summary + '\n')
-          expected = {'com.xlox.ui.HomeSettingsNavigationTest': 40,
+          expected = {'com.xlox.ui.HomeSettingsNavigationTest': 52,
+                      'com.xlox.ui.LoginSplashUiTest': 18,
                       'com.xlox.utils.AppManagerObbStateTest': 16}
           for variant in ('testAnoyDebugUnitTest', 'testKennyDebugUnitTest'):
               for name, count in expected.items():
                   actual = suites.get((variant, name))
                   assert actual is not None and actual['tests'] >= count, (variant, name, actual)
-          assert totals['tests'] >= 112, 'Both brands must run all 20 UI + 8 OBB tests on Android 21 and 28.'
+          assert totals['tests'] >= 172, 'Both brands must run all 26 navigation + 9 login/splash + 8 OBB tests on Android 21 and 28.'
           assert totals['failures'] == totals['errors'] == totals['skipped'] == 0, summary
           print('::notice title=Android host test totals::' + summary)
           PYNAV

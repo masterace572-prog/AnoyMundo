@@ -9,7 +9,6 @@ import android.os.Handler;
 import android.os.Looper;
 import android.text.Editable;
 import android.text.InputFilter;
-import android.text.InputType;
 import android.text.Spanned;
 import android.text.TextWatcher;
 import android.util.Log;
@@ -27,6 +26,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import com.google.android.material.bottomsheet.BottomSheetDialog;
 import com.google.android.material.button.MaterialButton;
 
+import com.xlox.ui.LicenceKeyVisibility;
 import com.xlox.ui.PermissionSheet;
 import com.xlox.ui.Ui;
 import com.xlox.ui.UpdateGate;
@@ -127,7 +127,7 @@ public class LogAct extends AppCompatActivity {
     private boolean signingIn;
     /** Explanation shown before the All files access / Install unknown apps page. */
     private BottomSheetDialog permissionSheet;
-    private boolean keyVisible;
+    private LicenceKeyVisibility keyVisibility;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -137,7 +137,7 @@ public class LogAct extends AppCompatActivity {
         prefs = new Prefs(this);
 
         keyInput = findViewById(R.id.userkey);
-        // A single-line key can't wrap: cap its scale so ANOY-7D-XXXXX fits at 2.0.
+        // Keys stay one line and scroll in-place; both icons keep a full hit area.
         Ui.capFontScale(keyInput, 1.5f);
         keyField = findViewById(R.id.keyField);
         toggleKey = findViewById(R.id.toggleKey);
@@ -185,10 +185,7 @@ public class LogAct extends AppCompatActivity {
             return false;
         });
 
-        toggleKey.setOnClickListener(v -> {
-            Ui.tap(v);
-            setKeyVisible(!keyVisible);
-        });
+        keyVisibility = new LicenceKeyVisibility(keyInput, toggleKey);
         pasteKey.setOnClickListener(v -> {
             Ui.tap(v);
             pasteFromClipboard();
@@ -229,7 +226,7 @@ public class LogAct extends AppCompatActivity {
             footer.setVisibility(ime ? View.GONE : View.VISIBLE);
             View top = findViewById(R.id.loginTopSpace);
             ViewGroup.LayoutParams lp = top.getLayoutParams();
-            int want = getResources().getDimensionPixelSize(ime ? R.dimen.space_16 : R.dimen.space_72);
+            int want = getResources().getDimensionPixelSize(ime ? R.dimen.space_16 : R.dimen.login_top_space);
             if (lp.height != want) {
                 lp.height = want;
                 top.setLayoutParams(lp);
@@ -306,6 +303,12 @@ public class LogAct extends AppCompatActivity {
     }
 
     @Override
+    protected void onStop() {
+        if (keyVisibility != null) keyVisibility.hide();
+        super.onStop();
+    }
+
+    @Override
     protected void onDestroy() {
         main.removeCallbacks(slowLogin);
         if (gate != null) gate.dispose();
@@ -332,21 +335,6 @@ public class LogAct extends AppCompatActivity {
         // While signing in the pill stays blue (loading); taps are ignored by
         // attemptSignIn and by Ui.setLoading.
         loginButton.setEnabled(signingIn || (gatePassed && keyInput.getText().toString().trim().length() > 0));
-    }
-
-    private void setKeyVisible(boolean visible) {
-        keyVisible = visible;
-        int selection = keyInput.getSelectionEnd();
-        keyInput.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS
-                | (visible ? InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD
-                : InputType.TYPE_TEXT_VARIATION_PASSWORD));
-        // setInputType resets the typeface on some versions; keep the mono face.
-        keyInput.setTypeface(androidx.core.content.res.ResourcesCompat.getFont(this, R.font.jetbrains_mono_medium));
-        keyInput.setSelection(Math.max(0, Math.min(selection, keyInput.getText().length())));
-        toggleKey.setImageResource(visible ? R.drawable.ic_eye_off : R.drawable.ic_eye);
-        toggleKey.setSelected(visible);
-        toggleKey.setContentDescription(getString(visible ? R.string.hide_key_description
-                : R.string.show_key_description));
     }
 
     private void pasteFromClipboard() {

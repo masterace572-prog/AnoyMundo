@@ -651,9 +651,8 @@
         <item name="trackCornerRadius">0.75dp</item>
     </style>
 
-    <!-- Home / Settings: static Manrope weights work back to Android 21 through
-         AppCompat; no variable font API or online font provider is required.
-         Login, splash wordmarks and support/key monospace styles stay unchanged. -->
+    <!-- Loader screens share static Manrope weights back to Android 21 through
+         AppCompat. Keys and support previews retain the dedicated monospace face. -->
     <style name="Text.Dashboard" parent="Text">
         <item name="android:fontFamily">@font/manrope_regular</item>
         <item name="fontFamily">@font/manrope_regular</item>
@@ -768,6 +767,45 @@
     </style>
     <style name="Row.Dashboard" parent="Row">
         <item name="android:minHeight">@dimen/space_56</item>
+    </style>
+
+    <style name="Text.Dashboard.Meta.Small" parent="Text.Dashboard.Meta">
+        <item name="android:textSize">@dimen/text_micro</item>
+    </style>
+    <style name="Text.Dashboard.Footer" parent="Text.Dashboard.Meta.Small">
+        <item name="android:textColor">@color/text_tertiary</item>
+    </style>
+
+    <!-- Login and Splash extend the Home typography, not the game runtime. -->
+    <style name="Text.Auth.Title" parent="Text.Dashboard.Title">
+        <item name="android:textSize">@dimen/text_title_l</item>
+        <item name="lineHeight">34sp</item>
+    </style>
+    <style name="Text.Auth.Key" parent="Text.MonoKey">
+        <item name="android:textSize">@dimen/text_login_key</item>
+        <item name="lineHeight">22sp</item>
+        <item name="android:letterSpacing">0</item>
+    </style>
+    <style name="Widget.Anoy.Button.Auth" parent="Widget.Anoy.Button.Dashboard">
+        <item name="android:minHeight">@dimen/button_height</item>
+    </style>
+    <style name="Widget.Anoy.Button.Text.Auth" parent="Widget.Anoy.Button.Text">
+        <item name="android:fontFamily">@font/manrope_medium</item>
+        <item name="fontFamily">@font/manrope_medium</item>
+        <item name="android:textAppearance">@style/TextAppearance.Anoy.AuthLink</item>
+    </style>
+    <style name="TextAppearance.Anoy.AuthLink" parent="TextAppearance.Anoy.TextButton">
+        <item name="android:fontFamily">@font/manrope_medium</item>
+        <item name="fontFamily">@font/manrope_medium</item>
+    </style>
+    <style name="Text.Splash.Wordmark" parent="Text.Wordmark">
+        <item name="android:fontFamily">@font/manrope_semibold</item>
+        <item name="fontFamily">@font/manrope_semibold</item>
+        <item name="android:textSize">@dimen/text_splash_wordmark</item>
+    </style>
+    <style name="Text.Splash.Kicker" parent="Text.Dashboard.Brand">
+        <item name="android:letterSpacing">0.08</item>
+        <item name="android:textAllCaps">false</item>
     </style>
 
     <!-- ===================================================== Rows -->

@@ -29,6 +29,7 @@ import com.google.android.material.progressindicator.LinearProgressIndicator;
 import com.google.android.material.snackbar.Snackbar;
 
 import com.xlox.ui.Ui;
+import com.xlox.ui.StatusText;
 import com.xlox.ui.HomeSettingsPager;
 import com.xlox.ui.HomeSettingsNavigation;
 import com.xlox.ui.PermissionSheet;
@@ -1106,7 +1107,8 @@ public class MAct extends AppCompatActivity {
 
     private void showCountdownText(String text, int colourRes) {
         if (!text.contentEquals(timeLeftValue.getText())) timeLeftValue.setText(text);
-        timeLeftValue.setTextColor(ContextCompat.getColor(this, colourRes));
+        int colour = ContextCompat.getColor(this, colourRes);
+        if (timeLeftValue.getCurrentTextColor() != colour) timeLeftValue.setTextColor(colour);
     }
 
     /** TalkBack reads the compact expiry summary as one sentence, once a minute. */
@@ -1155,20 +1157,7 @@ public class MAct extends AppCompatActivity {
      * no chips, at most three dots per screen). {@code dotColour} 0 = no dot.
      */
     private void setDot(TextView view, CharSequence text, int dotColour, int textColour) {
-        view.setVisibility(View.VISIBLE);
-        view.setText(text);
-        view.setTextColor(ContextCompat.getColor(this, textColour));
-        android.graphics.drawable.Drawable dot = null;
-        if (dotColour != 0) {
-            dot = ContextCompat.getDrawable(this, R.drawable.dot);
-            if (dot != null) {
-                dot = androidx.core.graphics.drawable.DrawableCompat.wrap(dot.mutate());
-                androidx.core.graphics.drawable.DrawableCompat.setTint(dot, ContextCompat.getColor(this, dotColour));
-                int size = getResources().getDimensionPixelSize(R.dimen.dot);
-                dot.setBounds(0, 0, size, size);
-            }
-        }
-        view.setCompoundDrawablesRelative(dot, null, null, null);
+        StatusText.set(view, text, dotColour, textColour);
     }
 
     /** Licence length from the saved key ("ANOY-7D-..." = 7 days), or -1. */

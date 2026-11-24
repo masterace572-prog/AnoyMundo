@@ -45,6 +45,8 @@
     <string name="paste_key_description">Paste licence key</string>
     <string name="show_key_description">Show licence key</string>
     <string name="hide_key_description">Hide licence key</string>
+    <string name="key_state_visible">Key visible</string>
+    <string name="key_state_hidden">Key hidden</string>
     <string name="sign_in">Login</string>
     <string name="signing_in">Logging in…</string>
     <string name="still_logging_in">Still logging in…</string>
