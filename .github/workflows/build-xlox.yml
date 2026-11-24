@@ -329,12 +329,27 @@ jobs:
           expected = hashlib.sha256(Path('/tmp/original-signer.der').read_bytes()).hexdigest()
           apks = [Path('../dist/Anoy-XLOX-loader.apk'), Path('../dist/KennyPvt-loader.apk')]
           apks += sorted(Path('../prior-release-backup').glob('*.apk'))
+          def fingerprints(output):
+              # Current apksigner may prefix the signer with SDK-range details and
+              # repeat the same certificate for different signature schemes/ranges.
+              return {value.lower() for value in re.findall(
+                  r'(?mi)^Signer[^\r\n]*? certificate SHA-256 digest:\s*([0-9a-f]{64})\s*$', output)}
+          sample = 'a' * 64
+          assert fingerprints('Signer #1 certificate SHA-256 digest: ' + sample) == {sample}
+          assert fingerprints('Signer (minSdkVersion=24, maxSdkVersion=35) #1 certificate SHA-256 digest: ' + sample) == {sample}
+          assert fingerprints('Signer #1 public key SHA-256 digest: ' + sample) == set()
           for apk in apks:
               result = subprocess.run([os.environ['APKSIGNER'], 'verify', '--verbose', '--print-certs', str(apk)],
-                                      check=True, capture_output=True, text=True)
-              signers = re.findall(r'Signer #\d+ certificate SHA-256 digest: ([0-9a-fA-F]+)', result.stdout)
-              assert signers == [expected], apk.name + ': unexpected signer'
-              print('Verified original signer:', apk.name, expected)
+                                      capture_output=True, text=True)
+              signers = fingerprints(result.stdout)
+              if result.returncode != 0 or signers != {expected}:
+                  detail = str(apk) + ': verification exit=' + str(result.returncode)
+                  detail += '\nExpected certificate: ' + expected + '\nActual certificates: ' + str(sorted(signers))
+                  detail += '\n' + result.stdout[-3000:] + '\n' + result.stderr[-3000:]
+                  print('::error title=APK original-signer verification::' + detail.replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A'))
+                  raise SystemExit(1)
+              print('Verified original signer:', str(apk), expected)
+              print('::notice title=Original APK signer::' + str(apk) + ' SHA-256 ' + expected)
           PYSIGN
 
       - uses: actions/upload-artifact@v7
