@@ -320,36 +320,28 @@ jobs:
           XLOX_STORE_PASSWORD: ${{ secrets.XLOX_STORE_PASSWORD }}
         run: |
           APKSIGNER=$(find "$ANDROID_SDK_ROOT/build-tools" -name apksigner | sort | tail -1)
-          export APKSIGNER
-          # Compare the actual APK signer to the original key, not just "a valid signature".
+          SIGNER_JAR="$(dirname "$APKSIGNER")/lib/apksigner.jar"
+          test -f "$SIGNER_JAR"
+          export SIGNER_JAR
+          # Export only the public certificate; the original private key stays in its keystore.
           keytool -exportcert -keystore app/xlox.jks -storepass:env XLOX_STORE_PASSWORD -alias key0 > /tmp/original-signer.der
+          mkdir -p /tmp/original-signer-check
+          javac -source 8 -target 8 -cp "$SIGNER_JAR" -d /tmp/original-signer-check tests/apk/VerifyOriginalSigner.java
           python3 - <<'PYSIGN'
-          import hashlib, os, re, subprocess
+          import os, subprocess
           from pathlib import Path
-          expected = hashlib.sha256(Path('/tmp/original-signer.der').read_bytes()).hexdigest()
           apks = [Path('../dist/Anoy-XLOX-loader.apk'), Path('../dist/KennyPvt-loader.apk')]
           apks += sorted(Path('../prior-release-backup').glob('*.apk'))
-          def fingerprints(output):
-              # Current apksigner may prefix the signer with SDK-range details and
-              # repeat the same certificate for different signature schemes/ranges.
-              return {value.lower() for value in re.findall(
-                  r'(?mi)^Signer[^\r\n]*? certificate SHA-256 digest:\s*([0-9a-f]{64})\s*$', output)}
-          sample = 'a' * 64
-          assert fingerprints('Signer #1 certificate SHA-256 digest: ' + sample) == {sample}
-          assert fingerprints('Signer (minSdkVersion=24, maxSdkVersion=35) #1 certificate SHA-256 digest: ' + sample) == {sample}
-          assert fingerprints('Signer #1 public key SHA-256 digest: ' + sample) == set()
-          for apk in apks:
-              result = subprocess.run([os.environ['APKSIGNER'], 'verify', '--verbose', '--print-certs', str(apk)],
-                                      capture_output=True, text=True)
-              signers = fingerprints(result.stdout)
-              if result.returncode != 0 or signers != {expected}:
-                  detail = str(apk) + ': verification exit=' + str(result.returncode)
-                  detail += '\nExpected certificate: ' + expected + '\nActual certificates: ' + str(sorted(signers))
-                  detail += '\n' + result.stdout[-3000:] + '\n' + result.stderr[-3000:]
-                  print('::error title=APK original-signer verification::' + detail.replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A'))
-                  raise SystemExit(1)
-              print('Verified original signer:', str(apk), expected)
-              print('::notice title=Original APK signer::' + str(apk) + ' SHA-256 ' + expected)
+          # ApkVerifier returns actual verified certificates. Human-readable apksigner
+          # report labels vary by SDK tools version and are not a machine-readable API.
+          result = subprocess.run(['java', '-cp', os.environ['SIGNER_JAR'] + ':/tmp/original-signer-check',
+                                   'com.xlox.tests.apk.VerifyOriginalSigner', '/tmp/original-signer.der',
+                                   *map(str, apks)], capture_output=True, text=True)
+          print(result.stdout)
+          if result.returncode:
+              detail = result.stderr[-5000:]
+              print('::error title=Original signer gate failed::' + detail.replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A'))
+              raise SystemExit(result.returncode)
           PYSIGN
 
       - uses: actions/upload-artifact@v7
