@@ -63,16 +63,43 @@ Local SDK-free checks executed during preparation:
 - 7 new navigation structure/lifecycle wiring checks.
 - Java 8 syntax parsing, XML/Python parsing and whitespace checks.
 
-CI must additionally build and lint **both release variants**, execute actual
-Android view inflation/geometry/tap/touch-swipe tests for both brands on host
-Android 21/28, inspect the compiled APK versions, permissions, callback manifest
-and artwork, verify native alignment, and compare each APK signer to the original
-keystore certificate. A build-only run precedes any removal of the old release.
+CI builds and lints **both release variants**, executes actual Android view
+inflation/geometry/tap/touch-swipe tests for both brands on host Android 21/28,
+inspects compiled APK versions, permissions, callback manifests and artwork,
+verifies native alignment, and compares each APK signer to the original keystore
+certificate through the SDK's structured `ApkVerifier` API (not console labels).
+A build-only run precedes any removal of the old release.
 Its explicit backup mode archives and SHA-256-verifies the old 2.4.3 assets and
 release/tag metadata in a retained Actions artifact; it does not delete anything.
 Use manual `publish_release=false, backup_replaced_243=true`, or a branch push
 whose commit message contains `[verify-2.4.3]`. That push marker also disables
 publication, allowing verification when manual workflow dispatch is not permitted.
+
+### Completed build-only acceptance
+
+[Run 45412360296](https://github.com/masterace572-prog/AnoyMundo/actions/runs/45412360296)
+passed on source **`a35e20dcd7ad156a45576add756408da310f5b56`**, with publication
+explicitly skipped:
+
+- **44/44 host Android view tests**: 11 tests × Android 21/28 × Anoy/KennyPvt;
+  no failures, errors or skipped tests. Includes actual touch swipes, half-page
+  geometry, capsule bounds, tap animations, accessibility, retained scroll and
+  recreation. The test host avoids native game/session initialization.
+- Both release APKs assembled and linted; compiled **2.4.3 (21)**,
+  **minSdk 21 / targetSdk 28**, correct package/branding and permissions.
+- Callback manifests, Kenny artwork pixels and each loader's 16 KiB native
+  alignment checks passed.
+- Both new APKs **and both archived old 2.4.3 APKs** cryptographically verified
+  against the exact original public certificate. Its SHA-256 is
+  `77f05d53ce8bf1855caef38ce87f13a8bb2b1b2cdd2d48da9d3ba897eac4549e`.
+- Verified prior-release archive **`prior-release-2.4.3-21-backup`**, artifact
+  **14928877389**, retained for 90 days on that run. Both APK artifacts, Android
+  navigation test reports and lint reports are also available there.
+- Fresh release/tag comparison confirmed the four releases through 2.4.2 and
+  their exact tag targets were unchanged before the one-time replacement.
+
+Only this acceptance record changes between that verified source and the
+publication commit; the publication pipeline repeats all APK gates before release.
 
 ```sh
 cd xlox
