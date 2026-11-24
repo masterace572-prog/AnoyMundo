@@ -70,6 +70,9 @@ and artwork, verify native alignment, and compare each APK signer to the origina
 keystore certificate. A build-only run precedes any removal of the old release.
 Its explicit backup mode archives and SHA-256-verifies the old 2.4.3 assets and
 release/tag metadata in a retained Actions artifact; it does not delete anything.
+Use manual `publish_release=false, backup_replaced_243=true`, or a branch push
+whose commit message contains `[verify-2.4.3]`. That push marker also disables
+publication, allowing verification when manual workflow dispatch is not permitted.
 
 ```sh
 cd xlox

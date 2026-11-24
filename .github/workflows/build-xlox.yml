@@ -3,7 +3,8 @@ name: Build Anoy and KennyPvt APKs
 # One workflow, two separately installable branded APKs. Publishing an APK to
 # GitHub NEVER changes either owner's panel library or live APK-update choice.
 # No automatic pruning: either channel may still point at an older release/tag.
-# The explicit 2.4.3 backup input archives assets only; it never replaces a release.
+# The explicit 2.4.3 backup input / [verify-2.4.3] push archives assets only.
+# That verify-only marker also disables publishing; it never replaces a release.
 on:
   workflow_dispatch:
     inputs:
@@ -71,11 +72,11 @@ jobs:
           python3 scripts/test_kenny_icons.py
 
       - name: Back up old 2.4.3 assets (explicit build-only request)
-        if: github.event_name == 'workflow_dispatch' && inputs.backup_replaced_243
+        if: (github.event_name == 'workflow_dispatch' && inputs.backup_replaced_243) || (github.event_name == 'push' && contains(github.event.head_commit.message, '[verify-2.4.3]'))
         working-directory: ${{ github.workspace }}
         env:
           GH_TOKEN: ${{ github.token }}
-          PUBLISH_REQUESTED: ${{ inputs.publish_release }}
+          PUBLISH_REQUESTED: ${{ inputs.publish_release || false }}
         run: |
           set -eu
           [ "$PUBLISH_REQUESTED" = false ] || { echo '::error::Backup mode must be build-only.'; exit 1; }
@@ -105,7 +106,7 @@ jobs:
           PYBACKUP
 
       - name: Retain verified prior-release backup (no source or release changes)
-        if: github.event_name == 'workflow_dispatch' && inputs.backup_replaced_243
+        if: (github.event_name == 'workflow_dispatch' && inputs.backup_replaced_243) || (github.event_name == 'push' && contains(github.event.head_commit.message, '[verify-2.4.3]'))
         uses: actions/upload-artifact@v7
         with:
           name: prior-release-2.4.3-21-backup
@@ -337,7 +338,7 @@ jobs:
           if-no-files-found: ignore
 
       - name: Publish both APKs in ONE GitHub release (no pruning)
-        if: env.XLOX_SIGNED == 'true' && (github.event_name == 'push' || inputs.publish_release)
+        if: env.XLOX_SIGNED == 'true' && ((github.event_name == 'push' && !contains(github.event.head_commit.message, '[verify-2.4.3]')) || (github.event_name == 'workflow_dispatch' && inputs.publish_release))
         working-directory: ${{ github.workspace }}
         env:
           GH_TOKEN: ${{ github.token }}
