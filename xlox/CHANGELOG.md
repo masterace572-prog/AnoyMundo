@@ -4,7 +4,16 @@ Screenshots, design notes (`docs/ui-redesign/…`) and the one-off generator
 scripts mentioned below were removed from the tree in the repo cleanup after
 2.3.2; they remain in git history.
 
-## 2.4.3 loader-UI follow-up — verification only (versionCode 21)
+## 2.4.3 — short release changelog (versionCode 21)
+
+[Simple 2.4.2 → 2.4.3 changelog](CHANGELOG-2.4.3.md).
+The owner-approved replacement includes the verified loader-UI and announcement
+follow-ups below. APK/test inputs are unchanged from accepted source `cfc442e`;
+publication repeats both brands' build/lint/test/signature gates. Replace only
+2.4.3; preserve 2.4.2 and older releases. Same-code installs update manually in
+place, without uninstalling or clearing app/container data.
+
+## 2.4.3 loader-UI follow-up — pre-publication verification (versionCode 21)
 
 - Match the announcement background and no-stroke treatment to the game cards;
   keep its heading/icon blue and make the server-fetched message explicitly white.

@@ -1,10 +1,17 @@
 # Completed 2.4.3 replacement — versionCode 21
 
-> The replacement recorded below is complete: release **456953450**, tag
-> `loaders-v2.4.3-21`, source **96356a5**. The subsequent Login/Splash/capsule-drag
-> follow-up is **verification only**, with no new publication or deletion.
-> See [loader UI follow-up and device QA](LOADER-UI-QA.md). The accepted Home
-> iteration's backup 14934004032 archives the older **456878910**, not 456953450.
+> **Latest UI refresh approved for publication.** Accepted source **cfc442e** /
+> [run 45436589864](https://github.com/masterace572-prog/AnoyMundo/actions/runs/45436589864)
+> passed 180 host checks and both brands' build/lint/compiled/signature gates.
+> Publication changes only documentation/release-note generation, then repeats
+> all APK gates. Replace only **456953450**, tag `loaders-v2.4.3-21`; four older
+> releases and exact refs remain protected. Backup **14941666853** archives that
+> predecessor's actual APKs/source96356a5, with hashes and original signers checked.
+> See the [short 2.4.2 → 2.4.3 changelog](CHANGELOG-2.4.3.md).
+>
+> The older Home-only replacement documented below completed as **456953450** /
+> source **96356a5**. Its backup **14934004032** archives **456878910**, not 456953450.
+> [UI verification and device limits](LOADER-UI-QA.md) records the subsequent work.
 
 ## Requested scope (completed publication)
 

@@ -63,8 +63,10 @@ JUnit / Robolectric are host-test-only and are not packaged in either loader.
 [Loader UI follow-up and device QA](LOADER-UI-QA.md) explains the gesture surfaces,
 show/hide semantics, host coverage and the opt-in frame-timing tool. **60Hz is a
 performance target, not a measured phone result from host tests.** Game FPS and
-runtime behavior are unchanged. This follow-up uses build-only verification; the
-previous GitHub release remains intact.
+runtime behavior are unchanged. The UI was accepted in build-only runs; its
+owner-approved 2.4.3 replacement follows separate backup/publication guards.
+See the [short 2.4.2 → 2.4.3 changelog](CHANGELOG-2.4.3.md) and
+[release scope](RELEASE-2.4.3.md).
 
 `scripts/ui_quality_gate.py` enforces the rules statically (palette-only
 colours, styled MaterialButtons, no Toast / default ProgressBar, every

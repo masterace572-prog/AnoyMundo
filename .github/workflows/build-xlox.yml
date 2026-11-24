@@ -409,26 +409,22 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -eu
-          printf '%s\n' \
-            "Anoy + KennyPvt $APP_VERSION_NAME ($APP_VERSION_CODE)" '' \
-            '- Anoy: com.xlox (existing package and signing key preserved)' \
-            '- KennyPvt: com.kennypvt (separate app, library and APK-update channel)' \
-            '- One shared panel and licence database; each Owner publishes only their own releases.' \
-            '- BGMI keeps libbgmi.so; BGMI Air / Lite (com.krafton.bgmilite) uses its own libbgmilite.so and supplied icon.' \
-            '- Air stays Coming soon until its own library is installed from the Owner bundle.' \
-            '- Independent Launch / Stop; a second game requires a ten-second warning and explicit confirmation.' \
-            '- Clean game cards contain their own controls, readiness/OBB state, feedback and progress; no pinned game-action bar.' \
-            '- Smaller Welcome back, compact top-right expiry/status, dark-blue announcement and refined Settings with static Android-21-compatible Manrope fonts.' \
-            '- Blue Home / Settings capsule supports taps and real horizontal/diagonal swipes over scrollable content and buttons; Help stays in Settings, with centered red Sign out.' \
-            '- Swipe, button cancellation, font loading and read-only OBB regressions pass on host Android 21/28 for both brands; physical-device UI/game validation is still required.' \
-            '- Real-device Air launch, assets and provider compatibility remain unverified; no game library is bundled in these APKs.' \
-            '- These downloads do not automatically change either live panel release.' \
-            "- Source commit: ${{ github.sha }}" '' > /tmp/release-notes.md
-          cat dist/SHA256SUMS.txt >> /tmp/release-notes.md
+          printf '%s\n\n' "Anoy + KennyPvt $APP_VERSION_NAME ($APP_VERSION_CODE)" > /tmp/release-notes.md
           if [ "$APP_VERSION_NAME" = 2.4.3 ] && [ "$APP_VERSION_CODE" = 21 ]; then
+            cat xlox/CHANGELOG-2.4.3.md >> /tmp/release-notes.md
             printf '\n%s\n' \
-              'Owner-requested replacement 2.4.3 (21). Installed code-20 builds can update; installed code-21 builds do not see an equal-code OTA upgrade and need a manual same-signer APK update. Do not uninstall or clear app/container data.' >> /tmp/release-notes.md
+              '**Update:** install the matching brand over your existing app. Already on code 21? This is a manual same-code update, not a newer OTA. Do not uninstall or clear app/container data.' >> /tmp/release-notes.md
+          else
+            printf '%s\n' '- Updated Anoy and KennyPvt loaders with their separate app/update identities preserved.' >> /tmp/release-notes.md
           fi
+          printf '\n%s\n' \
+            'BGMI Air needs its own library from the Owner bundle. Real-device game/provider compatibility still needs testing. No live panel/library/APK selections are changed.' \
+            '' '<details>' '<summary>Build verification and SHA-256 checksums</summary>' '' \
+            "Source: ${{ github.sha }}" \
+            "[Build and checks](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}): both brands built/linted, host Android 21/28 checks passed, and original APK signatures verified. Phone UI/frame-time validation is separate." \
+            '' '```text' >> /tmp/release-notes.md
+          cat dist/SHA256SUMS.txt >> /tmp/release-notes.md
+          printf '%s\n' '```' '</details>' >> /tmp/release-notes.md
           PRE_RELEASE=false
           case "$APP_VERSION_NAME" in
             *-webtest*|*-test*|*-rc*) PRE_RELEASE=true ;;

@@ -3,8 +3,9 @@
 This follow-up keeps the accepted Home direction and extends it to Login and
 Splash. It does **not** change the games, native payloads, game FPS settings,
 AARs, permission/library/licence gates, signing, flavors, version or live panel
-selections. Version remains **2.4.3 (21)**. Verification builds do not publish or
-replace the already-published release.
+selections. Version remains **2.4.3 (21)**. The verification builds recorded here
+did not publish or replace a release. The subsequent owner-approved publication
+is a separate guarded replacement; see [release scope](RELEASE-2.4.3.md).
 
 ## Changed presentation and interaction
 
@@ -76,10 +77,25 @@ export XLOX_ROBOLECTRIC_DIR="$(cd ../.cache/xlox-robolectric && pwd)"
 A `[verify-2.4.3]` push runs both brands' tests/build/lint/compiled APK/signature
 gates without publication. Its backup guard now pins release **456953450**, tag
 `loaders-v2.4.3-21`, source **96356a5** and that release's exact APK digests. The
-older backup of release 456878910 is not a backup of the current release. No
-release deletion or replacement is part of this follow-up.
+older backup of release 456878910 is not a backup of release 456953450. The UI
+verification itself did not delete or replace releases. The later publication
+uses the accepted announcement build and the fresh backup identified below.
 
-## Accepted build-only verification
+## Final announcement build accepted for publication
+
+[Run 45436589864](https://github.com/masterace572-prog/AnoyMundo/actions/runs/45436589864),
+source **`cfc442ea28fcecce8101548274142359d8fb2e29`**, passed **180/180** host Android
+checks across both brands/API 21/28, both release builds/lints and all compiled
+APK/signature gates. Its announcement matches the game-card surface, keeps the
+heading/icon blue and makes the server message white.
+
+The current-release backup **14941666853** archives **456953450/source96356a5**.
+CI verified the downloaded asset hashes and both original APK signatures before
+retaining it for 90 days. This is distinct from the older 456878910 archive.
+The owner subsequently approved replacing only 2.4.3 with the verified inputs;
+that publication does not change live panel selections or certify device FPS.
+
+## Earlier build-only verification (before the announcement color follow-up)
 
 [Run 45432509435](https://github.com/masterace572-prog/AnoyMundo/actions/runs/45432509435),
 source **`5e15155fb476402c4eaf092762641e583ef797c8`**, passed. Build job
