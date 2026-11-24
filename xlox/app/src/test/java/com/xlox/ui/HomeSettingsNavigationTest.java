@@ -262,6 +262,8 @@ public class HomeSettingsNavigationTest {
         assertTrue(activity.findViewById(R.id.navigationHome).getHeight() >= Ui.dp(activity, 48));
         assertTrue(activity.findViewById(R.id.navigationSettings).getHeight() >= Ui.dp(activity, 48));
         assertEquals(pager.getBottom(), host.getTop());
+        assertTrue("Decoration cannot consume the page viewport", pager.getHeight() > root.getHeight() / 2);
+        assertTrue("Default-scale capsule stays compact", capsule.getHeight() < Ui.dp(activity, 120));
         Rect bounds = new Rect();
         capsule.getDrawingRect(bounds);
         root.offsetDescendantRectToMyCoords(capsule, bounds);

@@ -35,6 +35,8 @@ public final class CapsuleNavigation extends FrameLayout {
         }
         // wrap_content has a 280dp preferred width but can shrink on narrow / split
         // screens. Height remains content-driven for large accessibility fonts.
+        // The decorative indicator has 0dp intrinsic size; onLayout sizes it so
+        // it cannot turn a wrap_content capsule into a full-height panel.
         super.onMeasure(MeasureSpec.makeMeasureSpec(width, MeasureSpec.EXACTLY), heightMeasureSpec);
     }
 

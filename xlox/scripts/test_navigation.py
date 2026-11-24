@@ -27,6 +27,8 @@ class NavigationWiring(unittest.TestCase):
         nav = ids('activity_main.xml')
         self.assertEqual(nav['@+id/navigationHome'].get(A + 'text'), '@string/navigation_home')
         self.assertEqual(nav['@+id/navigationSettings'].get(A + 'text'), '@string/settings')
+        # The decoration must not dictate a wrap_content capsule's intrinsic height.
+        self.assertEqual(nav['@+id/navigationIndicator'].get(A + 'layout_height'), '0dp')
 
     def test_pages_are_opaque_and_keep_launch_actions_inside_home(self):
         for layout in ('page_home.xml', 'page_settings.xml'):
