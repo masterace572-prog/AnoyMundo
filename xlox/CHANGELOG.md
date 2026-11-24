@@ -10,8 +10,10 @@ scripts mentioned below were removed from the tree in the repo cleanup after
 The owner-approved replacement includes the verified loader-UI and announcement
 follow-ups below. APK/test inputs are unchanged from accepted source `cfc442e`;
 publication repeats both brands' build/lint/test/signature gates. Replace only
-2.4.3; preserve 2.4.2 and older releases. Same-code installs update manually in
-place, without uninstalling or clearing app/container data.
+the older internal 2.4.3 GitHub test artifacts; preserve 2.4.2 and older releases.
+**2.4.2 (20) is the last version distributed to users.** Earlier 2.4.3 builds were
+internal tests only. Users upgrade normally to **2.4.3 (21)** in place, without
+uninstalling or clearing app/container data.
 
 ## 2.4.3 loader-UI follow-up — pre-publication verification (versionCode 21)
 
@@ -43,7 +45,7 @@ place, without uninstalling or clearing app/container data.
   version/signing, live panel choices and published releases are unchanged.
   [UI details and device acceptance](LOADER-UI-QA.md).
 
-## Previous 2.4.3 UI refinement — published same-version replacement (versionCode 21)
+## Internal 2.4.3 UI test iteration — GitHub artifacts only (versionCode 21)
 
 - Put each game's controls, task feedback and progress **inside its own scrolling
   card**. Keep only the Home / Settings capsule persistent, with a blue selected
@@ -70,9 +72,9 @@ place, without uninstalling or clearing app/container data.
 - Keep **2.4.3 / code 21**, both identities/original signer, every release through
   2.4.2 and live panel library/APK choices unchanged. This replaces only the
   current 2.4.3 release after fresh build-only verification and its own backup.
-  Same-code installations need a manual in-place APK update, never an uninstall.
+  This was an internal test iteration, not an update distributed to users.
 
-## Previous 2.4.3 replacement — BGMI Air and sliding navigation (versionCode 21)
+## Internal 2.4.3 test iteration — BGMI Air and sliding navigation (versionCode 21)
 
 - Add BGMI Air (`com.krafton.bgmilite`) with the supplied game icon and its own
   Launch/Stop action. BGMI retains `com.pubg.imobile` / `libbgmi.so`; Air loads
@@ -95,10 +97,10 @@ place, without uninstalling or clearing app/container data.
 - Re-mask the licence key on page movement/backgrounding; tie Back and the Home
   countdown to the selected/settled page, not retained-page visibility. Reserve
   system navigation/gesture insets below the capsule once.
-- Owner explicitly requested version **2.4.3 / code 21**, replacing the earlier
-  release after 2.4.2. An existing code-21 install needs a manual same-signer APK
-  update: equal codes are not newer OTA versions. Never uninstall/clear data for
-  this replacement. Panel, database and live library/APK choices are unchanged.
+- Owner requested version **2.4.3 / code 21**, the next user release after
+  **2.4.2 / code 20**. Earlier 2.4.3 APKs were internal test builds only, not
+  distributed updates. Preserve app/container data during an in-place upgrade.
+  Panel, database and live library/APK choices are unchanged.
 - Add host Android 21/28 view-inflation, tap, touch-swipe, half-page geometry,
   accessibility, reduced-motion and recreation regressions for both brands.
   [Release scope and verification](RELEASE-2.4.3.md).

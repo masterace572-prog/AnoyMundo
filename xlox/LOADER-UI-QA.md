@@ -5,7 +5,9 @@ Splash. It does **not** change the games, native payloads, game FPS settings,
 AARs, permission/library/licence gates, signing, flavors, version or live panel
 selections. Version remains **2.4.3 (21)**. The verification builds recorded here
 did not publish or replace a release. The subsequent owner-approved publication
-is a separate guarded replacement; see [release scope](RELEASE-2.4.3.md).
+is a separate guarded replacement of internal GitHub test artifacts; see
+[release scope](RELEASE-2.4.3.md). **2.4.2 (20) is the last user-distributed release;
+earlier 2.4.3 (21) builds were internal tests only.**
 
 ## Changed presentation and interaction
 
@@ -44,7 +46,7 @@ is a separate guarded replacement; see [release scope](RELEASE-2.4.3.md).
 
 ## Regression evidence
 
-The user still could not slide navigation after the previous release. The new
+The owner still could not slide navigation in the previous internal test build. The new
 `draggingTheBottomSelectorSwitchesBothWaysWithoutTabTaps` regression reproduced
 one concrete missing path in [run 45428597782](https://github.com/masterace572-prog/AnoyMundo/actions/runs/45428597782),
 source `f05e723f847e1bc8a05f2ef35ea032b34109cb3b`: root-dispatched capsule drags
@@ -128,7 +130,7 @@ frame-time measurement is claimed by these build/host results.
 
 Use the **original, matching-brand APK** from the relevant verification run.
 Record its SHA-256 and source commit: version 2.4.3/code 21 alone cannot identify
-which UI iteration is installed. For an existing code-21 installation, update in
+which UI iteration is installed. For an internal tester already on code 21, update in
 place with the original signer. **Never uninstall or clear app/container data.**
 
 - Swipe both pages left/right from blank areas, game cards/buttons and scrolled

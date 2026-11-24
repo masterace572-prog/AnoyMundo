@@ -1,6 +1,8 @@
-# Completed 2.4.3 replacement — versionCode 21
+# 2.4.3 — user update from 2.4.2 (versionCode 21)
 
-> **Latest UI refresh approved for publication.** Accepted source **cfc442e** /
+> **2.4.2 (20) is the last version distributed to users.** Earlier 2.4.3 APKs
+> were internal tests only. This is the first user-facing **2.4.3 (21)** release.
+> The latest UI refresh is approved for publication. Accepted source **cfc442e** /
 > [run 45436589864](https://github.com/masterace572-prog/AnoyMundo/actions/runs/45436589864)
 > passed 180 host checks and both brands' build/lint/compiled/signature gates.
 > Publication changes only documentation/release-note generation, then repeats
@@ -9,7 +11,7 @@
 > predecessor's actual APKs/source96356a5, with hashes and original signers checked.
 > See the [short 2.4.2 → 2.4.3 changelog](CHANGELOG-2.4.3.md).
 >
-> The older Home-only replacement documented below completed as **456953450** /
+> The older Home-only internal GitHub test artifacts below used **456953450** /
 > source **96356a5**. Its backup **14934004032** archives **456878910**, not 456953450.
 > [UI verification and device limits](LOADER-UI-QA.md) records the subsequent work.
 
@@ -19,9 +21,9 @@
   separate branding, owner channels, JNI namespace and original signing key.
 - Include BGMI Air / Lite (`com.krafton.bgmilite` → `libbgmilite.so`) alongside
   BGMI (`com.pubg.imobile` → `libbgmi.so`). [Air/bundle details](BGMI-AIR.md).
-- Replace **only the current 2.4.3 (21)** release for this UI refinement.
-  Preserve 2.4.2 and every older release. The earlier cleanup is complete; this
-  is not a release-pruning policy. Live panel library/APK selections are unchanged.
+- Replace **only the older internal 2.4.3 (21) GitHub test artifacts** with
+  this first user-facing 2.4.3 update. Preserve 2.4.2 and every older release.
+  This is not a release-pruning policy. Live panel library/APK choices are unchanged.
 
 ## Navigation
 
@@ -106,19 +108,21 @@ geometry in addition to the retained tap/scroll/accessibility/lifecycle tests.
 Physical-device gestures, font rasterization, keyboard/TalkBack operation and
 native game behavior still require device QA.
 
-## Installing a replacement with the same code
+## Updating from the last user release (2.4.2)
 
-The owner explicitly requested **versionName 2.4.3 / versionCode 21**.
-The updater correctly requires a **strictly greater** code; it was not weakened.
+The user upgrade is **2.4.2 / code 20 → 2.4.3 / code 21**. Earlier code-21 APKs
+were internal test builds only, not releases distributed to users.
 
-- An existing code-20 installation can receive a code-21 update through its
-  configured owner APK channel, if the Owner chooses this APK there.
-- An existing code-21 installation does **not** discover this equal-code build
-  as a new OTA version. Download the matching brand's signed APK and perform a
-  manual in-place update. Do not uninstall or clear app/container data.
+- Install the matching Anoy or KennyPvt APK over the existing app. The original
+  signing key and package IDs are preserved. Do not uninstall or clear app/container data.
+- The in-app updater can offer code 21 to code 20 once the Owner selects this
+  APK in the matching channel; the strictly-greater-code check is unchanged.
 - Publishing to GitHub does not select an APK or a game-library release in the
   panel. Air stays Coming soon until its own usable file is installed from the
   correct Owner's library bundle.
+
+Internal testers already on code 21 can install the matching APK manually in
+place. That technical note does not describe the user upgrade path.
 
 ## Verification
 

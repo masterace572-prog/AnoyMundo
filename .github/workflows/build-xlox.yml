@@ -413,7 +413,7 @@ jobs:
           if [ "$APP_VERSION_NAME" = 2.4.3 ] && [ "$APP_VERSION_CODE" = 21 ]; then
             cat xlox/CHANGELOG-2.4.3.md >> /tmp/release-notes.md
             printf '\n%s\n' \
-              '**Update:** install the matching brand over your existing app. Already on code 21? This is a manual same-code update, not a newer OTA. Do not uninstall or clear app/container data.' >> /tmp/release-notes.md
+              '**Update from 2.4.2:** install the matching Anoy or KennyPvt APK over your existing app. Do not uninstall or clear app/container data.' >> /tmp/release-notes.md
           else
             printf '%s\n' '- Updated Anoy and KennyPvt loaders with their separate app/update identities preserved.' >> /tmp/release-notes.md
           fi

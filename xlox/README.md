@@ -34,9 +34,9 @@ SplashActivity ──► (AppUpdateActivity) ──► LogAct ──► MAct
 - Starting a second game is allowed only after ten seconds and **OK, launch
   anyway**. Cancel/Back/backgrounding never starts it. Stop affects only its game.
 - [Bundle requirements, compatibility boundaries and device QA](BGMI-AIR.md).
-  This is the owner-requested **2.4.3 / code 21 replacement**. Existing code-21
-  installations need a manual same-signer APK update; the in-app updater only
-  accepts a higher code. Live panel/library/APK selections are not changed.
+  This is the **2.4.3 / code 21** user release after **2.4.2 / code 20**.
+  Earlier 2.4.3 APKs were internal tests only. Users can upgrade the matching
+  brand in place; live panel/library/APK selections are not changed.
 - [Navigation, release scope and verification](RELEASE-2.4.3.md).
 
 ## Design
