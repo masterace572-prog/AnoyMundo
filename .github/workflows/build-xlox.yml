@@ -168,24 +168,27 @@ jobs:
             echo 'XLOX_SIGNED=true' >> "$GITHUB_ENV"
           fi
 
-      - name: Build BOTH release variants
-        env:
-          XLOX_STORE_PASSWORD: ${{ secrets.XLOX_STORE_PASSWORD }}
-          XLOX_KEY_PASSWORD: ${{ secrets.XLOX_KEY_PASSWORD }}
+      - name: Host runtime preparation regressions (offline fixtures)
+        run: python3 -B scripts/test_prepare_robolectric.py
+
+      - name: Restore pinned host Android runtimes
+        id: host-runtime-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/.cache/xlox-robolectric
+          key: ${{ runner.os }}-robolectric-4.14.1-i7-api21-28-35-v1
+
+      - name: Prepare checksum-verified host Android runtimes
         run: |
-          chmod +x gradlew
-          set +e
-          ./gradlew :app:assembleAnoyRelease :app:assembleKennyRelease --no-daemon > /tmp/assemble.log 2>&1
-          rc=$?
-          cat /tmp/assemble.log
-          if [ "$rc" -ne 0 ]; then
-            python3 - <<'PYLOG'
-          from pathlib import Path
-          log = '\n'.join(Path('/tmp/assemble.log').read_text(errors='replace').splitlines()[-80:])
-          print('::error title=Android assembly failed::' + log[-7000:].replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A'))
-          PYLOG
-          fi
-          exit "$rc"
+          python3 -B scripts/prepare_robolectric.py --dir "$HOME/.cache/xlox-robolectric"
+          echo "XLOX_ROBOLECTRIC_DIR=$HOME/.cache/xlox-robolectric" >> "$GITHUB_ENV"
+
+      - name: Save verified host runtimes before running tests
+        if: steps.host-runtime-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: ~/.cache/xlox-robolectric
+          key: ${{ runner.os }}-robolectric-4.14.1-i7-api21-28-35-v1
 
       - name: Android navigation view regressions for BOTH brands
         run: |
@@ -226,6 +229,25 @@ jobs:
           log = '\n'.join(Path('/tmp/navigation-tests.log').read_text(errors='replace').splitlines()[-100:])
           print('::error title=Android navigation Gradle failure::' + log[-6500:].replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A'))
           PYNAVLOG
+          fi
+          exit "$rc"
+
+      - name: Build BOTH release variants
+        env:
+          XLOX_STORE_PASSWORD: ${{ secrets.XLOX_STORE_PASSWORD }}
+          XLOX_KEY_PASSWORD: ${{ secrets.XLOX_KEY_PASSWORD }}
+        run: |
+          chmod +x gradlew
+          set +e
+          ./gradlew :app:assembleAnoyRelease :app:assembleKennyRelease --no-daemon > /tmp/assemble.log 2>&1
+          rc=$?
+          cat /tmp/assemble.log
+          if [ "$rc" -ne 0 ]; then
+            python3 - <<'PYLOG'
+          from pathlib import Path
+          log = '\n'.join(Path('/tmp/assemble.log').read_text(errors='replace').splitlines()[-80:])
+          print('::error title=Android assembly failed::' + log[-7000:].replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A'))
+          PYLOG
           fi
           exit "$rc"
 

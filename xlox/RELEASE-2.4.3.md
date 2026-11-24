@@ -79,7 +79,9 @@ cd xlox
 python3 -B scripts/ui_quality_gate.py
 python3 -B scripts/check_branding.py
 python3 -B scripts/test_runtime_fixes.py
-# With a full JDK + Android SDK/NDK:
+# With a full JDK + Android SDK/NDK (optional verified offline host-runtime cache):
+python3 -B scripts/prepare_robolectric.py --dir ../.cache/xlox-robolectric
+export XLOX_ROBOLECTRIC_DIR="$(cd ../.cache/xlox-robolectric && pwd)"
 ./gradlew :app:testAnoyDebugUnitTest :app:testKennyDebugUnitTest \
   :app:assembleAnoyRelease :app:assembleKennyRelease \
   :app:lintAnoyRelease :app:lintKennyRelease --no-daemon
@@ -87,6 +89,12 @@ python3 -B scripts/test_runtime_fixes.py
 
 Preparation evidence is ignored under `../qa-logs/release-2.4.3/`; the prior Air
 feature evidence remains separately preserved under `../qa-logs/bgmiair/`.
+CI prepares pinned Robolectric 4.14.1/i7 Android jars sequentially, checks their
+published SHA-512 and framework entries, then runs the tests offline. The Google
+Maven Central mirror avoids Central's per-test 429 responses; a canonical Central
+fallback is bounded. These cached host runtimes are never packaged in an APK.
+Seven offline downloader/cache integrity regressions also run before preparation.
+
 A host Android view test is not a physical-device game test. Real arm64 game
 launch, Air asset delivery/provider authentication, native payload compatibility
 and simultaneous-game memory/thermal behavior still need authorized device QA.
