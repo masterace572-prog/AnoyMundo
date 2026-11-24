@@ -569,9 +569,9 @@ licence_return expired home_licence_expired_by_panel
 
 
 
-# TalkBack text of the licence card (one sentence).
+# TalkBack text of the compact header expiry (one sentence).
 open_home
-log "licence card description: $(dump_ui | grep -o 'resource-id="com.xlox:id/licenceCard"[^>]*' | grep -o 'content-desc="[^"]*"')"
+log "licence summary description: $(dump_ui | grep -o 'resource-id="com.xlox:id/licenceSummary"[^>]*' | grep -o 'content-desc="[^"]*"')"
 
 adb logcat -d > ../qa-logs/logcat.txt 2>/dev/null || true
 
@@ -645,8 +645,8 @@ adb shell wm size reset || true
 adb shell wm density reset || true
 sleep 2
 
-# Typical 20:9 phone (411 x 914 dp): the GAME card must clear the pinned Launch bar
-# without scrolling. Measured from the view bounds, not eyeballed.
+# Typical 20:9 phone (411 x 914 dp): each visible game action belongs inside
+# its own card, not a pinned bottom panel. Measured from bounds, not eyeballed.
 adb shell wm size 1080x2400 || true
 adb shell wm density 420 || true
 sleep 3
@@ -658,13 +658,13 @@ xml = sys.stdin.read()
 def box(i):
     m = re.search(r"resource-id=\"com\.xlox:id/%s\"[^>]*?bounds=\"\[(\d+),(\d+)\]\[(\d+),(\d+)\]\"" % i, xml)
     return tuple(map(int, m.groups())) if m else None
-card, bar = box("gameCard"), box("actionBar")
-# 2.3.0: the pinned bar has no fade; its top edge (12 dp above Launch) is the limit.
-if card and bar:
-    clear = card[3] <= bar[1]
-    print("game card bottom %d, launch bar top %d: %s" % (card[3], bar[1], "clear" if clear else "covered"))
-else:
-    print("game card bounds missing")
+for card_id, action_id in (("gameCard", "primaryAction"), ("airGameCard", "airPrimaryAction")):
+    card, action = box(card_id), box(action_id)
+    if card and action:
+        inside = card[0] <= action[0] < action[2] <= card[2] and card[1] <= action[1] < action[3] <= card[3]
+        print("%s action: %s" % (card_id, "inside its card" if inside else "OUTSIDE its card"))
+    else:
+        print("%s/action bounds missing or offscreen" % card_id)
 ' | while read -r line; do log "typical phone: $line"; done
 adb shell wm size reset || true
 adb shell wm density reset || true

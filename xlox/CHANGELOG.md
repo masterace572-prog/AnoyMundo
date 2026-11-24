@@ -4,7 +4,36 @@ Screenshots, design notes (`docs/ui-redesign/…`) and the one-off generator
 scripts mentioned below were removed from the tree in the repo cleanup after
 2.3.2; they remain in git history.
 
-## 2.4.3 replacement — BGMI Air and sliding navigation (versionCode 21)
+## 2.4.3 UI refinement — same-version replacement (versionCode 21)
+
+- Put each game's controls, task feedback and progress **inside its own scrolling
+  card**. Keep only the Home / Settings capsule persistent, with a blue selected
+  segment and contrasting white active text.
+- Restore the smaller **Welcome back** greeting. Move a compact, two-unit expiry
+  to the top right, with licence/server statuses below it; keep the exact IST
+  expiry in Settings and accessibility text. Remove the separate Home licence
+  card and the game-card server/library metadata.
+- Use a matching dark-blue announcement, cleaner grouped Settings and bundled
+  static **Manrope 400/500/600** dashboard fonts. Keep existing login/splash
+  branding and monospaced licence/support text. No SDK/dependency upgrade or
+  runtime font download; Android 21-compatible font instances include the OFL.
+- Remove Air's explanatory paragraph and duplicate state copy. Without its own
+  usable library, its disabled button says only **Coming soon**.
+- Read OBB source availability off the UI thread through the existing copier's
+  lookup. Distinguish missing files from blocked access; **Ready** requires
+  readable source files, the game's own library, permissions and activation.
+  This hint does not replace verified OBB preparation or authorize a launch.
+- Reproduce a previously missed diagonal swipe failure through scrolled Android
+  content. Lock each real touch stream to its predominant axis before a child
+  ScrollView can claim it; retain ViewPager's native drag/velocity/settling.
+  Verify button cancellation, vertical scrolling, real in-flight page geometry,
+  both swipe directions, taps and retained navigation in host Android tests.
+- Keep **2.4.3 / code 21**, both identities/original signer, every release through
+  2.4.2 and live panel library/APK choices unchanged. This replaces only the
+  current 2.4.3 release after fresh build-only verification and its own backup.
+  Same-code installations need a manual in-place APK update, never an uninstall.
+
+## Previous 2.4.3 replacement — BGMI Air and sliding navigation (versionCode 21)
 
 - Add BGMI Air (`com.krafton.bgmilite`) with the supplied game icon and its own
   Launch/Stop action. BGMI retains `com.pubg.imobile` / `libbgmi.so`; Air loads

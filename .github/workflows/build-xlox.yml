@@ -241,6 +241,7 @@ jobs:
                   assert actual is not None and actual['tests'] >= count, (variant, name, actual)
           assert totals['tests'] >= 112, 'Both brands must run all 20 UI + 8 OBB tests on Android 21 and 28.'
           assert totals['failures'] == totals['errors'] == totals['skipped'] == 0, summary
+          print('::notice title=Android host test totals::' + summary)
           PYNAV
           nav_rc=$?
           if [ "$rc" -eq 0 ]; then rc=$nav_rc; fi
@@ -413,7 +414,10 @@ jobs:
             '- BGMI keeps libbgmi.so; BGMI Air / Lite (com.krafton.bgmilite) uses its own libbgmilite.so and supplied icon.' \
             '- Air stays Coming soon until its own library is installed from the Owner bundle.' \
             '- Independent Launch / Stop; a second game requires a ten-second warning and explicit confirmation.' \
-            '- Bottom Home / Settings capsule supports taps and real horizontal swipes; Help is in Settings, with centered red Sign out.' \
+            '- Clean game cards contain their own controls, readiness/OBB state, feedback and progress; no pinned game-action bar.' \
+            '- Smaller Welcome back, compact top-right expiry/status, dark-blue announcement and refined Settings with static Android-21-compatible Manrope fonts.' \
+            '- Blue Home / Settings capsule supports taps and real horizontal/diagonal swipes over scrollable content and buttons; Help stays in Settings, with centered red Sign out.' \
+            '- Swipe, button cancellation, font loading and read-only OBB regressions pass on host Android 21/28 for both brands; physical-device UI/game validation is still required.' \
             '- Real-device Air launch, assets and provider compatibility remain unverified; no game library is bundled in these APKs.' \
             '- These downloads do not automatically change either live panel release.' \
             "- Source commit: ${{ github.sha }}" '' > /tmp/release-notes.md
