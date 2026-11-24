@@ -229,6 +229,19 @@ public class HomeSettingsNavigationTest {
     }
 
     @Test
+    public void draggingTheBottomSelectorSwitchesBothWaysWithoutTabTaps() {
+        Rect capsule = bounds(activity.findViewById(R.id.bottomCapsule));
+        float left = capsule.centerX() - capsule.width() / 4f;
+        float right = capsule.centerX() + capsule.width() / 4f;
+        drag(left, capsule.centerY(), right, capsule.centerY(), MotionEvent.ACTION_UP);
+        assertEquals(HomeSettingsPager.SETTINGS, activity.navigation.currentPage());
+        assertEquals(pager.getWidth(), pager.getScrollX());
+        drag(right, capsule.centerY(), left, capsule.centerY(), MotionEvent.ACTION_UP);
+        assertEquals(HomeSettingsPager.HOME, activity.navigation.currentPage());
+        assertEquals(0, pager.getScrollX());
+    }
+
+    @Test
     public void diagonalSwipeStartingOnLaunchCancelsTheButtonAndTapStillWorks() {
         View action = activity.findViewById(R.id.primaryAction);
         Rect box = bounds(action);
