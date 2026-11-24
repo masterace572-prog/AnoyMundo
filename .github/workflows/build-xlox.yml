@@ -173,7 +173,7 @@ jobs:
 
       - name: Restore pinned host Android runtimes
         id: host-runtime-cache
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v5
         with:
           path: ~/.cache/xlox-robolectric
           key: ${{ runner.os }}-robolectric-4.14.1-i7-api21-28-35-v1
@@ -185,7 +185,7 @@ jobs:
 
       - name: Save verified host runtimes before running tests
         if: steps.host-runtime-cache.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v5
         with:
           path: ~/.cache/xlox-robolectric
           key: ${{ runner.os }}-robolectric-4.14.1-i7-api21-28-35-v1
@@ -268,8 +268,16 @@ jobs:
               errors = [line for line in text.splitlines() if ': Error:' in line]
               if errors:
                   messages.extend(errors)
-          detail = '\n'.join(messages)[:6000] + '\n' + log[-6000:]
-          print('::error title=Android lint failed::' + detail.replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A'))
+          from collections import defaultdict
+          import re
+          by_issue = defaultdict(list)
+          for message in messages:
+              match = re.search(r'\[([^]\n]+)\]$', message)
+              by_issue[match[1] if match else 'Unknown'].append(message)
+          for issue, lines in sorted(by_issue.items()):
+              detail = str(len(lines)) + ' error(s):\n' + '\n'.join(lines[:5])
+              print('::error title=Android lint ' + issue + '::' + detail.replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A'))
+          print('::error title=Android lint failed::' + log[-6000:].replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A'))
           PYLINT
           fi
           exit "$rc"

@@ -18,22 +18,35 @@ public final class HomeSettingsPager extends ViewPager {
     public static final int HOME = 0;
     public static final int SETTINGS = 1;
 
+    /** Programmatic construction (also exercised by the host Android tests). */
     public HomeSettingsPager(Context context) {
         this(context, null);
+        LayoutInflater inflater = LayoutInflater.from(context);
+        inflater.inflate(R.layout.page_home, this, true);
+        inflater.inflate(R.layout.page_settings, this, true);
+        attachPages();
     }
 
     public HomeSettingsPager(Context context, AttributeSet attrs) {
         super(context, attrs);
         // These English navigation labels always keep Home left / Settings right.
         setLayoutDirection(View.LAYOUT_DIRECTION_LTR);
-        LayoutInflater inflater = LayoutInflater.from(context);
-        final View[] pages = {
-                inflater.inflate(R.layout.page_home, this, false),
-                inflater.inflate(R.layout.page_settings, this, false)
-        };
-        // Attach both now so MAct can bind IDs during onCreate, before ViewPager's
-        // first measure/populate. instantiateItem below is deliberately idempotent.
-        for (View page : pages) addView(page);
+        setOffscreenPageLimit(1);
+    }
+
+    @Override
+    protected void onFinishInflate() {
+        super.onFinishInflate();
+        // activity_main declares both <include>s. IDs are visible to Android Lint
+        // and MAct during onCreate, before ViewPager's first measure/populate.
+        attachPages();
+    }
+
+    private void attachPages() {
+        final View[] pages = {findViewById(R.id.homePage), findViewById(R.id.settingsPage)};
+        if (pages[HOME] == null || pages[SETTINGS] == null) {
+            throw new IllegalStateException("HomeSettingsPager requires both page layouts");
+        }
         setAdapter(new PagerAdapter() {
             @Override
             public int getCount() {
@@ -58,7 +71,6 @@ public final class HomeSettingsPager extends ViewPager {
                 container.removeView((View) object);
             }
         });
-        setOffscreenPageLimit(1);
         // No alpha/scale transformer: at a half-width drag each page occupies
         // exactly half the viewport, including Home's own Launch / Stop bar.
     }

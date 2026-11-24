@@ -12,7 +12,11 @@
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
-        android:overScrollMode="never" />
+        android:overScrollMode="never">
+
+        <include layout="@layout/page_home" />
+        <include layout="@layout/page_settings" />
+    </com.xlox.ui.HomeSettingsPager>
 
     <FrameLayout
         android:id="@+id/bottomNavigationHost"

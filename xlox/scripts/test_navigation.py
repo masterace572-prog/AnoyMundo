@@ -22,6 +22,7 @@ class NavigationWiring(unittest.TestCase):
         self.assertEqual(root[0].tag, 'com.xlox.ui.HomeSettingsPager')
         self.assertEqual(root[0].get(A + 'layout_height'), '0dp')
         self.assertEqual(root[0].get(A + 'layout_weight'), '1')
+        self.assertEqual([e.get('layout') for e in root[0]], ['@layout/page_home', '@layout/page_settings'])
         self.assertEqual(root[1].get(A + 'id'), '@+id/bottomNavigationHost')
         self.assertEqual(root[1].get(A + 'tag'), 'snackbar_anchor')
         nav = ids('activity_main.xml')
