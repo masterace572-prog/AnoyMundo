@@ -87,9 +87,22 @@ jobs:
           import json
           from pathlib import Path
           release = json.loads(Path('prior-release-backup/release.json').read_text())
-          assert release['id'] == 453635973, 'Old release changed; stop for review.'
-          assert {asset['name'] for asset in release['assets']} == {
-              'Anoy-XLOX-loader.apk', 'KennyPvt-loader.apk', 'SHA256SUMS.txt'}
+          # This UI refresh replaces the already-rebuilt release, NOT the
+          # historical 453635973 release archived by the previous iteration.
+          assert release['id'] == 456878910, 'Current 2.4.3 release changed; stop for review.'
+          expected_source = '9ae21239f12278ffc895d3b18b0fe679865ace49'
+          assert release['target_commitish'] == expected_source, 'Release source changed.'
+          tag = json.loads(Path('prior-release-backup/tag.json').read_text())
+          assert tag['object']['type'] == 'commit' and tag['object']['sha'] == expected_source, 'Tag changed.'
+          expected = {
+              'Anoy-XLOX-loader.apk': (5295800, 'dfe2519352d6e366d637dcb9d3455ab0e9af095378d134f71b0c33eaf64132c4'),
+              'KennyPvt-loader.apk': (7908720, '3d1942a47fd21ac66437d9884b13c09cd0830fa1de6b1266cee3e1a663026e6e'),
+              'SHA256SUMS.txt': (173, '0630acd501c22c508cfdba0f2cdcd06015d709223d69cdc54a7108f4cbc8e4cc'),
+          }
+          assert {asset['name'] for asset in release['assets']} == set(expected), 'Asset set changed.'
+          for asset in release['assets']:
+              size, digest = expected[asset['name']]
+              assert asset['size'] == size and asset['digest'] == 'sha256:' + digest, 'Asset changed: ' + asset['name']
           PYBACKUP
           gh release download loaders-v2.4.3-21 --dir prior-release-backup
           python3 - <<'PYBACKUP'

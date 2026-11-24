@@ -184,6 +184,30 @@ public class HomeSettingsNavigationTest {
         assertEquals(0, pager.getScrollX());
     }
 
+    @Test
+    public void diagonalSwipeFromScrolledSettingsContentReachesHome() {
+        activity.navigation.select(HomeSettingsPager.SETTINGS, false);
+        ScrollView scroll = activity.findViewById(R.id.settingsScroll);
+        scroll.scrollTo(0, 180);
+        assertTrue(scroll.getScrollY() > 0);
+        // A real, predominantly horizontal finger path, not a fake drag or a
+        // perfectly level swipe dispatched directly to ViewPager. The vertical
+        // ScrollView must not claim it just because the finger also moves down.
+        long down = SystemClock.uptimeMillis();
+        for (int i = 0; i <= 12; i++) {
+            int action = i == 0 ? MotionEvent.ACTION_DOWN : i == 12
+                    ? MotionEvent.ACTION_UP : MotionEvent.ACTION_MOVE;
+            MotionEvent event = MotionEvent.obtain(down, down + i * 20L, action,
+                    60f + 20f * i, 220f + (160f / 12f) * i, 0);
+            root.dispatchTouchEvent(event);
+            event.recycle();
+            Shadows.shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(20));
+        }
+        settle();
+        assertEquals(HomeSettingsPager.HOME, activity.navigation.currentPage());
+        assertEquals(0, pager.getScrollX());
+    }
+
     private void swipe(float start, float end, float y) {
         long down = SystemClock.uptimeMillis();
         for (int i = 0; i <= 12; i++) {
