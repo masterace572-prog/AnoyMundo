@@ -4,7 +4,34 @@ Screenshots, design notes (`docs/ui-redesign/…`) and the one-off generator
 scripts mentioned below were removed from the tree in the repo cleanup after
 2.3.2; they remain in git history.
 
-## 2.4.3 UI refinement — same-version replacement (versionCode 21)
+## 2.4.3 loader-UI follow-up — verification only (versionCode 21)
+
+- Extend the accepted Home design to Login and Splash with static Manrope,
+  consistent gutters, black surfaces and blue actions/final Hax word.
+- Replace Login's Paste text button with a clipboard icon. Keep two 48dp icon
+  targets and more key space; long keys scroll in-place. Show/hide changes only
+  the transformation, preserving text, cursor range, typeface and IME input type.
+  Use clear next-action icons/labels, visible/hidden accessibility state and
+  re-mask on background without clearing the key.
+- Replace Splash's strong overlapping words with a measured fade-through and
+  small vertical exchange; animate render properties only, use individual
+  temporary text layers, remove idle name breathing and clean up animator
+  listeners before cancellation. Keep reduced motion and update/error/retry gates.
+- Put Active and Safe on one baseline below the end-aligned expiry; wrap statuses
+  into end-aligned rows when their measured widths do not fit. Skip redundant
+  status text/color writes and reuse unchanged dot drawables.
+- Reproduce the missing bottom-capsule drag path on host Android 21/28, then add
+  touch-slop/axis arbitration, pixel tracking, label-press cancellation and
+  cancelled/multi-pointer gesture cleanup. Both pages and the actual selector
+  now have drag paths; retain native page scroll and existing button safety.
+- Inset only the blue selector by 2dp per edge. Preserve full tab-pitch travel
+  and at least 48dp hit targets. Keep the successful Home/game-card direction.
+- Expand host coverage and add an opt-in non-destructive device frame-stat tool.
+  **60fps is a target, not a phone-measured guarantee.** Games, native/runtime,
+  version/signing, live panel choices and published releases are unchanged.
+  [UI details and device acceptance](LOADER-UI-QA.md).
+
+## Previous 2.4.3 UI refinement — published same-version replacement (versionCode 21)
 
 - Put each game's controls, task feedback and progress **inside its own scrolling
   card**. Keep only the Home / Settings capsule persistent, with a blue selected

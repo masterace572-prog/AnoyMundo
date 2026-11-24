@@ -17,11 +17,11 @@ SplashActivity ──► (AppUpdateActivity) ──► LogAct ──► MAct
 
 | Screen | Code / layout | What it does |
 |---|---|---|
-| **Splash** (launcher) | `SplashActivity`, `activity_splash` | Wordmark film (~3 s, reduced motion respected) and a status line while `AppUpdater.check` asks `GET /api/app/update`. A newer version code opens the update screen; "up to date" continues on its own; a failed check shows the reason and **Retry**. |
+| **Splash** (launcher) | `SplashActivity`, `activity_splash` | Manrope wordmark film (~3 s, reduced motion respected), a blue final Hax and a quiet fade-through word change, plus a status line while `AppUpdater.check` asks `GET /api/app/update`. A newer version code opens the update screen; "up to date" continues on its own; a failed check shows the reason and **Retry**. |
 | **App update** | `AppUpdateActivity`, `activity_app_update`, `item_changelog` | Changelog, **Update now** (and **Not now** unless mandatory). `AppUpdater` downloads over https (redirects https-only, retries for 5xx/408/429), checks the APK matches the running app's package (`com.xlox` or `com.kennypvt`) with the announced, higher version code, then commits it to a `PackageInstaller` session. Errors are shown inline with **Try again**. |
 | **Library gate** | `ui/UpdateGate`, `dialog_update` (bottom sheet) | Checks `GET /api/lib/manifest`. When a newer library exists, or none is installed, the only action is **Update now**; Back closes the app; sign in stays blocked until the download is verified (size + SHA-256) and installed. Also re-runs silently when the app returns to the foreground, and backs Settings → Re-download library. |
-| **Sign in** | `LogAct`, `activity_login` | Takes the licence key (`ANOY-7D-GKFHJ`); the native code calls `POST /connect` and verifies the token. Readable errors for unknown / expired / blocked keys, device limit, clock, maintenance, offline, timeout, VPN. |
-| **Home** | `MAct`, `activity_main`, `page_home` | Smaller Welcome back greeting; compact top-right expiry with global statuses beneath it (exact IST date in Settings). Each BGMI/BGMI Air card contains its logo, installed game version, readiness/OBB hint and its own Launch/Stop/Install, feedback and progress. No pinned game-action bar or library-filename paragraphs. Unavailable Air shows only **Coming soon** in its disabled button. The persistent blue Home / Settings capsule supports taps and horizontal swipes, including diagonal strokes over scrollable content/buttons. Launch still verifies/copies only the selected package’s OBB (`utils/AppManager`); a second game requires the 10-second warning and explicit confirmation. |
+| **Sign in** | `LogAct`, `activity_login` | Home-matched typography, a fitted single-line key field, clipboard icon and explicit show/hide control. Visibility changes keep the text, selection and keyboard input type; backgrounding masks again. The native code calls `POST /connect` and verifies the token. Readable errors for unknown / expired / blocked keys, device limit, clock, maintenance, offline, timeout, VPN. |
+| **Home** | `MAct`, `activity_main`, `page_home` | Smaller Welcome back greeting; compact top-right expiry with baseline-aligned Active/Safe statuses that wrap when needed (exact IST date in Settings). Each BGMI/BGMI Air card contains its logo, installed game version, readiness/OBB hint and its own Launch/Stop/Install, feedback and progress. No pinned game-action bar or library-filename paragraphs. Unavailable Air shows only **Coming soon** in its disabled button. The persistent blue Home / Settings capsule supports taps and selector dragging; its blue decoration is only 2dp inset, with 48dp label targets. The pages also support horizontal/diagonal swipes over scrollable content/buttons. Launch still verifies/copies only the selected package’s OBB (`utils/AppManager`); a second game requires the 10-second warning and explicit confirmation. |
 | **Settings** | `HomeSettingsNavigation`, `page_settings`, sheets `sheet_*` | Licence (masked key, status, expiry), Updates (check for app updates, re-download library), device, Help (`?`), support info, Telegram report, centered red Sign out / Forget. Permissions are requested through `ui/PermissionSheet` (`sheet_permission`). |
 
 ## BGMI Air in 2.4.3 (21)
@@ -44,7 +44,8 @@ SplashActivity ──► (AppUpdateActivity) ──► LogAct ──► MAct
 Black background, white text, one accent (`#0A84FF`). Views + XML only (no
 Compose), Material Components 1.13 (`MaterialButton`, cards, bottom sheets),
 Lottie for two small splash-status animations (`res/raw/anoy_arc.json`,
-`anoy_check.json`), fonts Inter and JetBrains Mono (`res/font`).
+`anoy_check.json`). Home, Settings, Login and Splash share bundled static Manrope;
+legacy sheets use Inter and licence/support text retains JetBrains Mono (`res/font`).
 
 | File | Contents |
 |---|---|
@@ -58,6 +59,12 @@ Home / Settings uses AndroidX ViewPager 1.0.0 (minSdk-compatible; no SDK,
 Fragment, Material, AppCompat or native dependency upgrade). Its default physical
 scroll places the full-width pages side by side, without an alpha transformer.
 JUnit / Robolectric are host-test-only and are not packaged in either loader.
+
+[Loader UI follow-up and device QA](LOADER-UI-QA.md) explains the gesture surfaces,
+show/hide semantics, host coverage and the opt-in frame-timing tool. **60Hz is a
+performance target, not a measured phone result from host tests.** Game FPS and
+runtime behavior are unchanged. This follow-up uses build-only verification; the
+previous GitHub release remains intact.
 
 `scripts/ui_quality_gate.py` enforces the rules statically (palette-only
 colours, styled MaterialButtons, no Toast / default ProgressBar, every

@@ -1,6 +1,12 @@
-# 2.4.3 replacement — versionCode 21
+# Completed 2.4.3 replacement — versionCode 21
 
-## Requested scope
+> The replacement recorded below is complete: release **456953450**, tag
+> `loaders-v2.4.3-21`, source **96356a5**. The subsequent Login/Splash/capsule-drag
+> follow-up is **verification only**, with no new publication or deletion.
+> See [loader UI follow-up and device QA](LOADER-UI-QA.md). The accepted Home
+> iteration's backup 14934004032 archives the older **456878910**, not 456953450.
+
+## Requested scope (completed publication)
 
 - Build **Anoy** (`com.xlox`) and **KennyPvt** (`com.kennypvt`), preserving their
   separate branding, owner channels, JNI namespace and original signing key.
@@ -14,8 +20,10 @@
 
 The loader page is **Home**, headed by the smaller **Welcome back** greeting.
 A persistent bottom capsule contains **Home** and **Settings**, both with at least
-48dp touch targets. The selected segment is blue, with white text. Tap a label
-or drag either page horizontally. The two full-width, opaque pages are physically
+48dp touch targets. The selected segment is blue, with white text. Tap a label,
+drag either page horizontally, or drag the blue selector towards the other tab.
+Only the selector decoration is now inset by 2dp; its travel remains one full tab
+pitch and the label targets stay unchanged. The two full-width, opaque pages are physically
 adjacent: at a half-width drag the viewport shows half of Home and half of
 Settings, not a crossfade. Each game's controls and task feedback are inside its
 own scrolling card; there is no pinned game-action panel and nothing is overlaid
@@ -65,9 +73,9 @@ are test-only dependencies.
   red Sign out; Help and confirmation/Forget behavior are retained.
 - Home, Settings and the capsule use bundled **static Manrope 400/500/600**
   resources through AppCompat on Android 21+. No variable font support, font
-  provider/network access or new runtime dependency is required. Login/splash
-  branding and licence/support monospace text remain unchanged. Font provenance,
-  reproducible preparation and OFL are bundled in `assets/licenses/`.
+  provider/network access or new runtime dependency is required. The follow-up
+  extends that family to Login/Splash; licence/support monospace text stays.
+  Font provenance, reproducible preparation and OFL are in `assets/licenses/`.
 
 ### Swipe regression and evidence limits
 
@@ -79,7 +87,9 @@ reproduction does not prove that it was the only cause on the user's phone.
 
 The pager now decides the predominant axis from **original MotionEvents** before
 a child can disallow interception. Horizontal streams use ViewPager's own drag,
-velocity and settle logic (not production fake drags or alpha transitions).
+velocity and settle logic for page-origin strokes (not alpha transitions).
+The follow-up adds the standard fake-drag API specifically for the external
+capsule selector, without replacing the original-event page handler.
 Vertical streams stay vertical through release; taking a horizontal stream
 cancels the child's pressed/scroll state, so dragging a Launch button cannot
 also launch. Both pages remain opaque and adjacent during a partial swipe.
@@ -125,7 +135,7 @@ Use manual `publish_release=false, backup_replaced_243=true`, or a branch push
 whose commit message contains `[verify-2.4.3]`. That push marker also disables
 publication, allowing verification when manual workflow dispatch is not permitted.
 
-### Current UI-refinement acceptance
+### Completed Home-refinement acceptance — before the Login/Splash follow-up
 
 [Build-only run 45422161757](https://github.com/masterace572-prog/AnoyMundo/actions/runs/45422161757)
 passed on source **`aa28b2b07f5645132d1434f55bd441ac939f9fa5`**; publication was
@@ -141,7 +151,7 @@ explicitly skipped. Build job: **138544628846**.
 - Both new APKs **and both archived current APKs** verified against the original
   certificate through the structured SDK verifier. SHA-256:
   `77f05d53ce8bf1855caef38ce87f13a8bb2b1b2cdd2d48da9d3ba897eac4549e`.
-- Fresh SHA-256-verified **current-release** backup, artifact **14934004032**,
+- SHA-256-verified **then-current release** backup, artifact **14934004032**,
   `prior-release-2.4.3-21-backup`, retained for **90 days**. It archives release
   **456878910**, source/tag **9ae21239f12278ffc895d3b18b0fe679865ace49**, its two
   APKs, checksums and exact release/tag metadata. This is distinct from the
@@ -201,7 +211,8 @@ export XLOX_ROBOLECTRIC_DIR="$(cd ../.cache/xlox-robolectric && pwd)"
   :app:lintAnoyRelease :app:lintKennyRelease --no-daemon
 ```
 
-UI-refinement evidence is ignored under `../qa-logs/ui-polish-2.4.3/`.
+The active follow-up evidence is ignored under `../qa-logs/auth-splash-nav-2.4.3/`.
+Completed Home-refinement evidence is under `../qa-logs/ui-polish-2.4.3/`.
 The prior publication evidence remains in `../qa-logs/release-2.4.3/`; Air feature
 evidence remains separately preserved under `../qa-logs/bgmiair/`. The inherited
 emulator screenshot/install harness has not been run for this refinement.
