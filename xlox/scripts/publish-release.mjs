@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/** Publish a .so or ZIP (up to 10 MiB) to the signed-in Owner's own channel.
+/** Publish a .so or ZIP (up to 20 MiB) to the signed-in Owner's own channel.
  * Files go straight to private Storage; no large base64 Vercel request.
  *
  * PANEL_CHANNEL=anoy PANEL_ADMIN_USERNAME=Anoy PANEL_ADMIN_PASSWORD=... \
@@ -18,7 +18,7 @@ const version = (process.argv[3] || '1.0').trim();
 const channel = process.env.PANEL_CHANNEL || 'anoy';
 const username = process.env.PANEL_ADMIN_USERNAME || (channel === 'anoy' ? 'Anoy' : '');
 const password = process.env.PANEL_ADMIN_PASSWORD;
-const MAX = 10 * 1024 * 1024;
+const MAX = 20 * 1024 * 1024;
 const sha = (bytes) => crypto.createHash('sha256').update(bytes).digest('hex');
 
 const cookie = (res) => res.headers.getSetCookie().map(c => c.split(';')[0]).join('; ');
@@ -28,7 +28,7 @@ async function main() {
   if (!['anoy', 'kenny'].includes(channel)) throw new Error('PANEL_CHANNEL must be anoy or kenny.');
   if (!username || !password) throw new Error('Set PANEL_ADMIN_USERNAME and PANEL_ADMIN_PASSWORD for the channel Owner.');
   const bytes = fs.readFileSync(path.resolve(input));
-  if (bytes.length < 64 || bytes.length > MAX) throw new Error('Choose a .so or ZIP between 64 bytes and 10 MiB.');
+  if (bytes.length < 64 || bytes.length > MAX) throw new Error('Choose a .so or ZIP between 64 bytes and 20 MiB.');
 
   const login = await fetch(`${base}/login`, {
     method: 'POST', redirect: 'manual', signal: AbortSignal.timeout(30000),

@@ -5,7 +5,6 @@ import android.content.Context;
 import android.util.Log;
 
 import com.xlox.utils.LibManager;
-import com.xlox.utils.AirCrashDiagnostics;
 import com.xlox.utils.GameTarget;
 import com.xlox.utils.GameWebRouting;
 
@@ -119,14 +118,6 @@ public class BoxApplication extends Application
             if (!LibManager.makeReadOnly(lib)) {
                 Log.w(LOAD_TAG, "Could not mark " + lib.getName() + " read-only; "
                         + "Android 17 may reject System.load()");
-            }
-
-            // Build-only isolation test: leave validation, SDK startup and BGMI
-            // unchanged. Do not delete/replace the Air library or report it loaded.
-            if (BuildConfig.AIR_NATIVE_ISOLATION && game == GameTarget.BGMI_AIR) {
-                AirCrashDiagnostics.recordGuest(ctx);
-                Log.w(LOAD_TAG, "AIR-NATIVE-ISOLATION: libbgmilite.so injection skipped");
-                return;
             }
 
             System.load(lib.getAbsolutePath());

@@ -3,9 +3,6 @@ package com.xlox.utils;
 import static org.junit.Assert.*;
 
 import android.app.Application;
-import android.os.Looper;
-
-import static org.robolectric.Shadows.shadowOf;
 
 import org.junit.Before;
 import org.junit.Rule;
@@ -50,7 +47,7 @@ public class AppManagerObbStateTest {
     public void emptyOrAbsentDirectoryIsMissingAndDoesNotCreateAnything() {
         assertEquals(AppManager.ObbState.MISSING, manager.inspectObb(BGMI, Collections.singletonList(source)));
         File absent = new File(source, "absent");
-        assertEquals(AppManager.ObbState.MISSING, manager.inspectObb(BGMI, Collections.singletonList(absent)));
+        assertEquals(AppManager.ObbState.MISSING, manager.inspectObb(AIR, Collections.singletonList(absent)));
         assertFalse(absent.exists());
         assertArrayEquals(new String[0], source.list());
     }
@@ -66,21 +63,21 @@ public class AppManagerObbStateTest {
     }
 
     @Test
-    public void bgmiCannotBorrowAirFilesOrAPatchAsItsRequiredMain() throws Exception {
-        file("main.123." + AIR + ".obb", true);
-        file("patch.123." + BGMI + ".obb", true);
-        assertEquals(AppManager.ObbState.MISSING, manager.inspectObb(BGMI, Collections.singletonList(source)));
-        assertEquals(AppManager.ObbState.NOT_REQUIRED, manager.inspectObb(AIR, Collections.singletonList(source)));
+    public void bgmiAndPatchFilesCannotMasqueradeAsAirMain() throws Exception {
         file("main.123." + BGMI + ".obb", true);
+        file("patch.123." + AIR + ".obb", true);
         assertEquals(AppManager.ObbState.AVAILABLE, manager.inspectObb(BGMI, Collections.singletonList(source)));
+        assertEquals(AppManager.ObbState.MISSING, manager.inspectObb(AIR, Collections.singletonList(source)));
+        file("main.123." + AIR + ".obb", true);
+        assertEquals(AppManager.ObbState.AVAILABLE, manager.inspectObb(AIR, Collections.singletonList(source)));
     }
 
     @Test
     public void zeroLengthAndIncompleteDownloadsDoNotClaimReadiness() throws Exception {
-        file("main.123." + BGMI + ".obb", false);
-        file("main.124." + BGMI + ".obb.part", true);
-        file("main.invalid." + BGMI + ".obb", true);
-        assertEquals(AppManager.ObbState.MISSING, manager.inspectObb(BGMI, Collections.singletonList(source)));
+        file("main.123." + AIR + ".obb", false);
+        file("main.124." + AIR + ".obb.part", true);
+        file("main.invalid." + AIR + ".obb", true);
+        assertEquals(AppManager.ObbState.MISSING, manager.inspectObb(AIR, Collections.singletonList(source)));
     }
 
     @Test
@@ -98,8 +95,8 @@ public class AppManagerObbStateTest {
             @Override public boolean isDirectory() { return true; }
             @Override public File[] listFiles() { return null; }
         };
-        file("main.10." + BGMI + ".obb", true);
-        assertEquals(AppManager.ObbState.AVAILABLE, manager.inspectObb(BGMI, Arrays.asList(blocked, source)));
+        file("main.10." + AIR + ".obb", true);
+        assertEquals(AppManager.ObbState.AVAILABLE, manager.inspectObb(AIR, Arrays.asList(blocked, source)));
     }
 
     @Test
@@ -107,7 +104,7 @@ public class AppManagerObbStateTest {
         File denied = new File(source, "denied") {
             @Override public boolean isDirectory() { throw new SecurityException("fixture"); }
         };
-        assertEquals(AppManager.ObbState.ACCESS_REQUIRED, manager.inspectObb(BGMI, Collections.singletonList(denied)));
+        assertEquals(AppManager.ObbState.ACCESS_REQUIRED, manager.inspectObb(AIR, Collections.singletonList(denied)));
     }
 
     @Test
@@ -115,44 +112,6 @@ public class AppManagerObbStateTest {
         File broken = new File(source, "broken") {
             @Override public boolean isDirectory() { throw new IllegalStateException("fixture"); }
         };
-        assertEquals(AppManager.ObbState.UNKNOWN, manager.inspectObb(BGMI, Collections.singletonList(broken)));
+        assertEquals(AppManager.ObbState.UNKNOWN, manager.inspectObb(AIR, Collections.singletonList(broken)));
     }
-    @Test
-    public void airNeedsNoObbEvenWhenSharedStorageIsCompletelyBlocked() {
-        File forbidden = new File(source, "never-touch") {
-            @Override public boolean isDirectory() { throw new AssertionError("Air must not inspect OBB folders"); }
-            @Override public File[] listFiles() { throw new AssertionError("Air must not list OBB folders"); }
-        };
-        assertEquals(AppManager.ObbState.NOT_REQUIRED, manager.inspectObb(AIR, Collections.singletonList(forbidden)));
-        assertEquals(AppManager.ObbState.NOT_REQUIRED, manager.inspectObb(AIR));
-        assertTrue(manager.isObbCurrent(AIR));
-        assertFalse(forbidden.exists());
-    }
-
-    @Test
-    public void airCopyIsANoOpAndNeverCreatesOrRequestsAnObb() {
-        final boolean[] completed = {false};
-        manager.copyObbAsync(AIR, new AppManager.CopyCallback() {
-            @Override public void onCopyCompleted(boolean success, String error) {
-                assertTrue(success); assertNull(error); completed[0] = true;
-            }
-            @Override public void onProgressUpdate(int percent) { fail("There is no OBB to copy for Air"); }
-        });
-        shadowOf(Looper.getMainLooper()).idle();
-        assertTrue(completed[0]);
-        assertArrayEquals(new String[0], source.list());
-    }
-
-    @Test
-    public void permissionPolicyKeepsBgmiGatesButDoesNotBlockAirOnObbAccess() {
-        assertTrue(GameTarget.BGMI.requiresObb());
-        assertFalse(GameTarget.BGMI_AIR.requiresObb());
-        for (StorageAccess.Need need : StorageAccess.Need.values()) {
-            assertTrue(StorageAccess.requiredForGame(GameTarget.BGMI, need));
-            assertTrue(StorageAccess.requiredForGame(null, need));
-            assertEquals(need == StorageAccess.Need.INSTALL,
-                    StorageAccess.requiredForGame(GameTarget.BGMI_AIR, need));
-        }
-    }
-
 }

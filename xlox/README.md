@@ -21,17 +21,15 @@ SplashActivity ──► (AppUpdateActivity) ──► LogAct ──► MAct
 | **App update** | `AppUpdateActivity`, `activity_app_update`, `item_changelog` | Changelog, **Update now** (and **Not now** unless mandatory). `AppUpdater` downloads over https (redirects https-only, retries for 5xx/408/429), checks the APK matches the running app's package (`com.xlox` or `com.kennypvt`) with the announced, higher version code, then commits it to a `PackageInstaller` session. Errors are shown inline with **Try again**. |
 | **Library gate** | `ui/UpdateGate`, `dialog_update` (bottom sheet) | Checks `GET /api/lib/manifest`. When a newer library exists, or none is installed, the only action is **Update now**; Back closes the app; sign in stays blocked until the download is verified (size + SHA-256) and installed. Also re-runs silently when the app returns to the foreground, and backs Settings → Re-download library. |
 | **Sign in** | `LogAct`, `activity_login` | Home-matched typography, a fitted single-line key field, clipboard icon and explicit show/hide control. Visibility changes keep the text, selection and keyboard input type; backgrounding masks again. The native code calls `POST /connect` and verifies the token. Readable errors for unknown / expired / blocked keys, device limit, clock, maintenance, offline, timeout, VPN. |
-| **Home** | `MAct`, `activity_main`, `page_home` | Smaller Welcome back greeting; compact top-right expiry with baseline-aligned Active/Safe statuses that wrap when needed (exact IST date in Settings). Each BGMI/BGMI Air card contains its logo, installed game version, readiness/OBB hint and its own Launch/Stop/Install, feedback and progress. No pinned game-action bar or library-filename paragraphs. Unavailable Air shows only **Coming soon** in its disabled button. The persistent blue Home / Settings capsule supports taps and selector dragging; its blue decoration is only 2dp inset, with 48dp label targets. The pages also support horizontal/diagonal swipes over scrollable content/buttons. Launch prepares the full installed base/split APK set; BGMI additionally verifies/copies its OBB, while Lite/Air needs no OBB; a second game requires the 10-second warning and explicit confirmation. |
+| **Home** | `MAct`, `activity_main`, `page_home` | Smaller Welcome back greeting; compact top-right expiry with baseline-aligned Active/Safe statuses that wrap when needed (exact IST date in Settings). Each BGMI/BGMI Air card contains its logo, installed game version, readiness/OBB hint and its own Launch/Stop/Install, feedback and progress. No pinned game-action bar or library-filename paragraphs. Unavailable Air shows only **Coming soon** in its disabled button. The persistent blue Home / Settings capsule supports taps and selector dragging; its blue decoration is only 2dp inset, with 48dp label targets. The pages also support horizontal/diagonal swipes over scrollable content/buttons. Launch still verifies/copies only the selected package’s OBB (`utils/AppManager`); a second game requires the 10-second warning and explicit confirmation. |
 | **Settings** | `HomeSettingsNavigation`, `page_settings`, sheets `sheet_*` | Licence (masked key, status, expiry), Updates (check for app updates, re-download library), device, Help (`?`), support info, Telegram report, centered red Sign out / Forget. Permissions are requested through `ui/PermissionSheet` (`sheet_permission`). |
 
 ## BGMI Air in 2.4.3 (21)
 
-The source follow-up supports complete installed split-APK sets and removes
-Lite/Air's OBB requirement. BGMI still requires its own expansion files.
-[Split-package behavior, tests and physical-device acceptance](../docs/SPLIT_APK_SUPPORT.md).
-The Air-only [native-copy verification/SDK repair](../docs/AIR_NATIVE_PREPARATION.md)
-closes an additional readiness gap; the reported native crash is not yet proven
-fixed on a phone. These follow-ups are not yet part of the published APKs below.
+The owner-requested [restoration](../docs/RESTORE_2.4.3.md) returns both loaders
+to the released normal APK + OBB flow. Split-import/native-copy experiments and
+root/crash-report diagnostics are removed. This is a rollback, not a new split
+compatibility fix. The original library-dependent Coming soon gate is retained.
 
 - BGMI: `com.pubg.imobile` → `libbgmi.so`.
 - BGMI Air: `com.krafton.bgmilite` → `libbgmilite.so` (not `libbgmiair.so`).
@@ -148,8 +146,9 @@ loads it inside the `com.pubg.imobile` virtual process.
 ## Publishing a loader library
 
 Upload a raw arm64 `.so` **or** ZIP at **Library** in your signed-in Owner
-panel, up to **20 MiB input and combined expanded contents**. Whatever the input's
-filename, the main installed file is **libbgmi.so**. Valid sibling `.so`
+panel, up to **20 MiB input and total expanded contents** (20,971,520 bytes
+for each limit). This separate panel limit is retained during the loader rollback.
+Whatever the input's filename, the main installed file is **libbgmi.so**. Valid sibling `.so`
 dependencies in a ZIP are kept. Each Owner can publish only to their own
 immutable channel. For scripted publication:
 

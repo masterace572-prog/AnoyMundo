@@ -4,29 +4,16 @@ Screenshots, design notes (`docs/ui-redesign/…`) and the one-off generator
 scripts mentioned below were removed from the tree in the repo cleanup after
 2.3.2; they remain in git history.
 
-## Unreleased follow-up — 20 MiB libraries and complete Lite/Air APK sets
+## 2.4.3 — owner-requested restoration (versionCode 21)
 
-- Raise the panel's shared `.so`/ZIP input **and total expanded** limit to 20 MiB;
-  two 7.57 MiB game libraries now fit one bundle. Keep bounded inflation, CRC,
-  owner isolation, direct signed uploads and the small legacy request cap.
-  Additive private-bucket and publication-RPC migrations reserve 21 MiB for normalized ZIP overhead.
-- Lite/Air no longer inspects, copies or requires an OBB, nor blocks Launch on
-  OBB-only file access. BGMI retains its verified main/patch preparation.
-- Prepare each complete installed APK set off-thread (base + ABI/config/language/
-  feature/asset splits) using the original SDK's public non-moving multi-APK directory API.
-  Repair a base-only/stale SDK package, read it back, and fail safely on partial
-  files, SDK errors or an installed-game update race. Never merge/re-sign APKs,
-  uninstall games or clear data. Single-APK games use the same path.
-- Wait for the real default-user `0` registration and internal launch-activity
-  resolution after import; component parsing is asynchronous in the original
-  SDK. Add only a missing default user without resetting data, retain staging
-  through readiness, and fail safely on timeout/interruption.
-- Add 50 APK-set/readiness host cases and extend OBB/policy coverage to 11 cases
-  per API and brand: **392 host Android checks** with the navigation/login suite.
-  [Scope and required device checks](../docs/SPLIT_APK_SUPPORT.md).
-- APK changes are **build-only pending device testing**, not a replacement of
-  the published 2.4.3 release. No version/signing/AAR changes or live library/APK
-  selections are part of this follow-up. No crash-free device claim.
+- Restore the released normal APK + OBB launch/preparation flow for both brands,
+  with the original library-dependent **Coming soon** state for BGMI Air.
+- Remove later split-import/native-copy experiments, injection-isolation mode,
+  and crash/root-report UI and readers. Split installs are not certified working.
+- Keep the released Home/Login/Splash design, original SDK/signer, separate
+  identities, licence/saves and version 2.4.3 (21). No uninstall or data reset.
+- Preserve 20 MiB panel uploads, live library/APK choices and existing public
+  release assets. [Restoration source, boundaries and checks](../docs/RESTORE_2.4.3.md).
 
 ## 2.4.3 — short release changelog (versionCode 21)
 

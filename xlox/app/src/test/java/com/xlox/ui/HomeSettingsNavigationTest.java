@@ -126,40 +126,6 @@ public class HomeSettingsNavigationTest {
     }
 
     @Test
-    public void diagnosticNoticeIsHiddenAndDoesNotReplaceGameFeedbackOrControls() {
-        TextView notice = activity.findViewById(R.id.airDiagnosticNotice);
-        TextView message = activity.findViewById(R.id.airStatusMessage);
-        View action = activity.findViewById(R.id.airPrimaryAction);
-        assertEquals(View.GONE, notice.getVisibility());
-        assertEquals(View.GONE, activity.findViewById(R.id.airCrashReportOpen).getVisibility());
-        assertEquals(activity.getString(R.string.air_native_isolation_notice), notice.getText().toString());
-        assertNotSame(message, notice);
-        boolean enabled = action.isEnabled();
-        notice.setVisibility(View.VISIBLE);
-        message.setVisibility(View.GONE);
-        layout(360, 800);
-        assertEquals(View.VISIBLE, notice.getVisibility());
-        assertTrue(notice.getHeight() > 0);
-        assertEquals(enabled, action.isEnabled());
-    }
-
-    @Test
-    public void airReportSheetBindsPreviewAndExplicitCopyRootCloseControls() {
-        View report = android.view.LayoutInflater.from(activity).inflate(R.layout.sheet_air_crash_report, null, false);
-        assertNotNull(report.findViewById(R.id.airCrashReportText));
-        assertNotNull(report.findViewById(R.id.airCrashReportClose));
-        assertFalse(report.findViewById(R.id.airCrashReportCopy).isEnabled());
-        assertFalse(report.findViewById(R.id.airCrashReportRoot).isEnabled());
-        assertFalse(report.findViewById(R.id.airCrashReportNative).isEnabled());
-        assertEquals(activity.getString(R.string.air_crash_report_native),
-                ((TextView) report.findViewById(R.id.airCrashReportNative)).getText().toString());
-        assertNotSame(report.findViewById(R.id.airCrashReportRoot), report.findViewById(R.id.airCrashReportNative));
-        String initial = ((TextView) report.findViewById(R.id.airCrashReportText)).getText().toString();
-        assertEquals(activity.getString(R.string.air_crash_report_reading), initial);
-        assertFalse(initial.contains("Licence key:"));
-    }
-
-    @Test
     public void homeAndSettingsTabsAnimateInBothDirections() {
         assertTrue(activity.navigation.homeIsSettled());
         assertTrue(activity.findViewById(R.id.navigationHome).isSelected());

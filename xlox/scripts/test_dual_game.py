@@ -88,35 +88,6 @@ class DualGameWiring(unittest.TestCase):
         self.assertIn('StorageAccess.consumeGameAfterRestart(this)', home)
         self.assertIn('launchTarget != preparingGame', home)
 
-    def test_air_skips_obb_but_checks_full_installed_apk_set(self):
-        home = (JAVA / 'MAct.java').read_text()
-        prepare = home.split('private void prepareObbThenLaunch()', 1)[1].split('Log.d(TAG, "Launch: preparing game files")', 1)[0]
-        self.assertIn('!launchTarget.target.requiresObb()', prepare)
-        self.assertIn('prepareInstalledPackageThenLaunch(launchTarget)', prepare)
-        self.assertIn('StorageAccess.has(this, launchTarget.target)', home)
-        self.assertIn('new GamePackagePreparer(MAct.this).prepare(preparingGame.target)', home)
-        self.assertIn('if (result != null && !result.isReady())', home)
-        package = (JAVA / 'utils/GamePackagePreparer.java').read_text()
-        self.assertIn('MetaApplicationInstaller.installAppsByPath(directory)', package)
-        self.assertNotIn('MetaApplicationInstaller.cloneApp(', package)
-        self.assertNotIn('installAppsByPathAndMove(', package)
-        self.assertIn('info.splitNames', package)
-        self.assertIn('app.splitSourceDirs', package)
-        for call in ('MetaPackageManager.getInstalledUserName(pkg)',
-                     'MetaPackageManager.createEmptyUser(pkg, "0")',
-                     'MetaPackageManager.getLaunchIntent(pkg)',
-                     'installed.matchesPackage(virtual) && awaitLaunchReady(game.packageName)',
-                     'if (!launchReady || !installed.matchesPackage(virtual))',
-                     'Thread.currentThread().interrupt()'):
-            self.assertIn(call, package)
-        self.assertEqual(package.count('MetaActivityManager.'), 1)
-        self.assertIn('return MetaActivityManager.isAppRunning(pkg);', package)  # read-only repair guard
-        self.assertNotIn('MetaActivityManager.launch', package)
-        self.assertNotIn('MetaActivityManager.kill', package)
-        self.assertNotIn('installAppByPath(', package)
-        self.assertNotIn('uninstallAppFully(', package)
-        self.assertNotIn('cleanPackageDataAsUser(', package)
-
     def test_library_updates_check_both_running_games(self):
         home = (JAVA / 'MAct.java').read_text()
         self.assertIn('if (preview || controlsBlocked() || anyGameRunning()) return;', home)

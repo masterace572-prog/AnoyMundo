@@ -319,27 +319,6 @@
     <string name="settings_copy_support">Copy support info</string>
     <string name="settings_version">App version</string>
     <string name="settings_version_value">%1$s (%2$d)</string>
-    <!-- Build-only diagnostic, never used by normal release builds. -->
-    <string name="settings_version_value_air_diagnostic">%1$s (%2$d) · Air diagnostic</string>
-    <string name="air_native_isolation_notice">Air diagnostic: injected library OFF. Test build, not a fix.</string>
-    <string name="air_crash_report_open">Copy Air crash report</string>
-    <string name="air_crash_report_title">Air crash report</string>
-    <string name="air_crash_report_privacy">After Air closes, return here within 15 minutes. This report excludes licence keys and full-device logs. Review before copying.</string>
-    <string name="air_crash_report_reading">Reading this loader\'s recent exit record…</string>
-    <string name="air_crash_report_reading_root">Waiting for root permission and app-specific exit details…</string>
-    <string name="air_crash_report_copy">Copy report</string>
-    <string name="air_crash_report_copied">Report copied</string>
-    <string name="air_crash_report_root">Add root exit details (optional)</string>
-    <string name="air_crash_report_close">Close</string>
-    <string name="air_crash_report_failed">Could not read the app-specific exit record. No raw errors or sensitive data were copied.</string>
-    <string name="air_crash_root_title">Read exit details with root?</string>
-    <string name="air_crash_root_message">Runs only dumpsys activity exit-info for this loader. Only matching recent exit numbers are included, not raw output. No game files, memory dumps, protections or device settings are changed. Root permission is optional; the request times out after 20 seconds.</string>
-    <string name="air_crash_root_allow">Allow root read</string>
-    <string name="air_crash_report_native">Read native trace (root)</string>
-    <string name="air_crash_report_reading_native">Waiting for root permission and bounded matching native facts… (up to 20 seconds)</string>
-    <string name="air_crash_native_title">Read matching native crash record?</string>
-    <string name="air_crash_native_message">Separate from exit history. With root, inspects up to 100 crash-file headers (4 KiB / 32 lines each) for the latest confirmed Air PID, UID and exit time. Only a matching record gets a bounded 64 KiB text read and two 4 KiB structured identity checks. Exports only numeric signal facts, module basenames, relative PCs and hex BuildIds. No raw tombstones, full logs, memory dumps or licence keys are copied or uploaded. No debugger attachment, game-file, signal-handler or protection changes. A readable matching record may not exist. This request times out after 20 seconds; closing the sheet cancels it.</string>
-    <string name="air_crash_native_allow">Allow native read</string>
     <string name="settings_row_description">%1$s: %2$s</string>
     <string name="game_title_version">BGMI v%1$s</string>
     <string name="game_icon_description">BGMI</string>
@@ -385,10 +364,4 @@
         <item quantity="other">%d minutes</item>
     </plurals>
     <string name="navigation_home">Home</string>
-    <string name="game_error_apk_set">Could not read the complete %1$s installation. Install the game with all its split APKs, then retry. Do not install just base.apk.</string>
-    <string name="game_error_apk_changed">%1$s changed during preparation. Wait for its update to finish, then retry.</string>
-    <string name="game_error_apk_space">Not enough free storage to prepare %1$s APKs. Free some storage space, then retry. Game data has not been cleared.</string>
-    <string name="game_error_apk_setup">Could not prepare all %1$s APKs in the loader. Close the game and retry. App data has not been cleared.</string>
-    <string name="game_error_native_setup">Could not verify %1$s game libraries after preparation. Launch was stopped instead of using an incomplete copy. Game data has not been cleared.</string>
-    <string name="game_error_apk_running">Stop %1$s in the loader before repairing its game files, then retry. Game data has not been cleared.</string>
 </resources>

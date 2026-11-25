@@ -5,8 +5,6 @@ name: Build Anoy and KennyPvt APKs
 # No automatic pruning: either channel may still point at an older release/tag.
 # The explicit 2.4.3 backup input / [verify-2.4.3] push archives assets only.
 # That verify-only marker also disables publishing; it never replaces a release.
-# [air-native-isolation] requires [verify-2.4.3] and produces clearly labelled
-# Air-without-injection diagnostics ONLY. It can never publish a release.
 on:
   workflow_dispatch:
     inputs:
@@ -16,10 +14,6 @@ on:
         default: true
       backup_replaced_243:
         description: 'Build-only: archive the current 2.4.3 (21) release assets before further testing'
-        type: boolean
-        default: false
-      air_native_isolation:
-        description: 'Build-only Air diagnostic: skip Air injection (publish_release must be false)'
         type: boolean
         default: false
   push:
@@ -68,22 +62,6 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
-      - name: Select normal or strictly build-only Air diagnostic
-        env:
-          AIR_NATIVE_ISOLATION_REQUESTED: ${{ (github.event_name == 'workflow_dispatch' && inputs.air_native_isolation) || (github.event_name == 'push' && contains(github.event.head_commit.message, '[air-native-isolation]')) }}
-          VERIFY_ONLY_PUSH: ${{ github.event_name == 'push' && contains(github.event.head_commit.message, '[verify-2.4.3]') }}
-          PUBLISH_REQUESTED: ${{ github.event_name == 'workflow_dispatch' && inputs.publish_release }}
-        run: |
-          set -eu
-          if [ "$AIR_NATIVE_ISOLATION_REQUESTED" = true ]; then
-            [ "$PUBLISH_REQUESTED" = false ] || { echo '::error::Air diagnostics cannot publish a release.'; exit 1; }
-            if [ "$GITHUB_EVENT_NAME" = push ]; then
-              [ "$VERIFY_ONLY_PUSH" = true ] || { echo '::error::Air diagnostics require [verify-2.4.3].'; exit 1; }
-            fi
-            echo '**AIR DIAGNOSTIC ONLY:** Air injection skipped; not a fix or public release.' >> "$GITHUB_STEP_SUMMARY"
-          fi
-          echo "AIR_NATIVE_ISOLATION=$AIR_NATIVE_ISOLATION_REQUESTED" >> "$GITHUB_ENV"
-
       - name: Install pinned artwork-check dependency (not bundled in APKs)
         run: python3 -m pip install --disable-pip-version-check -r scripts/icon-requirements.txt
       - name: Static UI, artwork and two-brand isolation gates
@@ -171,12 +149,6 @@ jobs:
       - name: Game login routing and cancellable update transport regressions
         run: python3 scripts/test_runtime_fixes.py
 
-      - name: Air native-copy integrity and safe-repair regressions
-        run: python3 -B scripts/test_air_native_preparation.py
-
-      - name: Air injection isolation and diagnostic release-safety regressions
-        run: python3 -B scripts/test_air_native_isolation.py
-
       - name: Install the SDK and pinned NDK
         run: |
           SDK="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-$HOME/android-sdk}}"
@@ -236,7 +208,7 @@ jobs:
       - name: Android navigation view regressions for BOTH brands
         run: |
           set +e
-          ./gradlew :app:testAnoyDebugUnitTest :app:testKennyDebugUnitTest "-PairNativeIsolation=$AIR_NATIVE_ISOLATION" --no-daemon > /tmp/navigation-tests.log 2>&1
+          ./gradlew :app:testAnoyDebugUnitTest :app:testKennyDebugUnitTest --no-daemon > /tmp/navigation-tests.log 2>&1
           rc=$?
           cat /tmp/navigation-tests.log
           python3 - <<'PYNAV'
@@ -259,21 +231,18 @@ jobs:
                       detail = case.get('name', '') + ': ' + (failure.get('message') or '')[:600]
                       detail += '\n' + causes[:1800] + '\n' + trace[-1400:]
                       print('::error title=Android navigation test::' + detail.replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A'))
-          summary = 'Android UI/OBB/diagnostic-consent tests (Anoy + KennyPvt, host Android 21 / 28 / 35): ' + str(totals)
+          summary = 'Android UI/OBB tests (Anoy + KennyPvt, host Android 21 / 28): ' + str(totals)
           print(summary)
           with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as out:
               out.write(summary + '\n')
-          expected = {'com.xlox.ui.HomeSettingsNavigationTest': 60,
+          expected = {'com.xlox.ui.HomeSettingsNavigationTest': 56,
                       'com.xlox.ui.LoginSplashUiTest': 18,
-                      'com.xlox.utils.AppManagerObbStateTest': 22,
-                      'com.xlox.utils.GamePackagePreparerTest': 210,
-                      'com.xlox.utils.AirCrashDiagnosticsTest': 12,
-                      'com.xlox.ui.AirCrashReportDialogTest': 16}
+                      'com.xlox.utils.AppManagerObbStateTest': 16}
           for variant in ('testAnoyDebugUnitTest', 'testKennyDebugUnitTest'):
               for name, count in expected.items():
                   actual = suites.get((variant, name))
                   assert actual is not None and actual['tests'] >= count, (variant, name, actual)
-          assert totals['tests'] >= 676, 'Both brands must run navigation/login/OBB tests on Android 21/28, all APK-set and Air native integrity/repair tests on Android 21/28/35, plus private Air adapter and separate root-native consent/lifecycle tests on Android 21/35.'
+          assert totals['tests'] >= 180, 'Both brands must run all 28 navigation/presentation + 9 login/splash + 8 OBB tests on Android 21 and 28.'
           assert totals['failures'] == totals['errors'] == totals['skipped'] == 0, summary
           print('::notice title=Android host test totals::' + summary)
           PYNAV
@@ -295,7 +264,7 @@ jobs:
         run: |
           chmod +x gradlew
           set +e
-          ./gradlew :app:assembleAnoyRelease :app:assembleKennyRelease "-PairNativeIsolation=$AIR_NATIVE_ISOLATION" --no-daemon > /tmp/assemble.log 2>&1
+          ./gradlew :app:assembleAnoyRelease :app:assembleKennyRelease --no-daemon > /tmp/assemble.log 2>&1
           rc=$?
           cat /tmp/assemble.log
           if [ "$rc" -ne 0 ]; then
@@ -310,7 +279,7 @@ jobs:
       - name: Lint both variants
         run: |
           set +e
-          ./gradlew :app:lintAnoyRelease :app:lintKennyRelease "-PairNativeIsolation=$AIR_NATIVE_ISOLATION" --no-daemon > /tmp/lint.log 2>&1
+          ./gradlew :app:lintAnoyRelease :app:lintKennyRelease --no-daemon > /tmp/lint.log 2>&1
           rc=$?
           cat /tmp/lint.log
           if [ "$rc" -ne 0 ]; then
@@ -347,12 +316,6 @@ jobs:
           cp "$ANOY" ../dist/Anoy-XLOX-loader.apk
           cp "$KENNY" ../dist/KennyPvt-loader.apk
           (cd ../dist && sha256sum Anoy-XLOX-loader.apk KennyPvt-loader.apk > SHA256SUMS.txt)
-
-      - name: Verify compiled Air diagnostic mode in BOTH APKs
-        run: python3 -B scripts/test_air_native_isolation.py --expected-isolation "$AIR_NATIVE_ISOLATION" ../dist/Anoy-XLOX-loader.apk ../dist/KennyPvt-loader.apk
-
-      - name: Verify compiled Air preparation in BOTH APKs
-        run: python3 -B scripts/test_air_native_preparation.py --compiled-apks ../dist/Anoy-XLOX-loader.apk ../dist/KennyPvt-loader.apk
 
       - name: Verify permissions in BOTH APKs
         run: python3 scripts/check_apk_permissions.py ../dist/Anoy-XLOX-loader.apk ../dist/KennyPvt-loader.apk
@@ -406,39 +369,18 @@ jobs:
               raise SystemExit(result.returncode)
           PYSIGN
 
-      - name: Stage clearly named Air diagnostic APKs and test instructions
-        if: env.AIR_NATIVE_ISOLATION == 'true'
-        run: |
-          mkdir -p ../dist/air-native-isolation
-          cp ../dist/Anoy-XLOX-loader.apk ../dist/air-native-isolation/Anoy-Air-diagnostic.apk
-          cp ../dist/KennyPvt-loader.apk ../dist/air-native-isolation/KennyPvt-Air-diagnostic.apk
-          cp ../docs/AIR_NATIVE_ISOLATION.md ../dist/air-native-isolation/TEST-INSTRUCTIONS.md
-          printf '\nBuild source: `%s`.\n' "$GITHUB_SHA" >> ../dist/air-native-isolation/TEST-INSTRUCTIONS.md
-          (cd ../dist/air-native-isolation && sha256sum Anoy-Air-diagnostic.apk KennyPvt-Air-diagnostic.apk > SHA256SUMS.txt)
-
       - uses: actions/upload-artifact@v7
         with:
-          name: ${{ env.XLOX_SIGNED == 'true' && 'Anoy-APK' || 'Anoy-APK-unsigned' }}${{ env.AIR_NATIVE_ISOLATION == 'true' && '-Air-diagnostic' || '' }}
-          path: ${{ env.AIR_NATIVE_ISOLATION == 'true' && 'dist/air-native-isolation/Anoy-Air-diagnostic.apk' || 'dist/Anoy-XLOX-loader.apk' }}
+          name: ${{ env.XLOX_SIGNED == 'true' && 'Anoy-APK' || 'Anoy-APK-unsigned' }}
+          path: dist/Anoy-XLOX-loader.apk
           retention-days: 14
           if-no-files-found: error
       - uses: actions/upload-artifact@v7
         with:
-          name: ${{ env.XLOX_SIGNED == 'true' && 'KennyPvt-APK' || 'KennyPvt-APK-unsigned' }}${{ env.AIR_NATIVE_ISOLATION == 'true' && '-Air-diagnostic' || '' }}
-          path: ${{ env.AIR_NATIVE_ISOLATION == 'true' && 'dist/air-native-isolation/KennyPvt-Air-diagnostic.apk' || 'dist/KennyPvt-loader.apk' }}
+          name: ${{ env.XLOX_SIGNED == 'true' && 'KennyPvt-APK' || 'KennyPvt-APK-unsigned' }}
+          path: dist/KennyPvt-loader.apk
           retention-days: 14
           if-no-files-found: error
-      - name: Upload Air diagnostic instructions and APK checksums
-        if: env.AIR_NATIVE_ISOLATION == 'true'
-        uses: actions/upload-artifact@v7
-        with:
-          name: Air-diagnostic-instructions-and-checksums
-          path: |
-            dist/air-native-isolation/TEST-INSTRUCTIONS.md
-            dist/air-native-isolation/SHA256SUMS.txt
-          retention-days: 14
-          if-no-files-found: error
-
       - name: Upload Android navigation test reports
         if: always()
         uses: actions/upload-artifact@v7
@@ -461,13 +403,12 @@ jobs:
           if-no-files-found: ignore
 
       - name: Publish both APKs in ONE GitHub release (no pruning)
-        if: env.AIR_NATIVE_ISOLATION != 'true' && env.XLOX_SIGNED == 'true' && ((github.event_name == 'push' && !contains(github.event.head_commit.message, '[verify-2.4.3]')) || (github.event_name == 'workflow_dispatch' && inputs.publish_release))
+        if: env.XLOX_SIGNED == 'true' && ((github.event_name == 'push' && !contains(github.event.head_commit.message, '[verify-2.4.3]')) || (github.event_name == 'workflow_dispatch' && inputs.publish_release))
         working-directory: ${{ github.workspace }}
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -eu
-          [ "$AIR_NATIVE_ISOLATION" = false ] || { echo '::error::Refusing to publish diagnostic APKs.'; exit 1; }
           printf '%s\n\n' "Anoy + KennyPvt $APP_VERSION_NAME ($APP_VERSION_CODE)" > /tmp/release-notes.md
           if [ "$APP_VERSION_NAME" = 2.4.3 ] && [ "$APP_VERSION_CODE" = 21 ]; then
             cat xlox/CHANGELOG-2.4.3.md >> /tmp/release-notes.md

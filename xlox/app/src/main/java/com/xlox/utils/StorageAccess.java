@@ -97,22 +97,8 @@ public final class StorageAccess {
     /** The first missing permission in request order, or null when all are granted. */
     @Nullable
     public static Need firstMissing(Context context) {
-        return firstMissing(context, (GameTarget) null);
-    }
-
-    /** Lite/Air reads installed APKs, not shared-storage OBBs; keep the SDK install gate. */
-    public static boolean requiredForGame(GameTarget game, Need need) {
-        return game == null || game.requiresObb() || need == Need.INSTALL;
-    }
-
-    public static boolean has(Context context, GameTarget game) {
-        return firstMissing(context, game) == null;
-    }
-
-    @Nullable
-    public static Need firstMissing(Context context, GameTarget game) {
         for (Need need : Need.values()) {
-            if (requiredForGame(game, need) && !has(context, need)) return need;
+            if (!has(context, need)) return need;
         }
         return null;
     }
