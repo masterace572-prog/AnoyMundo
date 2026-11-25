@@ -1910,14 +1910,22 @@ public class MAct extends AppCompatActivity {
         if (result != null && !result.isReady()) {
             Log.w(TAG, "Game package preparation: " + preparingGame.target.packageName + " " + result.status);
             setBusy(false, null);
-            int message = result.status == GamePackagePreparer.Status.PACKAGE_CHANGED
-                    ? R.string.game_error_apk_changed
-                    : result.status == GamePackagePreparer.Status.INSUFFICIENT_SPACE
-                            ? R.string.game_error_apk_space
-                            : result.status == GamePackagePreparer.Status.CONTAINER_UNAVAILABLE
-                                    ? R.string.game_error_apk_setup : R.string.game_error_apk_set;
+            int message;
+            switch (result.status) {
+                case PACKAGE_CHANGED: message = R.string.game_error_apk_changed; break;
+                case INSUFFICIENT_SPACE: message = R.string.game_error_apk_space; break;
+                case NATIVE_LIBRARIES_UNAVAILABLE: message = R.string.game_error_native_setup; break;
+                case GAME_RUNNING: message = R.string.game_error_apk_running; break;
+                case CONTAINER_UNAVAILABLE: message = R.string.game_error_apk_setup; break;
+                default: message = R.string.game_error_apk_set;
+            }
             showMessage(getString(message, gameName(preparingGame)), true);
             return;
+        }
+        if (result != null && preparingGame.target == GameTarget.BGMI_AIR) {
+            Log.i(TAG, result.repairedAirNativeLibraries
+                    ? "Air native preparation: VERIFIED_AFTER_SDK_REIMPORT"
+                    : "Air native preparation: VERIFIED");
         }
         hideMessage();
         preparingGame.action.setText(R.string.launching);

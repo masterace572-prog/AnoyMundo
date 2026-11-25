@@ -29,7 +29,9 @@ SplashActivity ──► (AppUpdateActivity) ──► LogAct ──► MAct
 The source follow-up supports complete installed split-APK sets and removes
 Lite/Air's OBB requirement. BGMI still requires its own expansion files.
 [Split-package behavior, tests and physical-device acceptance](../docs/SPLIT_APK_SUPPORT.md).
-This follow-up is not yet part of the published APKs referenced below.
+The Air-only [native-copy verification/SDK repair](../docs/AIR_NATIVE_PREPARATION.md)
+closes an additional readiness gap; the reported native crash is not yet proven
+fixed on a phone. These follow-ups are not yet part of the published APKs below.
 
 - BGMI: `com.pubg.imobile` → `libbgmi.so`.
 - BGMI Air: `com.krafton.bgmilite` → `libbgmilite.so` (not `libbgmiair.so`).
@@ -146,7 +148,7 @@ loads it inside the `com.pubg.imobile` virtual process.
 ## Publishing a loader library
 
 Upload a raw arm64 `.so` **or** ZIP at **Library** in your signed-in Owner
-panel, up to **10 MiB input and expanded contents**. Whatever the input's
+panel, up to **20 MiB input and combined expanded contents**. Whatever the input's
 filename, the main installed file is **libbgmi.so**. Valid sibling `.so`
 dependencies in a ZIP are kept. Each Owner can publish only to their own
 immutable channel. For scripted publication:

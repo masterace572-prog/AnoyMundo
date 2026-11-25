@@ -6,6 +6,7 @@ import android.app.Application;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
+import android.os.Build;
 
 import org.junit.Before;
 import org.junit.Rule;
@@ -26,7 +27,7 @@ import java.util.zip.ZipOutputStream;
 
 /** Real temporary APK-shaped ZIPs + Android PackageInfo, without starting a game/SDK. */
 @RunWith(RobolectricTestRunner.class)
-@Config(application = Application.class, sdk = {21, 28})
+@Config(application = Application.class, sdk = {21, 28, 35})
 public class GamePackagePreparerTest {
     @Rule public TemporaryFolder temporary = new TemporaryFolder();
     private static final GameTarget GAME = GameTarget.BGMI_AIR;
@@ -38,6 +39,9 @@ public class GamePackagePreparerTest {
     private boolean removed;
     private boolean defaultUser = true;
     private boolean launchReady = true;
+    private boolean running;
+    private int runningChecks;
+    private Runnable onRunningRead = () -> {};
     private int userRequests;
     private int userChecks;
     private int launchChecks;
@@ -85,6 +89,9 @@ public class GamePackagePreparerTest {
             }
             @Override public boolean hasLaunchActivity(String pkg) {
                 assertEquals(GAME.packageName, pkg); launchChecks++; onResolve.run(); return launchReady;
+            }
+            @Override public boolean isRunning(String pkg) {
+                assertEquals(GAME.packageName, pkg); runningChecks++; onRunningRead.run(); return running;
             }
         }, work, millis -> {
             assertEquals(100L, millis); waits++; onPause.sleep(millis);
@@ -303,6 +310,7 @@ public class GamePackagePreparerTest {
             @Override public boolean hasDefaultUser(String pkg) { throw new AssertionError("No imported package"); }
             @Override public void addDefaultUser(String pkg) { fail("Must not create a user when staging failed"); }
             @Override public boolean hasLaunchActivity(String pkg) { throw new AssertionError("No imported package"); }
+            @Override public boolean isRunning(String pkg) { return false; }
         }, noSpace);
         assertEquals(GamePackagePreparer.Status.INSUFFICIENT_SPACE, limited.prepare(GAME).status);
         assertEquals(0, work.listFiles().length);
@@ -317,6 +325,7 @@ public class GamePackagePreparerTest {
             @Override public boolean hasDefaultUser(String pkg) { throw new AssertionError("No imported package"); }
             @Override public void addDefaultUser(String pkg) { fail("Must not create a user when staging failed"); }
             @Override public boolean hasLaunchActivity(String pkg) { throw new AssertionError("No imported package"); }
+            @Override public boolean isRunning(String pkg) { return false; }
         }, temporary.newFile("not-a-directory"));
         assertEquals(GamePackagePreparer.Status.CONTAINER_UNAVAILABLE, limited.prepare(GAME).status);
         assertTrue(new File(installed.applicationInfo.sourceDir).isFile());
@@ -512,4 +521,204 @@ public class GamePackagePreparerTest {
         assertEquals(0, userChecks); assertEquals(0, userRequests); assertEquals(0, launchChecks);
     }
 
+    private static final byte[] BASE_NATIVE = "base-native-fixture".getBytes(StandardCharsets.UTF_8);
+    private static final byte[] SPLIT_NATIVE = "arm64-split-fixture".getBytes(StandardCharsets.UTF_8);
+    private File natives;
+
+    private void nativeApk(String path, String name, byte[] body) throws Exception {
+        try (ZipOutputStream zip = new ZipOutputStream(new FileOutputStream(path))) {
+            zip.putNextEntry(new ZipEntry("AndroidManifest.xml"));
+            zip.write("manifest-fixture".getBytes(StandardCharsets.UTF_8)); zip.closeEntry();
+            zip.putNextEntry(new ZipEntry("lib/arm64-v8a/" + name));
+            zip.write(body); zip.closeEntry();
+        }
+    }
+
+    private void nativeFixture() throws Exception {
+        nativeApk(installed.applicationInfo.sourceDir, "libbase.so", BASE_NATIVE);
+        nativeApk(installed.applicationInfo.splitSourceDirs[0], "libUE4.so", SPLIT_NATIVE);
+        installed.applicationInfo.flags |= ApplicationInfo.FLAG_EXTRACT_NATIVE_LIBS;
+        natives = temporary.newFolder("container-native");
+        virtual = copy(installed);
+        virtual.applicationInfo.nativeLibraryDir = natives.getPath();
+        onInstall = this::successfulNativeImport;
+    }
+
+    /** Only the fake original-SDK adapter writes files, never the verifier. */
+    private void successfulNativeImport() {
+        virtual = copy(installed);
+        virtual.applicationInfo.nativeLibraryDir = natives.getPath();
+        try {
+            Files.write(new File(natives, "libbase.so").toPath(), BASE_NATIVE);
+            Files.write(new File(natives, "libUE4.so").toPath(), SPLIT_NATIVE);
+        } catch (Exception e) { throw new AssertionError(e); }
+    }
+
+    @Test public void intactAirNativeCopiesNeedNoReimportOrRunningQuery() throws Exception {
+        nativeFixture(); successfulNativeImport();
+        GamePackagePreparer.Result result = preparer.prepare(GAME);
+        assertTrue(result.isReady()); assertFalse(result.repairedAirNativeLibraries);
+        assertEquals(0, installs); assertEquals(0, runningChecks);
+    }
+
+    @Test public void missingAbiSplitLibraryRetriesTheWholeOriginalSdkImportOnce() throws Exception {
+        nativeFixture();
+        Files.write(new File(natives, "libbase.so").toPath(), BASE_NATIVE);
+        GamePackagePreparer.Result result = preparer.prepare(GAME);
+        assertTrue(result.isReady()); assertTrue(result.repairedAirNativeLibraries);
+        assertEquals(1, installs); assertEquals(2, runningChecks);
+        assertArrayEquals(SPLIT_NATIVE, bytes(new File(natives, "libUE4.so")));
+        assertEquals(3, virtual.splitNames.length);
+    }
+
+    @Test public void truncatedBaseLibraryIsRepairedEvenWhenAllApksAlreadyMatch() throws Exception {
+        nativeFixture(); successfulNativeImport();
+        Files.write(new File(natives, "libbase.so").toPath(), new byte[]{42});
+        expect(GamePackagePreparer.Status.READY); assertEquals(1, installs);
+        assertArrayEquals(BASE_NATIVE, bytes(new File(natives, "libbase.so")));
+    }
+
+    @Test public void nativeCrcDetectsSameSizeSameTimestampCorruptionAndPreservesSaves() throws Exception {
+        nativeFixture(); successfulNativeImport();
+        File library = new File(natives, "libUE4.so"); long modified = library.lastModified();
+        byte[] bad = SPLIT_NATIVE.clone(); bad[0] ^= 1;
+        Files.write(library.toPath(), bad); assertTrue(library.setLastModified(modified));
+        File saved = temporary.newFile("existing-air-save");
+        Files.write(saved.toPath(), new byte[]{51, 52});
+        GamePackagePreparer.Result result = preparer.prepare(GAME);
+        assertTrue(result.isReady()); assertTrue(result.repairedAirNativeLibraries);
+        assertEquals(1, installs); assertEquals(0, userRequests);
+        assertArrayEquals(new byte[]{51, 52}, bytes(saved));
+        assertArrayEquals(SPLIT_NATIVE, bytes(library));
+    }
+
+    @Test public void aFreshImportWithFailedNativeCopyIsNotRetriedOrMarkedReady() throws Exception {
+        nativeFixture(); virtual = null;
+        onInstall = () -> { virtual = copy(installed); virtual.applicationInfo.nativeLibraryDir = natives.getPath(); };
+        expect(GamePackagePreparer.Status.NATIVE_LIBRARIES_UNAVAILABLE);
+        assertEquals(1, installs); assertEquals(0, userRequests);
+    }
+
+    @Test public void failedNativeRepairCannotLoopOrLaunchWithTheOldBrokenCopy() throws Exception {
+        nativeFixture();
+        onInstall = () -> {}; // SDK silently did not copy, but its PackageInfo still matches
+        expect(GamePackagePreparer.Status.NATIVE_LIBRARIES_UNAVAILABLE);
+        assertEquals(1, installs); assertEquals(0, userRequests);
+        assertEquals(0, natives.listFiles().length);
+    }
+
+    @Test public void copyingOnlyTheBaseLibraryDoesNotMakeAFreshSplitInstallReady() throws Exception {
+        nativeFixture(); virtual = null;
+        onInstall = () -> {
+            successfulNativeImport(); assertTrue(new File(natives, "libUE4.so").delete());
+        };
+        expect(GamePackagePreparer.Status.NATIVE_LIBRARIES_UNAVAILABLE); assertEquals(1, installs);
+    }
+
+    @Test public void nativeRepairNeverReplacesMappedCodeOfARunningAirGame() throws Exception {
+        nativeFixture(); running = true;
+        expect(GamePackagePreparer.Status.GAME_RUNNING);
+        assertEquals(0, installs); assertEquals(1, runningChecks);
+        assertEquals(0, natives.listFiles().length); assertEquals(0, work.listFiles().length);
+    }
+
+    @Test public void runningAirWithStaleApksIsNotStoppedOrReimportedEither() throws Exception {
+        virtual = copy(installed); virtual.versionCode--; running = true;
+        expect(GamePackagePreparer.Status.GAME_RUNNING);
+        assertEquals(0, installs); assertEquals(0, userRequests);
+    }
+
+    @Test public void aGameStartingDuringStagingStopsRepairAndCleansOnlyStaging() throws Exception {
+        nativeFixture(); File other = apk("unlisted.apk");
+        onRunningRead = () -> { if (runningChecks == 2) running = true; };
+        expect(GamePackagePreparer.Status.GAME_RUNNING);
+        assertEquals(0, installs); assertEquals(2, runningChecks);
+        assertEquals(0, work.listFiles().length); assertTrue(other.isFile());
+        assertTrue(new File(installed.applicationInfo.sourceDir).isFile());
+    }
+
+    @Test public void unreadableRunningStateDoesNotAuthorizeNativeRepair() throws Exception {
+        nativeFixture(); onRunningRead = () -> { throw new IllegalStateException("offline SDK fixture"); };
+        expect(GamePackagePreparer.Status.CONTAINER_UNAVAILABLE);
+        assertEquals(0, installs); assertEquals(0, work.listFiles().length);
+    }
+
+    @Test public void aStoreUpdateBeforeNativeRepairIsDetectedBeforeSdkReplacement() throws Exception {
+        nativeFixture(); onRunningRead = () -> installed.versionCode++;
+        expect(GamePackagePreparer.Status.PACKAGE_CHANGED);
+        assertEquals(0, installs); assertEquals(0, natives.listFiles().length);
+    }
+
+    @Test public void interruptionBeforeNativeHashingDoesNotTriggerRepair() throws Exception {
+        nativeFixture(); successfulNativeImport(); onResolve = () -> Thread.currentThread().interrupt();
+        try {
+            expect(GamePackagePreparer.Status.CONTAINER_UNAVAILABLE);
+            assertTrue(Thread.currentThread().isInterrupted()); assertEquals(0, installs);
+        } finally { Thread.interrupted(); }
+    }
+
+    @Test public void directFromApkNativeModeDoesNotRequireInventedExtractedFilesOn23Plus() throws Exception {
+        nativeFixture(); installed.applicationInfo.flags = 0; virtual.applicationInfo.flags = 0;
+        onInstall = () -> {}; // no extraction is expected in direct-from-APK mode
+        GamePackagePreparer.Result result = preparer.prepare(GAME);
+        if (Build.VERSION.SDK_INT >= 23) {
+            assertTrue(result.isReady()); assertEquals(0, installs);
+        } else {
+            assertEquals(GamePackagePreparer.Status.NATIVE_LIBRARIES_UNAVAILABLE, result.status);
+            assertEquals(1, installs);
+        }
+    }
+
+    @Test public void corruptExtractedFileCannotShadowALegalDirectFromApkLibrary() throws Exception {
+        nativeFixture(); installed.applicationInfo.flags = 0; virtual.applicationInfo.flags = 0;
+        Files.write(new File(natives, "libUE4.so").toPath(), new byte[]{1});
+        expect(GamePackagePreparer.Status.READY); assertEquals(1, installs);
+    }
+
+    @Test public void hostExtractionFlagCannotBeLostByContainerReadBack() throws Exception {
+        nativeFixture(); virtual.applicationInfo.flags = 0;
+        expect(GamePackagePreparer.Status.READY); assertEquals(1, installs);
+    }
+
+    @Test public void containerExtractionFlagAlsoRequiresCompleteNativeCopies() throws Exception {
+        nativeFixture(); installed.applicationInfo.flags = 0;
+        expect(GamePackagePreparer.Status.READY); assertEquals(1, installs);
+    }
+
+    @Test public void nativeRepairRetainsExactStagedSetThroughAsynchronousReadiness() throws Exception {
+        nativeFixture(); File other = apk("unlisted.apk");
+        onInstall = () -> { assertStagedSet(); successfulNativeImport(); launchReady = false; };
+        onPause = millis -> {
+            assertTrue(new File(lastInput, "base.apk").isFile());
+            assertEquals(4, new File(lastInput).listFiles().length);
+            if (waits == 2) launchReady = true;
+        };
+        expect(GamePackagePreparer.Status.READY); assertEquals(1, installs); assertEquals(2, waits);
+        assertEquals(0, work.listFiles().length); assertTrue(other.isFile());
+    }
+
+    @Test public void invalidSdkReadBackAfterNativeRepairStillFailsClosedAndCleansStaging() throws Exception {
+        nativeFixture(); apk("unlisted.apk");
+        onInstall = () -> { assertStagedSet(); virtual.splitNames = null; };
+        expect(GamePackagePreparer.Status.CONTAINER_UNAVAILABLE);
+        assertEquals(1, installs); assertEquals(0, work.listFiles().length);
+        assertEquals(0, userRequests);
+    }
+
+    @Test public void bgmiNativeFilesAndItsRunningStateAreNotSubjectToTheAirRepair() throws Exception {
+        nativeFixture(); installed.packageName = GameTarget.BGMI.packageName;
+        installed.applicationInfo.packageName = GameTarget.BGMI.packageName;
+        virtual = copy(installed); // includes missing native files; Air-only policy must not run
+        GamePackagePreparer bgmiOnly = new GamePackagePreparer(pkg -> installed, new GamePackagePreparer.Container() {
+            @Override public PackageInfo read(String pkg) { assertEquals(GameTarget.BGMI.packageName, pkg); return virtual; }
+            @Override public void installApkSet(String dir) { fail("BGMI preparation must remain unchanged"); }
+            @Override public boolean hasDefaultUser(String pkg) { return true; }
+            @Override public void addDefaultUser(String pkg) { fail("Existing user must not be recreated"); }
+            @Override public boolean hasLaunchActivity(String pkg) { return true; }
+            @Override public boolean isRunning(String pkg) { throw new AssertionError("Air-only running guard"); }
+        }, work);
+        GamePackagePreparer.Result result = bgmiOnly.prepare(GameTarget.BGMI);
+        assertTrue(result.isReady()); assertFalse(result.repairedAirNativeLibraries);
+        assertEquals(0, natives.listFiles().length);
+    }
 }

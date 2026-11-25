@@ -109,7 +109,10 @@ class DualGameWiring(unittest.TestCase):
                      'if (!launchReady || !installed.matchesPackage(virtual))',
                      'Thread.currentThread().interrupt()'):
             self.assertIn(call, package)
-        self.assertNotIn('MetaActivityManager.', package)  # resolver, never a launch during preparation
+        self.assertEqual(package.count('MetaActivityManager.'), 1)
+        self.assertIn('return MetaActivityManager.isAppRunning(pkg);', package)  # read-only repair guard
+        self.assertNotIn('MetaActivityManager.launch', package)
+        self.assertNotIn('MetaActivityManager.kill', package)
         self.assertNotIn('installAppByPath(', package)
         self.assertNotIn('uninstallAppFully(', package)
         self.assertNotIn('cleanPackageDataAsUser(', package)

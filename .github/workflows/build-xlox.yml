@@ -171,6 +171,9 @@ jobs:
       - name: Game login routing and cancellable update transport regressions
         run: python3 scripts/test_runtime_fixes.py
 
+      - name: Air native-copy integrity and safe-repair regressions
+        run: python3 -B scripts/test_air_native_preparation.py
+
       - name: Air injection isolation and diagnostic release-safety regressions
         run: python3 -B scripts/test_air_native_isolation.py
 
@@ -263,14 +266,14 @@ jobs:
           expected = {'com.xlox.ui.HomeSettingsNavigationTest': 60,
                       'com.xlox.ui.LoginSplashUiTest': 18,
                       'com.xlox.utils.AppManagerObbStateTest': 22,
-                      'com.xlox.utils.GamePackagePreparerTest': 100,
+                      'com.xlox.utils.GamePackagePreparerTest': 210,
                       'com.xlox.utils.AirCrashDiagnosticsTest': 12,
                       'com.xlox.ui.AirCrashReportDialogTest': 16}
           for variant in ('testAnoyDebugUnitTest', 'testKennyDebugUnitTest'):
               for name, count in expected.items():
                   actual = suites.get((variant, name))
                   assert actual is not None and actual['tests'] >= count, (variant, name, actual)
-          assert totals['tests'] >= 456, 'Both brands must run all navigation/login/OBB/APK-set tests on Android 21/28 plus private Air adapter and separate root-native consent/lifecycle tests on Android 21/35.'
+          assert totals['tests'] >= 676, 'Both brands must run navigation/login/OBB tests on Android 21/28, all APK-set and Air native integrity/repair tests on Android 21/28/35, plus private Air adapter and separate root-native consent/lifecycle tests on Android 21/35.'
           assert totals['failures'] == totals['errors'] == totals['skipped'] == 0, summary
           print('::notice title=Android host test totals::' + summary)
           PYNAV
@@ -347,6 +350,9 @@ jobs:
 
       - name: Verify compiled Air diagnostic mode in BOTH APKs
         run: python3 -B scripts/test_air_native_isolation.py --expected-isolation "$AIR_NATIVE_ISOLATION" ../dist/Anoy-XLOX-loader.apk ../dist/KennyPvt-loader.apk
+
+      - name: Verify compiled Air preparation in BOTH APKs
+        run: python3 -B scripts/test_air_native_preparation.py --compiled-apks ../dist/Anoy-XLOX-loader.apk ../dist/KennyPvt-loader.apk
 
       - name: Verify permissions in BOTH APKs
         run: python3 scripts/check_apk_permissions.py ../dist/Anoy-XLOX-loader.apk ../dist/KennyPvt-loader.apk

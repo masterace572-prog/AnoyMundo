@@ -36,11 +36,27 @@ launch call, after BGMI's OBB preparation (Lite/Air skips that step).
    The polling budget is 100 interruptible 100 ms pauses on the I/O worker;
    missing registration/components time out to a controlled error. Keep staged
    APKs through readiness/read-back and clean up on timeout or interruption too.
-6. Recheck the host install's version, update time and code-path/content stamps
+6. **Air only:** verify the arm64 native libraries in the SDK's reported
+   `nativeLibraryDir` against entries from the installed base and every split,
+   streaming size/CRC checks with 64 KiB memory. The pinned SDK discards its
+   native-copy result, so matching APK descriptors alone cannot prove extraction
+   succeeded. If an otherwise complete Air install has a missing/truncated/bad
+   copy, use that same whole-set SDK import once and require verification again.
+   An initial import and a repair share a maximum of **one import per Launch**;
+   failed native read-back stops launch with a controlled error, not another
+   retry, manual extraction or a fallback mode. Do not re-import a running Air
+   game: query its SDK state before staging and immediately before replacement.
+   Recheck the host installation before replacement too. Keep Android's legal
+   direct-from-APK mode on API 23+; optional extracted copies must still match if
+   present. API 21/22 require extraction. BGMI's preparation path is unchanged.
+7. Recheck the host install's version, update time and code-path/content stamps
    to avoid mixing files during a store update. A failed/partial setup does not
    proceed to launch or create an external fallback user.
-7. Keep existing launch/data/signing behavior. No merging, re-signing, game
+8. Keep existing launch/data/signing behavior. No merging, re-signing, game
    uninstall, data clear, private-SDK reflection, source-APK moves or AAR swap.
+
+[Air native-copy correction, boundaries and phone acceptance](AIR_NATIVE_PREPARATION.md).
+This closes a verified readiness gap, not a proven cause of the reported SIGBUS.
 
 ### Why this API, not `cloneApp`
 
@@ -81,13 +97,16 @@ passing the full set cannot itself prove that its engine supports every game.
 
 ## Verification and remaining device checks
 
-The host suite includes **50 APK-set/readiness cases**, plus 11 OBB/permission-policy
-cases, 28 navigation/presentation cases and 9 Login/Splash cases, each on host
-Android 21/28 for both brands (**392 checks**). APK-set cases use temporary
-APK-shaped ZIPs and an injected SDK adapter: exact-set imports/staging,
-single/split installs, stale/missing/same-size wrong splits, read-back failure,
-update races, low space, delayed component/user registration, bounded timeout,
-interruption, no fallback users, and retaining originals/data. They do **not**
+CI requires **70 APK-set/readiness cases on host Android 21/28/35 for each
+brand**, including 20 native integrity/repair cases. Existing navigation,
+Login/Splash, OBB and private diagnostic adapter/consent tests bring the required
+total to **676 checks** across both brands. APK-set cases use temporary APK-shaped
+ZIPs and an injected SDK adapter: exact-set imports/staging, single/split installs,
+stale/missing/same-size wrong splits, read-back failure, update races, low space,
+delayed component/user registration, bounded timeout, interruption, no fallback
+users, and retaining originals/data. Native cases add a single SDK-owned repair,
+CRC corruption detection, running-game guards and direct-load policy. A separate
+JVM fixture streams a >20 MiB game library inside a 32 MiB heap. They do **not**
 start the real SDK/game. Full compilation and these host checks run in CI;
 source-level bytecode inspection is not physical-device proof.
 

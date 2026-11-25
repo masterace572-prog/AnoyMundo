@@ -13,10 +13,12 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InterruptedIOException;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Enumeration;
 import java.util.HashSet;
@@ -26,6 +28,7 @@ import java.util.Set;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
+import net_62v.external.MetaActivityManager;
 import net_62v.external.MetaApplicationInstaller;
 import net_62v.external.MetaPackageManager;
 
@@ -39,16 +42,23 @@ import net_62v.external.MetaPackageManager;
 public final class GamePackagePreparer {
     public enum Status {
         READY, NOT_INSTALLED, INCOMPLETE_APKS, APK_UNREADABLE,
-        PACKAGE_CHANGED, INSUFFICIENT_SPACE, CONTAINER_UNAVAILABLE
+        PACKAGE_CHANGED, INSUFFICIENT_SPACE, CONTAINER_UNAVAILABLE,
+        NATIVE_LIBRARIES_UNAVAILABLE, GAME_RUNNING
     }
 
     public static final class Result {
         public final Status status;
         public final int splitCount;
+        public final boolean repairedAirNativeLibraries;
 
         private Result(Status status, int splitCount) {
+            this(status, splitCount, false);
+        }
+
+        private Result(Status status, int splitCount, boolean repairedAirNativeLibraries) {
             this.status = status;
             this.splitCount = splitCount;
+            this.repairedAirNativeLibraries = repairedAirNativeLibraries;
         }
 
         public boolean isReady() { return status == Status.READY; }
@@ -64,6 +74,7 @@ public final class GamePackagePreparer {
         boolean hasDefaultUser(String packageName);
         void addDefaultUser(String packageName);
         boolean hasLaunchActivity(String packageName);
+        boolean isRunning(String packageName);
     }
 
     interface Pause { void sleep(long millis) throws InterruptedException; }
@@ -119,6 +130,12 @@ public final class GamePackagePreparer {
                 return launch != null && launch.getComponent() != null
                         && pkg.equals(launch.getComponent().getPackageName());
             }
+
+            @Override public boolean isRunning(String pkg) {
+                // Read-only. The Air repair must not replace mapped code or
+                // implicitly stop an already-running game to repair its files.
+                return MetaActivityManager.isAppRunning(pkg);
+            }
         };
     }
 
@@ -140,21 +157,40 @@ public final class GamePackagePreparer {
             if (Thread.currentThread().isInterrupted()) throw new InterruptedException();
             Snapshot installed = snapshot(host.read(game.packageName), game.packageName);
             Snapshot virtual = readContainer(game.packageName);
-            boolean launchReady;
-            // Use Android's installed directory only if its .apk files are
-            // EXACTLY the PackageManager set. Otherwise stream a private set;
-            // never send unrelated/unlisted APKs to the SDK. Keep staged files
-            // until read-back/readiness finishes, not merely until API return.
-            try (ApkDirectory source = installed.matchesPackage(virtual) ? null : apkDirectory(installed)) {
-                if (Thread.currentThread().isInterrupted()) throw new InterruptedException();
-                if (source != null) {
-                    container.installApkSet(source.directory.getPath());
-                    virtual = readContainer(game.packageName);
+            boolean launchReady = false, nativeReady = false, nativeRepair = false, imported = false;
+            // At most ONE SDK import, not a retry loop on every failed copy.
+            // An otherwise complete Air install may need that import solely to
+            // repair extraction: the SDK discards copyNativeBinaries' result.
+            for (int attempt = 0; attempt < 2; attempt++) {
+                boolean needsImport = !installed.matchesPackage(virtual) || nativeRepair;
+                if (needsImport && game == GameTarget.BGMI_AIR && container.isRunning(game.packageName)) {
+                    return result(Status.GAME_RUNNING);
                 }
-                // A rejected import must not fall back to creating an external
-                // clone/user for a package that was never fully imported.
-                launchReady = installed.matchesPackage(virtual) && awaitLaunchReady(game.packageName);
-                if (launchReady) virtual = readContainer(game.packageName);
+                // Use the installed directory only if its APKs are EXACTLY the
+                // PackageManager set. Otherwise privately stage that whole set.
+                // Retain staging through component/user and native read-back.
+                try (ApkDirectory source = needsImport ? apkDirectory(installed) : null) {
+                    if (Thread.currentThread().isInterrupted()) throw new InterruptedException();
+                    if (source != null) {
+                        if (game == GameTarget.BGMI_AIR) {
+                            if (!hostUnchanged(installed, game.packageName)) return result(Status.PACKAGE_CHANGED);
+                            // Staging may take time. Recheck before SDK-owned
+                            // code replacement; never kill a game for repair.
+                            if (container.isRunning(game.packageName)) return result(Status.GAME_RUNNING);
+                        }
+                        container.installApkSet(source.directory.getPath());
+                        imported = true;
+                        virtual = readContainer(game.packageName);
+                    }
+                    // A rejected import cannot authorize an external fallback
+                    // user, a partial launch or another import attempt.
+                    launchReady = installed.matchesPackage(virtual) && awaitLaunchReady(game.packageName);
+                    if (launchReady) virtual = readContainer(game.packageName);
+                    if (!launchReady || !installed.matchesPackage(virtual)) break;
+                    nativeReady = game != GameTarget.BGMI_AIR || nativeLibrariesMatch(installed, virtual);
+                }
+                if (nativeReady || imported) break;
+                nativeRepair = true;
             }
             // Store updates can replace code paths during preparation. Never
             // combine the base from one installation with splits from another.
@@ -166,17 +202,35 @@ public final class GamePackagePreparer {
             }
             if (!installed.sameInstall(latest)) return result(Status.PACKAGE_CHANGED);
             if (!launchReady || !installed.matchesPackage(virtual)) return result(Status.CONTAINER_UNAVAILABLE);
-            return new Result(Status.READY, installed.files.size() - 1);
+            if (!nativeReady) return result(Status.NATIVE_LIBRARIES_UNAVAILABLE);
+            return new Result(Status.READY, installed.files.size() - 1, nativeRepair);
         } catch (PackageManager.NameNotFoundException e) {
             return result(Status.NOT_INSTALLED);
         } catch (InvalidApks e) {
             return result(e.status);
-        } catch (InterruptedException e) {
+        } catch (InterruptedException | InterruptedIOException e) {
             Thread.currentThread().interrupt();
             return result(Status.CONTAINER_UNAVAILABLE);
         } catch (IOException | RuntimeException | LinkageError e) {
             return result(Status.CONTAINER_UNAVAILABLE);
         }
+    }
+
+    private boolean hostUnchanged(Snapshot installed, String pkg) {
+        try { return installed.sameInstall(snapshot(host.read(pkg), pkg)); }
+        catch (PackageManager.NameNotFoundException | InvalidApks e) { return false; }
+    }
+
+    private static boolean nativeLibrariesMatch(Snapshot installed, Snapshot virtual) throws InterruptedIOException {
+        ArrayList<String> paths = new ArrayList<>();
+        for (FileStamp file : installed.files.values()) paths.add(file.path);
+        // API 21/22 always extract. On 23+ preserve legal direct-from-APK mode;
+        // never change manifest flags or force the SDK to rewrite game binaries.
+        boolean required = Build.VERSION.SDK_INT < 23
+                || ((installed.flags | virtual.flags) & ApplicationInfo.FLAG_EXTRACT_NATIVE_LIBS) != 0;
+        try { return AirNativeLibraries.matches(paths, virtual.nativeDirectory, required); }
+        catch (InterruptedIOException e) { throw e; }
+        catch (IOException | SecurityException e) { return false; }
     }
 
     private boolean awaitLaunchReady(String pkg) throws InterruptedException {
@@ -282,7 +336,7 @@ public final class GamePackagePreparer {
             if (app.splitPublicSourceDirs != null) stamp(app.splitPublicSourceDirs[i]);
         }
         long version = Build.VERSION.SDK_INT >= 28 ? info.getLongVersionCode() : info.versionCode & 4294967295L;
-        return new Snapshot(version, info.lastUpdateTime, files);
+        return new Snapshot(version, info.lastUpdateTime, files, app.nativeLibraryDir, app.flags);
     }
 
     private static FileStamp stamp(String path) throws InvalidApks {
@@ -352,8 +406,12 @@ public final class GamePackagePreparer {
         final long version;
         final long updated;
         final LinkedHashMap<String, FileStamp> files;
-        Snapshot(long version, long updated, LinkedHashMap<String, FileStamp> files) {
+        final String nativeDirectory;
+        final int flags;
+        Snapshot(long version, long updated, LinkedHashMap<String, FileStamp> files,
+                String nativeDirectory, int flags) {
             this.version = version; this.updated = updated; this.files = files;
+            this.nativeDirectory = nativeDirectory; this.flags = flags;
         }
         boolean matchesPackage(Snapshot other) {
             if (other == null || version != other.version || !files.keySet().equals(other.files.keySet())) return false;
