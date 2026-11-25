@@ -390,6 +390,8 @@ public class MAct extends AppCompatActivity {
         air.title = findViewById(R.id.airGameValue);
         air.version = findViewById(R.id.airGameVersion);
         air.state = findViewById(R.id.airGameStateValue);
+        findViewById(R.id.airDiagnosticNotice).setVisibility(
+                BuildConfig.AIR_NATIVE_ISOLATION ? View.VISIBLE : View.GONE);
         if (preview) {
             qaLaunchTarget = sessionFor(GameTarget.fromPackage(getIntent().getStringExtra(EXTRA_QA_GAME)));
             launchTarget = qaLaunchTarget;
@@ -2260,7 +2262,9 @@ public class MAct extends AppCompatActivity {
             Ui.tap(v);
             confirmRedownload();
         });
-        ((TextView) findViewById(R.id.appVersionValue)).setText(getString(R.string.settings_version_value,
+        ((TextView) findViewById(R.id.appVersionValue)).setText(getString(
+                BuildConfig.AIR_NATIVE_ISOLATION ? R.string.settings_version_value_air_diagnostic
+                        : R.string.settings_version_value,
                 BuildConfig.VERSION_NAME, BuildConfig.VERSION_CODE));
         // Insets: mainRoot pads the status bar and sides; setupInsets pads the bottom.
         Ui.maxWidth(findViewById(R.id.settingsContent), 600);

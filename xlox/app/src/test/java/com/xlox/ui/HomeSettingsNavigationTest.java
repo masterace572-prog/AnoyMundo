@@ -126,6 +126,23 @@ public class HomeSettingsNavigationTest {
     }
 
     @Test
+    public void diagnosticNoticeIsHiddenAndDoesNotReplaceGameFeedbackOrControls() {
+        TextView notice = activity.findViewById(R.id.airDiagnosticNotice);
+        TextView message = activity.findViewById(R.id.airStatusMessage);
+        View action = activity.findViewById(R.id.airPrimaryAction);
+        assertEquals(View.GONE, notice.getVisibility());
+        assertEquals(activity.getString(R.string.air_native_isolation_notice), notice.getText().toString());
+        assertNotSame(message, notice);
+        boolean enabled = action.isEnabled();
+        notice.setVisibility(View.VISIBLE);
+        message.setVisibility(View.GONE);
+        layout(360, 800);
+        assertEquals(View.VISIBLE, notice.getVisibility());
+        assertTrue(notice.getHeight() > 0);
+        assertEquals(enabled, action.isEnabled());
+    }
+
+    @Test
     public void homeAndSettingsTabsAnimateInBothDirections() {
         assertTrue(activity.navigation.homeIsSettled());
         assertTrue(activity.findViewById(R.id.navigationHome).isSelected());

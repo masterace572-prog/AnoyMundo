@@ -2,6 +2,13 @@ plugins {
     id 'com.android.application'
 }
 
+// Explicit, compile-time-only diagnostic. Normal builds MUST keep Air injection.
+// This is not a runtime preference, Intent extra, licence bypass or release mode.
+def airNativeIsolation = providers.gradleProperty('airNativeIsolation').getOrElse('false')
+if (!(airNativeIsolation in ['true', 'false'])) {
+    throw new GradleException('airNativeIsolation must be true or false')
+}
+
 def signingProps = new Properties()
 def signingPropsFile = rootProject.file('local.properties')
 if (signingPropsFile.isFile()) {
@@ -99,6 +106,7 @@ android {
         }
 
         buildConfigField 'String', 'PANEL_BASE_URL', '"https://anoymundo-panel.vercel.app"'
+        buildConfigField 'boolean', 'AIR_NATIVE_ISOLATION', airNativeIsolation
         multiDexEnabled true
     }
 

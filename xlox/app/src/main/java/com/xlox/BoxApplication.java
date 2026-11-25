@@ -120,6 +120,13 @@ public class BoxApplication extends Application
                         + "Android 17 may reject System.load()");
             }
 
+            // Build-only isolation test: leave validation, SDK startup and BGMI
+            // unchanged. Do not delete/replace the Air library or report it loaded.
+            if (BuildConfig.AIR_NATIVE_ISOLATION && game == GameTarget.BGMI_AIR) {
+                Log.w(LOAD_TAG, "AIR-NATIVE-ISOLATION: libbgmilite.so injection skipped");
+                return;
+            }
+
             System.load(lib.getAbsolutePath());
             Log.i(LOAD_TAG, game.libraryName + " LOADED from " + lib.getAbsolutePath());
             LibManager.recordLoadSuccess(ctx, game, lib.getAbsolutePath());
