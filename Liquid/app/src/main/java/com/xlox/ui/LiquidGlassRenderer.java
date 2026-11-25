@@ -202,8 +202,9 @@ final class LiquidGlassRenderer {
     private void fill(int color) {
         paint.setShader(null);
         paint.setStyle(Paint.Style.FILL);
-        paint.setColor(color);
+        // Reset FIRST; setColor then applies the token's intended alpha.
         paint.setAlpha(255);
+        paint.setColor(color);
     }
 
     private void fill(Shader shader) {
