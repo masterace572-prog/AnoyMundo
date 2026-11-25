@@ -79,24 +79,16 @@ final class LiquidGlassRenderer {
         shellPath.reset();
         shellPath.addRoundRect(shell, radius, radius, Path.Direction.CW);
 
-        // A low contact shadow separates the clear material from dark page content.
+        // A very low contact shadow separates the clear material from dark page content.
         int shellShadow = canvas.save();
         canvas.translate(0, dp(1.2f));
         fill(shade);
+        paint.setAlpha(28);
         canvas.drawPath(shellPath, paint);
         canvas.restoreToCount(shellShadow);
 
-        BitmapShader clearImage = backdrop.clearShader();
-        if (clearImage != null) {
-            // The whole capsule behaves like clear glass: the sharp page behind it is
-            // gently magnified, while the selected lens below does the stronger frost.
-            matrix.setScale(width / (float) backdrop.width(), height / (float) backdrop.height());
-            matrix.postScale(1.018f, 1.035f, shell.centerX(), shell.centerY());
-            clearImage.setLocalMatrix(matrix);
-            fill(clearImage);
-            paint.setAlpha(82);
-            canvas.drawPath(shellPath, paint);
-        }
+        // The outer capsule stays genuinely clear: Android shows the live pager
+        // directly through it. Only the moving selector uses the sampled frost.
         fill(clearTint);
         canvas.drawPath(shellPath, paint);
         map(shellLight, shell, focusX * dp(1.2f), focusY * dp(.5f));

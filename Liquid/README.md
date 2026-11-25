@@ -8,12 +8,11 @@ release documents describe the baseline, not device acceptance of this experimen
 ## What the navigation does
 
 - **Clear floating glass:** the black footer and solid blue selection are gone.
-  Unchanged Home/Settings pages extend behind the translucent capsule, which
-  faintly refracts the real pager instead of using an opaque fill.
+  Unchanged Home/Settings pages remain directly visible through the translucent
+  capsule; the moving selector supplies the stronger glass refraction.
 - **A slightly frosted moving lens:** a bounded, downsampled in-memory crop of
-  the actual sibling pager is softened and locally magnified more strongly
-  underneath the selected segment. This is real backdrop rendering, not a
-  gradient labelled blur.
+  the actual sibling pager is softened and locally magnified underneath the
+  selected segment. This is real backdrop rendering, not a gradient labelled blur.
 - **Water-like interaction:** the lens stays exactly aligned with the finger/page
   offset while its trailing edge stretches, its surface subtly squashes and a
   damped shape spring settles after taps/drags. There is no permanent wobble.
