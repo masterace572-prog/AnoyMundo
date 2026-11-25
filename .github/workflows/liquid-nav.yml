@@ -88,7 +88,7 @@ jobs:
         run: |
           chmod +x gradlew
           set +e
-          ./gradlew :app:testAnoyDebugUnitTest :app:testKennyDebugUnitTest --no-daemon > /tmp/liquid-tests.log 2>&1
+          ./gradlew :app:testAnoyDebugUnitTest :app:testKennyDebugUnitTest --continue --no-daemon > /tmp/liquid-tests.log 2>&1
           rc=$?
           cat /tmp/liquid-tests.log
           python3 - <<'PYTESTS'
