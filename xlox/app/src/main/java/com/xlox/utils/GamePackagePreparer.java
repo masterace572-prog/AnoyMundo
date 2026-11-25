@@ -6,10 +6,22 @@ import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.os.Build;
 
+import java.io.Closeable;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.Arrays;
+import java.util.Enumeration;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
@@ -17,16 +29,16 @@ import net_62v.external.MetaApplicationInstaller;
 import net_62v.external.MetaPackageManager;
 
 /**
- * Prepares an installed game as ONE package, whether it has one APK or splits.
- * Run on an I/O worker, not the UI thread. Never install just sourceDir: doing
- * so drops config/feature APKs and can cause missing resources, dex or JNI libs.
- * The original SDK's public package clone API preserves the complete installed
- * set. We do not merge/re-sign APKs, uninstall a game or clear container data.
+ * Prepares ONE installed package, whether it has one APK or many splits.
+ * Run on an I/O worker, not the UI thread. The original SDK's non-moving
+ * multi-APK installer parses the whole directory, imports every split and
+ * extracts their native libraries. Its cloneApp API does NOT import that set.
+ * Never merge/re-sign APKs, uninstall a game or clear container/user data.
  */
 public final class GamePackagePreparer {
     public enum Status {
         READY, NOT_INSTALLED, INCOMPLETE_APKS, APK_UNREADABLE,
-        PACKAGE_CHANGED, CONTAINER_UNAVAILABLE
+        PACKAGE_CHANGED, INSUFFICIENT_SPACE, CONTAINER_UNAVAILABLE
     }
 
     public static final class Result {
@@ -47,33 +59,42 @@ public final class GamePackagePreparer {
 
     interface Container {
         PackageInfo read(String packageName);
-        void cloneInstalledPackage(String packageName);
+        void installApkSet(String directory);
     }
 
     private final HostPackages host;
     private final Container container;
+    private final File workRoot;
 
     public GamePackagePreparer(Context context) {
-        final PackageManager manager = context.getApplicationContext().getPackageManager();
+        final Context app = context.getApplicationContext();
+        final PackageManager manager = app.getPackageManager();
         host = pkg -> manager.getPackageInfo(pkg, 0);
+        workRoot = app.getCacheDir();
         container = new Container() {
+            private boolean scanned;
             @Override public PackageInfo read(String pkg) {
+                // The SDK exposes a bounded (10 s) initial-scan barrier. Do not
+                // race its startup scan when retaining an existing user's data.
+                if (!scanned) { MetaPackageManager.waitForBackgroundScanner(); scanned = true; }
                 return MetaPackageManager.getPackageInfo(pkg);
             }
 
-            @Override public void cloneInstalledPackage(String pkg) {
-                // By PACKAGE, not base.apk, a split_config APK or an APK-path install.
-                // Do not assume undocumented numeric result codes mean success:
-                // the full package read-back below must pass before any launch.
-                MetaApplicationInstaller.cloneApp(pkg);
+            @Override public void installApkSet(String directory) {
+                // Original public API, mode 1: directory containing base + ALL
+                // splits. Not mode 0 (base only), mode 2 (clone/external mode),
+                // nor the "AndMove" APIs which must never move installed APKs.
+                // Require full read-back, not an undocumented numeric result.
+                MetaApplicationInstaller.installAppsByPath(directory);
             }
         };
     }
 
     // Host-Android test seam. Production always uses the original SDK above.
-    GamePackagePreparer(HostPackages host, Container container) {
+    GamePackagePreparer(HostPackages host, Container container, File workRoot) {
         this.host = host;
         this.container = container;
+        this.workRoot = workRoot;
     }
 
     public Result prepare(GameTarget game) {
@@ -82,11 +103,16 @@ public final class GamePackagePreparer {
             Snapshot installed = snapshot(host.read(game.packageName), game.packageName);
             Snapshot virtual = readContainer(game.packageName);
             if (!installed.matchesPackage(virtual)) {
-                container.cloneInstalledPackage(game.packageName);
+                // Use Android's installed directory only if its .apk files are
+                // EXACTLY the PackageManager set. Otherwise stream a private
+                // temporary set; never send unrelated/unlisted APKs to the SDK.
+                try (ApkDirectory source = apkDirectory(installed)) {
+                    container.installApkSet(source.directory.getPath());
+                }
                 virtual = readContainer(game.packageName);
             }
-            // Store/installer updates can replace code paths during preparation.
-            // Never combine the base from one install with splits from another.
+            // Store updates can replace code paths during preparation. Never
+            // combine the base from one installation with splits from another.
             Snapshot latest;
             try {
                 latest = snapshot(host.read(game.packageName), game.packageName);
@@ -100,9 +126,7 @@ public final class GamePackagePreparer {
             return result(Status.NOT_INSTALLED);
         } catch (InvalidApks e) {
             return result(e.status);
-        } catch (RuntimeException | LinkageError e) {
-            // The prebuilt SDK can be unavailable/throw a linkage error. Surface a
-            // controlled setup failure instead of starting a known partial game.
+        } catch (IOException | RuntimeException | LinkageError e) {
             return result(Status.CONTAINER_UNAVAILABLE);
         }
     }
@@ -117,14 +141,62 @@ public final class GamePackagePreparer {
         }
     }
 
+    private ApkDirectory apkDirectory(Snapshot installed) throws InvalidApks, IOException {
+        File directory = new File(installed.files.get("").path).getParentFile();
+        Set<String> expected = new HashSet<>();
+        boolean together = directory != null;
+        for (FileStamp file : installed.files.values()) {
+            expected.add(file.path);
+            together &= directory != null && directory.equals(new File(file.path).getParentFile());
+        }
+        File[] children = together ? directory.listFiles() : null;
+        Set<String> found = new HashSet<>();
+        if (children != null) {
+            for (File child : children) {
+                if (child.getName().endsWith(".apk")) found.add(child.getCanonicalPath());
+            }
+            if (expected.equals(found)) return new ApkDirectory(directory, false);
+        }
+        if (workRoot == null || (!workRoot.isDirectory() && !workRoot.mkdirs())) throw new IOException("No staging directory");
+        long total = 1024L * 1024L; // Keep a little room for directory/ZIP metadata.
+        for (FileStamp file : installed.files.values()) total += file.size;
+        if (workRoot.getUsableSpace() < total) throw new InvalidApks(Status.INSUFFICIENT_SPACE);
+        File stage = File.createTempFile("game-apks-", "", workRoot);
+        if (!stage.delete() || !stage.mkdir()) throw new IOException("Could not stage APK set");
+        ApkDirectory source = new ApkDirectory(stage, true);
+        try {
+            byte[] buffer = new byte[64 * 1024]; // Never load a multi-GB asset APK into memory.
+            int i = 0;
+            for (Map.Entry<String, FileStamp> entry : installed.files.entrySet()) {
+                FileStamp file = entry.getValue();
+                File target = new File(stage, entry.getKey().isEmpty() ? "base.apk" : "split_" + i++ + ".apk");
+                long copied = 0;
+                try (InputStream in = new FileInputStream(file.path); FileOutputStream out = new FileOutputStream(target)) {
+                    int count;
+                    while ((count = in.read(buffer)) != -1) {
+                        if (Thread.currentThread().isInterrupted() || copied + count > file.size) {
+                            throw new InvalidApks(Status.PACKAGE_CHANGED);
+                        }
+                        out.write(buffer, 0, count);
+                        copied += count;
+                    }
+                }
+                if (copied != file.size || !file.sameContents(stamp(target.getPath()))
+                        || !file.sameFile(stamp(file.path))) throw new InvalidApks(Status.PACKAGE_CHANGED);
+            }
+            return source;
+        } catch (IOException | InvalidApks | RuntimeException | LinkageError e) {
+            source.close();
+            throw e;
+        }
+    }
+
     private static Snapshot snapshot(PackageInfo info, String pkg) throws InvalidApks {
         if (info == null || !pkg.equals(info.packageName) || info.applicationInfo == null) {
             throw new InvalidApks(Status.INCOMPLETE_APKS);
         }
         ApplicationInfo app = info.applicationInfo;
-        if (app.packageName != null && !pkg.equals(app.packageName)) {
-            throw new InvalidApks(Status.INCOMPLETE_APKS);
-        }
+        if (app.packageName != null && !pkg.equals(app.packageName)) throw new InvalidApks(Status.INCOMPLETE_APKS);
         String[] names = info.splitNames;
         String[] paths = app.splitSourceDirs;
         int count = paths == null ? 0 : paths.length;
@@ -136,9 +208,7 @@ public final class GamePackagePreparer {
         files.put("", stamp(app.sourceDir));
         for (int i = 0; i < count; i++) {
             String name = names[i];
-            if (name == null || name.isEmpty() || files.containsKey(name)) {
-                throw new InvalidApks(Status.INCOMPLETE_APKS);
-            }
+            if (name == null || name.isEmpty() || files.containsKey(name)) throw new InvalidApks(Status.INCOMPLETE_APKS);
             FileStamp split = stamp(paths[i]);
             for (FileStamp existing : files.values()) {
                 if (split.path.equals(existing.path)) throw new InvalidApks(Status.INCOMPLETE_APKS);
@@ -155,18 +225,44 @@ public final class GamePackagePreparer {
         try {
             File file = new File(path).getCanonicalFile();
             if (!file.isFile() || !file.canRead() || file.length() <= 0) throw new InvalidApks(Status.APK_UNREADABLE);
-            // PackageManager supplies the signed installed set. This lightweight
-            // read is not an APK signature verifier; it catches missing, empty,
-            // incomplete downloads and non-APK paths before handing them to SDK.
+            MessageDigest directory;
+            try { directory = MessageDigest.getInstance("SHA-256"); }
+            catch (NoSuchAlgorithmException e) { throw new IllegalStateException(e); }
+            // Compare entry CRCs/sizes/names, not file size alone. Reading the
+            // central directory avoids hashing GBs of asset data every launch.
+            // This is a completeness descriptor, NOT a new signature verifier.
             try (ZipFile apk = new ZipFile(file)) {
                 ZipEntry manifest = apk.getEntry("AndroidManifest.xml");
-                if (manifest == null || manifest.isDirectory() || manifest.getSize() <= 0) {
-                    throw new InvalidApks(Status.APK_UNREADABLE);
+                if (manifest == null || manifest.isDirectory() || manifest.getSize() <= 0) throw new InvalidApks(Status.APK_UNREADABLE);
+                try (InputStream in = apk.getInputStream(manifest)) {
+                    if (in.read() == -1) throw new InvalidApks(Status.APK_UNREADABLE);
+                }
+                ByteBuffer numbers = ByteBuffer.allocate(24);
+                Enumeration<? extends ZipEntry> entries = apk.entries();
+                while (entries.hasMoreElements()) {
+                    ZipEntry entry = entries.nextElement();
+                    byte[] name = entry.getName().getBytes(StandardCharsets.UTF_8);
+                    numbers.clear();
+                    numbers.putLong(name.length).putLong(entry.getSize()).putLong(entry.getCrc());
+                    directory.update(numbers.array());
+                    directory.update(name);
                 }
             }
-            return new FileStamp(file.getPath(), file.length(), file.lastModified());
+            return new FileStamp(file.getPath(), file.length(), file.lastModified(), directory.digest());
         } catch (IOException | SecurityException e) {
             throw new InvalidApks(Status.APK_UNREADABLE);
+        }
+    }
+
+    private static final class ApkDirectory implements Closeable {
+        final File directory;
+        final boolean temporary;
+        ApkDirectory(File directory, boolean temporary) { this.directory = directory; this.temporary = temporary; }
+        @Override public void close() {
+            if (!temporary) return; // NEVER remove anything in Android's installed source directory.
+            File[] children = directory.listFiles();
+            if (children != null) for (File file : children) file.delete();
+            directory.delete();
         }
     }
 
@@ -179,11 +275,12 @@ public final class GamePackagePreparer {
         final String path;
         final long size;
         final long modified;
-        FileStamp(String path, long size, long modified) {
-            this.path = path;
-            this.size = size;
-            this.modified = modified;
+        final byte[] directoryDigest;
+        FileStamp(String path, long size, long modified, byte[] directoryDigest) {
+            this.path = path; this.size = size; this.modified = modified; this.directoryDigest = directoryDigest;
         }
+        boolean sameContents(FileStamp other) { return size == other.size && Arrays.equals(directoryDigest, other.directoryDigest); }
+        boolean sameFile(FileStamp other) { return sameContents(other) && path.equals(other.path) && modified == other.modified; }
     }
 
     private static final class Snapshot {
@@ -191,24 +288,19 @@ public final class GamePackagePreparer {
         final long updated;
         final LinkedHashMap<String, FileStamp> files;
         Snapshot(long version, long updated, LinkedHashMap<String, FileStamp> files) {
-            this.version = version;
-            this.updated = updated;
-            this.files = files;
+            this.version = version; this.updated = updated; this.files = files;
         }
-
         boolean matchesPackage(Snapshot other) {
             if (other == null || version != other.version || !files.keySet().equals(other.files.keySet())) return false;
             for (Map.Entry<String, FileStamp> file : files.entrySet()) {
-                if (file.getValue().size != other.files.get(file.getKey()).size) return false;
+                if (!file.getValue().sameContents(other.files.get(file.getKey()))) return false;
             }
             return true;
         }
-
         boolean sameInstall(Snapshot other) {
             if (!matchesPackage(other) || updated != other.updated) return false;
             for (Map.Entry<String, FileStamp> file : files.entrySet()) {
-                FileStamp a = file.getValue(), b = other.files.get(file.getKey());
-                if (!a.path.equals(b.path) || a.modified != b.modified) return false;
+                if (!file.getValue().sameFile(other.files.get(file.getKey()))) return false;
             }
             return true;
         }

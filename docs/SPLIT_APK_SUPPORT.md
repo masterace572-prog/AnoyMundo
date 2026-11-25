@@ -2,7 +2,7 @@
 
 ## Scope
 
-The loader launches the complete game already installed on the phone. A normal
+The loader prepares the complete game already installed on the phone. A normal
 single APK and an installed base + split set use the same Launch button.
 Lite/Air (`com.krafton.bgmilite`) does **not** use an OBB. BGMI
 (`com.pubg.imobile`) still requires its own verified main OBB and optional patch.
@@ -16,61 +16,75 @@ launch call, after BGMI's OBB preparation (Lite/Air skips that step).
 
 1. Read the installed package from Android PackageManager: base `sourceDir`,
    **every** `splitSourceDirs` entry and its corresponding `PackageInfo.splitNames`.
-   This includes ABI, language, configuration, feature and asset APK splits.
-2. Reject missing/duplicate split metadata, missing/empty/unreadable code paths
-   and APKs without a readable ZIP/manifest. These are lightweight completeness
-   checks, not a new APK-signature verifier; Android verifies the installed set.
-3. Read back the SDK package. If its version, split set or APK sizes do not match,
-   use the original SDK's public **`MetaApplicationInstaller.cloneApp(package)`**
-   path. Never install only `base.apk` or one `split_config` file by path.
-4. Require the complete SDK package to be readable afterwards. Recheck the host
-   install's version, update timestamp and code-path stamps to avoid mixing
-   files while a store/installer updates the game. A failed/partial setup is a
-   controlled error and does not proceed to launch.
-5. Keep the SDK's existing launch flow, game data and signatures. No APK merging,
-   re-signing, game uninstall, data clear, private-SDK reflection or AAR swap.
+   Do not drop ABI, language, configuration, feature or asset APK splits.
+2. Reject missing/duplicate metadata, missing/empty/unreadable code paths and
+   APKs without a readable ZIP/manifest. Android verifies the installed APK set;
+   these additional completeness checks do not replace signature verification.
+3. Read back the SDK package after its public initial-scan barrier. Compare
+   package, version, split names, sizes and ZIP-entry names/CRCs/sizes. This avoids
+   treating a same-size stale split as ready without hashing GBs every launch.
+4. If repair/import is needed, call the original SDK's public **non-moving**
+   `MetaApplicationInstaller.installAppsByPath(directory)` with the **whole set**.
+   Use the installed directory only if its APKs exactly match PackageManager;
+   otherwise stream just that set into a private temporary directory. Bound
+   staging memory, check free space and clean temporary files even on failure.
+5. Require the full SDK package to be readable afterwards. Recheck the host
+   install's version, update time and code-path/content stamps to avoid mixing
+   files during a store update. A failed/partial setup does not proceed to launch.
+6. Keep existing launch/data/signing behavior. No merging, re-signing, game
+   uninstall, data clear, private-SDK reflection, source-APK moves or AAR swap.
 
-The original AAR already exposes whole-package cloning and split-aware
-ApplicationInfo handling. Its `installAppByPath` (single-file) API is deliberately
-not used. Native libraries, dex, resources and split dependencies are handled by
-the SDK's package loader, not by a partial custom APK merger.
+### Why this API, not `cloneApp`
+
+The original `mundo-release.aar` was inspected through its actual wrapper and
+service implementation, not inferred from API names:
+
+- `cloneApp(package)` selects mode **2**. This unregisters an internal code copy
+  in favor of external-package mode; it is **not** a complete split APK import.
+- `installAppsByPath(directory)` selects mode **1**. The service's `o5` dispatch
+  calls `i1`'s directory parser: enumerate `.apk`, `parseApkLite`, import base and
+  every split, extract native binaries from **each** APK and populate
+  `splitNames`, `splitSourceDirs`, `splitPublicSourceDirs` and revision metadata.
+- The non-moving path copies original APK bytes. It reuses an existing package's
+  user map rather than clearing its data. `l2` preserves split metadata on public
+  PackageInfo read-back. The initial-scan barrier is bounded to ten seconds.
+
+Do not replace this with `installAppByPath(base.apk)` or an `AndMove` variant.
+The SDK still owns actual dex/resource/asset loading and native-linker behavior;
+passing the full set cannot itself prove that its engine supports every game.
 
 ## No OBB requirement for Lite/Air
 
 - `GameTarget.requiresObb()` is true for BGMI, false for Lite/Air.
-- Lite/Air reports `AppManager.ObbState.NOT_REQUIRED`, including when shared
-  storage is blocked. It never reads/creates an OBB directory or starts a copy.
-- Its Launch permission check does not require All-files/OBB Files access. The
-  existing SDK install permission gate remains. BGMI retains all three gates.
-- General Login/Home permission explanations can still be shown for BGMI and
-  can be declined. They must not prevent Lite/Air launching without an OBB.
-- A split-based **BGMI** install is not exempt from BGMI's OBB requirement.
-  Asset policy is package-specific, not guessed from the presence of splits.
+- Lite/Air reports `AppManager.ObbState.NOT_REQUIRED`, even when shared storage
+  is blocked. It never reads/creates an OBB directory or starts a copy.
+- Its Launch check skips All-files/OBB Files access; the SDK install gate remains.
+  General permission explanations for BGMI can still be shown and declined.
+- A split-based **BGMI** install still needs BGMI's OBB. Asset policy is
+  package-specific, not guessed from the presence of splits.
 
-## Verification and limits
+## Verification and remaining device checks
 
-Host Android 21/28 tests run for both brands. They cover single and split APKs,
-whole-set registration/read-back, repairing base-only/stale versions and split
-sets, incomplete/corrupt files, SDK/linkage failure, install-update races,
-retaining container data, no-OBB behavior and per-game permission policy.
-These tests use temporary APK-shaped ZIPs and an injected SDK adapter. They do
-**not** start the real SDK/game or establish crash-free phone compatibility.
+The host suite includes **32 APK-set cases**, plus 11 OBB/permission-policy cases,
+28 navigation/presentation cases and 9 Login/Splash cases, each on host Android
+21/28 for both brands (**320 checks**). APK-set cases use temporary APK-shaped
+ZIPs and an injected SDK adapter: exact-set imports/staging, single/split installs,
+stale/missing/same-size wrong splits, read-back failure, update races, low space,
+cleanup and retaining originals/data. They do **not** start the real SDK/game.
 
 Required physical-device checks before calling Lite/Air runtime-compatible:
 
 - Install the complete legitimate split set through a trusted installer/store.
-  Open it normally once to finish any asset downloads. Do not install just base.apk.
+  Open it normally once to finish any asset downloads; never install just base.apk.
 - Launch Lite/Air with **no OBB folder** and shared-storage permissions denied;
-  with its own usable `libbgmilite.so`, licence and SDK activation available.
-- Confirm the game can load ABI libraries, code, resources and asset splits;
-  resume it, stop/relaunch it, and repeat after an installed-game update.
-- Verify a normal single-APK game still launches and BGMI still verifies/copies
-  its OBB. Confirm existing container saves/logins are retained.
-- Exercise both brands and second-game cancellation/ten-second confirmation.
-- Provider/OAuth rules, Play Asset Delivery beyond installed APK splits,
-  anti-container restrictions, unsupported CPU architectures and failures inside
-  native game/SDK code may still need a supported SDK update and device logs.
+  have its own usable `libbgmilite.so`, licence and SDK activation available.
+- Check ABI libraries, dex, resources and asset splits, then resume, stop/relaunch
+  and repeat after an installed-game update. Repeat for both loader brands.
+- Verify ordinary single-APK behavior, BGMI OBB preparation and existing container
+  saves/logins. Exercise second-game cancellation/ten-second confirmation.
+- Dynamic features/Play Asset Delivery beyond installed splits, OAuth/provider
+  rules, anti-container restrictions and failures inside native SDK/game code may
+  still require a supported SDK update and device logs.
 
-A missing complete installed set now yields a retry/install-complete message;
-that is safer than launching a known partial package, not a promise that every
-third-party split distribution or game engine will be crash-free.
+Controlled setup errors prevent known partial launches. They are not a promise
+that every third-party split distribution or game engine will be crash-free.

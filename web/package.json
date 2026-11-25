@@ -15,7 +15,7 @@
     "start": "node scripts/dev-server.mjs",
     "test": "npm run test:smoke && npm run test:channels && npm run test:storage && npm run test:db",
     "test:smoke": "node scripts/smoke-test.mjs",
-    "test:channels": "node --test scripts/channels-test.mjs",
+    "test:channels": "node --test scripts/channels-test.mjs scripts/live-channel-checks-test.mjs",
     "test:db": "node scripts/channel-db-test.mjs",
     "test:storage": "node --test scripts/library-storage-worker-test.mjs",
     "storage:cleanup": "node scripts/cleanup-library-storage.mjs"

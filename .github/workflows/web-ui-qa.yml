@@ -5,6 +5,11 @@ name: Web UI QA
 # (7 days). Nothing is committed to the repository.
 on:
   workflow_dispatch:
+    inputs:
+      live_channel_storage:
+        description: 'Opt-in only after production is promoted: verify a temporary 20 MiB upload without publishing or touching licence keys'
+        type: boolean
+        default: false
   push:
     branches: [main, arena/dda4cc57-anoymundo]
     paths:
@@ -38,9 +43,9 @@ jobs:
       # Opt in AFTER the production deployment is READY/promoted. A push does
       # not itself deploy Vercel. This never mutates a live release or
       # creates an Owner; optionally uses the EXISTING Owner secret to PUT and
-      # remove one private 10 MiB pending object. No licence-key fixtures.
+      # remove one private 20 MiB pending object. No licence-key fixtures.
       - name: Live channel and Storage acceptance (explicit opt-in)
-        if: contains(github.event.head_commit.message, '[live-check]')
+        if: contains(github.event.head_commit.message, '[live-check]') || (github.event_name == 'workflow_dispatch' && inputs.live_channel_storage)
         env:
           BASE: https://anoymundo-panel.vercel.app
           OWNER_USERNAME: Anoy

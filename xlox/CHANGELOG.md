@@ -13,12 +13,12 @@ scripts mentioned below were removed from the tree in the repo cleanup after
 - Lite/Air no longer inspects, copies or requires an OBB, nor blocks Launch on
   OBB-only file access. BGMI retains its verified main/patch preparation.
 - Prepare each complete installed APK set off-thread (base + ABI/config/language/
-  feature/asset splits) using the original SDK's public whole-package clone API.
+  feature/asset splits) using the original SDK's public non-moving multi-APK directory API.
   Repair a base-only/stale SDK package, read it back, and fail safely on partial
   files, SDK errors or an installed-game update race. Never merge/re-sign APKs,
   uninstall games or clear data. Single-APK games use the same path.
-- Add 20 APK-set host cases and extend OBB/policy coverage to 11 cases per API
-  and brand: **272 host Android checks** with the existing navigation/login suite.
+- Add 32 APK-set host cases and extend OBB/policy coverage to 11 cases per API
+  and brand: **320 host Android checks** with the existing navigation/login suite.
   [Scope and required device checks](../docs/SPLIT_APK_SUPPORT.md).
 - APK changes are **build-only pending device testing**, not a replacement of
   the published 2.4.3 release. No version/signing/AAR changes or live library/APK

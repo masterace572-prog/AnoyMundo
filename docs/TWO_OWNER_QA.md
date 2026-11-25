@@ -16,6 +16,12 @@ release row, object, Owner identity, key or APK selection.
 Offline acceptance includes exact-20-MiB binary PUT, incompressible normalized
 ZIP overhead, two 7.57 MiB sibling libraries through publication/download, exact
 expanded boundaries, CRC/forged-size/oversize refusal and cross-channel isolation.
+Production opt-in checks never reset/publish either channel (Anoy is Real Owner
+and a cross-channel reset could succeed). They create/delete one private pending
+20 MiB object, reject oversize/unknown-channel tickets, and compare both libraries
+and APK selections before/after. Channel-only mode returns before any licence-key
+activation/generation or API-key fixtures.
+
 The numbers in the historical rollout below describe the earlier 10 MiB limit,
 not a claim that the new 20 MiB production check has already run.
 

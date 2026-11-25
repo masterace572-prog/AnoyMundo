@@ -758,6 +758,20 @@ test('external-library verification accepts real arm64/ZIP content but rejects b
 });
 
 
+test('HTTPS-linked libraries use the same 20 MiB input and combined expanded boundary', async () => {
+  const raw = elf(MAX_LIBRARY_BYTES);
+  const linked = await verifyLibraryLink('https://cdn.example/full.so', {
+    fetchImpl: async () => new Response(raw, { headers: { 'content-length': String(raw.length) } }),
+  });
+  assert.equal(linked.ok, true);
+  const each = Math.floor(7.57 * 1024 * 1024);
+  const dual = Buffer.from(zipSync({ 'libbgmi.so': elf(each), 'libbgmilite.so': elf(each) }));
+  assert.equal((await verifyLibraryLink('https://cdn.example/both.zip', { fetchImpl: async () => new Response(dual) })).ok, true);
+  const tooLarge = Buffer.from(zipSync({ 'libbgmi.so': elf(MAX_LIBRARY_BYTES / 2), 'libbgmilite.so': elf(MAX_LIBRARY_BYTES / 2 + 1) }));
+  const denied = await verifyLibraryLink('https://cdn.example/expanded.zip', { fetchImpl: async () => new Response(tooLarge) });
+  assert.equal(denied.ok, false); assert.match(denied.error, /20 MB/);
+});
+
 test('a real binary ZIP with two 7.57 MiB libraries publishes/downloads intact without changing the other channel', async () => {
   const size = Math.floor(7.57 * 1024 * 1024);
   const bgmi = crypto.randomBytes(size), lite = crypto.randomBytes(size);

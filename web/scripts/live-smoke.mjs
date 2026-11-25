@@ -182,6 +182,14 @@ async function main() {
   ok(r.status === 302 && r.location === '/dashboard' && cookies.has('am_session'), `${OWNER} signs in`);
   if (!cookies.has('am_session')) throw new Error('cannot continue without a session');
 
+  // Explicit release/Storage-only acceptance must never reach key activation,
+  // key generation, API-key fixtures or a real release reset, even for Real Owner.
+  if (process.env.CHANNEL_LIVE_ONLY === '1') {
+    const storageOk = await ownerStorageChecks(request, ok, BASE);
+    if (storageOk && process.env.GITHUB_ACTIONS) console.log('::notice title=Live 20 MiB Storage::PASS: signed binary PUT, pending-object cleanup, unknown-channel denial and both live libraries/APK selections unchanged.');
+    return;
+  }
+
   r = await request('/dashboard');
   const isOwner = /Unlimited/.test(r.body) && /Owner/.test(r.body);
   console.log(`  (signed in as ${isOwner ? 'Owner' : 'non-owner'})`);
@@ -234,9 +242,8 @@ async function main() {
 
   if (isOwner) {
     const storageOk = await ownerStorageChecks(request, ok, BASE);
-    if (storageOk && process.env.GITHUB_ACTIONS) console.log('::notice title=Live 20 MiB Storage::PASS: signed binary PUT, pending-object cleanup, Owner channel denial and unchanged live library.');
+    if (storageOk && process.env.GITHUB_ACTIONS) console.log('::notice title=Live 20 MiB Storage::PASS: signed binary PUT, pending-object cleanup, unknown-channel denial and both live libraries/APK selections unchanged.');
   }
-  if (process.env.CHANNEL_LIVE_ONLY === '1') return;
 
   // 4. random + custom keys (owner is never charged)
   r = await request('/keys/generate', { method: 'POST', headers: SAME, body: form({ game: 'PUBG', duration: isOwner ? '168' : '2', max_devices: '1', count: '2', custom: '', request_id: `live-random-${run}-${crypto.randomUUID()}` }) });

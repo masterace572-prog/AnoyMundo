@@ -1900,8 +1900,10 @@ public class MAct extends AppCompatActivity {
             setBusy(false, null);
             int message = result.status == GamePackagePreparer.Status.PACKAGE_CHANGED
                     ? R.string.game_error_apk_changed
-                    : result.status == GamePackagePreparer.Status.CONTAINER_UNAVAILABLE
-                            ? R.string.game_error_apk_setup : R.string.game_error_apk_set;
+                    : result.status == GamePackagePreparer.Status.INSUFFICIENT_SPACE
+                            ? R.string.game_error_apk_space
+                            : result.status == GamePackagePreparer.Status.CONTAINER_UNAVAILABLE
+                                    ? R.string.game_error_apk_setup : R.string.game_error_apk_set;
             showMessage(getString(message, gameName(preparingGame)), true);
             return;
         }

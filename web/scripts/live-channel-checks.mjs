@@ -42,28 +42,41 @@ export async function publicChannelChecks(request, ok) {
   ok(bad.status === 400, 'unknown release channels are refused (never mapped to an owner)');
 }
 
-export async function ownerStorageChecks(request, ok, base) {
+export async function ownerStorageChecks(request, ok, base, { fetchImpl = globalThis.fetch } = {}) {
   const page = await request('/lib');
   const channel = /data-release-channel="(anoy|kenny)"/.exec(String(page.body))?.[1];
   ok(!!channel, 'signed-in release page derives a fixed Owner channel');
   if (!channel) return;
-  const other = channel === 'anoy' ? 'kenny' : 'anoy';
-  const before = await request(`/api/lib/manifest?channel=${channel}`);
-  const foreign = await request('/lib', { method: 'POST', body: { action: 'reset', channel: other } });
-  ok(foreign.status === 403, 'live panel refuses a forged other-owner write before changing anything');
+  // Anoy is the Real Owner and CAN manage both real channels. Never probe
+  // authority by resetting a real release: that would change a live selection.
+  const selections = () => Promise.all(['anoy', 'kenny'].flatMap(name => [
+    `/api/lib/manifest?channel=${name}`, `/api/app/update?channel=${name}&code=0`,
+  ]).map(async route => (await request(route)).body));
+  const before = await selections();
+  const forbidden = await request('/lib', { method: 'POST', body: {
+    action: 'prepare_upload', channel: 'not-a-channel', file_size: 128,
+  } });
+  ok(forbidden.status === 403, 'live panel refuses an unknown-channel upload without changing a real release');
+  ok(/up to 20 MB uploaded and 20 MB total unpacked/.test(String(page.body)),
+    'live upload UI shows the 20 MB input and combined expanded allowance');
+  const oversize = await request('/lib', { method: 'POST', body: {
+    action: 'prepare_upload', file_size: 20 * 1024 * 1024 + 1,
+  } });
+  ok(oversize.status === 400 && /20 MB/.test(oversize.body?.error || ''),
+    'live panel rejects a byte above 20 MiB before creating a Storage object');
 
   let pending;
   let uploaded = false, cleaned = false;
   try {
     const prepared = await request('/lib', { method: 'POST', body: { action: 'prepare_upload', file_size: 20 * 1024 * 1024, file_name: 'live-upload-test.so' } });
     pending = prepared.body?.upload_path;
-    ok(prepared.status === 200 && prepared.body?.ok === true && pending?.startsWith(`${channel}/pending/`),
+    ok(prepared.status === 200 && prepared.body?.ok === true && prepared.body.max_bytes === 20 * 1024 * 1024 && pending?.startsWith(`${channel}/pending/`),
       'live panel issues a channel-owned 20 MiB direct-upload ticket');
     if (!prepared.body?.upload_url || !pending) return;
     const uploadUrl = new URL(prepared.body.upload_url, base);
     ok(String(page.response.headers.get('content-security-policy')).includes(uploadUrl.origin),
       'browser CSP allows the exact configured Storage origin');
-    const upload = await fetch(uploadUrl, { method: 'PUT', signal: AbortSignal.timeout(90000),
+    const upload = await fetchImpl(uploadUrl, { method: 'PUT', signal: AbortSignal.timeout(90000),
       headers: { 'Content-Type': 'application/octet-stream' }, body: Buffer.alloc(20 * 1024 * 1024) });
     uploaded = upload.ok;
     ok(upload.ok, '20 MiB binary PUT to real private Storage succeeds', `HTTP ${upload.status}`);
@@ -75,8 +88,8 @@ export async function ownerStorageChecks(request, ok, base) {
       ok(cleaned, 'cleanup: private test upload removed (never published)');
     }
   }
-  const after = await request(`/api/lib/manifest?channel=${channel}`);
-  const unchanged = JSON.stringify(before.body) === JSON.stringify(after.body);
-  ok(unchanged, 'live library stays byte-for-byte unchanged during upload check');
-  return uploaded && cleaned && unchanged && foreign.status === 403;
+  const after = await selections();
+  const unchanged = JSON.stringify(before) === JSON.stringify(after);
+  ok(unchanged, 'both live libraries and APK selections stay byte-for-byte unchanged during upload check');
+  return uploaded && cleaned && unchanged && forbidden.status === 403 && oversize.status === 400;
 }

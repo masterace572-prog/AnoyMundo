@@ -98,7 +98,7 @@ game is running, to avoid replacing a library in use.
   created, and OBB-only file permissions cannot block its launch.
 - Both games prepare the **complete installed APK set** before launch, including
   base, ABI, language, feature and asset splits reported by PackageManager.
-  The SDK's public whole-package clone path is used, not a base-only file install.
+  The SDK's public non-moving multi-APK directory installer is used, not its external clone mode or a base-only file install.
   [Split-package behavior and device checks](../docs/SPLIT_APK_SUPPORT.md).
 - The existing contained web-login hooks are **BGMI-specific**, not blindly
   installed in Air processes. Air's provider IDs, callback schemes and container
