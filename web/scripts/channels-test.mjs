@@ -8,7 +8,7 @@ import { Script } from 'node:vm';
 import { test, before, after } from 'node:test';
 import crypto from 'node:crypto';
 import { zipSync, unzipSync } from 'fflate';
-import { normalizeLibrary, MAX_LIBRARY_BYTES, LIBRARY_BUCKET } from '../src/library-package.mjs';
+import { normalizeLibrary, MAX_LIBRARY_BYTES, LIBRARY_STORAGE_BYTES, LIBRARY_BUCKET } from '../src/library-package.mjs';
 
 process.env.DB_DRIVER = 'memory';
 process.env.APK_VERIFY_STUB = '1';
@@ -167,7 +167,7 @@ test('both .so and ZIP normalize any main filename to libbgmi.so, preserving val
   const siblings = unzipSync(normalizeLibrary(zipSync({ 'dir/libbgmi.so': raw, 'dir/libdep.so': elf(129), 'elsewhere/ignore.so': elf(130) })));
   assert.deepEqual(Object.keys(siblings).sort(), ['libbgmi.so', 'libdep.so']);
   assert.deepEqual(normalizeLibrary(raw), normalizeLibrary(raw), 'normalization is deterministic');
-  assert.throws(() => normalizeLibrary(elf(MAX_LIBRARY_BYTES + 1)), /10 MB/);
+  assert.throws(() => normalizeLibrary(elf(MAX_LIBRARY_BYTES + 1)), /20 MB/);
   assert.throws(() => normalizeLibrary(Buffer.from('this is not a library')), /arm64/);
   const wrongAbi = elf(); wrongAbi[18] = 62;
   assert.throws(() => normalizeLibrary(wrongAbi), /arm64/);
@@ -185,6 +185,26 @@ test('both .so and ZIP normalize any main filename to libbgmi.so, preserving val
   assert.throws(() => normalizeLibrary(badCrc), /invalid|damaged/);
 });
 
+test('two 7.57 MiB game libraries fit one bundle; the expanded limit is 20 MiB total, not per file', () => {
+  const size = Math.floor(7.57 * 1024 * 1024);
+  const bgmi = elf(size, 0x41), lite = elf(size, 0x42);
+  const normalized = unzipSync(normalizeLibrary(zipSync({ 'libbgmi.so': bgmi, 'libbgmilite.so': lite })));
+  assert.ok(bgmi.length + lite.length > 10 * 1024 * 1024);
+  assert.deepEqual(Buffer.from(normalized['libbgmi.so']), bgmi);
+  assert.deepEqual(Buffer.from(normalized['libbgmilite.so']), lite);
+  const half = MAX_LIBRARY_BYTES / 2;
+  assert.doesNotThrow(() => normalizeLibrary(zipSync({ 'libbgmi.so': elf(half), 'libbgmilite.so': elf(half) })));
+  assert.throws(() => normalizeLibrary(zipSync({ 'libbgmi.so': elf(half), 'libbgmilite.so': elf(half + 1) })), /20 MB expanded/);
+});
+
+test('an incompressible 20 MiB input fits private Storage after normalized ZIP overhead', () => {
+  const raw = crypto.randomBytes(MAX_LIBRARY_BYTES); raw.set(elf(64));
+  const normalized = normalizeLibrary(raw);
+  assert.ok(normalized.length > MAX_LIBRARY_BYTES, 'ZIP framing/deflate overhead must not break exact-limit uploads');
+  assert.ok(normalized.length <= LIBRARY_STORAGE_BYTES);
+  assert.deepEqual(Buffer.from(unzipSync(normalized)['libbgmi.so']), raw);
+});
+
 async function prepare(actor, bytes, name = 'any-name.so') {
   const r = await actor.post('/lib', { action: 'prepare_upload', file_name: name, file_size: bytes.length });
   assert.equal(r.status, 200);
@@ -195,7 +215,7 @@ async function prepare(actor, bytes, name = 'any-name.so') {
 }
 async function manifest(channel) { return (await anon.request(`/api/lib/manifest?channel=${channel}`)).data; }
 
-test('10 MiB direct upload succeeds and the other owner cannot adopt, overwrite or delete its pending file', async () => {
+test('20 MiB direct upload succeeds and the other owner cannot adopt, overwrite or delete its pending file', async () => {
   const raw = elf(MAX_LIBRARY_BYTES);
   const ticket = await prepare(anoy, raw, 'my-own-library.so');
   assert.match(ticket.upload_path, /^anoy\/pending\//);
@@ -716,8 +736,8 @@ test('external-library verification accepts real arm64/ZIP content but rejects b
   assert.equal((await verify('https://cdn.example/lib.so', async () => new Response(elf(128)))).ok, true);
   assert.equal((await verify('https://cdn.example/lib.zip', async () => new Response(normalizeLibrary(elf(128))))).ok, true);
   for (const response of [new Response('<html>download page</html>'), new Response('not found', { status: 404 }),
-    new Response(elf(128), { headers: { 'content-length': String(10 * 1024 * 1024 + 1) } }),
-    new Response(new Uint8Array(10 * 1024 * 1024 + 1))]) {
+    new Response(elf(128), { headers: { 'content-length': String(MAX_LIBRARY_BYTES + 1) } }),
+    new Response(new Uint8Array(MAX_LIBRARY_BYTES + 1))]) {
     assert.equal((await verify('https://cdn.example/library', async () => response)).ok, false);
   }
   assert.equal((await verify('https://cdn.example/library', async () => new Response(null, { status: 302, headers: { location: 'http://unsafe.example/lib.so' } }))).ok, false);
@@ -735,4 +755,29 @@ test('external-library verification accepts real arm64/ZIP content but rejects b
   assert.equal(failed.status, 400);
   assert.deepEqual(await Promise.all(['anoy', 'kenny'].map(manifest)), before);
   assert.equal(JSON.stringify(db()._store.library_storage_cleanup), queued);
+});
+
+
+test('a real binary ZIP with two 7.57 MiB libraries publishes/downloads intact without changing the other channel', async () => {
+  const size = Math.floor(7.57 * 1024 * 1024);
+  const bgmi = crypto.randomBytes(size), lite = crypto.randomBytes(size);
+  bgmi.set(elf(64)); lite.set(elf(64));
+  const archive = Buffer.from(zipSync({ 'libbgmi.so': bgmi, 'libbgmilite.so': lite }));
+  assert.ok(archive.length > 10 * 1024 * 1024 && archive.length < MAX_LIBRARY_BYTES);
+  const before = await manifest('kenny');
+  const ticket = await prepare(anoy, archive, 'bgmi-and-lite.zip');
+  assert.equal(ticket.max_bytes, 20 * 1024 * 1024);
+  const published = await anoy.post('/lib', { action: 'upload', upload_path: ticket.upload_path, version: '20mb-both-games' });
+  assert.equal(published.status, 200);
+  const current = await manifest('anoy');
+  const redirect = await anon.request('/api/lib/download?channel=anoy');
+  const download = await anon.request(redirect.location);
+  assert.equal(sha(download.data), current.sha256);
+  const files = unzipSync(download.data);
+  assert.deepEqual(Buffer.from(files['libbgmi.so']), bgmi);
+  assert.deepEqual(Buffer.from(files['libbgmilite.so']), lite);
+  assert.deepEqual(await manifest('kenny'), before);
+  const html = (await anoy.request('/lib')).data;
+  assert.match(html, /up to 20 MB uploaded and 20 MB total unpacked/);
+  assert.match(html, /var MAX = Number\('20'\)/);
 });

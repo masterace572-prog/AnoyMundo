@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 import { db, isMemory } from './db.mjs';
 import { assertWriteChannel } from './channels.mjs';
-import { normalizeLibrary, LIBRARY_BUCKET, LIBRARY_NAME, MAX_LIBRARY_BYTES } from './library-package.mjs';
+import { normalizeLibrary, LIBRARY_BUCKET, LIBRARY_NAME, MAX_LIBRARY_BYTES, MAX_LIBRARY_MB } from './library-package.mjs';
 import { cleanLibraryStorage } from './library-storage.mjs';
 import { libraryUrlReferencesPath } from './library-storage-core.mjs';
 import { sendJson } from './render.mjs';
@@ -35,7 +35,7 @@ export async function doLibUpload(req, res, body, user, query = null) {
   if (action === 'prepare_upload') {
     const size = Number(body.file_size);
     if (!Number.isInteger(size) || size < 4 || size > MAX_LIBRARY_BYTES) {
-      return sendJson(res, { ok: false, error: 'Choose a .so or ZIP file up to 10 MB.' }, 400);
+      return sendJson(res, { ok: false, error: `Choose a .so or ZIP file up to ${MAX_LIBRARY_MB} MB.` }, 400);
     }
     const path = `${channel}/pending/${crypto.randomUUID()}`;
     const result = unwrap(await storage().createSignedUploadUrl(path));
@@ -68,7 +68,7 @@ export async function doLibUpload(req, res, body, user, query = null) {
   if (uploadPath && !new RegExp(`^${channel}/pending/[a-f0-9-]{36}$`).test(uploadPath)) {
     return sendJson(res, { ok: false, error: 'That upload does not belong to your channel.' }, 403);
   }
-  if (base64.length > 4_194_304) return sendJson(res, { ok: false, error: 'Use the direct file uploader for files over 3 MB. It supports 10 MB.' }, 413);
+  if (base64.length > 4_194_304) return sendJson(res, { ok: false, error: `Use the direct file uploader for files over 3 MB. It supports ${MAX_LIBRARY_MB} MB.` }, 413);
   if (externalUrl) {
     const check = isMemory && process.env.APK_VERIFY_STUB === '1'
       ? (/bad-library/.test(externalUrl) ? { ok: false, error: 'That link is not a working library. The current release is unchanged.' } : { ok: true })

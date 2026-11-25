@@ -50,7 +50,7 @@ GET /api/app/update?channel=kenny&code=18
 Manifests include `channel` and `library_name: "libbgmi.so"`. A library download
 can return **302 to private Storage's short-lived signed URL** (or an existing
 external link). Follow redirects, then verify size/SHA-256 from the manifest.
-New file publications accept `.so` and ZIP up to 10 MiB and are normalized to a
+New file publications accept `.so` and ZIP up to 20 MiB and are normalized to a
 ZIP whose main entry is always **libbgmi.so**, regardless of input filename.
 Library/version/manifest/download responses are no-store. Public APK metadata
 may be CDN-cached for 60 s with a 300 s stale window, keyed by query string.

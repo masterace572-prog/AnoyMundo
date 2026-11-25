@@ -70,7 +70,13 @@ uses service-role-only RPCs with per-channel advisory locks, so failed writes
 cannot demote the previous release or touch the other channel. Keys, pricing,
 billing RPCs, maintenance, floating text and feature settings remain shared.
 
-## 3. Library files: 10 MiB, .so or ZIP
+## 3. Library files: 20 MiB, .so or ZIP
+
+For an existing deployment, apply only the additive migration
+`supabase/migrations/20261121134307_library_upload_20mib.sql` and deploy the updated
+panel. It raises private `loader-releases` capacity to 21 MiB (20 MiB plus ZIP
+overhead). It does not replace any uploaded library or APK-channel choice.
+Do not rerun a historical fresh-start migration on production.
 
 The browser first asks `POST /lib {action:'prepare_upload', file_size:...}`.
 The server authenticates the Owner and signs one random private object:
@@ -78,19 +84,19 @@ The server authenticates the Owner and signs one random private object:
 Storage**, then sends a small publication descriptor to `/lib`. This avoids
 Vercel's approximately 4.5 MB request-body limit.
 
-The server caps both input and total expanded ZIP bytes at **10 MiB** and ZIP
+The server caps both input and total expanded ZIP bytes at **20 MiB** and ZIP
 entry count at 128; checks paths, CRCs and actual bounded inflation; accepts
 arm64 ELF libraries; and writes a normalized ZIP with **libbgmi.so** as its main
 entry. Input filenames do not become installed library names. Verified sibling
 `.so` dependencies are retained. The private bucket `loader-releases` allows
-11 MiB per object to accommodate normalized ZIP overhead. Do not make it public
+21 MiB per object to accommodate normalized ZIP overhead. Do not make it public
 or add anonymous upload policies.
 
 `GET /api/lib/download?channel=…` signs a short-lived download URL and returns
 302. The manifest supplies normalized size and SHA-256. Existing base64-stored
 releases remain downloadable unchanged; legacy small base64 publications are
 accepted up to approximately 3 MiB, but new integrations must use direct
-upload for the full 10 MiB limit. External HTTPS links remain supported.
+upload for the full 20 MiB limit. External HTTPS links remain supported.
 `cancel_upload` can remove only an Owner's own **pending** object, never a live
 release. A lost publication response is ambiguous: reload before retrying;
 the server never deletes an output that might already be current.
@@ -107,7 +113,7 @@ the server never deletes an output that might already be current.
 | `OWNER_USERNAME` | no | Legacy account-name safeguard only; not Owner authority |
 | `TELEGRAM_USERNAME` | no | Shared contact; default `libAkAudioVisiual` |
 | `PUBLIC_BASE_URL` | no | Canonical panel URL |
-| `MAX_LIB_UPLOAD_MB` | no | Legacy deployment metadata only; v2.4 enforces 10 MiB in code |
+| `MAX_LIB_UPLOAD_MB` | no | Legacy deployment metadata only; v2.4 enforces 20 MiB in code |
 | `FALLBACK_LIB_VERSION` | no | Anoy-only legacy fallback; Kenny never falls back to Anoy |
 
 No new secret, second database, second site or client-side service key is
@@ -175,7 +181,7 @@ package with explicit flavor tasks.
 | Owner has no release access / column missing | Apply the v2.4 migration before deploying the new code |
 | Direct upload blocked by CSP | `SUPABASE_URL` must be the configured HTTPS Storage project origin |
 | Storage HTTP 404 / bucket missing | Migration must create private `loader-releases` |
-| Upload rejected | Input ≤10 MiB; expanded ZIP ≤10 MiB; valid arm64 ELF; unambiguous main library |
+| Upload rejected | Input ≤20 MiB; expanded ZIP ≤20 MiB; valid arm64 ELF; unambiguous main library |
 | Kenny download 404 before first publication | Expected; the second Owner must upload their own library |
 | APK update rejected on device | Check flavor/package, versionCode and signing key; APKs are not interchangeable |
 | Sign-in loops | Check stable `AUTH_SECRET` and account password/session status |

@@ -4,6 +4,21 @@ Implementation branch: `arena/dda4cc57-anoymundo`. The shared panel and
 licensing contract remain in place; only Owner library/APK-release authority
 and Android branding/installation identities split into two fixed channels.
 
+## 20 MiB upload follow-up
+
+The current source accepts `.so`/ZIP input up to **20 MiB**, and **20 MiB total
+expanded content**, allowing two 7.57 MiB game libraries in one bundle. Browser,
+server, HTTPS-link validation and memory-Storage fixtures share the same limit.
+Private Storage reserves **21 MiB** for normalized ZIP overhead using the
+additive `20261121134307_library_upload_20mib.sql` migration. It changes no live
+release row, object, Owner identity, key or APK selection.
+
+Offline acceptance includes exact-20-MiB binary PUT, incompressible normalized
+ZIP overhead, two 7.57 MiB sibling libraries through publication/download, exact
+expanded boundaries, CRC/forged-size/oversize refusal and cross-channel isolation.
+The numbers in the historical rollout below describe the earlier 10 MiB limit,
+not a claim that the new 20 MiB production check has already run.
+
 ## Contract
 
 | Brand | Channel | Application ID | APK filename |

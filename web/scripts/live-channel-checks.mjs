@@ -55,18 +55,18 @@ export async function ownerStorageChecks(request, ok, base) {
   let pending;
   let uploaded = false, cleaned = false;
   try {
-    const prepared = await request('/lib', { method: 'POST', body: { action: 'prepare_upload', file_size: 10 * 1024 * 1024, file_name: 'live-upload-test.so' } });
+    const prepared = await request('/lib', { method: 'POST', body: { action: 'prepare_upload', file_size: 20 * 1024 * 1024, file_name: 'live-upload-test.so' } });
     pending = prepared.body?.upload_path;
     ok(prepared.status === 200 && prepared.body?.ok === true && pending?.startsWith(`${channel}/pending/`),
-      'live panel issues a channel-owned 10 MiB direct-upload ticket');
+      'live panel issues a channel-owned 20 MiB direct-upload ticket');
     if (!prepared.body?.upload_url || !pending) return;
     const uploadUrl = new URL(prepared.body.upload_url, base);
     ok(String(page.response.headers.get('content-security-policy')).includes(uploadUrl.origin),
       'browser CSP allows the exact configured Storage origin');
     const upload = await fetch(uploadUrl, { method: 'PUT', signal: AbortSignal.timeout(90000),
-      headers: { 'Content-Type': 'application/octet-stream' }, body: Buffer.alloc(10 * 1024 * 1024) });
+      headers: { 'Content-Type': 'application/octet-stream' }, body: Buffer.alloc(20 * 1024 * 1024) });
     uploaded = upload.ok;
-    ok(upload.ok, '10 MiB binary PUT to real private Storage succeeds', `HTTP ${upload.status}`);
+    ok(upload.ok, '20 MiB binary PUT to real private Storage succeeds', `HTTP ${upload.status}`);
     await upload.body?.cancel();
   } finally {
     if (pending) {

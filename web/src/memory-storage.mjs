@@ -1,6 +1,7 @@
 // OFFLINE ONLY. Supabase Storage's narrow API, plus local signed URLs for
 // integration tests. Never mounted by the Vercel function.
 import crypto from 'node:crypto';
+import { LIBRARY_STORAGE_BYTES } from './library-package.mjs';
 
 export function createMemoryStorage() {
   const objects = new Map();
@@ -62,7 +63,7 @@ export function createMemoryStorage() {
       let size = 0;
       for await (const chunk of req) {
         size += chunk.length;
-        if (size > 11 * 1024 * 1024) { res.statusCode = 413; return res.end(); }
+        if (size > LIBRARY_STORAGE_BYTES) { res.statusCode = 413; return res.end(); }
         chunks.push(chunk);
       }
       objects.set(entry.key, Buffer.concat(chunks));

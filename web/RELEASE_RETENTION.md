@@ -18,7 +18,7 @@ GitHub release assets are not changed.
 
 ## Retention and safety
 
-1. Accept the existing 10 MiB `.so` / ZIP inputs and normalize to `libbgmi.so`.
+1. Accept the existing 20 MiB `.so` / ZIP inputs and normalize to `libbgmi.so`.
    Read back the newly stored ZIP and verify its length and SHA256 before publishing.
    External links must also yield a valid library before replacing a working file.
 2. Atomically select the new current release and enqueue retired managed objects.
@@ -81,7 +81,7 @@ node scripts/build-library-worker.mjs
 ```
 
 The suite covers existing billing/referral/licence behavior, asymmetric release
-permissions, 10 MiB/archive limits, concurrent publication, transaction rollback,
+permissions, 20 MiB/archive limits, concurrent publication, transaction rollback,
 readback failure, broken links, short-lived downloads, stale-orphan protection,
 Storage errors, acknowledgement retries, worker authentication, and scheduling.
 The scheduler's SQL control flow is exercised with offline extension stubs; live

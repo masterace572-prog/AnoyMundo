@@ -82,9 +82,9 @@ export async function channelBrowserTests(browser, base, out, { kennyReferral })
     assert.match(await second.locator('.page-sub').textContent(), /KennyPvt (?:library|APK updates)/);
     await shot(second, 'kenny_empty');
 
-    // Browser uploads 10 MiB to a signed binary PUT, not a >4.5 MB panel JSON.
-    await publish(owner, 'anything-i-like.so', elf(10 * 1024 * 1024), '1.8');
-    await shot(owner, 'anoy_10mb_published');
+    // Browser uploads 20 MiB to a signed binary PUT, not a >4.5 MB panel JSON.
+    await publish(owner, 'anything-i-like.so', elf(20 * 1024 * 1024), '1.8');
+    await shot(owner, 'anoy_20mb_published');
     const randomElf = crypto.randomBytes(4 * 1024 * 1024); randomElf.set(elf(64));
     await publish(second, 'my-release.zip', Buffer.from(zipSync({ 'nested/renamed.so': randomElf })), '0.1');
     await shot(second, 'kenny_zip_published');
@@ -130,6 +130,6 @@ export async function channelBrowserTests(browser, base, out, { kennyReferral })
     const overflow = await second.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
     assert.ok(overflow <= 1, 'Kenny release UI fits a phone');
     assert.deepEqual(errors, [], 'no browser script errors in invitation/upload flow');
-    console.log('PASS browser: clean referral UI, confirmed deletion, private one-time Owner signup, 10 MiB .so + ZIP, Real Owner cross-channel library/APK controls, Kenny isolation');
+    console.log('PASS browser: clean referral UI, confirmed deletion, private one-time Owner signup, 20 MiB .so + ZIP, Real Owner cross-channel library/APK controls, Kenny isolation');
   } finally { await ownerCtx.close(); await secondCtx.close(); }
 }

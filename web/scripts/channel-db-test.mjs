@@ -22,8 +22,10 @@ try {
   const migration = await fs.readFile(new URL('../../supabase/migrations/20261119_two_owner_channels.sql', import.meta.url), 'utf8');
   const lifecycle = await fs.readFile(new URL('../../supabase/migrations/20261119_referral_single_use.sql', import.meta.url), 'utf8');
   const schema = await fs.readFile(new URL('../../supabase/schema.sql', import.meta.url), 'utf8');
+  const uploadLimit = await fs.readFile(new URL('../../supabase/migrations/20261121134307_library_upload_20mib.sql', import.meta.url), 'utf8');
   ok(schema.split('-- BEGIN SINGLE USE REFERRALS')[0].trim().endsWith(migration.trim())
-    && schema.endsWith(lifecycle), 'fresh schema includes both exact additive migrations');
+    && schema.split('-- BEGIN LIBRARY 20 MIB UPLOADS')[0].trim().endsWith(lifecycle.trim())
+    && schema.endsWith(uploadLimit), 'fresh schema includes the exact owner/referral/upload-limit additive migrations');
   await db.exec(migration);
   await db.exec(lifecycle);
   await db.exec(migration); // deliberately re-run both to verify idempotence
@@ -32,6 +34,14 @@ try {
   ok((await rows('select content_base64, channel from public.client_release where is_current'))[0].content_base64 === 'preserve-existing-bytes', 'migration preserves the existing library bytes');
   ok((await rows('select channel, version_code from public.app_release where is_current'))[0].version_code === 17, 'migration preserves the existing APK update');
   ok((await rows('select public, file_size_limit from storage.buckets'))[0].public === false, 'new upload bucket is private');
+  const liveBeforeLimit = await rows('select row_to_json(r) as row from public.client_release r union all select row_to_json(a) from public.app_release a');
+  await db.exec(uploadLimit);
+  await db.exec(uploadLimit); // idempotent, including deployments with an existing private bucket
+  const [bucket] = await rows("select public, file_size_limit from storage.buckets where id='loader-releases'");
+  ok(bucket.public === false && Number(bucket.file_size_limit) === 21 * 1024 * 1024,
+    '20 MiB inputs have 21 MiB private Storage capacity for normalized ZIP overhead');
+  assert.deepEqual(await rows('select row_to_json(r) as row from public.client_release r union all select row_to_json(a) from public.app_release a'), liveBeforeLimit);
+  checks++; console.log('  PASS  upload-limit migration preserves every current library/APK row and byte descriptor');
   const [anoy] = await rows("select id_users from public.users where owner_channel='anoy'");
   const call = async (name, args) => (await rows(`select public.${name}(${args.map((_, i) => '$' + (i + 1)).join(',')}) as result`, args))[0].result;
   const invite = await call('create_owner_invite', [anoy.id_users, 'a'.repeat(32), 'KENNY24']);

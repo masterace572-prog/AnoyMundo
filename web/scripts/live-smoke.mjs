@@ -234,7 +234,7 @@ async function main() {
 
   if (isOwner) {
     const storageOk = await ownerStorageChecks(request, ok, BASE);
-    if (storageOk && process.env.GITHUB_ACTIONS) console.log('::notice title=Live 10 MiB Storage::PASS: signed binary PUT, pending-object cleanup, Owner channel denial and unchanged live library.');
+    if (storageOk && process.env.GITHUB_ACTIONS) console.log('::notice title=Live 20 MiB Storage::PASS: signed binary PUT, pending-object cleanup, Owner channel denial and unchanged live library.');
   }
   if (process.env.CHANNEL_LIVE_ONLY === '1') return;
 

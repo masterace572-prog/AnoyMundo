@@ -41,6 +41,8 @@ import net_62v.external.MetaStorageManager;
  *   <li>A file is skipped only when the container copy is a different file
  *       with the same name and size; anything else is copied and verified.</li>
  * </ul>
+ * Lite/Air explicitly has no OBB: its APK set is prepared separately. Its
+ * readiness is NOT_REQUIRED and no shared-storage folder is inspected/created.
  * Runs on one background thread; callbacks are delivered on the main thread.
  */
 public final class AppManager {
@@ -74,10 +76,11 @@ public final class AppManager {
     // ------------------------------------------------------------ public API
 
     /** Read-only source availability for a game card; not a verified container copy. */
-    public enum ObbState { UNKNOWN, AVAILABLE, MISSING, ACCESS_REQUIRED }
+    public enum ObbState { UNKNOWN, AVAILABLE, MISSING, ACCESS_REQUIRED, NOT_REQUIRED }
 
     /** Run off the main thread. Uses the very same package-specific lookup as copyObbAsync. */
     public ObbState inspectObb(String pkg) {
+        if (!requiresObb(pkg)) return ObbState.NOT_REQUIRED;
         try {
             return inspectObb(pkg, sourceDirs(pkg));
         } catch (SecurityException e) {
@@ -91,6 +94,7 @@ public final class AppManager {
     // Package-private directory seam for host Android tests; never changes the
     // production search roots and never creates, copies or deletes game files.
     ObbState inspectObb(String pkg, List<File> dirs) {
+        if (!requiresObb(pkg)) return ObbState.NOT_REQUIRED;
         try {
             String[] error = {null};
             if (findSource(pkg, dirs, error) != null) return ObbState.AVAILABLE;
@@ -107,9 +111,14 @@ public final class AppManager {
     /**
      * Makes sure the container has a verified copy of the game's OBB files,
      * copying with progress where needed. {@code success} is true only after a
-     * real, verified copy or a correct "already current" check.
+     * real, verified copy or a correct "already current" check for BGMI; Lite/Air
+     * is a deliberate no-op because that game does not use expansion files.
      */
     public void copyObbAsync(String pkg, CopyCallback callback) {
+        if (!requiresObb(pkg)) {
+            main.post(() -> { if (callback != null) callback.onCopyCompleted(true, null); });
+            return;
+        }
         EXECUTOR.execute(() -> {
             String[] error = {null};
             boolean ok;
@@ -135,6 +144,7 @@ public final class AppManager {
      * container folder is the device folder. Blocking; call off the main thread.
      */
     public boolean isObbCurrent(String pkg) {
+        if (!requiresObb(pkg)) return true; // No expansion file exists or is needed for Lite/Air.
         try {
             Source source = findSource(pkg, new String[1]);
             if (source == null) return false;
@@ -148,6 +158,12 @@ public final class AppManager {
             Log.w(TAG, "OBB freshness check failed", t);
             return false;
         }
+    }
+
+    /** Only the explicitly known no-OBB game is exempt; unknown packages fail closed. */
+    private static boolean requiresObb(String pkg) {
+        GameTarget game = GameTarget.fromPackage(pkg);
+        return game == null || game.requiresObb();
     }
 
     // ------------------------------------------------------------- the work

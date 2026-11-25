@@ -1,3 +1,5 @@
+import { MAX_LIBRARY_MB } from './library-package.mjs';
+
 // Central configuration. Only SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY +
 // AUTH_SECRET are required. Everything else has a safe default so the panel
 // still boots on a fresh Vercel project before optional settings are added.
@@ -29,7 +31,7 @@ export const config = {
   ownerUsername: String(env.OWNER_USERNAME || 'Anoy').trim(),
   telegramHandle: String(env.TELEGRAM_USERNAME || 'libAkAudioVisiual').replace(/^@/, ''),
   baseUrl: env.PUBLIC_BASE_URL || '',
-  maxUploadMb: 10, // Direct signed Storage uploads; both input and expanded contents capped at 10 MiB.
+  maxUploadMb: MAX_LIBRARY_MB, // Shared with validation, direct uploads and bounded ZIP inflation.
   sessionMinutes: 30,
   rememberHours: 24,
   passwordSalt: 'XquxmymXDtWRA66D',

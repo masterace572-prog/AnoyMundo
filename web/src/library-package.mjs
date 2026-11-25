@@ -1,7 +1,10 @@
 import { zipSync } from 'fflate';
 import { inflateRawSync } from 'node:zlib';
 
-export const MAX_LIBRARY_BYTES = 10 * 1024 * 1024;
+export const MAX_LIBRARY_MB = 20;
+export const MAX_LIBRARY_BYTES = MAX_LIBRARY_MB * 1024 * 1024;
+// Normalized, incompressible ZIPs can be slightly larger than the input.
+export const LIBRARY_STORAGE_BYTES = MAX_LIBRARY_BYTES + 1024 * 1024;
 export const LIBRARY_NAME = 'libbgmi.so';
 export const LIBRARY_BUCKET = 'loader-releases';
 
@@ -61,7 +64,7 @@ function readZip(bytes) {
       || /^[A-Za-z]:/.test(name) || name.split('/').includes('..')) throw new Error('ZIP contains an unsafe path.');
     if (result.has(name)) damaged();
     expanded += original;
-    if (expanded > MAX_LIBRARY_BYTES) throw new Error('ZIP contents exceed the 10 MB expanded limit.');
+    if (expanded > MAX_LIBRARY_BYTES) throw new Error('ZIP contents exceed the 20 MB expanded limit.');
     if (bytes.readUInt32LE(local) !== 0x04034b50
       || bytes.readUInt16LE(local + 6) !== flags || bytes.readUInt16LE(local + 8) !== method) damaged();
     const localNameLength = bytes.readUInt16LE(local + 26);
@@ -85,14 +88,14 @@ function readZip(bytes) {
   return result;
 }
 
-/** Inputs and expanded ZIP contents are capped at 10 MiB. The result is a ZIP
+/** Inputs and expanded ZIP contents are capped at 20 MiB. The result is a ZIP
  * with a canonical libbgmi.so, preserving existing Android download contracts.
  * Only verified arm64 sibling .so dependencies are retained. Input filenames
  * are deliberately irrelevant, including names inside wrapping ZIP folders.
  */
 export function normalizeLibrary(input) {
   const bytes = Buffer.from(input);
-  if (bytes.length > MAX_LIBRARY_BYTES) throw new Error('Library uploads must be 10 MB or smaller.');
+  if (bytes.length > MAX_LIBRARY_BYTES) throw new Error('Library uploads must be 20 MB or smaller.');
   const files = Object.create(null);
   if (isArm64Elf(bytes)) {
     files[LIBRARY_NAME] = bytes;

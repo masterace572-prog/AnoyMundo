@@ -54,8 +54,10 @@ single-file normalization contract treats a raw library as BGMI.
 The current panel normalizer preserves valid arm64 `.so` siblings next to the
 identified BGMI payload. Android can also find wrapped layouts, but the panel
 can drop non-sibling files during normalization; the root layout above avoids
-that ambiguity. The existing panel caps the **uploaded ZIP at 10 MiB** and its
-**total expanded contents at 10 MiB**, not 10 MiB per game. No server limits were changed.
+that ambiguity. The panel now caps the **uploaded ZIP at 20 MiB** and its
+**total expanded contents at 20 MiB**, not 20 MiB per game. Two 7.57 MiB game
+libraries fit together. Private Storage reserves 21 MiB per object for normalized
+ZIP overhead; existing deployments need the additive upload-limit migration.
 
 When publication is separately authorized, publish the bundle in the correct
 Owner/channel with a new library version. Users must download/install that
@@ -91,11 +93,13 @@ game is running, to avoid replacing a library in use.
 
 ### Game files and login boundaries requiring a device
 
-- `AppManager` already accepts a package: Air now uses its own source/destination
-  OBB folders and the same verified-copy pipeline. BGMI's OBB names are not reused.
-  This still requires a main OBB; **Air's actual asset delivery/layout is not
-  established here**. If Air uses asset packs/no OBB, design a package-specific
-  preparation path after inspecting a real installation—do not skip verification.
+- **BGMI still requires its verified main OBB** (and newest patch when present).
+  **Lite/Air needs no OBB**: its state is `NOT_REQUIRED`, no OBB folder is read or
+  created, and OBB-only file permissions cannot block its launch.
+- Both games prepare the **complete installed APK set** before launch, including
+  base, ABI, language, feature and asset splits reported by PackageManager.
+  The SDK's public whole-package clone path is used, not a base-only file install.
+  [Split-package behavior and device checks](../docs/SPLIT_APK_SUPPORT.md).
 - The existing contained web-login hooks are **BGMI-specific**, not blindly
   installed in Air processes. Air's provider IDs, callback schemes and container
   behavior have not been supplied or phone-validated.
@@ -161,7 +165,7 @@ keep real licence/provider credentials out of captures and logs.
 | Valid two-file bundle | Both canonical files retain their own bytes; Air card refreshes without restarting Home. |
 | Next release omits Air | After successful installation, old Air file is gone and Coming soon returns. |
 | Air missing from device but library present | Install BGMI Air opens `com.krafton.bgmilite`, not the BGMI store page. |
-| First launch of each | Only that package's files are prepared/copied; only that game's library loads. Confirm real Air OBB/asset format. |
+| First launch of each | Only that package's files are prepared/copied; only that game's library loads. Lite/Air must work with no OBB directory; confirm all installed asset splits are available. |
 | BGMI running → launch Air; reverse direction | Warning each direction; confirmation disabled at 0–9.999 s, enabled at ≥10 s; no automatic launch. |
 | Cancel / Back / dismiss / background / recreation | No second launch; retry starts a fresh ten-second wait. |
 | Wait complete → explicit confirm | Both may run; Stop BGMI leaves Air alone and Stop Air leaves BGMI alone. |

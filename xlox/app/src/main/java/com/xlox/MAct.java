@@ -38,6 +38,7 @@ import com.xlox.utils.AppManager;
 import com.xlox.utils.AppUpdater;
 import com.xlox.utils.GameSupport;
 import com.xlox.utils.GameTarget;
+import com.xlox.utils.GamePackagePreparer;
 import com.xlox.utils.GameRunState;
 import com.xlox.utils.ConcurrentLaunchGuard;
 import com.xlox.utils.LibManager;
@@ -556,8 +557,8 @@ public class MAct extends AppCompatActivity {
     /**
      * Asks for whichever of All files access, Files and Install unknown apps
      * is missing, one after another (see {@link StorageAccess}). With
-     * {@code thenLaunch}, the existing startLaunch() - OBB copy, then launch -
-     * continues once all three are granted.
+     * {@code thenLaunch}, request only the selected game's needs and resume
+     * preparation afterwards. Lite/Air never needs shared-storage OBB access.
      */
     private void requestStorage(boolean thenLaunch) {
         if (storagePromptOpen || (permissionSheet != null && permissionSheet.isShowing())) return;
@@ -574,7 +575,8 @@ public class MAct extends AppCompatActivity {
     }
 
     private void askNextPermission() {
-        StorageAccess.Need need = StorageAccess.firstMissing(this);
+        StorageAccess.Need need = StorageAccess.firstMissing(this,
+                launchAfterStorage ? launchTarget.target : null);
         if (need == null) {
             permissionsGranted();
             return;
@@ -1321,7 +1323,7 @@ public class MAct extends AppCompatActivity {
                 setDot(game.state, getString(R.string.state_not_installed), 0, R.color.text_secondary);
             } else if (!available) {
                 setDot(game.state, getString(R.string.state_library_needed), R.color.warning, R.color.text_secondary);
-            } else if (StorageAccess.firstMissing(this) != null
+            } else if (StorageAccess.firstMissing(this, game.target) != null
                     || game.obbState == AppManager.ObbState.ACCESS_REQUIRED) {
                 setDot(game.state, getString(R.string.state_files_access), R.color.warning, R.color.text_secondary);
             } else if (game.obbState == AppManager.ObbState.MISSING) {
@@ -1345,8 +1347,11 @@ public class MAct extends AppCompatActivity {
         for (GameSession game : games) {
             final int request = ++game.obbRequest;
             game.checkingObb = false;
-            game.obbState = AppManager.ObbState.UNKNOWN;
-            if (!game.installed || !libraryAvailable(game) || StorageAccess.firstMissing(this) != null) continue;
+            game.obbState = game.target.requiresObb() ? AppManager.ObbState.UNKNOWN : AppManager.ObbState.NOT_REQUIRED;
+            // Lite/Air's data is in its installed APK set; never look for an OBB
+            // or ask for shared-storage access on behalf of that game.
+            if (!game.target.requiresObb()) continue;
+            if (!game.installed || !libraryAvailable(game) || StorageAccess.firstMissing(this, game.target) != null) continue;
             if (preview) {
                 game.obbState = AppManager.ObbState.AVAILABLE;
                 continue;
@@ -1567,10 +1572,11 @@ public class MAct extends AppCompatActivity {
         return s;
     }
 
-    /** Read-only readiness hint. Launch still performs the full, verified OBB preparation. */
+    /** Read-only hint. Launch verifies the APK set, and BGMI additionally prepares its OBB. */
     private boolean readyToLaunch(GameSession game) {
-        if (!libraryAvailable(game) || game.obbState != AppManager.ObbState.AVAILABLE) return false;
-        if (StorageAccess.firstMissing(this) != null) return false;
+        if (!libraryAvailable(game)) return false;
+        if (game.target.requiresObb() && game.obbState != AppManager.ObbState.AVAILABLE) return false;
+        if (StorageAccess.firstMissing(this, game.target) != null) return false;
         if (preview) return true; // The preview is not a native/container integration test.
         try {
             return MetaActivationManager.getActivationStatus();
@@ -1719,7 +1725,7 @@ public class MAct extends AppCompatActivity {
             else refreshGameState();
             return;
         }
-        if (!StorageAccess.has(this)) {
+        if (!StorageAccess.has(this, launchTarget.target)) {
             requestStorage(true);
             return;
         }
@@ -1782,9 +1788,16 @@ public class MAct extends AppCompatActivity {
     /**
      * Copies the game's OBB into the container with live percent on the Launch
      * button, and launches only once AppManager reports a verified copy (or a
-     * truly current one). Any failure stops here: no launch.
+     * truly current one). Lite/Air skips OBB entirely. Both paths then prepare
+     * the full installed APK set. Any preparation failure stops the launch.
      */
     private void prepareObbThenLaunch() {
+        if (!launchTarget.target.requiresObb()) {
+            cancelPrepTimers();
+            launchTarget.obbState = AppManager.ObbState.NOT_REQUIRED;
+            prepareInstalledPackageThenLaunch(launchTarget);
+            return;
+        }
         Log.d(TAG, "Launch: preparing game files");
         setBusy(true, getString(R.string.action_preparing));
         showProgress(0, true);
@@ -1849,12 +1862,52 @@ public class MAct extends AppCompatActivity {
                             : getString(R.string.error_obb_copy, reason), true);
                     return;
                 }
-                Log.d(TAG, "Launch: game files ready, launching");
-                hideMessage(); // The pill itself reads "Launching…".
-                preparingGame.action.setText(R.string.launching);
-                main.postDelayed(MAct.this::launchGame, LAUNCH_DELAY_MS);
+                Log.d(TAG, "Launch: OBB ready; preparing the complete installed APK set");
+                prepareInstalledPackageThenLaunch(preparingGame);
             }
         });
+    }
+
+    /** Whole installed package (base + every split); never clone just base.apk. */
+    private void prepareInstalledPackageThenLaunch(final GameSession preparingGame) {
+        if (!Ui.alive(this) || launchTarget != preparingGame) return;
+        setBusy(true, getString(R.string.action_preparing));
+        hideMessage();
+        showProgress(0, true);
+        if (qaLaunch != null) {
+            // Existing debug-only launch stand-in: no real SDK/game initialization.
+            onInstalledPackagePrepared(preparingGame, null);
+            return;
+        }
+        try {
+            ioExecutor.execute(() -> {
+                GamePackagePreparer.Result result = new GamePackagePreparer(MAct.this).prepare(preparingGame.target);
+                main.post(() -> onInstalledPackagePrepared(preparingGame, result));
+            });
+        } catch (RejectedExecutionException ignored) {
+            if (!Ui.alive(this)) return;
+            hideProgress();
+            setBusy(false, null);
+            showMessage(getString(R.string.game_error_apk_setup, gameName(preparingGame)), true);
+        }
+    }
+
+    private void onInstalledPackagePrepared(GameSession preparingGame, GamePackagePreparer.Result result) {
+        if (!Ui.alive(this) || launchTarget != preparingGame) return;
+        hideProgress();
+        if (result != null && !result.isReady()) {
+            Log.w(TAG, "Game package preparation: " + preparingGame.target.packageName + " " + result.status);
+            setBusy(false, null);
+            int message = result.status == GamePackagePreparer.Status.PACKAGE_CHANGED
+                    ? R.string.game_error_apk_changed
+                    : result.status == GamePackagePreparer.Status.CONTAINER_UNAVAILABLE
+                            ? R.string.game_error_apk_setup : R.string.game_error_apk_set;
+            showMessage(getString(message, gameName(preparingGame)), true);
+            return;
+        }
+        hideMessage();
+        preparingGame.action.setText(R.string.launching);
+        main.postDelayed(MAct.this::launchGame, LAUNCH_DELAY_MS);
     }
 
     /** Stops the "Preparing" line's 400 ms and 15 s timers. */

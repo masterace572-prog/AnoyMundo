@@ -1,6 +1,6 @@
 // Replacing a stored library with a broken external link must not garbage-
 // collect the last working binary. Verify the link before any DB publication.
-import { normalizeLibrary, MAX_LIBRARY_BYTES } from './library-package.mjs';
+import { normalizeLibrary, MAX_LIBRARY_BYTES, MAX_LIBRARY_MB } from './library-package.mjs';
 
 export async function verifyLibraryLink(rawUrl, { selfHosts = [], fetchImpl = globalThis.fetch, timeoutMs = 10_000 } = {}) {
   const bad = reason => ({ ok: false, error: `That link is not a working library (${reason}). The current release is unchanged.` });
@@ -24,7 +24,7 @@ export async function verifyLibraryLink(rawUrl, { selfHosts = [], fetchImpl = gl
         url = new URL(location, url); continue;
       }
       if (!res.ok) { await res.body?.cancel(); return bad(`HTTP ${res.status}`); }
-      if (Number(res.headers.get('content-length')) > MAX_LIBRARY_BYTES) { await res.body?.cancel(); return bad('over 10 MB'); }
+      if (Number(res.headers.get('content-length')) > MAX_LIBRARY_BYTES) { await res.body?.cancel(); return bad(`over ${MAX_LIBRARY_MB} MB`); }
       const reader = res.body?.getReader();
       if (!reader) return bad('empty download');
       const chunks = [];
@@ -34,12 +34,12 @@ export async function verifyLibraryLink(rawUrl, { selfHosts = [], fetchImpl = gl
           const { done, value } = await reader.read();
           if (done) break;
           size += value.byteLength;
-          if (size > MAX_LIBRARY_BYTES) return bad('over 10 MB');
+          if (size > MAX_LIBRARY_BYTES) return bad(`over ${MAX_LIBRARY_MB} MB`);
           chunks.push(Buffer.from(value));
         }
       } finally { await reader.cancel().catch(() => {}); }
       try { normalizeLibrary(Buffer.concat(chunks, size)); }
-      catch { return bad('expected an arm64 .so or a valid ZIP up to 10 MB'); }
+      catch { return bad(`expected an arm64 .so or a valid ZIP up to ${MAX_LIBRARY_MB} MB`); }
       return { ok: true };
     }
     return bad('too many redirects');

@@ -15,6 +15,11 @@ public enum GameTarget {
         this.displayName = displayName;
     }
 
+    /** BGMI uses expansion files; Lite/Air delivers assets in its installed APK set. */
+    public boolean requiresObb() {
+        return this == BGMI;
+    }
+
     public static GameTarget fromPackage(String packageName) {
         for (GameTarget game : values()) {
             if (game.packageName.equals(packageName)) return game;
