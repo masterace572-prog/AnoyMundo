@@ -102,6 +102,14 @@ class DualGameWiring(unittest.TestCase):
         self.assertNotIn('installAppsByPathAndMove(', package)
         self.assertIn('info.splitNames', package)
         self.assertIn('app.splitSourceDirs', package)
+        for call in ('MetaPackageManager.getInstalledUserName(pkg)',
+                     'MetaPackageManager.createEmptyUser(pkg, "0")',
+                     'MetaPackageManager.getLaunchIntent(pkg)',
+                     'installed.matchesPackage(virtual) && awaitLaunchReady(game.packageName)',
+                     'if (!launchReady || !installed.matchesPackage(virtual))',
+                     'Thread.currentThread().interrupt()'):
+            self.assertIn(call, package)
+        self.assertNotIn('MetaActivityManager.', package)  # resolver, never a launch during preparation
         self.assertNotIn('installAppByPath(', package)
         self.assertNotIn('uninstallAppFully(', package)
         self.assertNotIn('cleanPackageDataAsUser(', package)

@@ -1,14 +1,18 @@
 # BGMI Air — 2.4.3 implementation notes
 
-Included in the owner-requested **2.4.3 (versionCode 21)** replacement, alongside
-sliding Home / Settings navigation. The separate `claudeuiredesign/` copy, panel,
-database, native licence/JNI implementation, original signer, SDK versions and
-live library/APK selections are unchanged. No game library is bundled in the APK.
+The two-game cards and sliding Home / Settings navigation were included in the
+first user-facing **2.4.3 (versionCode 21)**. The new no-OBB/installed-split work
+below is an **unreleased, build-only follow-up**, not a replacement of those
+published APKs. No game library is bundled in the APK; the native licence/JNI
+implementation, original signer/AAR, separate brands, existing data and live
+library/APK selections are preserved. The unrelated `claudeuiredesign/` copy is
+untouched. The panel's new 20 MiB limits have separate additive SQL migrations.
 
-The current OTA installer requires a strictly higher code. An installed code-20
-loader can upgrade; an installed code-21 loader needs a manual same-signer APK
-update, without uninstalling or clearing container data. Release/build evidence
-and the navigation changes are documented in [RELEASE-2.4.3.md](RELEASE-2.4.3.md).
+The last user-distributed loader was **2.4.2 (code 20)**. It upgrades normally to
+the matching-brand public 2.4.3 (21), without uninstalling or clearing data. OTA
+still requires a strictly higher code. Earlier internal 2.4.3 builds are not a
+separate public update path. Historical publication/navigation evidence is in
+[RELEASE-2.4.3.md](RELEASE-2.4.3.md).
 
 ## Game identities and availability
 
@@ -57,7 +61,8 @@ can drop non-sibling files during normalization; the root layout above avoids
 that ambiguity. The panel now caps the **uploaded ZIP at 20 MiB** and its
 **total expanded contents at 20 MiB**, not 20 MiB per game. Two 7.57 MiB game
 libraries fit together. Private Storage reserves 21 MiB per object for normalized
-ZIP overhead; existing deployments need the additive upload-limit migration.
+ZIP overhead; existing deployments need both additive bucket and publication-RPC
+limit migrations. Raising the bucket alone does not update the old SQL guard.
 
 When publication is separately authorized, publish the bundle in the correct
 Owner/channel with a new library version. Users must download/install that
@@ -98,7 +103,10 @@ game is running, to avoid replacing a library in use.
   created, and OBB-only file permissions cannot block its launch.
 - Both games prepare the **complete installed APK set** before launch, including
   base, ABI, language, feature and asset splits reported by PackageManager.
-  The SDK's public non-moving multi-APK directory installer is used, not its external clone mode or a base-only file install.
+  The SDK's public non-moving multi-APK directory installer is used, not its
+  external clone mode or a base-only file install. Preparation also waits for
+  default user `0` and the internal launch activity to become readable; an
+  asynchronous request or file match alone never authorizes launch.
   [Split-package behavior and device checks](../docs/SPLIT_APK_SUPPORT.md).
 - The existing contained web-login hooks are **BGMI-specific**, not blindly
   installed in Air processes. Air's provider IDs, callback schemes and container

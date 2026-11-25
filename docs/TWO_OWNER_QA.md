@@ -9,9 +9,12 @@ and Android branding/installation identities split into two fixed channels.
 The current source accepts `.so`/ZIP input up to **20 MiB**, and **20 MiB total
 expanded content**, allowing two 7.57 MiB game libraries in one bundle. Browser,
 server, HTTPS-link validation and memory-Storage fixtures share the same limit.
-Private Storage reserves **21 MiB** for normalized ZIP overhead using the
-additive `20261121134307_library_upload_20mib.sql` migration. It changes no live
-release row, object, Owner identity, key or APK selection.
+Private Storage reserves **21 MiB** for normalized ZIP overhead using
+`20261121134307_library_upload_20mib.sql`; the additive
+`20261121134308_library_publish_20mib.sql` raises the RPC's normalized-object guard
+to the same limit. The RPC migration changes only that size expression, preserving
+function identity, privileges, Real Owner authority and retention safeguards.
+Neither migration changes a live release row, object, Owner, key or APK selection.
 
 Offline acceptance includes exact-20-MiB binary PUT, incompressible normalized
 ZIP overhead, two 7.57 MiB sibling libraries through publication/download, exact
@@ -22,8 +25,20 @@ and a cross-channel reset could succeed). They create/delete one private pending
 and APK selections before/after. Channel-only mode returns before any licence-key
 activation/generation or API-key fixtures.
 
+Current validation: **213 smoke + 37 channel/archive/live-safety + 8 worker +
+152 PostgreSQL checks**. SQL tests publish two-library, exact-limit and normalized
+ZIP-overhead descriptors against both historical and Real Owner/retention RPCs;
+reject over-limit metadata without demotion; and preserve grants and other rows.
+The promoted panel passed **28 public live checks** in
+[45577002850](https://github.com/masterace572-prog/AnoyMundo/actions/runs/45577002850).
+**Authenticated production PUT was skipped** because `PANEL_OWNER_PASSWORD` is
+not configured in CI. No live file, key or release was created for that run.
+Configure that existing secret privately to opt into the real Storage check;
+never paste a password into chat. The production bucket/RPC bounds were separately
+read back as 22,020,096 bytes, with both libraries and APK table digests unchanged.
+
 The numbers in the historical rollout below describe the earlier 10 MiB limit,
-not a claim that the new 20 MiB production check has already run.
+not a claim of an authenticated 20 MiB production upload.
 
 ## Contract
 

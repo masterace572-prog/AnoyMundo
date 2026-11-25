@@ -163,7 +163,7 @@ begin
   if coalesce(p_release->>'storage_path', '') <> '' then
     if p_release->>'storage_path' !~ ('^' || v_channel || '/releases/[a-f0-9-]{36}/libbgmi[.]zip$')
         or coalesce(p_release->>'sha256', '') !~ '^[a-f0-9]{64}$'
-        or coalesce((p_release->>'file_size')::bigint, 0) not between 1 and 11534336 then raise exception 'Invalid stored library'; end if;
+        or coalesce((p_release->>'file_size')::bigint, 0) not between 1 and 22020096 then raise exception 'Invalid stored library'; end if;
   elsif coalesce(p_release->>'external_url', '') !~ '^https://[^[:space:]]+$' then
     raise exception 'A file or HTTPS link is required';
   end if;

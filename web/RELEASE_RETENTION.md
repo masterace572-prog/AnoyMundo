@@ -15,16 +15,27 @@ does not publish a replacement library or APK.
   `dpl_2bmvyqJDfA1aFJyzcTkctmzD2pKC` is READY/PROMOTED on the existing panel URL.
 - Additive migration `20261125082507_site_library_upload_20mib` corresponds to
   `../supabase/migrations/20261121134307_library_upload_20mib.sql`. It raises the
-  private bucket to **21 MiB** for normalized ZIP overhead. Every existing library
-  and APK release row matched the pre-migration digests afterwards.
-- Local/CI checks: 213 smoke + 37 archive/channel/live-safety + 8 cleanup-worker +
-  127 PostgreSQL checks; Chromium covers direct 20 MiB uploads on the offline site.
+  private bucket to **21 MiB** for normalized ZIP overhead. The companion
+  `../supabase/migrations/20261121134308_library_publish_20mib.sql` (applied as
+  `20261125083508_site_library_publish_20mib`) changes only the installed RPC's
+  object-size guard to 21 MiB, preserving Real Owner/retention and
+  privileges. Fresh/reapplied site SQL uses that guard too. All existing library
+  and APK release rows matched the pre-migration digests after both changes.
+- Local checks: 213 smoke + 37 archive/channel/live-safety + 8 cleanup-worker +
+  152 PostgreSQL checks, including actual SQL publication of large normalized
+  metadata against both historical and Real Owner RPCs, oversize rejection,
+  exact migration read-back/ACL preservation and unchanged other-channel state.
+  Chromium covers direct 20 MiB uploads on the offline site.
 - The repository's explicit `[live-check]` push opt-in (or the workflow's manual
   opt-in when available) tests one **private pending** 20 MiB PUT, then deletes it.
   It rejects oversize/unknown-channel tickets and compares both libraries and
   APK selections before/after. It never resets a real channel (Anoy is Real Owner),
   publishes a test library, or reaches licence-key activation/generation fixtures.
   The real-Storage result must be read from CI, not inferred from a READY deploy.
+  Live run [45577002850](https://github.com/masterace572-prog/AnoyMundo/actions/runs/45577002850)
+  passed 28 public checks, but explicitly **skipped authenticated PUT** because
+  the existing `PANEL_OWNER_PASSWORD` secret is not configured. No live fixture
+  or test account was created; a real authenticated 20 MiB PUT remains untested.
 - The Android split/no-OBB follow-up is separate: both signed variants built and
   passed **320/320** host checks in [45576035996](https://github.com/masterace572-prog/AnoyMundo/actions/runs/45576035996).
   Publication was skipped. Device game testing is still required; see

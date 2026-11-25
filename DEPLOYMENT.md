@@ -72,11 +72,17 @@ billing RPCs, maintenance, floating text and feature settings remain shared.
 
 ## 3. Library files: 20 MiB, .so or ZIP
 
-For an existing deployment, apply only the additive migration
-`supabase/migrations/20261121134307_library_upload_20mib.sql` and deploy the updated
-panel. It raises private `loader-releases` capacity to 21 MiB (20 MiB plus ZIP
-overhead). It does not replace any uploaded library or APK-channel choice.
-Do not rerun a historical fresh-start migration on production.
+For an existing deployment, apply these additive migrations (skip applied ones):
+
+1. `supabase/migrations/20261121134307_library_upload_20mib.sql` raises private
+   `loader-releases` capacity to 21 MiB (20 MiB plus ZIP overhead).
+2. `supabase/migrations/20261121134308_library_publish_20mib.sql` raises the RPC's
+   normalized-object guard to the same 21 MiB. Raising the bucket alone is not
+   enough: an older RPC would still reject large publication descriptors.
+
+Deploy the updated panel. These migrations do not replace any uploaded library
+or APK-channel choice; they preserve the installed Real Owner/retention logic
+and grants. Do not rerun a historical fresh-start migration on production.
 
 The browser first asks `POST /lib {action:'prepare_upload', file_size:...}`.
 The server authenticates the Owner and signs one random private object:

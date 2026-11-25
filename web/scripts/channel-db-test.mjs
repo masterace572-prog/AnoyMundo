@@ -9,6 +9,44 @@ const rows = async (sql, args = []) => (await db.query(sql, args)).rows;
 let checks = 0;
 const ok = (value, message) => { assert.ok(value, message); checks++; console.log('  PASS  ' + message); };
 const rejects = async (fn, message) => { await assert.rejects(fn); checks++; console.log('  PASS  ' + message); };
+async function verifyPublicationLimitMigration(sql, label) {
+  const definition = async () => (await rows("select pg_get_functiondef('public.publish_library_release(integer,jsonb)'::regprocedure) as definition"))[0].definition;
+  const attributes = () => rows("select oid,proowner,prosecdef,proconfig,proacl::text from pg_proc where oid='public.publish_library_release(integer,jsonb)'::regprocedure");
+  const definitionBefore = await definition(), attributesBefore = await attributes();
+  const libraries = await rows('select * from public.client_release order by id');
+  const apps = await rows('select * from public.app_release order by id');
+  await db.exec(sql); await db.exec(sql);
+  const old = "coalesce((p_release->>'file_size')::bigint, 0) not between 1 and 11534336";
+  const updated = old.replace('11534336', '22020096');
+  ok(await definition() === definitionBefore.replace(old, updated), `${label}: only the normalized-object size expression changes (idempotent)`);
+  assert.deepEqual(await attributes(), attributesBefore);
+  checks++; console.log(`  PASS  ${label}: function identity/owner/ACL/definer/search_path are preserved`);
+  assert.deepEqual(await rows('select * from public.client_release order by id'), libraries);
+  assert.deepEqual(await rows('select * from public.app_release order by id'), apps);
+  checks++; console.log(`  PASS  ${label}: every existing library and APK row remains unchanged`);
+}
+
+async function verifyLargeSqlPublication(call, actor, channel, label) {
+  const before = await rows('select * from public.client_release order by id');
+  const descriptor = size => JSON.stringify({ channel, version: 'limit-' + size, file_size: size,
+    sha256: 'a'.repeat(64), storage_path: `${channel}/releases/${crypto.randomUUID()}/libbgmi.zip` });
+  await db.exec('begin');
+  try {
+    for (const size of [Math.floor(7.57 * 1024 * 1024) * 2 + 4096, 20 * 1024 * 1024 + 8192, 21 * 1024 * 1024]) {
+      ok((await call('publish_library_release', [actor, descriptor(size)])).ok,
+        `${label}: SQL publishes a ${size}-byte normalized bundle, including two 7.57 MiB libraries/ZIP overhead`);
+      ok(Number((await rows('select file_size from public.client_release where channel=$1 and is_current', [channel]))[0].file_size) === size,
+        `${label}: the full normalized size survives in release metadata`);
+    }
+    assert.deepEqual(await rows('select * from public.client_release where channel<>$1 order by id', [channel]), before.filter(row => row.channel !== channel));
+    checks++; console.log(`  PASS  ${label}: large publications preserve the other channel`);
+  } finally { await db.exec('rollback'); }
+  await rejects(() => call('publish_library_release', [actor, descriptor(21 * 1024 * 1024 + 1)]),
+    `${label}: SQL refuses one byte above the 21 MiB normalized Storage allowance`);
+  assert.deepEqual(await rows('select * from public.client_release order by id'), before);
+  checks++; console.log(`  PASS  ${label}: rollback/oversize rejection never changes an active release`);
+}
+
 try {
   await db.exec(`create role anon; create role authenticated; create role service_role;
     create schema storage; create table storage.buckets(id text primary key, name text, public boolean, file_size_limit bigint);
@@ -23,9 +61,11 @@ try {
   const lifecycle = await fs.readFile(new URL('../../supabase/migrations/20261119_referral_single_use.sql', import.meta.url), 'utf8');
   const schema = await fs.readFile(new URL('../../supabase/schema.sql', import.meta.url), 'utf8');
   const uploadLimit = await fs.readFile(new URL('../../supabase/migrations/20261121134307_library_upload_20mib.sql', import.meta.url), 'utf8');
+  const publicationLimit = await fs.readFile(new URL('../../supabase/migrations/20261121134308_library_publish_20mib.sql', import.meta.url), 'utf8');
   ok(schema.split('-- BEGIN SINGLE USE REFERRALS')[0].trim().endsWith(migration.trim())
     && schema.split('-- BEGIN LIBRARY 20 MIB UPLOADS')[0].trim().endsWith(lifecycle.trim())
-    && schema.endsWith(uploadLimit), 'fresh schema includes the exact owner/referral/upload-limit additive migrations');
+    && schema.split('-- BEGIN LIBRARY 20 MIB PUBLICATION')[0].trim().endsWith(uploadLimit.trim())
+    && schema.endsWith(publicationLimit), 'fresh schema includes the exact owner/referral/Storage/publication-limit migrations');
   await db.exec(migration);
   await db.exec(lifecycle);
   await db.exec(migration); // deliberately re-run both to verify idempotence
@@ -42,8 +82,10 @@ try {
     '20 MiB inputs have 21 MiB private Storage capacity for normalized ZIP overhead');
   assert.deepEqual(await rows('select row_to_json(r) as row from public.client_release r union all select row_to_json(a) from public.app_release a'), liveBeforeLimit);
   checks++; console.log('  PASS  upload-limit migration preserves every current library/APK row and byte descriptor');
+  await verifyPublicationLimitMigration(publicationLimit, 'historical two-owner RPC');
   const [anoy] = await rows("select id_users from public.users where owner_channel='anoy'");
   const call = async (name, args) => (await rows(`select public.${name}(${args.map((_, i) => '$' + (i + 1)).join(',')}) as result`, args))[0].result;
+  await verifyLargeSqlPublication(call, anoy.id_users, 'anoy', 'historical two-owner RPC');
   const invite = await call('create_owner_invite', [anoy.id_users, 'a'.repeat(32), 'KENNY24']);
   ok(invite.ok && invite.referral === 'KENNY24', 'Anoy can create the single-use second-owner invitation');
   ok((await call('create_owner_invite', [anoy.id_users, 'b'.repeat(32), 'OTHER24'])).referral === invite.referral, 'repeated invitation requests return the same pending code');
@@ -132,8 +174,14 @@ try {
   const siteMigration = await fs.readFile(new URL('../sql/real_owner_library_retention.sql', import.meta.url), 'utf8');
   const currentBefore = await rows('select id, channel, storage_path, content_base64 from public.client_release where is_current order by channel');
   const appsBefore = await rows('select * from public.app_release where is_current order by channel');
+  const legacySiteMigration = siteMigration.replace('not between 1 and 22020096', 'not between 1 and 11534336');
+  await db.exec(legacySiteMigration);
+  await verifyPublicationLimitMigration(publicationLimit, 'Real Owner + retention RPC');
+  await verifyLargeSqlPublication(call, anoy.id_users, 'kenny', 'Real Owner + retention RPC');
+  await db.exec(siteMigration); // fresh/idempotent installer must also keep the larger guard
   await db.exec(siteMigration);
-  await db.exec(siteMigration);
+  ok((await rows("select pg_get_functiondef('public.publish_library_release(integer,jsonb)'::regprocedure) as definition"))[0].definition.includes('not between 1 and 22020096'),
+    'fresh/reapplied Real Owner SQL does not restore the obsolete publication cap');
   ok(JSON.stringify(currentBefore) === JSON.stringify(await rows('select id, channel, storage_path, content_base64 from public.client_release where is_current order by channel')), 'new site migration installs without deleting/changing current libraries');
   ok(JSON.stringify(appsBefore) === JSON.stringify(await rows('select * from public.app_release where is_current order by channel')), 'new site migration preserves both current app updates');
   ok((await rows('select password from public.users where username=$1', ['Anoy']))[0].password === before, 'Real Owner capability does not reset credentials or numeric billing role');

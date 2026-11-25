@@ -36,7 +36,17 @@ public class GamePackagePreparerTest {
     private File work;
     private String lastInput;
     private boolean removed;
+    private boolean defaultUser = true;
+    private boolean launchReady = true;
+    private int userRequests;
+    private int userChecks;
+    private int launchChecks;
+    private int waits;
     private Runnable onInstall;
+    private Runnable onUserRead = () -> {};
+    private Runnable onAddUser = () -> defaultUser = true;
+    private Runnable onResolve = () -> {};
+    private GamePackagePreparer.Pause onPause = millis -> {};
     private GamePackagePreparer preparer;
 
     @Before
@@ -67,7 +77,18 @@ public class GamePackagePreparerTest {
                 installs++;
                 onInstall.run();
             }
-        }, work);
+            @Override public boolean hasDefaultUser(String pkg) {
+                assertEquals(GAME.packageName, pkg); userChecks++; onUserRead.run(); return defaultUser;
+            }
+            @Override public void addDefaultUser(String pkg) {
+                assertEquals(GAME.packageName, pkg); userRequests++; onAddUser.run();
+            }
+            @Override public boolean hasLaunchActivity(String pkg) {
+                assertEquals(GAME.packageName, pkg); launchChecks++; onResolve.run(); return launchReady;
+            }
+        }, work, millis -> {
+            assertEquals(100L, millis); waits++; onPause.sleep(millis);
+        });
     }
 
     private File apk(String name) throws Exception { return apk(name, "manifest-fixture"); }
@@ -279,6 +300,9 @@ public class GamePackagePreparerTest {
         GamePackagePreparer limited = new GamePackagePreparer(pkg -> installed, new GamePackagePreparer.Container() {
             @Override public PackageInfo read(String pkg) { return null; }
             @Override public void installApkSet(String dir) { fail("Must not install when staging has no space"); }
+            @Override public boolean hasDefaultUser(String pkg) { throw new AssertionError("No imported package"); }
+            @Override public void addDefaultUser(String pkg) { fail("Must not create a user when staging failed"); }
+            @Override public boolean hasLaunchActivity(String pkg) { throw new AssertionError("No imported package"); }
         }, noSpace);
         assertEquals(GamePackagePreparer.Status.INSUFFICIENT_SPACE, limited.prepare(GAME).status);
         assertEquals(0, work.listFiles().length);
@@ -290,6 +314,9 @@ public class GamePackagePreparerTest {
         GamePackagePreparer limited = new GamePackagePreparer(pkg -> installed, new GamePackagePreparer.Container() {
             @Override public PackageInfo read(String pkg) { return null; }
             @Override public void installApkSet(String dir) { fail("Must not install a partial staged set"); }
+            @Override public boolean hasDefaultUser(String pkg) { throw new AssertionError("No imported package"); }
+            @Override public void addDefaultUser(String pkg) { fail("Must not create a user when staging failed"); }
+            @Override public boolean hasLaunchActivity(String pkg) { throw new AssertionError("No imported package"); }
         }, temporary.newFile("not-a-directory"));
         assertEquals(GamePackagePreparer.Status.CONTAINER_UNAVAILABLE, limited.prepare(GAME).status);
         assertTrue(new File(installed.applicationInfo.sourceDir).isFile());
@@ -349,6 +376,140 @@ public class GamePackagePreparerTest {
         virtual.applicationInfo.splitSourceDirs[1] = path;
         virtual.applicationInfo.splitPublicSourceDirs = virtual.applicationInfo.splitSourceDirs.clone();
         expect(GamePackagePreparer.Status.READY); assertEquals(0, installs);
+    }
+
+    @Test public void missingDefaultUserIsAddedWithoutReimportingOrClearingSavedData() throws Exception {
+        virtual = copy(installed); defaultUser = false;
+        File saved = temporary.newFile("existing-save");
+        Files.write(saved.toPath(), new byte[]{42, 43});
+        expect(GamePackagePreparer.Status.READY);
+        assertEquals(0, installs); assertEquals(1, userRequests); assertEquals(1, waits);
+        assertArrayEquals(new byte[]{42, 43}, bytes(saved));
+    }
+
+    @Test public void asynchronousUserRegistrationMustBeObservedBeforeLaunchIsReady() {
+        defaultUser = false;
+        onAddUser = () -> {}; // the SDK schedules work; return is not completion
+        onPause = millis -> { if (waits == 3) defaultUser = true; };
+        expect(GamePackagePreparer.Status.READY);
+        assertEquals(1, userRequests); assertEquals(3, waits); assertEquals(1, launchChecks);
+    }
+
+    @Test public void neverUsesAnAlternateUserWhenDefaultUserRegistrationTimesOut() {
+        defaultUser = false; onAddUser = () -> {};
+        expect(GamePackagePreparer.Status.CONTAINER_UNAVAILABLE);
+        assertEquals(1, userRequests); assertEquals(100, waits); assertEquals(0, launchChecks);
+    }
+
+    @Test public void existingDefaultUserIsNeverRecreated() {
+        expect(GamePackagePreparer.Status.READY);
+        assertEquals(0, userRequests); assertEquals(0, waits); assertEquals(1, launchChecks);
+    }
+
+    @Test public void sdkUserLookupFailureIsControlledWithoutChangingAnExistingPackage() {
+        virtual = copy(installed);
+        onUserRead = () -> { throw new IllegalStateException("offline service failure"); };
+        expect(GamePackagePreparer.Status.CONTAINER_UNAVAILABLE);
+        assertEquals(0, installs); assertEquals(0, userRequests); assertEquals(0, launchChecks);
+    }
+
+    @Test public void sdkUserCreationFailureCannotAuthorizeLaunch() {
+        virtual = copy(installed); defaultUser = false;
+        onAddUser = () -> { throw new UnsatisfiedLinkError("offline SDK failure"); };
+        expect(GamePackagePreparer.Status.CONTAINER_UNAVAILABLE);
+        assertEquals(0, installs); assertEquals(1, userRequests); assertEquals(0, launchChecks);
+    }
+
+    @Test public void existingPackageWaitsForComponentParsingWithoutReinstalling() {
+        virtual = copy(installed); launchReady = false;
+        onPause = millis -> { if (waits == 3) launchReady = true; };
+        expect(GamePackagePreparer.Status.READY);
+        assertEquals(0, installs); assertEquals(3, waits); assertEquals(0, userRequests);
+    }
+
+    @Test public void importerReturnAndCompleteFilesDoNotReplaceLaunchComponentReadiness() {
+        launchReady = false;
+        onPause = millis -> { if (waits == 4) launchReady = true; };
+        expect(GamePackagePreparer.Status.READY);
+        assertEquals(1, installs); assertEquals(4, waits); assertEquals(5, launchChecks);
+    }
+
+    @Test public void aCompletePackageWithoutALauncherTimesOutInsteadOfLaunchingPartially() {
+        launchReady = false;
+        expect(GamePackagePreparer.Status.CONTAINER_UNAVAILABLE);
+        assertEquals(100, waits); assertEquals(101, launchChecks); assertEquals(0, userRequests);
+    }
+
+    @Test public void launchResolverFailureIsAControlledResult() {
+        onResolve = () -> { throw new IllegalStateException("offline resolver failure"); };
+        expect(GamePackagePreparer.Status.CONTAINER_UNAVAILABLE);
+        assertEquals(0, waits); assertEquals(0, userRequests);
+    }
+
+    @Test public void stagedApksStayAvailableUntilAsynchronousReadinessHasBeenObserved() throws Exception {
+        File otherGame = apk("unlisted.apk"); launchReady = false;
+        onInstall = this::assertStagedSet;
+        onPause = millis -> {
+            assertStagedSet(); assertTrue(new File(lastInput).isDirectory());
+            if (waits == 2) launchReady = true;
+        };
+        expect(GamePackagePreparer.Status.READY);
+        assertEquals(2, waits); assertEquals(0, work.listFiles().length); assertTrue(otherGame.isFile());
+        assertTrue(new File(installed.applicationInfo.sourceDir).isFile());
+    }
+
+    @Test public void stagingIsRemovedIfReadinessTimesOutButOriginalApksRemain() throws Exception {
+        File otherGame = apk("unlisted.apk"); launchReady = false;
+        expect(GamePackagePreparer.Status.CONTAINER_UNAVAILABLE);
+        assertEquals(100, waits); assertEquals(0, work.listFiles().length); assertTrue(otherGame.isFile());
+        assertTrue(new File(installed.applicationInfo.sourceDir).isFile());
+    }
+
+    @Test public void interruptionWhileWaitingCleansStagingAndPreservesTheInterruptFlag() throws Exception {
+        apk("unlisted.apk"); launchReady = false;
+        onPause = millis -> { throw new InterruptedException("offline cancelled I/O worker"); };
+        try {
+            expect(GamePackagePreparer.Status.CONTAINER_UNAVAILABLE);
+            assertTrue(Thread.currentThread().isInterrupted());
+            assertEquals(1, waits); assertEquals(0, work.listFiles().length);
+            assertTrue(new File(installed.applicationInfo.sourceDir).isFile());
+        } finally { Thread.interrupted(); }
+    }
+
+    @Test public void alreadyInterruptedPreparationNeverCallsTheInstaller() {
+        Thread.currentThread().interrupt();
+        try {
+            expect(GamePackagePreparer.Status.CONTAINER_UNAVAILABLE);
+            assertTrue(Thread.currentThread().isInterrupted());
+            assertEquals(0, installs); assertEquals(0, userChecks);
+        } finally { Thread.interrupted(); }
+    }
+
+    @Test public void hostUpdateDuringReadinessWaitRequiresRetry() {
+        launchReady = false;
+        onPause = millis -> { installed.versionCode++; launchReady = true; };
+        expect(GamePackagePreparer.Status.PACKAGE_CHANGED);
+        assertEquals(1, waits);
+    }
+
+    @Test public void readinessOnTheLastBoundedCheckIsAccepted() {
+        launchReady = false;
+        onPause = millis -> { if (waits == 100) launchReady = true; };
+        expect(GamePackagePreparer.Status.READY);
+        assertEquals(100, waits); assertEquals(101, launchChecks);
+    }
+
+    @Test public void rejectedImportNeverCreatesAnExternalFallbackUser() {
+        defaultUser = false; onInstall = () -> {};
+        expect(GamePackagePreparer.Status.CONTAINER_UNAVAILABLE);
+        assertEquals(0, userChecks); assertEquals(0, userRequests); assertEquals(0, launchChecks);
+    }
+
+    @Test public void partialReadBackNeverRegistersAUserForAnIncompleteApkSet() {
+        defaultUser = false;
+        onInstall = () -> { virtual = copy(installed); virtual.splitNames = null; };
+        expect(GamePackagePreparer.Status.CONTAINER_UNAVAILABLE);
+        assertEquals(0, userChecks); assertEquals(0, userRequests); assertEquals(0, launchChecks);
     }
 
 }

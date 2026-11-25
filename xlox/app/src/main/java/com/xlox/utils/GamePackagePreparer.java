@@ -1,6 +1,7 @@
 package com.xlox.utils;
 
 import android.content.Context;
+import android.content.Intent;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
@@ -60,17 +61,28 @@ public final class GamePackagePreparer {
     interface Container {
         PackageInfo read(String packageName);
         void installApkSet(String directory);
+        boolean hasDefaultUser(String packageName);
+        void addDefaultUser(String packageName);
+        boolean hasLaunchActivity(String packageName);
     }
 
+    interface Pause { void sleep(long millis) throws InterruptedException; }
+
+    // Copying is synchronous in the pinned SDK; component parsing and adding a
+    // user are not. A PackageInfo/file match alone is NOT a launch-ready signal.
+    private static final int READY_WAITS = 100;
+    private static final long READY_POLL_MS = 100L;
     private final HostPackages host;
     private final Container container;
     private final File workRoot;
+    private final Pause pause;
 
     public GamePackagePreparer(Context context) {
         final Context app = context.getApplicationContext();
         final PackageManager manager = app.getPackageManager();
         host = pkg -> manager.getPackageInfo(pkg, 0);
         workRoot = app.getCacheDir();
+        pause = Thread::sleep;
         container = new Container() {
             private boolean scanned;
             @Override public PackageInfo read(String pkg) {
@@ -87,29 +99,62 @@ public final class GamePackagePreparer {
                 // Require full read-back, not an undocumented numeric result.
                 MetaApplicationInstaller.installAppsByPath(directory);
             }
+
+            @Override public boolean hasDefaultUser(String pkg) {
+                String[] users = MetaPackageManager.getInstalledUserName(pkg);
+                if (users != null) for (String user : users) if ("0".equals(user)) return true;
+                return false;
+            }
+
+            @Override public void addDefaultUser(String pkg) {
+                // This public API ADDS a missing user asynchronously. Never
+                // reset/clean an existing user or create a second clone ID.
+                MetaPackageManager.createEmptyUser(pkg, "0");
+            }
+
+            @Override public boolean hasLaunchActivity(String pkg) {
+                // Resolution has no launch side effect and uses the internal
+                // component index filled by the SDK's asynchronous parser.
+                Intent launch = MetaPackageManager.getLaunchIntent(pkg);
+                return launch != null && launch.getComponent() != null
+                        && pkg.equals(launch.getComponent().getPackageName());
+            }
         };
     }
 
-    // Host-Android test seam. Production always uses the original SDK above.
+    // Host-Android test seams. Production always uses the original SDK above.
     GamePackagePreparer(HostPackages host, Container container, File workRoot) {
+        this(host, container, workRoot, Thread::sleep);
+    }
+
+    GamePackagePreparer(HostPackages host, Container container, File workRoot, Pause pause) {
         this.host = host;
         this.container = container;
         this.workRoot = workRoot;
+        this.pause = pause;
     }
 
     public Result prepare(GameTarget game) {
         if (game == null) return result(Status.NOT_INSTALLED);
         try {
+            if (Thread.currentThread().isInterrupted()) throw new InterruptedException();
             Snapshot installed = snapshot(host.read(game.packageName), game.packageName);
             Snapshot virtual = readContainer(game.packageName);
-            if (!installed.matchesPackage(virtual)) {
-                // Use Android's installed directory only if its .apk files are
-                // EXACTLY the PackageManager set. Otherwise stream a private
-                // temporary set; never send unrelated/unlisted APKs to the SDK.
-                try (ApkDirectory source = apkDirectory(installed)) {
+            boolean launchReady;
+            // Use Android's installed directory only if its .apk files are
+            // EXACTLY the PackageManager set. Otherwise stream a private set;
+            // never send unrelated/unlisted APKs to the SDK. Keep staged files
+            // until read-back/readiness finishes, not merely until API return.
+            try (ApkDirectory source = installed.matchesPackage(virtual) ? null : apkDirectory(installed)) {
+                if (Thread.currentThread().isInterrupted()) throw new InterruptedException();
+                if (source != null) {
                     container.installApkSet(source.directory.getPath());
+                    virtual = readContainer(game.packageName);
                 }
-                virtual = readContainer(game.packageName);
+                // A rejected import must not fall back to creating an external
+                // clone/user for a package that was never fully imported.
+                launchReady = installed.matchesPackage(virtual) && awaitLaunchReady(game.packageName);
+                if (launchReady) virtual = readContainer(game.packageName);
             }
             // Store updates can replace code paths during preparation. Never
             // combine the base from one installation with splits from another.
@@ -120,15 +165,35 @@ public final class GamePackagePreparer {
                 return result(Status.PACKAGE_CHANGED);
             }
             if (!installed.sameInstall(latest)) return result(Status.PACKAGE_CHANGED);
-            if (!installed.matchesPackage(virtual)) return result(Status.CONTAINER_UNAVAILABLE);
+            if (!launchReady || !installed.matchesPackage(virtual)) return result(Status.CONTAINER_UNAVAILABLE);
             return new Result(Status.READY, installed.files.size() - 1);
         } catch (PackageManager.NameNotFoundException e) {
             return result(Status.NOT_INSTALLED);
         } catch (InvalidApks e) {
             return result(e.status);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return result(Status.CONTAINER_UNAVAILABLE);
         } catch (IOException | RuntimeException | LinkageError e) {
             return result(Status.CONTAINER_UNAVAILABLE);
         }
+    }
+
+    private boolean awaitLaunchReady(String pkg) throws InterruptedException {
+        boolean userRequested = false;
+        for (int waits = 0; waits <= READY_WAITS; waits++) {
+            if (Thread.currentThread().isInterrupted()) throw new InterruptedException();
+            boolean userPresent = container.hasDefaultUser(pkg);
+            if (!userPresent && !userRequested) {
+                container.addDefaultUser(pkg);
+                userRequested = true;
+            }
+            // Never silently launch another user's save, and never consider an
+            // asynchronous create request or a numeric install result success.
+            if (userPresent && container.hasLaunchActivity(pkg)) return true;
+            if (waits < READY_WAITS) pause.sleep(READY_POLL_MS);
+        }
+        return false;
     }
 
     private static Result result(Status status) { return new Result(status, 0); }

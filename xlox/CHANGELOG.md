@@ -9,7 +9,7 @@ scripts mentioned below were removed from the tree in the repo cleanup after
 - Raise the panel's shared `.so`/ZIP input **and total expanded** limit to 20 MiB;
   two 7.57 MiB game libraries now fit one bundle. Keep bounded inflation, CRC,
   owner isolation, direct signed uploads and the small legacy request cap.
-  An additive private-bucket migration reserves 21 MiB for normalized ZIP overhead.
+  Additive private-bucket and publication-RPC migrations reserve 21 MiB for normalized ZIP overhead.
 - Lite/Air no longer inspects, copies or requires an OBB, nor blocks Launch on
   OBB-only file access. BGMI retains its verified main/patch preparation.
 - Prepare each complete installed APK set off-thread (base + ABI/config/language/
@@ -17,8 +17,12 @@ scripts mentioned below were removed from the tree in the repo cleanup after
   Repair a base-only/stale SDK package, read it back, and fail safely on partial
   files, SDK errors or an installed-game update race. Never merge/re-sign APKs,
   uninstall games or clear data. Single-APK games use the same path.
-- Add 32 APK-set host cases and extend OBB/policy coverage to 11 cases per API
-  and brand: **320 host Android checks** with the existing navigation/login suite.
+- Wait for the real default-user `0` registration and internal launch-activity
+  resolution after import; component parsing is asynchronous in the original
+  SDK. Add only a missing default user without resetting data, retain staging
+  through readiness, and fail safely on timeout/interruption.
+- Add 50 APK-set/readiness host cases and extend OBB/policy coverage to 11 cases
+  per API and brand: **392 host Android checks** with the navigation/login suite.
   [Scope and required device checks](../docs/SPLIT_APK_SUPPORT.md).
 - APK changes are **build-only pending device testing**, not a replacement of
   the published 2.4.3 release. No version/signing/AAR changes or live library/APK
