@@ -70,12 +70,25 @@ Java/Python/XML/YAML/shell syntax, offline panel build/tests, and five mocked
 publication-CLI size boundaries passed. The CLI fixtures make no real network
 requests or publications.
 
-There is no local JDK/Android runtime. JVM execution, both Android builds/lints,
-compiled-APK gates and signature checks belong to the fresh build-only CI run;
-no pending CI result is represented as a pass here. The restored host suite
-requires at least **180 tests** across the two brands and Android 21/28, with
-zero failures/errors/skips. This is intentionally the released baseline's suite,
-not the retired 676-test experimental suite. Host results are not game/device QA.
+There is no local JDK/Android runtime. Fresh build-only
+[CI run 45620618808](https://github.com/masterace572-prog/AnoyMundo/actions/runs/45620618808)
+**succeeded** on rollback source `8c3fdfc2cb5bf1a8c460e6bf840703adb089c28b`:
+
+- Actual host totals: **180 tests, zero failures/errors/skips**, across both
+  brands and Android 21/28. The completed check-run annotation records these
+  totals; they are not merely a configured test floor.
+- Both release variants compiled/linted and passed compiled identity/version,
+  permission, callback-routing, artwork and native-alignment gates.
+- Both new APKs and both archived public APKs verified against original signer
+  `77f05d53ce8bf1855caef38ce87f13a8bb2b1b2cdd2d48da9d3ba897eac4549e`.
+- Public release publication was **skipped**. A post-build comparison confirmed
+  all five existing releases' notes, APK/checksum descriptors and tag targets
+  unchanged. No live panel/library/APK choice was edited.
+
+This is intentionally the released baseline's host suite, not the retired
+676-test experimental suite. JVM/host results are not game/device QA. The raw
+CI-log download was unavailable in this workspace; completed job/step metadata
+and GitHub check-run annotations provide the build, test and signer evidence.
 
 The original public APKs remain at
 [the 2.4.3 release](https://github.com/masterace572-prog/AnoyMundo/releases/tag/loaders-v2.4.3-21).
