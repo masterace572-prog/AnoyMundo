@@ -150,6 +150,10 @@ public class HomeSettingsNavigationTest {
         assertNotNull(report.findViewById(R.id.airCrashReportClose));
         assertFalse(report.findViewById(R.id.airCrashReportCopy).isEnabled());
         assertFalse(report.findViewById(R.id.airCrashReportRoot).isEnabled());
+        assertFalse(report.findViewById(R.id.airCrashReportNative).isEnabled());
+        assertEquals(activity.getString(R.string.air_crash_report_native),
+                ((TextView) report.findViewById(R.id.airCrashReportNative)).getText().toString());
+        assertNotSame(report.findViewById(R.id.airCrashReportRoot), report.findViewById(R.id.airCrashReportNative));
         String initial = ((TextView) report.findViewById(R.id.airCrashReportText)).getText().toString();
         assertEquals(activity.getString(R.string.air_crash_report_reading), initial);
         assertFalse(initial.contains("Licence key:"));

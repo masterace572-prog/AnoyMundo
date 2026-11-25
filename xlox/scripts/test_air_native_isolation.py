@@ -28,6 +28,7 @@ APP = ROOT / 'app'
 JAVA = APP / 'src/main/java/com/xlox'
 WORKFLOW = ROOT.parent / '.github/workflows/build-xlox.yml'
 MARKER = 'AIR-NATIVE-ISOLATION: libbgmilite.so injection skipped'
+NATIVE_MARKERS = (b'Air native crash report v2', b'NATIVE_LOOKUP_V2', b'NATIVE_CAPTURE_V2')
 A = '{http://schemas.android.com/apk/res/android}'
 
 
@@ -44,8 +45,10 @@ def verify_apk_marker(path: Path, diagnostic: bool) -> None:
     assert dex, 'No compiled DEX in ' + path.name
     present = any(MARKER.encode() in data for data in dex)
     assert present == diagnostic, path.name + ': wrong compiled Air isolation mode'
+    for marker in NATIVE_MARKERS:
+        assert any(marker in data for data in dex) == diagnostic, path.name + ': wrong compiled native reporter mode'
     if diagnostic:
-        assert any(b'Air crash report v1' in data for data in dex), path.name + ': crash reporter missing'
+        assert any(b'Air crash report v1' in data for data in dex), path.name + ': exit reporter missing'
 
 
 def verify_generated_release_flags(diagnostic: bool) -> None:
@@ -143,6 +146,64 @@ class IsolationWiringTest(unittest.TestCase):
         self.assertNotIn('Runtime.getRuntime()', report)
         self.assertNotIn('new FileOutputStream', report)
 
+    def test_native_root_is_a_distinct_fresh_consent_not_open_copy_or_exit_history(self):
+        adapter = (JAVA / 'utils/AirCrashDiagnostics.java').read_text()
+        dialog = (JAVA / 'ui/AirCrashReportDialog.java').read_text()
+        native = (JAVA / 'utils/RootNativeCrashReader.java').read_text()
+        old_collect = adapter.split('public static String collect(Context', 1)[1].split('public static String collectNative', 1)[0]
+        self.assertNotIn('RootNativeCrashReader', old_collect)
+        self.assertNotIn('NativeTraceProbe', old_collect)
+        self.assertIn('public static String collectNative(Context context)', adapter)
+        self.assertIn('if (guests.isEmpty()) return', adapter)
+        self.assertIn('RootNativeCrashReader.read(host, android.os.Process.myUid(), session, guests, exits, now)', adapter)
+        self.assertIn('.setPositiveButton(R.string.air_crash_native_allow, (d, which) -> readNative())', dialog)
+        self.assertIn('private void read(boolean includeRoot) { startRead(includeRoot, false); }', dialog)
+        self.assertIn('private void readNative() { startRead(false, true); }', dialog)
+        self.assertIn('includeNative ? reader.nativeTrace(app) : reader.exits(app, includeRoot)', dialog)
+        copy = dialog.split('copy.setOnClickListener', 1)[1].split('root.setOnClickListener', 1)[0]
+        self.assertNotIn('nativeTrace', copy)
+        self.assertNotIn('startRead', copy)
+        self.assertEqual(native.count('new ProcessBuilder('), 1)
+        self.assertIn('!BuildConfig.AIR_NATIVE_ISOLATION || !AirExitReport.ownPackage(host)', native)
+        self.assertIn('System.nanoTime() + TimeUnit.SECONDS.toNanos(20)', native)
+        self.assertIn('reader.get(remaining, TimeUnit.NANOSECONDS)', native)
+        self.assertIn('Thread.currentThread().isInterrupted()', native)
+        self.assertIn('process.destroyForcibly()', native)
+        self.assertIn('reader.cancel(true)', native)
+        for source in JAVA.rglob('*.java'):
+            if source.name not in ('AirCrashDiagnostics.java', 'AirCrashReportDialog.java'):
+                self.assertNotIn('collectNative(', source.read_text(), str(source))
+        sheet = ET.parse(APP / 'src/main/res/layout/sheet_air_crash_report.xml').getroot()
+        buttons = {e.get(A + 'id'): e for e in sheet.iter() if e.tag.endswith('MaterialButton')}
+        for id in ('airCrashReportRoot', 'airCrashReportNative', 'airCrashReportCopy'):
+            self.assertEqual(buttons['@+id/' + id].get(A + 'enabled'), 'false')
+        strings = {e.get('name'): ''.join(e.itertext())
+                   for e in ET.parse(APP / 'src/main/res/values/strings.xml').getroot().findall('string')}
+        self.assertNotEqual(strings['air_crash_root_message'], strings['air_crash_native_message'])
+        self.assertIn('Separate from exit history', strings['air_crash_native_message'])
+        self.assertIn('may not exist', strings['air_crash_native_message'])
+
+    def test_native_commands_are_fixed_bounded_read_only_and_fail_closed(self):
+        probe = (JAVA / 'utils/NativeTraceProbe.java').read_text()
+        native = (JAVA / 'utils/RootNativeCrashReader.java').read_text()
+        self.assertIn('/data/tombstones/tombstone_[0-9][0-9]', probe)
+        self.assertIn('/system/bin/head -c 4096', probe)
+        self.assertIn('/system/bin/head -c 65536', probe)
+        self.assertIn('[ ! -L', probe)
+        self.assertIn('MAX_EXIT_LAG_MS = 30_000L', probe)
+        self.assertIn('MAX_TIMESTAMP_AHEAD_MS = 2000L', probe)
+        self.assertIn('Math.min(32, exits.size())', probe)
+        self.assertIn('guests.isEmpty()', probe)
+        self.assertIn('!nativeLike(latest)', probe)
+        self.assertEqual(probe.count('AirExitReport.nativeIdentityMatches('), 2)
+        self.assertIn('!Arrays.equals(before, after)', probe)
+        self.assertIn('String facts = renderCapture(raw, h);', probe)
+        self.assertNotRegex(probe + native, r'getSharedPreferences|FileOutputStream|Log\.[deiw]\(|HttpURLConnection|setenforce|logcat|ptrace|sigaction')
+        self.assertNotIn('new ProcessBuilder', probe)
+        self.assertEqual((probe + native).count('new ProcessBuilder('), 1)
+        self.assertNotIn('getMessage()', probe + native)
+        self.assertTrue(all(ord(c) >= 32 or ord(c) in (9, 10, 13) for c in probe + native))
+
     def test_actual_workflow_selector_rejects_publishing_or_unmarked_diagnostics(self):
         body = workflow_step('Select normal or strictly build-only Air diagnostic')
         script = body.split('        run: |\n', 1)[1]
@@ -193,8 +254,9 @@ class IsolationWiringTest(unittest.TestCase):
     def test_dex_marker_parser_refuses_wrong_mode_missing_dex_or_asset_only_marker(self):
         with tempfile.TemporaryDirectory(prefix='air-dex-marker-') as tmp:
             path = Path(tmp) / 'fixture.apk'
-            for name, data, diagnostic in (('classes.dex', b'dex\n035\x00' + MARKER.encode() + b'Air crash report v1', True),
-                                            ('classes2.dex', b'dex\n035\x00' + MARKER.encode() + b'Air crash report v1', True),
+            compiled = b'dex\n035\x00' + MARKER.encode() + b'Air crash report v1' + b''.join(NATIVE_MARKERS)
+            for name, data, diagnostic in (('classes.dex', compiled, True),
+                                            ('classes2.dex', compiled, True),
                                             ('classes10.dex', b'dex\n035\x00', False)):
                 with ZipFile(path, 'w') as apk:
                     apk.writestr(name, data)
@@ -279,8 +341,10 @@ def run_callback_harness() -> None:
             sources.append(path)
         sources += [JAVA / 'BoxApplication.java', JAVA / 'utils/GameTarget.java',
                     JAVA / 'utils/AirExitReport.java', JAVA / 'utils/AirCrashSession.java',
+                    JAVA / 'utils/NativeTraceProbe.java',
                     ROOT / 'tests/runtime/AirNativeIsolationTest.java',
-                    ROOT / 'tests/runtime/AirCrashReportTest.java']
+                    ROOT / 'tests/runtime/AirCrashReportTest.java',
+                    ROOT / 'tests/runtime/AirNativeRecordTest.java']
         config = base / 'src/com/xlox/BuildConfig.java'
         for diagnostic in (False, True):
             value = str(diagnostic).lower()
@@ -296,6 +360,8 @@ def run_callback_harness() -> None:
                            check=True, timeout=30)
         subprocess.run([java, '-ea', '-cp', str(output), 'com.xlox.tests.AirCrashReportTest'],
                        check=True, timeout=30)
+        subprocess.run([java, '-ea', '-cp', str(output), 'com.xlox.tests.AirNativeRecordTest'],
+                       check=True, timeout=60)
 
 
 def main() -> None:

@@ -181,7 +181,38 @@ public final class AirExitReport {
         return frames;
     }
 
-    private static String module(String path) {
+    /** Verify a bounded protobuf HEADER before/after reading any text frames.
+     * Stop before non-header fields; never decode embedded logs or memory.
+     */
+    public static boolean nativeIdentityMatches(byte[] prefix, int expectedPid, int expectedUid, String stamp) {
+        if (prefix == null || prefix.length > 4096 || expectedPid <= 0 || expectedUid <= 0
+                || stamp == null || stamp.isEmpty() || stamp.length() > 80) return false;
+        try {
+            Proto p = new Proto(prefix);
+            int pid = -1, uid = -1;
+            String timestamp = null;
+            while (p.more()) {
+                int tag = p.tag(), field = tag >>> 3;
+                // AOSP's serialized identity header precedes the other fields.
+                // Unsupported ordering/truncated header fails closed. Never walk
+                // command-line, signal, thread, memory or log payloads here.
+                if (field > 7) break;
+                if (field == 4) {
+                    if (timestamp != null || !p.wire(tag, 2)) return false;
+                    timestamp = p.string();
+                } else if (field == 5) {
+                    if (pid != -1 || !p.wire(tag, 0)) return false;
+                    pid = p.id();
+                } else if (field == 7) {
+                    if (uid != -1 || !p.wire(tag, 0)) return false;
+                    uid = p.id();
+                } else p.skip(tag);
+            }
+            return pid == expectedPid && uid == expectedUid && stamp.equals(timestamp);
+        } catch (IOException | RuntimeException ignored) { return false; }
+    }
+
+    static String module(String path) {
         String name = path.substring(path.lastIndexOf('/') + 1).replace(" (deleted)", "");
         if (name.length() > 96 || !safeFact(name).equals(name)) return "[module withheld]";
         return name.matches("lib[A-Za-z0-9_.+-]+\\.so|(?:base|split_[A-Za-z0-9_.+-]+)\\.apk|linker64?|\\[vdso\\]")

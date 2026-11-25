@@ -256,7 +256,7 @@ jobs:
                       detail = case.get('name', '') + ': ' + (failure.get('message') or '')[:600]
                       detail += '\n' + causes[:1800] + '\n' + trace[-1400:]
                       print('::error title=Android navigation test::' + detail.replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A'))
-          summary = 'Android UI/OBB tests (Anoy + KennyPvt, host Android 21 / 28): ' + str(totals)
+          summary = 'Android UI/OBB/diagnostic-consent tests (Anoy + KennyPvt, host Android 21 / 28 / 35): ' + str(totals)
           print(summary)
           with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as out:
               out.write(summary + '\n')
@@ -264,12 +264,13 @@ jobs:
                       'com.xlox.ui.LoginSplashUiTest': 18,
                       'com.xlox.utils.AppManagerObbStateTest': 22,
                       'com.xlox.utils.GamePackagePreparerTest': 100,
-                      'com.xlox.utils.AirCrashDiagnosticsTest': 6}
+                      'com.xlox.utils.AirCrashDiagnosticsTest': 12,
+                      'com.xlox.ui.AirCrashReportDialogTest': 16}
           for variant in ('testAnoyDebugUnitTest', 'testKennyDebugUnitTest'):
               for name, count in expected.items():
                   actual = suites.get((variant, name))
                   assert actual is not None and actual['tests'] >= count, (variant, name, actual)
-          assert totals['tests'] >= 412, 'Both brands must run all navigation/login/OBB/APK-set tests on Android 21/28 plus private Air exit-report adapter tests on Android 21/35.'
+          assert totals['tests'] >= 456, 'Both brands must run all navigation/login/OBB/APK-set tests on Android 21/28 plus private Air adapter and separate root-native consent/lifecycle tests on Android 21/35.'
           assert totals['failures'] == totals['errors'] == totals['skipped'] == 0, summary
           print('::notice title=Android host test totals::' + summary)
           PYNAV

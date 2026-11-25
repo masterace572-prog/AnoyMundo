@@ -28,26 +28,41 @@
             android:textIsSelectable="true" />
     </ScrollView>
     <com.google.android.material.button.MaterialButton
-        android:id="@+id/airCrashReportCopy"
-        style="@style/Widget.Anoy.Button"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="@dimen/space_12"
-        android:enabled="false"
-        android:text="@string/air_crash_report_copy" />
-    <com.google.android.material.button.MaterialButton
         android:id="@+id/airCrashReportRoot"
         style="@style/Widget.Anoy.Button.Tonal"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="@dimen/space_8"
+        android:layout_marginTop="@dimen/space_12"
         android:enabled="false"
         android:text="@string/air_crash_report_root" />
     <com.google.android.material.button.MaterialButton
-        android:id="@+id/airCrashReportClose"
+        android:id="@+id/airCrashReportNative"
         style="@style/Widget.Anoy.Button.Tonal"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="@dimen/space_8"
-        android:text="@string/air_crash_report_close" />
+        android:enabled="false"
+        android:text="@string/air_crash_report_native" />
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/space_8"
+        android:orientation="horizontal">
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/airCrashReportCopy"
+            style="@style/Widget.Anoy.Button"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:enabled="false"
+            android:text="@string/air_crash_report_copy" />
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/airCrashReportClose"
+            style="@style/Widget.Anoy.Button.Tonal"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="@dimen/space_8"
+            android:layout_weight="1"
+            android:text="@string/air_crash_report_close" />
+    </LinearLayout>
 </LinearLayout>

@@ -45,18 +45,7 @@ public final class AirCrashDiagnostics {
         String host = context.getPackageName();
         if (!AirExitReport.ownPackage(host)) return "Diagnostic host identity unavailable.";
         StringBuilder out = new StringBuilder("Air crash report v1\n");
-        out.append("Loader: ").append(BuildConfig.DISPLAY_BRAND).append(' ')
-                .append(BuildConfig.VERSION_NAME).append(" (").append(BuildConfig.VERSION_CODE).append(")\n")
-                .append("Mode: Air injected library OFF; diagnostic, not a fix\n")
-                .append("Android: API ").append(Build.VERSION.SDK_INT).append(' ')
-                .append(AirExitReport.safeFact(Build.VERSION.RELEASE)).append('\n')
-                .append("Device: ").append(AirExitReport.safeFact(Build.MANUFACTURER)).append(' ')
-                .append(AirExitReport.safeFact(Build.MODEL)).append('\n');
-        try {
-            PackageInfo info = context.getPackageManager().getPackageInfo(GameTarget.BGMI_AIR.packageName, 0);
-            out.append("Air version: ").append(AirExitReport.safeFact(info.versionName)).append(" (")
-                    .append(Build.VERSION.SDK_INT >= 28 ? info.getLongVersionCode() : info.versionCode).append(")\n");
-        } catch (Exception ignored) { out.append("Air version: unavailable\n"); }
+        appendDeviceFacts(context, out);
         out.append("Scope: latest Air launch in this build, own UID, at most 4 exits.\n")
                 .append("Excludes licence keys, IDs, descriptions, full paths, logs, memory/register contents.\n\n");
         long now = System.currentTimeMillis(), elapsed = SystemClock.elapsedRealtime();
@@ -75,8 +64,64 @@ public final class AirCrashDiagnostics {
         return out.substring(0, Math.min(out.length(), AirExitReport.MAX_REPORT));
     }
 
+    /** Worker-thread only. Called ONLY by the separate native button's fresh consent.
+     * It never extends collect(includeRoot), startup, opening or copying a report.
+     */
+    public static String collectNative(Context context) {
+        if (!BuildConfig.AIR_NATIVE_ISOLATION) return "Air diagnostics are disabled in normal builds.";
+        String host = context.getPackageName();
+        if (!AirExitReport.ownPackage(host)) return "Diagnostic host identity unavailable.";
+        StringBuilder out = new StringBuilder("Air native crash report v2\n");
+        appendDeviceFacts(context, out);
+        out.append("Scope: newest confirmed Air callback exit in the latest fresh launch; own UID/PID/time.\n")
+                .append("Separate read-only native request; no raw tombstones, logs, memory or full paths copied.\n");
+        long now = System.currentTimeMillis(), elapsed = SystemClock.elapsedRealtime();
+        AirCrashSession session = AirCrashSession.current(directory(context), now, elapsed);
+        if (session == null) return out + "Native lookup not performed: no fresh launch marker. Reproduce Air once in this build, then return within 15 minutes.\n";
+        Set<Integer> guests = session.guestPids(directory(context), android.os.Process.myUid(), now, elapsed);
+        out.append("Launch time ms: ").append(session.wall).append('\n');
+        if (guests.isEmpty()) return out + "Native lookup not performed: no confirmed Air callback marker; host-stub candidates are not sufficient.\n";
+        out.append("Air callback marker: seen; injection skipped\n");
+        if (Build.VERSION.SDK_INT >= 30) out.append(Api30.nativeDetails(context, host, session, guests, now));
+        else out.append("Native lookup not performed: Android exit-history scope needs API 30+.\n");
+        out.append("No verified native frames does not prove no record exists. This diagnostic is not a fix.\n");
+        return out.substring(0, Math.min(out.length(), AirExitReport.MAX_REPORT));
+    }
+
+    private static void appendDeviceFacts(Context context, StringBuilder out) {
+        out.append("Loader: ").append(BuildConfig.DISPLAY_BRAND).append(' ')
+                .append(BuildConfig.VERSION_NAME).append(" (").append(BuildConfig.VERSION_CODE).append(")\n")
+                .append("Mode: Air injected library OFF; diagnostic, not a fix\n")
+                .append("Android: API ").append(Build.VERSION.SDK_INT).append(' ')
+                .append(AirExitReport.safeFact(Build.VERSION.RELEASE)).append('\n')
+                .append("Device: ").append(AirExitReport.safeFact(Build.MANUFACTURER)).append(' ')
+                .append(AirExitReport.safeFact(Build.MODEL)).append('\n');
+        try {
+            PackageInfo info = context.getPackageManager().getPackageInfo(GameTarget.BGMI_AIR.packageName, 0);
+            out.append("Air version: ").append(AirExitReport.safeFact(info.versionName)).append(" (")
+                    .append(Build.VERSION.SDK_INT >= 28 ? info.getLongVersionCode() : info.versionCode).append(")\n");
+        } catch (Exception ignored) { out.append("Air version: unavailable\n"); }
+    }
+
     @RequiresApi(30)
     private static final class Api30 {
+        static String nativeDetails(Context context, String host, AirCrashSession session, Set<Integer> guests, long now) {
+            try {
+                ActivityManager am = (ActivityManager) context.getSystemService(Context.ACTIVITY_SERVICE);
+                if (am == null) return "Native lookup not performed: scoped Android exit history unavailable.\n";
+                List<ApplicationExitInfo> history = am.getHistoricalProcessExitReasons(host, 0, 32);
+                List<AirExitReport.Exit> exits = new ArrayList<>();
+                if (history != null) for (int i = 0; i < Math.min(history.size(), 32); i++) {
+                    ApplicationExitInfo e = history.get(i);
+                    if (e != null) exits.add(new AirExitReport.Exit(e.getPid(), e.getPackageUid(), e.getProcessName(),
+                            e.getTimestamp(), e.getReason(), e.getStatus()));
+                }
+                return RootNativeCrashReader.read(host, android.os.Process.myUid(), session, guests, exits, now);
+            } catch (RuntimeException ignored) {
+                return "Native lookup not performed: matching Android exit history unavailable/restricted.\n";
+            }
+        }
+
         static void append(Context context, String host, AirCrashSession session, Set<Integer> guests,
                            long now, StringBuilder out) {
             try {

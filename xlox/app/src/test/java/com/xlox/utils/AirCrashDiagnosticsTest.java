@@ -36,6 +36,35 @@ public class AirCrashDiagnosticsTest {
         }
     }
 
+    @Test public void nativeEntryRequiresFreshLaunchBeforeAnyRootRead() {
+        String report = AirCrashDiagnostics.collectNative(context);
+        if (!BuildConfig.AIR_NATIVE_ISOLATION) assertTrue(report.contains("disabled"));
+        else {
+            assertTrue(report.startsWith("Air native crash report v2"));
+            assertTrue(report.contains("no fresh launch marker"));
+            assertFalse(report.contains("headers inspected"));
+        }
+    }
+
+    @Test public void nativeEntryRefusesUnconfirmedHostStubCandidates() {
+        AirCrashDiagnostics.recordLaunch(context);
+        String report = AirCrashDiagnostics.collectNative(context);
+        if (!BuildConfig.AIR_NATIVE_ISOLATION) assertTrue(report.contains("disabled"));
+        else {
+            assertTrue(report.contains("no confirmed Air callback marker"));
+            assertFalse(report.contains("headers inspected"));
+        }
+    }
+
+    @Test public void nativeReportDoesNotReadSavedLicence() {
+        String secret = "ANOY-7D-PRIVATEKEY";
+        context.getSharedPreferences("com.xlox.download", Context.MODE_PRIVATE).edit().putString("USER", secret).commit();
+        String report = AirCrashDiagnostics.collectNative(context);
+        assertFalse(report.contains(secret));
+        assertFalse(report.contains("Licence key:"));
+        assertTrue(report.length() <= AirExitReport.MAX_REPORT);
+    }
+
     @Test public void markerWriteIsBuildGatedAndIsolatedFromGameData() {
         AirCrashDiagnostics.recordLaunch(context);
         assertEquals(BuildConfig.AIR_NATIVE_ISOLATION, new File(dir, "launch.txt").exists());
