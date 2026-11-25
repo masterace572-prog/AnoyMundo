@@ -111,6 +111,7 @@ final class LiquidGlassRenderer {
         int lensShadow = canvas.save();
         canvas.translate(0, dp(1.4f));
         fill(shade);
+        paint.setAlpha(42);
         canvas.drawPath(lensPath, paint);
         canvas.restoreToCount(lensShadow);
 

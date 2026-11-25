@@ -59,11 +59,11 @@
     <color name="blue">#FF0A84FF</color>
     <!-- Liquid copy only. Low-alpha optics, never an opaque navigation fill. -->
     <color name="liquid_clear_tint">#14E8F3FF</color>
-    <color name="liquid_frost_tint">#2EEDF6FF</color>
+    <color name="liquid_frost_tint">#28EDF6FF</color>
     <color name="liquid_contact_shadow">#42000000</color>
     <color name="liquid_edge">#66E7F3FF</color>
     <color name="liquid_edge_soft">#1FDAEBFF</color>
     <color name="liquid_edge_bright">#CCFFFFFF</color>
     <color name="liquid_edge_cool">#668FC4FF</color>
-    <color name="liquid_reflection">#2EFFFFFF</color>
+    <color name="liquid_reflection">#24FFFFFF</color>
 </resources>
