@@ -155,7 +155,7 @@ jobs:
           from pathlib import Path
           for file in sorted(Path('app/build/liquid-preview').glob('*.png'))[:4]:
               encoded = base64.b64encode(file.read_bytes()).decode()
-              if len(encoded) <= 56000:
+              if len(encoded) <= 3600:
                   print('::notice title=Liquid native preview ' + file.name + '::LIQUIDPNG:' + file.name + ':' + encoded)
           PYPREVIEW
 

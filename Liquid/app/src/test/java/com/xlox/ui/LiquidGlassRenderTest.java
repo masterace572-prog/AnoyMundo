@@ -202,8 +202,9 @@ public class LiquidGlassRenderTest {
         Canvas fullCanvas = new Canvas(full);
         fullCanvas.drawColor(Color.BLACK);
         realistic.root.draw(fullCanvas);
-        Bitmap preview = Bitmap.createBitmap(full, 0, 400, 360, 240);
-        assertTrue("Realistic preview contains the opaque copied page", Color.alpha(preview.getPixel(180, 20)) > 240);
+        assertTrue("Realistic preview contains the opaque copied page", Color.alpha(full.getPixel(180, 420)) > 240);
+        Bitmap bottom = Bitmap.createBitmap(full, 0, 360, 360, 280);
+        Bitmap preview = Bitmap.createScaledBitmap(bottom, 320, 200, true);
         save(preview, "00-nav-realistic");
         realistic.navigation.dispose();
         realisticController.pause().stop().destroy();
