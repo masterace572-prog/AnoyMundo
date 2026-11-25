@@ -88,6 +88,7 @@ jobs:
         run: |
           chmod +x gradlew
           set +e
+          # --continue still executes the second brand if the first one fails.
           ./gradlew :app:testAnoyDebugUnitTest :app:testKennyDebugUnitTest --continue --no-daemon > /tmp/liquid-tests.log 2>&1
           rc=$?
           cat /tmp/liquid-tests.log
