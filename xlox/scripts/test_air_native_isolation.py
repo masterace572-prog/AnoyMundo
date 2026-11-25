@@ -44,6 +44,8 @@ def verify_apk_marker(path: Path, diagnostic: bool) -> None:
     assert dex, 'No compiled DEX in ' + path.name
     present = any(MARKER.encode() in data for data in dex)
     assert present == diagnostic, path.name + ': wrong compiled Air isolation mode'
+    if diagnostic:
+        assert any(b'Air crash report v1' in data for data in dex), path.name + ': crash reporter missing'
 
 
 def verify_generated_release_flags(diagnostic: bool) -> None:
@@ -73,7 +75,7 @@ class IsolationWiringTest(unittest.TestCase):
         guard = 'if (BuildConfig.AIR_NATIVE_ISOLATION && game == GameTarget.BGMI_AIR) {'
         self.assertEqual(text.count(guard), 1)
         skip = text.split(guard, 1)[1].split('}', 1)[0].strip()
-        self.assertEqual(skip, 'Log.w(LOAD_TAG, "' + MARKER + '");\n                return;')
+        self.assertEqual(skip, 'AirCrashDiagnostics.recordGuest(ctx);\n                Log.w(LOAD_TAG, "' + MARKER + '");\n                return;')
         self.assertLess(text.index('LibManager.makeReadOnly(lib)'), text.index(guard))
         self.assertLess(text.index(guard), text.index('System.load(lib.getAbsolutePath())'))
         self.assertLess(text.index('System.load(lib.getAbsolutePath())'), text.index('LibManager.recordLoadSuccess'))
@@ -101,6 +103,45 @@ class IsolationWiringTest(unittest.TestCase):
         strings = {e.get('name'): ''.join(e.itertext())
                    for e in ET.parse(APP / 'src/main/res/values/strings.xml').getroot().findall('string')}
         self.assertIn('not a fix', strings['air_native_isolation_notice'])
+
+    def test_report_is_private_scoped_and_root_is_only_explicit(self):
+        adapter = (JAVA / 'utils/AirCrashDiagnostics.java').read_text()
+        dialog = (JAVA / 'ui/AirCrashReportDialog.java').read_text()
+        home = (JAVA / 'MAct.java').read_text()
+        self.assertIn('if (!BuildConfig.AIR_NATIVE_ISOLATION) return', adapter)
+        self.assertIn('getHistoricalProcessExitReasons(host, 0, 32)', adapter)
+        self.assertIn('if (includeRoot)', adapter)
+        self.assertEqual(adapter.count('new ProcessBuilder('), 1)
+        self.assertIn('new ProcessBuilder("su", "-c", "/system/bin/dumpsys activity exit-info " + host)', adapter)
+        self.assertIn('if (!AirExitReport.ownPackage(host))', adapter)
+        self.assertIn('reader.get(20, TimeUnit.SECONDS)', adapter)
+        self.assertIn('process.destroyForcibly()', adapter)
+        startup = adapter.split('public static String collect', 1)[0]
+        self.assertNotIn('ProcessBuilder', startup)
+        self.assertNotIn('getHistoricalProcessExitReasons', startup)
+        self.assertIn('read(false);', dialog)
+        self.assertIn('.setPositiveButton(R.string.air_crash_root_allow, (d, which) -> read(true))', dialog)
+        self.assertIn('task.cancel(true)', dialog)
+        self.assertIn('worker.shutdownNow()', dialog)
+        self.assertIn('airCrashReportDialog.dispose()', home)
+        self.assertNotIn('getDescription()', adapter)  # Never export ApplicationExitInfo descriptions.
+        for forbidden in ('supportInfo(', 'licenceKey(', 'getAndroidId(', 'http://', 'https://'):
+            self.assertNotIn(forbidden, adapter + dialog)
+        self.assertIn('BuildConfig.AIR_NATIVE_ISOLATION && !preview && launchTarget == air', home)
+        layout = ET.parse(APP / 'src/main/res/layout/page_home.xml').getroot()
+        button = next(e for e in layout.iter() if e.get(A + 'id') == '@+id/airCrashReportOpen')
+        self.assertEqual(button.get(A + 'visibility'), 'gone')
+
+    def test_native_report_reads_only_allowlisted_fields_and_bounded_streams(self):
+        report = (JAVA / 'utils/AirExitReport.java').read_text()
+        self.assertIn('MAX_REPORT = 32 * 1024', report)
+        self.assertIn('MAX_TRACE = 8 * 1024 * 1024', report)
+        self.assertIn('MAX_ROOT = 128 * 1024', report)
+        self.assertIn('frames.size() >= 32', report)
+        self.assertIn('pid != expectedPid || uid != expectedUid', report)
+        self.assertNotIn('getSharedPreferences', report)
+        self.assertNotIn('Runtime.getRuntime()', report)
+        self.assertNotIn('new FileOutputStream', report)
 
     def test_actual_workflow_selector_rejects_publishing_or_unmarked_diagnostics(self):
         body = workflow_step('Select normal or strictly build-only Air diagnostic')
@@ -152,8 +193,8 @@ class IsolationWiringTest(unittest.TestCase):
     def test_dex_marker_parser_refuses_wrong_mode_missing_dex_or_asset_only_marker(self):
         with tempfile.TemporaryDirectory(prefix='air-dex-marker-') as tmp:
             path = Path(tmp) / 'fixture.apk'
-            for name, data, diagnostic in (('classes.dex', b'dex\n035\x00' + MARKER.encode(), True),
-                                            ('classes2.dex', b'dex\n035\x00' + MARKER.encode(), True),
+            for name, data, diagnostic in (('classes.dex', b'dex\n035\x00' + MARKER.encode() + b'Air crash report v1', True),
+                                            ('classes2.dex', b'dex\n035\x00' + MARKER.encode() + b'Air crash report v1', True),
                                             ('classes10.dex', b'dex\n035\x00', False)):
                 with ZipFile(path, 'w') as apk:
                     apk.writestr(name, data)
@@ -195,6 +236,9 @@ public interface IMundoProcessCallback { void onCreate(String a,String b); void 
 public class MetaCore { public static void setProcessLifecycleCallback(IMundoProcessCallback c) {} }''',
     'net_62v/external/MetaActivationManager.java': '''package net_62v.external;
 public class MetaActivationManager { public static void activateSdk(String key) {} }''',
+    'com/xlox/utils/AirCrashDiagnostics.java': '''package com.xlox.utils;
+public class AirCrashDiagnostics { public static int guests;
+ public static void recordGuest(android.content.Context c){guests++;} }''',
     'com/xlox/utils/GameWebRouting.java': '''package com.xlox.utils;
 public class GameWebRouting {
  public static int installs,refreshes;
@@ -234,7 +278,9 @@ def run_callback_harness() -> None:
             path.write_text(text)
             sources.append(path)
         sources += [JAVA / 'BoxApplication.java', JAVA / 'utils/GameTarget.java',
-                    ROOT / 'tests/runtime/AirNativeIsolationTest.java']
+                    JAVA / 'utils/AirExitReport.java', JAVA / 'utils/AirCrashSession.java',
+                    ROOT / 'tests/runtime/AirNativeIsolationTest.java',
+                    ROOT / 'tests/runtime/AirCrashReportTest.java']
         config = base / 'src/com/xlox/BuildConfig.java'
         for diagnostic in (False, True):
             value = str(diagnostic).lower()
@@ -248,6 +294,8 @@ def run_callback_harness() -> None:
             subprocess.run([java, '-ea', '-Dair.test.missingLibraryDir=' + str(base / 'absent'),
                             '-cp', str(output), 'com.xlox.tests.AirNativeIsolationTest'],
                            check=True, timeout=30)
+        subprocess.run([java, '-ea', '-cp', str(output), 'com.xlox.tests.AirCrashReportTest'],
+                       check=True, timeout=30)
 
 
 def main() -> None:

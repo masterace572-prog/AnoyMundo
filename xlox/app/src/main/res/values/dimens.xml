@@ -116,4 +116,5 @@
     <dimen name="login_top_space">48dp</dimen>
     <dimen name="text_login_key">15sp</dimen>
     <dimen name="text_splash_wordmark">36dp</dimen>
+    <dimen name="air_crash_report_preview_height">180dp</dimen>
 </resources>

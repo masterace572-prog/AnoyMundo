@@ -131,6 +131,7 @@ public class HomeSettingsNavigationTest {
         TextView message = activity.findViewById(R.id.airStatusMessage);
         View action = activity.findViewById(R.id.airPrimaryAction);
         assertEquals(View.GONE, notice.getVisibility());
+        assertEquals(View.GONE, activity.findViewById(R.id.airCrashReportOpen).getVisibility());
         assertEquals(activity.getString(R.string.air_native_isolation_notice), notice.getText().toString());
         assertNotSame(message, notice);
         boolean enabled = action.isEnabled();
@@ -140,6 +141,18 @@ public class HomeSettingsNavigationTest {
         assertEquals(View.VISIBLE, notice.getVisibility());
         assertTrue(notice.getHeight() > 0);
         assertEquals(enabled, action.isEnabled());
+    }
+
+    @Test
+    public void airReportSheetBindsPreviewAndExplicitCopyRootCloseControls() {
+        View report = android.view.LayoutInflater.from(activity).inflate(R.layout.sheet_air_crash_report, null, false);
+        assertNotNull(report.findViewById(R.id.airCrashReportText));
+        assertNotNull(report.findViewById(R.id.airCrashReportClose));
+        assertFalse(report.findViewById(R.id.airCrashReportCopy).isEnabled());
+        assertFalse(report.findViewById(R.id.airCrashReportRoot).isEnabled());
+        String initial = ((TextView) report.findViewById(R.id.airCrashReportText)).getText().toString();
+        assertEquals(activity.getString(R.string.air_crash_report_reading), initial);
+        assertFalse(initial.contains("Licence key:"));
     }
 
     @Test

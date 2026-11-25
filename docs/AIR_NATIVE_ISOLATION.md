@@ -29,11 +29,15 @@ library as loaded or record a successful load.
 3. Launch **Air only**, using the usual installed game and files. No injected
    menu/features are expected in this test. Check whether it still closes at
    the logo/loading point, or reaches the lobby and remains there for a minute.
-4. Report the result separately for **Anoy** and **KennyPvt**. No new full-device
-   log is needed just to report “still closes” or “reaches lobby.” If asked for
-   a scoped capture, collect it privately; do not upload another raw device log
-   to this public repository or share unredacted Copy support info (it includes
-   the licence key).
+4. If Air closes, return to the loader, wait a few seconds, then tap **Copy Air
+   crash report** on the Air card **within 15 minutes**. Review the preview and
+   tap **Copy report**, then paste that report into the conversation. This is
+   separate from Settings → Copy support info, which includes the licence key.
+   No full-device log or ADB command is needed. Report the result separately
+   for each brand; testing one does not establish the other's current result.
+   On a rooted test device, optionally tap **Add root exit details**, confirm
+   **Allow root read**, grant the root-manager prompt and copy the updated report.
+   Root is not requested automatically and cannot guarantee a native backtrace.
 5. When testing is finished, manually install the matching normal signed test
    APK over the diagnostic to restore Air injection. Keep app/container data.
    Do not change live panel APK/library choices for this test.
@@ -69,3 +73,45 @@ AIR-NATIVE-ISOLATION: libbgmilite.so injection skipped
   JVM-only adapters, check the per-game scope, and inspect generated release
   flags / compiled DEX markers in both branded APKs. Host checks do **not** prove
   Android linker behavior, native-game execution or physical save preservation.
+
+## Private in-app crash report
+
+The reporting diagnostic writes only tiny numeric launch and Air-callback
+markers in the loader's private `air_crash_diagnostics` directory. It never
+modifies game files or clears container data. Markers expire after 15 minutes,
+reject clock/reboot mismatches and retain at most 16 guest files. The callback
+marker confirms that Air reached the injection-skip branch; without it, any
+recent host-stub exit is explicitly an **unconfirmed candidate**, not proven Air.
+
+The dedicated report reads at most 32 own-package Android exit-history records
+and exports at most four matching recent exits. It includes loader/game version,
+Android/model, reason/status, and (if Android retained a readable native trace)
+the crashing thread's signal, relative PCs, allowlisted module basenames and hex
+BuildIds. It does **not** copy licence/session keys, Android/advertising IDs,
+free-form exit descriptions, abort strings, command lines, function/thread names,
+logs, registers, memory contents or full paths. Nothing is uploaded automatically.
+The preview precedes copying, and the clipboard is marked sensitive on API 33+.
+
+Android 12+ native traces use the [AOSP tombstone protobuf schema](https://github.com/aosp-mirror/platform_system_core/blob/main/debuggerd/proto/tombstone.proto).
+The bounded decoder reads top-level PID/TID/UID (fields 5/6/7), signal (10),
+thread map (16), current backtrace (thread field 4), and relative-PC/module/BuildId
+(frame fields 1/6/8). Everything else is skipped, including embedded log and
+memory data. PID and UID must match the selected exit. Input is limited to 8 MiB,
+at most 64 thread entries and 32 crashing-thread frames; the report is at most
+32 KiB. Unknown/malformed/oversized traces are reported unavailable, never copied
+raw. Older Android and signal-only exits may provide no native frames.
+
+The **optional root button** requires a second explicit confirmation. Its only
+command is `/system/bin/dumpsys activity exit-info <own-loader-package>`, where
+the package is pinned to `com.xlox` or `com.kennypvt`. It does not scan tombstone
+directories, run full-device logcat, attach a debugger, read game memory, alter
+signals/protections or modify settings. Root output is bounded to 128 KiB and a
+20-second read timeout, parsed for matching numeric exit facts only, and never
+saved or copied verbatim (including error output). Denied/unsupported root reads
+are harmless. Closing the sheet or destroying Home cancels the worker/root
+request. Android may still have no trace; root availability is not a fix.
+
+Tests cover marker scope/expiry/retention, Android 21/35 adapter entry points,
+per-UID/PID/time filtering, callback-mode scope, malformed protobufs/input bounds,
+native-frame caps and secret/path redaction. No automated test here exercises a
+physical device, game, real root manager or genuine native tombstone service.

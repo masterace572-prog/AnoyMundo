@@ -322,6 +322,19 @@
     <!-- Build-only diagnostic, never used by normal release builds. -->
     <string name="settings_version_value_air_diagnostic">%1$s (%2$d) · Air diagnostic</string>
     <string name="air_native_isolation_notice">Air diagnostic: injected library OFF. Test build, not a fix.</string>
+    <string name="air_crash_report_open">Copy Air crash report</string>
+    <string name="air_crash_report_title">Air crash report</string>
+    <string name="air_crash_report_privacy">After Air closes, return here within 15 minutes. This report excludes licence keys and full-device logs. Review before copying.</string>
+    <string name="air_crash_report_reading">Reading this loader\'s recent exit record…</string>
+    <string name="air_crash_report_reading_root">Waiting for root permission and app-specific exit details…</string>
+    <string name="air_crash_report_copy">Copy report</string>
+    <string name="air_crash_report_copied">Report copied</string>
+    <string name="air_crash_report_root">Add root exit details (optional)</string>
+    <string name="air_crash_report_close">Close</string>
+    <string name="air_crash_report_failed">Could not read the app-specific exit record. No raw errors or sensitive data were copied.</string>
+    <string name="air_crash_root_title">Read exit details with root?</string>
+    <string name="air_crash_root_message">Runs only dumpsys activity exit-info for this loader. Only matching recent exit numbers are included, not raw output. No game files, memory dumps, protections or device settings are changed. Root permission is optional; the request times out after 20 seconds.</string>
+    <string name="air_crash_root_allow">Allow root read</string>
     <string name="settings_row_description">%1$s: %2$s</string>
     <string name="game_title_version">BGMI v%1$s</string>
     <string name="game_icon_description">BGMI</string>

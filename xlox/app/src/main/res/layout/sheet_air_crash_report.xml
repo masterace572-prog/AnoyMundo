@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    style="@style/Sheet.Draggable">
+    <View style="@style/SheetHandle" />
+    <TextView
+        style="@style/Text.TitleM"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/air_crash_report_title" />
+    <TextView
+        style="@style/Text.BodyS"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/space_8"
+        android:text="@string/air_crash_report_privacy" />
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="@dimen/air_crash_report_preview_height"
+        android:layout_marginTop="@dimen/space_12"
+        android:fillViewport="true">
+        <TextView
+            android:id="@+id/airCrashReportText"
+            style="@style/Text.BodyS"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:fontFamily="monospace"
+            android:text="@string/air_crash_report_reading"
+            android:textIsSelectable="true" />
+    </ScrollView>
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/airCrashReportCopy"
+        style="@style/Widget.Anoy.Button"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/space_12"
+        android:enabled="false"
+        android:text="@string/air_crash_report_copy" />
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/airCrashReportRoot"
+        style="@style/Widget.Anoy.Button.Tonal"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/space_8"
+        android:enabled="false"
+        android:text="@string/air_crash_report_root" />
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/airCrashReportClose"
+        style="@style/Widget.Anoy.Button.Tonal"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/space_8"
+        android:text="@string/air_crash_report_close" />
+</LinearLayout>

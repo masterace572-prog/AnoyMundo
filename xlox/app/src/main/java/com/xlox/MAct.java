@@ -29,6 +29,8 @@ import com.google.android.material.progressindicator.LinearProgressIndicator;
 import com.google.android.material.snackbar.Snackbar;
 
 import com.xlox.ui.Ui;
+import com.xlox.ui.AirCrashReportDialog;
+import com.xlox.utils.AirCrashDiagnostics;
 import com.xlox.ui.StatusText;
 import com.xlox.ui.HomeSettingsPager;
 import com.xlox.ui.HomeSettingsNavigation;
@@ -186,6 +188,7 @@ public class MAct extends AppCompatActivity {
     private TextView gameStateValue;
     /** Retained Home / Settings pages; only Home owns the two game controls. */
     private HomeSettingsNavigation navigation;
+    private AirCrashReportDialog airCrashReportDialog;
     private boolean homeStarted;
     private TextView gameTitle;
     private OnBackPressedCallback settingsBack;
@@ -392,6 +395,12 @@ public class MAct extends AppCompatActivity {
         air.state = findViewById(R.id.airGameStateValue);
         findViewById(R.id.airDiagnosticNotice).setVisibility(
                 BuildConfig.AIR_NATIVE_ISOLATION ? View.VISIBLE : View.GONE);
+        View crashReport = findViewById(R.id.airCrashReportOpen);
+        crashReport.setVisibility(BuildConfig.AIR_NATIVE_ISOLATION ? View.VISIBLE : View.GONE);
+        if (BuildConfig.AIR_NATIVE_ISOLATION) crashReport.setOnClickListener(v -> {
+            if (airCrashReportDialog != null) airCrashReportDialog.dispose();
+            airCrashReportDialog = AirCrashReportDialog.show(this);
+        });
         if (preview) {
             qaLaunchTarget = sessionFor(GameTarget.fromPackage(getIntent().getStringExtra(EXTRA_QA_GAME)));
             launchTarget = qaLaunchTarget;
@@ -735,6 +744,7 @@ public class MAct extends AppCompatActivity {
         if (gate != null) gate.dispose();
         if (redownloadGate != null) redownloadGate.dispose();
         if (appCheckExecutor != null) appCheckExecutor.shutdownNow();
+        if (airCrashReportDialog != null) airCrashReportDialog.dispose();
         if (navigation != null) navigation.dispose();
         super.onDestroy();
     }
@@ -1966,6 +1976,9 @@ public class MAct extends AppCompatActivity {
         boolean started = false;
         Throwable failure = null;
         try {
+            if (BuildConfig.AIR_NATIVE_ISOLATION && !preview && launchTarget == air) {
+                AirCrashDiagnostics.recordLaunch(this);
+            }
             Intent intent = obtainLaunchIntent();
             if (intent != null) {
                 startActivity(intent);

@@ -347,6 +347,14 @@
                         android:text="@string/air_native_isolation_notice"
                         android:textColor="@color/warning"
                         android:visibility="gone" />
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/airCrashReportOpen"
+                        style="@style/Widget.Anoy.Button.Tonal"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/space_8"
+                        android:text="@string/air_crash_report_open"
+                        android:visibility="gone" />
                     <TextView
                         android:id="@+id/airStatusMessage"
                         style="@style/Text.Dashboard.Meta"

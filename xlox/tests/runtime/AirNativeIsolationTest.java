@@ -5,6 +5,7 @@ import com.xlox.BoxApplication;
 import com.xlox.BuildConfig;
 import com.xlox.utils.GameWebRouting;
 import com.xlox.utils.LibManager;
+import com.xlox.utils.AirCrashDiagnostics;
 
 /** Actual callback + game selector, JVM adapters only; NOT a game/runtime test. */
 public final class AirNativeIsolationTest {
@@ -25,6 +26,7 @@ public final class AirNativeIsolationTest {
         LibManager.readOnly = LibManager.files = 0;
         LibManager.valid = true;
         LibManager.lastError = null;
+        AirCrashDiagnostics.guests = 0;
         GameWebRouting.installs = GameWebRouting.refreshes = 0;
         return app;
     }
@@ -44,6 +46,8 @@ public final class AirNativeIsolationTest {
             expect(LibManager.successes == 0, "Never claim an unexecuted library loaded");
             expect(!Log.has("libbgmilite.so LOADED"), "No fabricated Air load log");
             expect(Log.has(SKIP) == BuildConfig.AIR_NATIVE_ISOLATION, "Exact skip marker only in diagnostic mode");
+            expect(AirCrashDiagnostics.guests == (BuildConfig.AIR_NATIVE_ISOLATION ? 1 : 0),
+                    "Only diagnostic Air records its own callback marker");
             // The file is absent: only the normal mode should reach System.load
             // and record its handled UnsatisfiedLinkError.
             expect(LibManager.errors == (BuildConfig.AIR_NATIVE_ISOLATION ? 0 : 1),
@@ -69,6 +73,7 @@ public final class AirNativeIsolationTest {
             expect(LibManager.successes == 0, "Absent test BGMI library did not load");
             expect(LibManager.readOnly == 1, "BGMI read-only handling preserved");
             expect(!Log.has(SKIP), "Diagnostic must never skip BGMI");
+            expect(AirCrashDiagnostics.guests == 0, "No Air diagnostic marker for BGMI");
             expect(GameWebRouting.installs == 1, "BGMI early web routing preserved");
             app.onInitialized();
             expect(GameWebRouting.refreshes == 1, "BGMI final web routing preserved");
