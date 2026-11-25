@@ -1,0 +1,4 @@
+
+rootProject.name = "Liquid"
+include ':app'
+project(':app').projectDir = file('app')

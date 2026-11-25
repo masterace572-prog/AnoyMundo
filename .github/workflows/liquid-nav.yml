@@ -1,0 +1,223 @@
+name: Liquid navigation — isolated Android QA
+
+# Isolated source copy only. No public release, panel, storage or deployment step.
+on:
+  workflow_dispatch:
+  push:
+    branches: [arena/dda4cc57-anoymundo]
+    paths:
+      - 'Liquid/**'
+      - '.github/workflows/liquid-nav.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: liquid-nav-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  liquid:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    defaults:
+      run:
+        working-directory: Liquid
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Verify copy isolation, visual source and unchanged behavior
+        run: |
+          python3 -m pip install --disable-pip-version-check -r scripts/icon-requirements.txt
+          python3 -B scripts/check_liquid_scope.py
+          python3 -B scripts/ui_quality_gate.py
+          python3 -B scripts/check_branding.py
+          python3 -B scripts/kenny_icons.py --check
+          python3 -B scripts/test_kenny_icons.py
+          python3 -B scripts/test_navigation.py
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+          cache-dependency-path: |
+            Liquid/gradle/wrapper/gradle-wrapper.properties
+            Liquid/build.gradle
+            Liquid/app/build.gradle
+
+      - name: Preserved routing, transport, game selection and fixture regressions
+        run: |
+          python3 -B scripts/test_runtime_fixes.py
+          python3 -B scripts/test_prepare_robolectric.py
+          python3 -B scripts/test_profile_loader_ui.py
+
+      - name: Install the unchanged Android SDK and pinned NDK
+        run: |
+          set -eu
+          SDK="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-$HOME/android-sdk}}"
+          mkdir -p "$SDK"
+          if [ -x "$SDK/cmdline-tools/latest/bin/sdkmanager" ]; then
+            SM="$SDK/cmdline-tools/latest/bin/sdkmanager"
+          elif command -v sdkmanager >/dev/null 2>&1; then
+            SM="$(command -v sdkmanager)"
+          else
+            curl -fsSL -o /tmp/liquid-cmdtools.zip https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
+            unzip -q /tmp/liquid-cmdtools.zip -d /tmp/liquid-cmdtools
+            mkdir -p "$SDK/cmdline-tools/latest"
+            cp -r /tmp/liquid-cmdtools/cmdline-tools/. "$SDK/cmdline-tools/latest/"
+            SM="$SDK/cmdline-tools/latest/bin/sdkmanager"
+          fi
+          echo "ANDROID_HOME=$SDK" >> "$GITHUB_ENV"
+          echo "ANDROID_SDK_ROOT=$SDK" >> "$GITHUB_ENV"
+          yes | "$SM" --sdk_root="$SDK" --licenses > /dev/null 2>&1 || true
+          "$SM" --sdk_root="$SDK" --install 'platforms;android-36' 'build-tools;34.0.0' 'ndk;24.0.8215888'
+
+      - uses: actions/cache@v5
+        with:
+          path: ~/.cache/xlox-robolectric
+          key: ${{ runner.os }}-robolectric-4.14.1-i7-api21-28-35-v1
+      - name: Prepare pinned host runtimes (not APK dependencies)
+        run: |
+          python3 -B scripts/prepare_robolectric.py --dir "$HOME/.cache/xlox-robolectric"
+          echo "XLOX_ROBOLECTRIC_DIR=$HOME/.cache/xlox-robolectric" >> "$GITHUB_ENV"
+
+      - name: Both brands — gestures, lifecycle, springs and real native-Skia glass pixels
+        run: |
+          chmod +x gradlew
+          set +e
+          ./gradlew :app:testAnoyDebugUnitTest :app:testKennyDebugUnitTest --no-daemon > /tmp/liquid-tests.log 2>&1
+          rc=$?
+          cat /tmp/liquid-tests.log
+          python3 - <<'PYTESTS'
+          import os
+          from pathlib import Path
+          import xml.etree.ElementTree as ET
+          totals = dict(tests=0, failures=0, errors=0, skipped=0)
+          suites = {}
+          for file in sorted(Path('app/build/test-results').rglob('TEST-*.xml')):
+              suite = ET.parse(file).getroot()
+              counts = {key: int(suite.get(key, '0')) for key in totals}
+              suites[(file.parent.name, suite.get('name'))] = counts
+              for key in totals:
+                  totals[key] += counts[key]
+              for case in suite.findall('testcase'):
+                  for error in list(case.findall('failure')) + list(case.findall('error')):
+                      detail = case.get('name', '') + ': ' + (error.get('message') or '') + '\n' + (error.text or '')[-3500:]
+                      print('::error title=Liquid Android regression::' + detail.replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A'))
+          summary = 'Liquid Android host tests (both brands): ' + str(totals)
+          print('::notice title=Liquid host test totals::' + summary)
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as out:
+              out.write(summary + '\n\nNative-Skia previews use a synthetic fixture, not a device/game capture.\n')
+          expected = {'com.xlox.ui.HomeSettingsNavigationTest': 56,
+                      'com.xlox.ui.LoginSplashUiTest': 18,
+                      'com.xlox.utils.AppManagerObbStateTest': 16,
+                      'com.xlox.ui.LiquidGlassMotionTest': 10,
+                      'com.xlox.ui.LiquidGlassNavigationTest': 24,
+                      'com.xlox.ui.LiquidGlassRenderTest': 4}
+          for variant in ('testAnoyDebugUnitTest', 'testKennyDebugUnitTest'):
+              for name, count in expected.items():
+                  actual = suites.get((variant, name))
+                  assert actual is not None and actual['tests'] >= count, (variant, name, actual)
+          assert totals['tests'] >= 256, 'All baseline + spring + API21/28/35 view + native-Skia tests must run for both brands'
+          assert totals['failures'] == totals['errors'] == totals['skipped'] == 0, summary
+          PYTESTS
+          checks=$?
+          if [ "$rc" -eq 0 ]; then rc=$checks; fi
+          if [ "$rc" -ne 0 ]; then
+            python3 - <<'PYLOG'
+          from pathlib import Path
+          detail = '\n'.join(Path('/tmp/liquid-tests.log').read_text(errors='replace').splitlines()[-85:])
+          print('::error title=Liquid Gradle tests::' + detail[-6500:].replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A'))
+          PYLOG
+          fi
+          exit "$rc"
+
+      - name: Make bounded synthetic native render previews inspectable
+        if: always()
+        run: |
+          python3 - <<'PYPREVIEW'
+          import base64
+          from pathlib import Path
+          for file in sorted(Path('app/build/liquid-preview').glob('*.png'))[:4]:
+              encoded = base64.b64encode(file.read_bytes()).decode()
+              if len(encoded) <= 56000:
+                  print('::notice title=Liquid native preview ' + file.name + '::LIQUIDPNG:' + file.name + ':' + encoded)
+          PYPREVIEW
+
+      - name: Require the existing signer, never generate or copy a private key
+        env:
+          XLOX_STORE_PASSWORD: ${{ secrets.XLOX_STORE_PASSWORD }}
+        run: |
+          set -eu
+          [ -n "$XLOX_STORE_PASSWORD" ] || { echo '::error::Original release signing is not configured. No unsigned test APK will be presented as an installable update.'; exit 1; }
+          keytool -list -keystore ../xlox/app/xlox.jks -storepass:env XLOX_STORE_PASSWORD -alias key0 > /dev/null
+
+      - name: Compile and lint BOTH copied release variants
+        env:
+          XLOX_STORE_PASSWORD: ${{ secrets.XLOX_STORE_PASSWORD }}
+          XLOX_KEY_PASSWORD: ${{ secrets.XLOX_KEY_PASSWORD }}
+        run: |
+          set +e
+          ./gradlew :app:assembleAnoyRelease :app:assembleKennyRelease :app:lintAnoyRelease :app:lintKennyRelease --no-daemon > /tmp/liquid-build.log 2>&1
+          rc=$?
+          cat /tmp/liquid-build.log
+          if [ "$rc" -ne 0 ]; then
+            python3 - <<'PYBUILD'
+          from pathlib import Path
+          log = '\n'.join(Path('/tmp/liquid-build.log').read_text(errors='replace').splitlines()[-90:])
+          print('::error title=Liquid compile/lint::' + log[-6500:].replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A'))
+          PYBUILD
+          fi
+          exit "$rc"
+
+      - name: Verify compiled copies and exact original certificate
+        env:
+          XLOX_STORE_PASSWORD: ${{ secrets.XLOX_STORE_PASSWORD }}
+        run: |
+          set -eu
+          mkdir -p ../qa-logs/liquid-nav/apks
+          cp app/build/outputs/apk/anoy/release/*.apk ../qa-logs/liquid-nav/apks/Liquid-Anoy.apk
+          cp app/build/outputs/apk/kenny/release/*.apk ../qa-logs/liquid-nav/apks/Liquid-KennyPvt.apk
+          A=../qa-logs/liquid-nav/apks/Liquid-Anoy.apk
+          K=../qa-logs/liquid-nav/apks/Liquid-KennyPvt.apk
+          python3 scripts/check_apk_permissions.py "$A" "$K"
+          python3 scripts/check_branding.py "$A" "$K"
+          python3 scripts/test_runtime_fixes.py "$A" "$K"
+          python3 scripts/kenny_icons.py --check --apk "$K"
+          for APK in "$A" "$K"; do
+            unzip -p "$APK" lib/arm64-v8a/libXloX.so > /tmp/liquid-libXloX.so
+            python3 scripts/check_elf_alignment.py --fail-on-unaligned /tmp/liquid-libXloX.so
+          done
+          APKSIGNER=$(find "$ANDROID_SDK_ROOT/build-tools" -name apksigner | sort | tail -1)
+          SIGNER_JAR="$(dirname "$APKSIGNER")/lib/apksigner.jar"
+          keytool -exportcert -keystore ../xlox/app/xlox.jks -storepass:env XLOX_STORE_PASSWORD -alias key0 > /tmp/liquid-original.der
+          mkdir -p /tmp/liquid-signer-check
+          javac -source 8 -target 8 -cp "$SIGNER_JAR" -d /tmp/liquid-signer-check tests/apk/VerifyOriginalSigner.java
+          java -cp "$SIGNER_JAR:/tmp/liquid-signer-check" com.xlox.tests.apk.VerifyOriginalSigner /tmp/liquid-original.der "$A" "$K"
+          python3 scripts/check_liquid_scope.py
+          (cd ../qa-logs/liquid-nav/apks && sha256sum *.apk > SHA256SUMS.txt)
+
+      - name: Retain isolated signed APKs (no publication)
+        uses: actions/upload-artifact@v7
+        with:
+          name: Liquid-navigation-APKs
+          path: qa-logs/liquid-nav/apks/
+          retention-days: 14
+          if-no-files-found: error
+      - name: Retain tests, lint and synthetic native rendering evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: Liquid-navigation-QA
+          path: |
+            Liquid/app/build/test-results/
+            Liquid/app/build/reports/tests/
+            Liquid/app/build/reports/lint-results-*
+            Liquid/app/build/liquid-preview/
+            /tmp/liquid-tests.log
+            /tmp/liquid-build.log
+          retention-days: 14
+          if-no-files-found: warn
