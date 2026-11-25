@@ -87,11 +87,22 @@ jobs:
       - name: Both brands — gestures, lifecycle, springs and real native-Skia glass pixels
         run: |
           chmod +x gradlew
-          set +e
-          # --continue still executes the second brand if the first one fails.
-          ./gradlew :app:testAnoyDebugUnitTest :app:testKennyDebugUnitTest --continue --no-daemon > /tmp/liquid-tests.log 2>&1
-          rc=$?
-          cat /tmp/liquid-tests.log
+          rc=1
+          attempt=1
+          while [ "$attempt" -le 3 ]; do
+            rm -rf app/build/test-results/testAnoyDebugUnitTest app/build/test-results/testKennyDebugUnitTest
+            set +e
+            # --continue still executes the second brand if the first one fails.
+            ./gradlew :app:testAnoyDebugUnitTest :app:testKennyDebugUnitTest --continue --no-daemon > /tmp/liquid-tests.log 2>&1
+            rc=$?
+            set -e
+            cat /tmp/liquid-tests.log
+            if [ "$rc" -eq 0 ]; then break; fi
+            if [ "$attempt" -eq 3 ] || ! grep -q 'Received status code 429' /tmp/liquid-tests.log; then break; fi
+            echo "::warning title=Maven Central rate limit::Retrying the isolated Liquid tests after a bounded pause (attempt $attempt of 3)."
+            sleep $((attempt * 90))
+            attempt=$((attempt + 1))
+          done
           python3 - <<'PYTESTS'
           import os
           from pathlib import Path
