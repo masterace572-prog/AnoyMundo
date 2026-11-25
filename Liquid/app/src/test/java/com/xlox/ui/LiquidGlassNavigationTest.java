@@ -85,7 +85,8 @@ public class LiquidGlassNavigationTest {
         activity.navigation.select(HomeSettingsPager.SETTINGS, false);
         layout(240, 640);
         ScrollView scroll = activity.findViewById(R.id.settingsScroll);
-        int maxScroll = Math.max(0, scroll.computeVerticalScrollRange() - scroll.getHeight());
+        int maxScroll = Math.max(0, scroll.getChildAt(0).getHeight()
+                + scroll.getPaddingTop() + scroll.getPaddingBottom() - scroll.getHeight());
         assertTrue("Settings content must genuinely scroll on a narrow screen", maxScroll > 0);
         scroll.scrollTo(0, maxScroll);
         Rect action = new Rect();
