@@ -26,6 +26,7 @@ final class LiquidGlassBackdrop implements ViewTreeObserver.OnPreDrawListener {
     private Bitmap sample;
     private Bitmap frost;
     private Canvas sampleCanvas;
+    private BitmapShader clearShader;
     private BitmapShader shader;
     private int[] pixels;
     private int[] work;
@@ -121,6 +122,7 @@ final class LiquidGlassBackdrop implements ViewTreeObserver.OnPreDrawListener {
         sample = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
         frost = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
         sampleCanvas = new Canvas(sample);
+        clearShader = new BitmapShader(sample, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP);
         shader = new BitmapShader(frost, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP);
         pixels = new int[width * height];
         work = new int[pixels.length];
@@ -154,6 +156,7 @@ final class LiquidGlassBackdrop implements ViewTreeObserver.OnPreDrawListener {
     private void releaseBuffers() {
         // Let Android release bitmap references safely; never recycle a bitmap
         // while a hardware display list may still refer to its previous frame.
+        clearShader = null;
         shader = null;
         sampleCanvas = null;
         sample = frost = null;
@@ -162,6 +165,7 @@ final class LiquidGlassBackdrop implements ViewTreeObserver.OnPreDrawListener {
         lastCapture = Long.MIN_VALUE;
     }
 
+    BitmapShader clearShader() { return hasFrame ? clearShader : null; }
     BitmapShader shader() { return hasFrame ? shader : null; }
     int width() { return frost == null ? 0 : frost.getWidth(); }
     int height() { return frost == null ? 0 : frost.getHeight(); }

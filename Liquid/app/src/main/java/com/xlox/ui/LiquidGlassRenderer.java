@@ -83,18 +83,17 @@ final class LiquidGlassRenderer {
         int shellShadow = canvas.save();
         canvas.translate(0, dp(1.2f));
         fill(shade);
-        paint.setAlpha(120);
         canvas.drawPath(shellPath, paint);
         canvas.restoreToCount(shellShadow);
 
-        BitmapShader image = backdrop.shader();
-        if (image != null) {
-            // The whole capsule behaves like clear glass: the page behind it is
+        BitmapShader clearImage = backdrop.clearShader();
+        if (clearImage != null) {
+            // The whole capsule behaves like clear glass: the sharp page behind it is
             // gently magnified, while the selected lens below does the stronger frost.
             matrix.setScale(width / (float) backdrop.width(), height / (float) backdrop.height());
             matrix.postScale(1.018f, 1.035f, shell.centerX(), shell.centerY());
-            image.setLocalMatrix(matrix);
-            fill(image);
+            clearImage.setLocalMatrix(matrix);
+            fill(clearImage);
             paint.setAlpha(82);
             canvas.drawPath(shellPath, paint);
         }
@@ -120,10 +119,10 @@ final class LiquidGlassRenderer {
         int lensShadow = canvas.save();
         canvas.translate(0, dp(1.4f));
         fill(shade);
-        paint.setAlpha(160);
         canvas.drawPath(lensPath, paint);
         canvas.restoreToCount(lensShadow);
 
+        BitmapShader image = backdrop.shader();
         int save = canvas.save();
         canvas.clipPath(lensPath);
         if (image != null) {

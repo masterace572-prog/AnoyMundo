@@ -39,7 +39,7 @@ import org.robolectric.annotation.Config;
 import org.robolectric.annotation.GraphicsMode;
 import org.robolectric.annotation.LooperMode;
 
-/** Native Skia pixels of the REAL navigation over an explicitly synthetic test backdrop.
+/** Native Skia pixels of the REAL navigation over synthetic and copied-Home fixtures.
  * Never opens MAct, authenticates, touches a game, or changes FLAG_SECURE anywhere.
  */
 @RunWith(RobolectricTestRunner.class)
@@ -199,7 +199,9 @@ public class LiquidGlassRenderTest {
         Shadows.shadowOf(Looper.getMainLooper()).idle();
         realistic.capsule.backdrop().capture(time += 64);
         Bitmap full = Bitmap.createBitmap(360, 640, Bitmap.Config.ARGB_8888);
-        realistic.root.draw(new Canvas(full));
+        Canvas fullCanvas = new Canvas(full);
+        fullCanvas.drawColor(Color.BLACK);
+        realistic.root.draw(fullCanvas);
         Bitmap preview = Bitmap.createBitmap(full, 0, 400, 360, 240);
         assertTrue("Realistic preview contains the opaque copied page", Color.alpha(preview.getPixel(180, 20)) > 240);
         save(preview, "00-nav-realistic");
