@@ -100,7 +100,26 @@ public class LiquidGlassRenderTest {
         }
     }
 
+    /** Real copied Home layout for a human-reviewable preview; still no MAct/game/account. */
+    public static class RealisticHost extends AppCompatActivity {
+        ViewGroup root;
+        CapsuleNavigation capsule;
+        HomeSettingsNavigation navigation;
+        @Override protected void onCreate(Bundle state) {
+            setTheme(R.style.AppTheme);
+            super.onCreate(state);
+            setContentView(R.layout.activity_main);
+            root = findViewById(R.id.mainRoot);
+            navigation = new HomeSettingsNavigation(root, new HomeSettingsNavigation.Listener() {
+                @Override public void onPageSelected(boolean settings) { }
+                @Override public void onMotionChanged(boolean moving) { }
+            });
+            capsule = root.findViewById(R.id.bottomCapsule);
+        }
+    }
+
     private ActivityController<Host> controller;
+    private ActivityController<RealisticHost> realisticController;
     private Host activity;
     private long time;
 
@@ -114,7 +133,10 @@ public class LiquidGlassRenderTest {
         time = SystemClock.uptimeMillis() + 100;
     }
 
-    @After public void destroy() { controller.pause().stop().destroy(); }
+    @After public void destroy() {
+        if (realisticController != null) realisticController.pause().stop().destroy();
+        controller.pause().stop().destroy();
+    }
 
     private Bitmap render() {
         activity.capsule.backdrop().capture(time += 64);
@@ -166,6 +188,24 @@ public class LiquidGlassRenderTest {
         Bitmap moving = render();
         save(moving, "nav-moving");
         assertFalse("Liquid lens has visibly moved", rest.sameAs(moving));
+    }
+
+    @Test public void nativeRendererExportsARealisticCopiedHomeNavigationPreview() throws Exception {
+        realisticController = Robolectric.buildActivity(RealisticHost.class).setup().visible();
+        RealisticHost realistic = realisticController.get();
+        realistic.root.measure(View.MeasureSpec.makeMeasureSpec(360, View.MeasureSpec.EXACTLY),
+                View.MeasureSpec.makeMeasureSpec(640, View.MeasureSpec.EXACTLY));
+        realistic.root.layout(0, 0, 360, 640);
+        Shadows.shadowOf(Looper.getMainLooper()).idle();
+        realistic.capsule.backdrop().capture(time += 64);
+        Bitmap full = Bitmap.createBitmap(360, 640, Bitmap.Config.ARGB_8888);
+        realistic.root.draw(new Canvas(full));
+        Bitmap preview = Bitmap.createBitmap(full, 0, 400, 360, 240);
+        assertTrue("Realistic preview contains the opaque copied page", Color.alpha(preview.getPixel(180, 20)) > 240);
+        save(preview, "00-nav-realistic");
+        realistic.navigation.dispose();
+        realisticController.pause().stop().destroy();
+        realisticController = null;
     }
 
     private static double variation(Bitmap bitmap, int left, int right, int y) {

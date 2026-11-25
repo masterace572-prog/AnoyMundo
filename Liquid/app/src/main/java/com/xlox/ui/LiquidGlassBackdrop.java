@@ -97,6 +97,7 @@ final class LiquidGlassBackdrop implements ViewTreeObserver.OnPreDrawListener {
             if (hasFrame && hash == previousHash) return false;
             previousHash = hash;
             blur(pixels, work, sample.getWidth(), sample.getHeight());
+            blur(pixels, work, sample.getWidth(), sample.getHeight());
             frost.setPixels(pixels, 0, frost.getWidth(), 0, 0, frost.getWidth(), frost.getHeight());
             hasFrame = true;
             return true;

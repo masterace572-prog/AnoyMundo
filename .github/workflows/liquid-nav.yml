@@ -128,12 +128,12 @@ jobs:
                       'com.xlox.utils.AppManagerObbStateTest': 16,
                       'com.xlox.ui.LiquidGlassMotionTest': 10,
                       'com.xlox.ui.LiquidGlassNavigationTest': 24,
-                      'com.xlox.ui.LiquidGlassRenderTest': 4}
+                      'com.xlox.ui.LiquidGlassRenderTest': 5}
           for variant in ('testAnoyDebugUnitTest', 'testKennyDebugUnitTest'):
               for name, count in expected.items():
                   actual = suites.get((variant, name))
                   assert actual is not None and actual['tests'] >= count, (variant, name, actual)
-          assert totals['tests'] >= 256, 'All baseline + spring + API21/28/35 view + native-Skia tests must run for both brands'
+          assert totals['tests'] >= 258, 'All baseline + spring + API21/28/35 view + native-Skia tests must run for both brands'
           assert totals['failures'] == totals['errors'] == totals['skipped'] == 0, summary
           PYTESTS
           checks=$?

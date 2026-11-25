@@ -8,10 +8,12 @@ release documents describe the baseline, not device acceptance of this experimen
 ## What the navigation does
 
 - **Clear floating glass:** the black footer and solid blue selection are gone.
-  Unchanged Home/Settings pages extend behind the translucent capsule.
+  Unchanged Home/Settings pages extend behind the translucent capsule, which
+  faintly refracts the real pager instead of using an opaque fill.
 - **A slightly frosted moving lens:** a bounded, downsampled in-memory crop of
-  the actual sibling pager is softened and locally magnified underneath the
-  selected segment. This is real backdrop rendering, not a gradient labelled blur.
+  the actual sibling pager is softened and locally magnified more strongly
+  underneath the selected segment. This is real backdrop rendering, not a
+  gradient labelled blur.
 - **Water-like interaction:** the lens stays exactly aligned with the finger/page
   offset while its trailing edge stretches, its surface subtly squashes and a
   damped shape spring settles after taps/drags. There is no permanent wobble.
@@ -69,8 +71,9 @@ APK/test/lint/render artifacts. It cannot publish a release or change panel data
 It retains the baseline gesture/login/OBB tests, adds deterministic spring tests,
 API 21/28/35 geometry/lifecycle/clearance tests, and API 28 native-Skia pixel tests.
 Pixel tests check real frost, a transparent fallback and live backdrop changes.
-Their PNGs use an explicitly **synthetic test backdrop**, not a phone screenshot,
-game, signed-in licence screen or measurement of physical-device performance.
+Their PNGs include an explicit synthetic fixture plus the copied Home layout, but
+they are still host-rendered previews, not a phone screenshot, game, signed-in
+licence screen or measurement of physical-device performance.
 
 Until a completed run is recorded, those are configured checks, not claimed
 passing results. No physical device, game or live account is exercised here.
