@@ -4,6 +4,32 @@ This change is confined to `web/`, including the site's additive backend SQL and
 cleanup worker. Android, original Mundo, artwork, APKs, signing, login work and
 GitHub release assets are not changed.
 
+## 20 MiB upload follow-up
+
+The current panel accepts **20 MiB uploaded AND 20 MiB total expanded**. This is
+not a per-library expanded allowance: two 7.57 MiB siblings fit one ZIP. The
+original retention/ownership rollout below is historical; this limit increase
+does not publish a replacement library or APK.
+
+- Source `365fb8de0c88f4ec98545a81c6c1e6d92f096162`; production deployment
+  `dpl_2bmvyqJDfA1aFJyzcTkctmzD2pKC` is READY/PROMOTED on the existing panel URL.
+- Additive migration `20261125082507_site_library_upload_20mib` corresponds to
+  `../supabase/migrations/20261121134307_library_upload_20mib.sql`. It raises the
+  private bucket to **21 MiB** for normalized ZIP overhead. Every existing library
+  and APK release row matched the pre-migration digests afterwards.
+- Local/CI checks: 213 smoke + 37 archive/channel/live-safety + 8 cleanup-worker +
+  127 PostgreSQL checks; Chromium covers direct 20 MiB uploads on the offline site.
+- The repository's explicit `[live-check]` push opt-in (or the workflow's manual
+  opt-in when available) tests one **private pending** 20 MiB PUT, then deletes it.
+  It rejects oversize/unknown-channel tickets and compares both libraries and
+  APK selections before/after. It never resets a real channel (Anoy is Real Owner),
+  publishes a test library, or reaches licence-key activation/generation fixtures.
+  The real-Storage result must be read from CI, not inferred from a READY deploy.
+- The Android split/no-OBB follow-up is separate: both signed variants built and
+  passed **320/320** host checks in [45576035996](https://github.com/masterace572-prog/AnoyMundo/actions/runs/45576035996).
+  Publication was skipped. Device game testing is still required; see
+  [installed APK-set scope](../docs/SPLIT_APK_SUPPORT.md).
+
 ## Ownership
 
 - The two immutable Owner slots remain permanent, with their existing numeric
