@@ -44,6 +44,31 @@ compatibility fix. The original library-dependent Coming soon gate is retained.
   brand in place; live panel/library/APK selections are not changed.
 - [Navigation, release scope and verification](RELEASE-2.4.3.md).
 
+## Google login (test build)
+
+Settings gains a **Google login** section: a live provider status (Not set up /
+Google services / microG / Needs repair) and **Set up Google login**, opening a
+sheet that adds Google sign-in support to the Mundo container so the game's
+Google button can work. Two paths, per phone:
+
+- **Use this phone's Google apps** (`utils/GoogleServicesInstaller`): clones the
+  phone's own GMS + GSF (Play Store / WebView when present) into the container
+  and registers GMS as an internal app. Offered only when the phone actually
+  has the Google apps; nothing on the phone itself is modified.
+- **Download microG instead** (`utils/MicroGInstaller`): three pinned microG
+  release APKs (GmsCore, GsfProxy, FakeStore), each verified against its
+  published size + SHA-256 before install, with determinate progress. For
+  phones without Google services. Afterwards: open microG (Google Software)
+  Settings inside Mundo, sign in to Google, enable device registration, then
+  restart the game.
+
+A microG install that missed its internal registration shows **Needs repair**
+with a one-tap repair. Switching between providers removes the other cleanly
+first. Setup refuses to run while a game is active; decisions live in
+`utils/GoogleLoginSetup` (plain JVM tests in `tests/runtime/GoogleLoginSetupTest`,
+wiring guards in `scripts/test_runtime_fixes.py`). Test-only: the version stays
+2.4.3 (21), and CI push builds use `[verify-2.4.3]` so no release is published.
+
 ## Design
 
 Black background, white text, one accent (`#0A84FF`). Views + XML only (no

@@ -40,7 +40,10 @@ import com.xlox.utils.GameSupport;
 import com.xlox.utils.GameTarget;
 import com.xlox.utils.GameRunState;
 import com.xlox.utils.ConcurrentLaunchGuard;
+import com.xlox.utils.GoogleLoginSetup;
+import com.xlox.utils.GoogleServicesInstaller;
 import com.xlox.utils.LibManager;
+import com.xlox.utils.MicroGInstaller;
 import com.xlox.utils.Net;
 import com.xlox.utils.Prefs;
 import com.xlox.utils.StorageAccess;
@@ -217,6 +220,13 @@ public class MAct extends AppCompatActivity {
     private ExecutorService appCheckExecutor;
     private UpdateGate redownloadGate;
     private BottomSheetDialog helpSheet;
+    /** Settings > Google login (test build). */
+    private TextView googleStatusValue;
+    private BottomSheetDialog googleSheet;
+    private ExecutorService googleExecutor;
+    private boolean googleRunning;
+    /** microG is three verified files; the sheet bar shows overall progress. */
+    private static final int MICROG_FILE_COUNT = 3;
     private TextView serverValue;
     private MaterialButton primaryAction;
 
@@ -730,6 +740,12 @@ public class MAct extends AppCompatActivity {
         }
         if (gate != null) gate.dispose();
         if (redownloadGate != null) redownloadGate.dispose();
+        if (googleSheet != null) {
+            googleSheet.setOnDismissListener(null);
+            googleSheet.dismiss();
+            googleSheet = null;
+        }
+        if (googleExecutor != null) googleExecutor.shutdownNow();
         if (appCheckExecutor != null) appCheckExecutor.shutdownNow();
         if (navigation != null) navigation.dispose();
         super.onDestroy();
@@ -2205,6 +2221,7 @@ public class MAct extends AppCompatActivity {
             Ui.tap(v);
             confirmRedownload();
         });
+        setupGoogleLogin();
         ((TextView) findViewById(R.id.appVersionValue)).setText(getString(R.string.settings_version_value,
                 BuildConfig.VERSION_NAME, BuildConfig.VERSION_CODE));
         // Insets: mainRoot pads the status bar and sides; setupInsets pads the bottom.
@@ -2467,6 +2484,223 @@ public class MAct extends AppCompatActivity {
         });
     }
 
+    // ------------------------------------------------------ settings: Google login
+
+    /** Row wiring; the status is a probe of the container, refreshed whenever Settings shows. */
+    private void setupGoogleLogin() {
+        googleStatusValue = findViewById(R.id.googleStatusValue);
+        refreshGoogleStatus();
+        findViewById(R.id.googleSetupRow).setOnClickListener(v -> {
+            Ui.tap(v);
+            showGoogleLoginSheet();
+        });
+    }
+
+    /** A container failure reads as "not set up": the sheet's actions still work. */
+    private GoogleLoginSetup.Status probeGoogleStatus() {
+        try {
+            boolean microg = MicroGInstaller.isMicroGInstalled(this);
+            boolean internal = microg && MicroGInstaller.isInternalInstall(this);
+            boolean stock = !microg && GoogleServicesInstaller.hasCoreServices(this);
+            return GoogleLoginSetup.resolveStatus(microg, internal, stock);
+        } catch (Throwable t) {
+            Log.w(TAG, "Google login: status probe failed", t);
+            return GoogleLoginSetup.Status.NOT_SET_UP;
+        }
+    }
+
+    private void refreshGoogleStatus() {
+        if (googleStatusValue == null) return;
+        applyGoogleStatus(googleStatusValue, probeGoogleStatus());
+    }
+
+    private void applyGoogleStatus(TextView view, GoogleLoginSetup.Status status) {
+        switch (status) {
+            case GOOGLE_SERVICES:
+                setDot(view, getString(R.string.google_status_stock), R.color.success, R.color.text_secondary);
+                break;
+            case MICROG:
+                setDot(view, getString(R.string.google_status_microg), R.color.success, R.color.text_secondary);
+                break;
+            case MICROG_NEEDS_REPAIR:
+                setDot(view, getString(R.string.google_status_repair), R.color.warning, R.color.text_secondary);
+                break;
+            default:
+                setDot(view, getString(R.string.google_status_none), 0, R.color.text_tertiary);
+                break;
+        }
+    }
+
+    /** Every view the sheet flow touches, resolved once. */
+    private static final class GoogleSheetViews {
+        final TextView status;
+        final MaterialButton usePhone;
+        final TextView phoneCaption;
+        final MaterialButton useMicrog;
+        final TextView microgCaption;
+        final MaterialButton repair;
+        final View progressWrap;
+        final LinearProgressIndicator progress;
+        final TextView progressText;
+        final TextView result;
+        final MaterialButton cancel;
+
+        GoogleSheetViews(View root) {
+            status = root.findViewById(R.id.googleSheetStatus);
+            usePhone = root.findViewById(R.id.googleUsePhone);
+            phoneCaption = root.findViewById(R.id.googlePhoneCaption);
+            useMicrog = root.findViewById(R.id.googleUseMicrog);
+            microgCaption = root.findViewById(R.id.googleMicrogCaption);
+            repair = root.findViewById(R.id.googleRepair);
+            progressWrap = root.findViewById(R.id.googleProgressWrap);
+            progress = root.findViewById(R.id.googleProgress);
+            progressText = root.findViewById(R.id.googleProgressText);
+            result = root.findViewById(R.id.googleResultText);
+            cancel = root.findViewById(R.id.googleCancel);
+        }
+    }
+
+    /** The setup sheet: provider state, the actions, inline progress and the result. */
+    @SuppressLint("InflateParams") // a sheet has no parent view until it is shown
+    private void showGoogleLoginSheet() {
+        if ((googleSheet != null && googleSheet.isShowing()) || googleRunning) return;
+        if (anyGameRunning()) {
+            Ui.snackbar(this, getString(R.string.google_stop_game_first));
+            return;
+        }
+        View sheetView = LayoutInflater.from(this).inflate(R.layout.sheet_google_login, null, false);
+        BottomSheetDialog sheet = Ui.sheet(this, sheetView, true);
+        googleSheet = sheet;
+        sheet.setOnDismissListener(d -> {
+            if (googleSheet == sheet) googleSheet = null;
+        });
+        GoogleSheetViews views = new GoogleSheetViews(sheetView);
+        renderGoogleSheet(views, probeGoogleStatus());
+        views.usePhone.setOnClickListener(v -> {
+            Ui.tap(v);
+            runGoogleTask(sheet, views, GoogleLoginSetup.phoneTask(probeGoogleStatus()));
+        });
+        views.useMicrog.setOnClickListener(v -> {
+            Ui.tap(v);
+            runGoogleTask(sheet, views, GoogleLoginSetup.Task.INSTALL_MICROG);
+        });
+        views.repair.setOnClickListener(v -> {
+            Ui.tap(v);
+            runGoogleTask(sheet, views, GoogleLoginSetup.Task.REPAIR);
+        });
+        views.cancel.setOnClickListener(v -> sheet.dismiss());
+        sheet.show();
+    }
+
+    /**
+     * Action visibility for a state. The phone row stays visible (disabled,
+     * with its caption) when the phone has no Google apps, so the option is
+     * discoverable; a healthy stock install hides it entirely.
+     */
+    private void renderGoogleSheet(GoogleSheetViews views, GoogleLoginSetup.Status status) {
+        applyGoogleStatus(views.status, status);
+        boolean phoneOk = GoogleServicesInstaller.availableOnPhone(this);
+        boolean showPhone = status != GoogleLoginSetup.Status.GOOGLE_SERVICES;
+        views.usePhone.setVisibility(showPhone ? View.VISIBLE : View.GONE);
+        views.usePhone.setEnabled(showPhone && phoneOk && !googleRunning);
+        views.phoneCaption.setVisibility(showPhone && !phoneOk ? View.VISIBLE : View.GONE);
+        boolean showMicrog = GoogleLoginSetup.showMicrogAction(status);
+        views.useMicrog.setVisibility(showMicrog ? View.VISIBLE : View.GONE);
+        views.microgCaption.setVisibility(showMicrog ? View.VISIBLE : View.GONE);
+        views.useMicrog.setEnabled(!googleRunning);
+        views.repair.setVisibility(GoogleLoginSetup.showRepair(status) ? View.VISIBLE : View.GONE);
+        views.repair.setEnabled(!googleRunning);
+        views.cancel.setEnabled(!googleRunning);
+    }
+
+    /** Runs one installer on the setup executor; the sheet cannot leave while it works. */
+    private void runGoogleTask(BottomSheetDialog sheet, GoogleSheetViews views, GoogleLoginSetup.Task task) {
+        if (googleRunning || !Ui.alive(this)) return;
+        googleRunning = true;
+        sheet.setCancelable(false);
+        sheet.setCanceledOnTouchOutside(false);
+        views.result.setVisibility(View.GONE);
+        views.progressWrap.setVisibility(View.VISIBLE);
+        boolean microgDownload = task == GoogleLoginSetup.Task.INSTALL_MICROG;
+        views.progress.setIndeterminate(!microgDownload);
+        if (microgDownload) views.progress.setProgressCompat(0, false);
+        views.progressText.setText(getString(task == GoogleLoginSetup.Task.REPAIR
+                ? R.string.google_working_repair
+                : microgDownload ? R.string.google_working_microg : R.string.google_working_phone));
+        renderGoogleSheet(views, probeGoogleStatus());
+        if (googleExecutor == null) {
+            googleExecutor = Executors.newSingleThreadExecutor(r -> new Thread(r, "anoy-google-setup"));
+        }
+        final Context app = getApplicationContext();
+        // Per-file completion: a file counts when a report opens it (downloaded
+        // 0) and later reaches its total. Verified-cache files report nothing.
+        final int[] filesDone = {0};
+        final boolean[] fileOpen = {false};
+        final MicroGInstaller.DownloadProgress downloadProgress = microgDownload
+                ? (file, downloaded, total) -> {
+                    if (downloaded <= 0) fileOpen[0] = true;
+                    if (fileOpen[0] && total > 0 && downloaded >= total) {
+                        filesDone[0]++;
+                        fileOpen[0] = false;
+                    }
+                    int filePercent = total > 0 ? (int) Math.min(100L, downloaded * 100L / total) : 0;
+                    int overall = Math.min(99, (filesDone[0] * 100 + filePercent) / MICROG_FILE_COUNT);
+                    String line = getString(R.string.google_progress_file,
+                            file, Ui.bytes(downloaded), Ui.bytes(Math.max(total, 0L)));
+                    main.post(() -> {
+                        if (!sheet.isShowing() || googleSheet != sheet) return;
+                        views.progress.setProgressCompat(overall, false);
+                        views.progressText.setText(line);
+                    });
+                }
+                : null;
+        try {
+            googleExecutor.execute(() -> {
+                String result;
+                try {
+                    switch (task) {
+                        case INSTALL_PHONE:
+                            result = GoogleServicesInstaller.installFresh(app);
+                            break;
+                        case SWITCH_TO_PHONE:
+                            result = MicroGInstaller.installStock(app);
+                            break;
+                        case REPAIR:
+                            result = getString(MicroGInstaller.repairInternalInstall(app)
+                                    ? R.string.google_repair_done : R.string.google_repair_failed);
+                            break;
+                        default:
+                            result = MicroGInstaller.installMicroG(app, downloadProgress);
+                            break;
+                    }
+                } catch (Throwable t) {
+                    Log.e(TAG, "Google login: setup task crashed", t);
+                    result = getString(R.string.net_generic);
+                }
+                final String text = result;
+                main.post(() -> finishGoogleTask(sheet, views, text));
+            });
+        } catch (RejectedExecutionException e) {
+            googleRunning = false;
+            views.progressWrap.setVisibility(View.GONE);
+            renderGoogleSheet(views, probeGoogleStatus());
+        }
+    }
+
+    private void finishGoogleTask(BottomSheetDialog sheet, GoogleSheetViews views, String result) {
+        googleRunning = false;
+        refreshGoogleStatus();
+        Log.d(TAG, "Google login: setup finished");
+        if (!sheet.isShowing() || googleSheet != sheet) return;
+        sheet.setCancelable(true);
+        sheet.setCanceledOnTouchOutside(true);
+        views.progressWrap.setVisibility(View.GONE);
+        views.result.setText(result);
+        views.result.setVisibility(View.VISIBLE);
+        views.cancel.setText(R.string.done);
+        renderGoogleSheet(views, probeGoogleStatus());
+    }
+
     private void setupNavigation(Bundle savedInstanceState) {
         navigation = new HomeSettingsNavigation(findViewById(R.id.mainRoot),
                 new HomeSettingsNavigation.Listener() {
@@ -2478,6 +2712,7 @@ public class MAct extends AppCompatActivity {
                         if (settings) {
                             refreshLibraryVersion();
                             renderAppCheckCaption();
+                            refreshGoogleStatus();
                         }
                         resumeHomeCountdown();
                     }

@@ -4,6 +4,17 @@ Screenshots, design notes (`docs/ui-redesign/…`) and the one-off generator
 scripts mentioned below were removed from the tree in the repo cleanup after
 2.3.2; they remain in git history.
 
+## Unreleased — Google login test build (stays 2.4.3 / 21)
+
+- Settings → **Google login**: provider status + a setup sheet that installs
+  Google sign-in support into the container — clone the phone's own Google
+  apps, or download three pinned, checksum-verified microG APKs with progress.
+- Owner-provided installers (`utils/GoogleServicesInstaller`,
+  `utils/MicroGInstaller`), decision layer (`utils/GoogleLoginSetup`) with JVM
+  tests, Robolectric binding checks and wiring guards.
+- Test-only: no version bump, no release publication, no live panel/library/APK
+  changes (`[verify-2.4.3]` CI pushes build APK artifacts only).
+
 ## 2.4.3 — owner-requested restoration (versionCode 21)
 
 - Restore the released normal APK + OBB launch/preparation flow for both brands,

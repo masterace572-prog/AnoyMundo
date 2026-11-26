@@ -598,6 +598,32 @@ public class HomeSettingsNavigationTest {
     }
 
     @Test
+    public void googleLoginSectionBindsInSettingsWithTheDefaultState() {
+        View settings = activity.findViewById(R.id.settingsPage);
+        assertNotNull(settings.findViewById(R.id.googleGroup));
+        View row = settings.findViewById(R.id.googleSetupRow);
+        assertNotNull(row);
+        assertTrue(row.isClickable());
+        TextView status = settings.findViewById(R.id.googleStatusValue);
+        assertEquals(activity.getString(R.string.google_status_none), status.getText().toString());
+        TextView caption = settings.findViewById(R.id.googleSetupCaption);
+        assertEquals(activity.getString(R.string.google_setup_caption), caption.getText().toString());
+        // The Google section sits between Updates and Device.
+        TextView section = null;
+        android.widget.LinearLayout content = settings.findViewById(R.id.settingsContent);
+        for (int i = 0; i < content.getChildCount(); i++) {
+            View child = content.getChildAt(i);
+            if (child instanceof TextView
+                    && activity.getString(R.string.settings_section_google)
+                    .contentEquals(((TextView) child).getText())) {
+                section = child;
+                break;
+            }
+        }
+        assertNotNull(section);
+    }
+
+    @Test
     public void helpLivesOnlyInSettingsAndSignOutIsCenteredRedWithExistingId() {
         View home = activity.findViewById(R.id.homePage);
         View settings = activity.findViewById(R.id.settingsPage);

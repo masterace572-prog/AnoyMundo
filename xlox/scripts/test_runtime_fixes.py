@@ -182,6 +182,55 @@ class AndroidWiring(unittest.TestCase):
         self.assertNotIn('percent == lastPercent', gate)
         self.assertIn('if (optional) runRedownload();\n            else runCheck();', gate)
 
+    def test_google_login_installers_are_pinned_and_verified(self):
+        microg = (JAVA / 'utils/MicroGInstaller.java').read_text()
+        services = (JAVA / 'utils/GoogleServicesInstaller.java').read_text()
+        # Pinned microG release URLs, sizes and SHA-256 digests (provided by the owner).
+        for needle in (
+                'https://github.com/microg/GmsCore/releases/download/v0.3.18.252432/com.google.android.gms-252432036.apk',
+                'https://github.com/microg/GsfProxy/releases/download/v0.1.0/GsfProxy.apk',
+                'https://github.com/microg/GmsCore/releases/download/v0.3.18.252432/com.android.vending-84022636.apk',
+                '"108520063"', '"21872"', '"4212484"',
+                '1094fa60ace2367ac52bd08d1bd4f33fa8144ba930e355121b28234b8ebbf382',
+                '86891b174301f06a1c84187b545a0a2a57044c6b768f3e84e865908743349692',
+                '3f1bde2f72bca746fbb53b61a32c2a85fcb026f886ee96d6fe9a05de9a6c6d5b'):
+            self.assertIn(needle, microg)
+        # Downloads are verified before install; HTTP only by redirect from the pinned https URL.
+        self.assertIn('expectedSha256.equalsIgnoreCase(sha256Of(outFile))', microg)
+        self.assertIn('outFile.length() != expectedSize', microg)
+        self.assertIn('HTTP_OK', microg)
+        self.assertNotIn('http://', microg)
+        # The stock path only clones/installs apps already on the phone.
+        self.assertIn('info.applicationInfo.sourceDir', services)
+        self.assertIn('MetaApplicationInstaller.cloneApp(pkg)', services)
+        self.assertNotIn('http://', services)
+        for src in (microg, services):
+            self.assertNotIn('getExtras(', src)
+            self.assertNotIn('FLAG_GRANT_', src)
+
+    def test_google_login_setup_is_wired_into_settings(self):
+        home = (JAVA / 'MAct.java').read_text()
+        self.assertIn('GoogleLoginSetup.resolveStatus', home)
+        self.assertIn('R.layout.sheet_google_login', home)
+        self.assertIn('R.id.googleSetupRow', home)
+        self.assertIn('MicroGInstaller.installMicroG(app, downloadProgress)', home)
+        self.assertIn('GoogleServicesInstaller.installFresh(app)', home)
+        self.assertIn('MicroGInstaller.installStock(app)', home)
+        self.assertIn('MicroGInstaller.repairInternalInstall(app)', home)
+        self.assertIn('anyGameRunning()', home)
+        self.assertIn('googleSheet.dismiss()', home)
+        settings = (ROOT / 'app/src/main/res/layout/page_settings.xml').read_text()
+        self.assertIn('@+id/googleSetupRow', settings)
+        self.assertIn('@+id/googleStatusValue', settings)
+        sheet = (ROOT / 'app/src/main/res/layout/sheet_google_login.xml').read_text()
+        for view_id in ('googleUsePhone', 'googleUseMicrog', 'googleRepair',
+                        'googleProgress', 'googleProgressText', 'googleResultText', 'googleCancel'):
+            self.assertIn('@+id/' + view_id, sheet)
+        strings = (ROOT / 'app/src/main/res/values/strings.xml').read_text()
+        for name in ('google_setup_row', 'google_status_none', 'google_status_stock',
+                     'google_status_microg', 'google_status_repair', 'google_stop_game_first'):
+            self.assertIn('name="' + name + '"', strings)
+
     def test_one_fresh_manifest_also_updates_the_game_support_notice(self):
         client = (JAVA / 'utils/Downtwo.java').read_text()
         support = (JAVA / 'utils/GameSupport.java').read_text()
@@ -265,12 +314,12 @@ def main() -> None:
     ecj = os.environ.get('ECJ_JAR')
     if not java or not (javac or ecj):
         raise RuntimeError('A JDK is needed (or JAVA + ECJ_JAR for a JRE-only local environment)')
-    sources = [JAVA / 'utils' / name for name in ('GameLoginRouter.java', 'UpdateRequest.java', 'LibraryHttp.java', 'GameWebPolicy.java', 'GameWebCallRouter.java', 'GameWebNavigator.java')]
-    sources.extend(ROOT / 'tests/runtime' / name for name in ('RuntimeFixesTest.java', 'GameWebFlowTest.java'))
+    sources = [JAVA / 'utils' / name for name in ('GameLoginRouter.java', 'UpdateRequest.java', 'LibraryHttp.java', 'GameWebPolicy.java', 'GameWebCallRouter.java', 'GameWebNavigator.java', 'GoogleLoginSetup.java')]
+    sources.extend(ROOT / 'tests/runtime' / name for name in ('RuntimeFixesTest.java', 'GameWebFlowTest.java', 'GoogleLoginSetupTest.java'))
     with tempfile.TemporaryDirectory(prefix='loader-runtime-test-') as output:
         compiler = [javac, '-source', '8', '-target', '8'] if javac else [java, '-jar', ecj, '-8', '-warn:none']
         subprocess.run([*compiler, '-d', output, *map(str, sources)], check=True)
-        for test in ('RuntimeFixesTest', 'GameWebFlowTest'):
+        for test in ('RuntimeFixesTest', 'GameWebFlowTest', 'GoogleLoginSetupTest'):
             subprocess.run([java, '-ea', '-cp', output, 'com.xlox.tests.' + test], check=True, timeout=30)
     # SDK-free structural checks (host Android UI behavior runs separately in Gradle).
     subprocess.run([sys.executable, '-B', str(ROOT / 'scripts/test_navigation.py')], check=True)
