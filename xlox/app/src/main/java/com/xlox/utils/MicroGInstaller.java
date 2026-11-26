@@ -45,7 +45,7 @@ public final class MicroGInstaller {
             if (!isMicroGInstalled(ctx)) return false;
             boolean repaired = false;
             if (!MetaPackageManager.isAppInstalledAsInternal(GoogleServicesInstaller.GMS_PKG)) {
-                repaired = MetaPackageManager.fixInternalAppAndReinstall(GMS_PKG);
+                repaired = MetaPackageManager.fixInternalAppAndReinstall(GoogleServicesInstaller.GMS_PKG);
             }
             if (repaired) {
                 MetaPackageManager.reloadAllApps();
