@@ -608,19 +608,20 @@ public class HomeSettingsNavigationTest {
         assertEquals(activity.getString(R.string.google_status_none), status.getText().toString());
         TextView caption = settings.findViewById(R.id.googleSetupCaption);
         assertEquals(activity.getString(R.string.google_setup_caption), caption.getText().toString());
-        // The Google section sits between Updates and Device.
-        TextView section = null;
-        android.widget.LinearLayout content = settings.findViewById(R.id.settingsContent);
+        // The section heading label exists and reads "Google login".
+        boolean found = false;
+        ViewGroup content = settings.findViewById(R.id.settingsContent);
         for (int i = 0; i < content.getChildCount(); i++) {
             View child = content.getChildAt(i);
-            if (child instanceof TextView
-                    && activity.getString(R.string.settings_section_google)
-                    .contentEquals(((TextView) child).getText())) {
-                section = child;
-                break;
+            if (child instanceof TextView) {
+                CharSequence text = ((TextView) child).getText();
+                if (text != null && text.toString().equals(activity.getString(R.string.settings_section_google))) {
+                    found = true;
+                    break;
+                }
             }
         }
-        assertNotNull(section);
+        assertTrue(found);
     }
 
     @Test
