@@ -223,7 +223,7 @@ public final class MicroGInstaller {
                 while ((n = in.read(buf)) > 0) md.update(buf, 0, n);
             }
             StringBuilder hex = new StringBuilder();
-            for (byte b : md.digest()) hex.append(String.format("%02x", b));
+            for (byte b : md.digest()) hex.append(String.format(java.util.Locale.US, "%02x", b));
             return hex.toString();
         } catch (Exception e) {
             return null;
@@ -241,7 +241,7 @@ public final class MicroGInstaller {
             conn.setInstanceFollowRedirects(true);
             conn.connect();
             if (conn.getResponseCode() != HttpURLConnection.HTTP_OK) return false;
-            long total = conn.getContentLengthLong();
+            long total = conn.getContentLength();
             in = conn.getInputStream();
             out = new FileOutputStream(outFile);
             byte[] buf = new byte[8192];
