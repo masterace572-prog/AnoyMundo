@@ -2238,16 +2238,10 @@ public class MAct extends AppCompatActivity {
     private String nativeExitSection() {
         try {
             String exit = CrashLogger.readNativeExit(this);
-            if (exit != null) return exit;
+            return exit != null ? exit : "Native exit: none recorded (the container may run as a system/root process Android does not attribute to this app)";
         } catch (Throwable t) {
             return "Native exit: unreadable";
         }
-        // ApplicationExitInfo is empty (the container's process is not
-        // attributed to this app): sweep the readable log/tombstone dirs for
-        // the file that mentions the dead package most recently.
-        String sweep = CrashLogger.sweepContainerLogs(this, "com.krafton.bgmilite");
-        return sweep != null ? sweep
-                : "Native exit: none recorded, and no readable container/tombstone log mentioned the game";
     }
 
     /** Appends the split-repair bookkeeping so a report shows whether the fix fired. */
