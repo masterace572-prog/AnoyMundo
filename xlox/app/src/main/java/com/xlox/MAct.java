@@ -564,6 +564,7 @@ public class MAct extends AppCompatActivity {
         maybeRecheckLibrary();
         maybeRefreshLicence(false);
         showCrashReport();
+        showAirCrashIfPending();
         // Back from the All-files-access page (some phones never send a result).
         if (storagePromptOpen && leftForStoragePrompt) finishStoragePrompt();
     }
@@ -2274,6 +2275,31 @@ public class MAct extends AppCompatActivity {
             return report + "\n\nSplit repair fired for:\n" + state;
         } catch (Throwable t) {
             return report;
+        }
+    }
+
+    /**
+     * Persistent Air crash line on the Air card. A native container death can
+     * restart the app at the splash without ever re-showing this activity, so the
+     * crash dialog never appears. Mirror the report here — it survives restarts and
+     * is always visible on Home. Tap-to-copy stays available via the crash dialog
+     * whenever MAct does come back.
+     */
+    private void showAirCrashIfPending() {
+        try {
+            if (air == null || air.message == null) return;
+            String action = CrashLogger.pendingAction(this);
+            if (action == null || !action.contains(GameTarget.BGMI_AIR.packageName)) return;
+            StringBuilder msg = new StringBuilder(getString(R.string.crash_action_title));
+            String diag = SplitDepsFix.readDiag(this);
+            if (!diag.isEmpty()) msg.append("\n").append(diag);
+            String state = SplitDepsFix.readState(this);
+            msg.append(state.isEmpty() ? "\nSplit repair: never fired"
+                    : "\nRepaired: " + state.replace('\n', ' '));
+            air.message.setText(msg.toString());
+            air.message.setVisibility(View.VISIBLE);
+        } catch (Throwable t) {
+            Log.w(TAG, "Air crash status unavailable", t);
         }
     }
 
