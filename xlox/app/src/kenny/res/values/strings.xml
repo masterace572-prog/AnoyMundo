@@ -2,6 +2,7 @@
 <!-- KennyPvt overrides; all non-brand behaviour remains shared. -->
 <resources>
     <string name="app_name">KennyPvt</string>
+    <string name="crash_report_title">KennyPvt crashed last time</string>
     <string name="telegram_url">https://t.me/crimecell</string>
     <string name="update_slow">Taking longer than usual. Keep KennyPvt open.</string>
     <string name="licence_key_hint">KENNYPVT-7D-XXXXX</string>
