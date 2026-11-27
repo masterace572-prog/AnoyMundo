@@ -2291,11 +2291,16 @@ public class MAct extends AppCompatActivity {
             String action = CrashLogger.pendingAction(this);
             if (action == null || !action.contains(GameTarget.BGMI_AIR.packageName)) return;
             StringBuilder msg = new StringBuilder(getString(R.string.crash_action_title));
+            // Air is NOT isolated-split (the diag proved it), so the crash is native:
+            // the vprocess System.load(libbgmilite.so) or Air's own .so. Surface the
+            // ELF page/alignment/writable state and the recorded load error — Android
+            // 16/17 reject a 4KB-aligned or writable library that Android 15 tolerated.
+            try {
+                msg.append("\nLib: ").append(LibManager.diagnostics(this, GameTarget.BGMI_AIR));
+            } catch (Throwable ignored) {
+            }
             String diag = SplitDepsFix.readDiag(this);
             if (!diag.isEmpty()) msg.append("\n").append(diag);
-            String state = SplitDepsFix.readState(this);
-            msg.append(state.isEmpty() ? "\nSplit repair: never fired"
-                    : "\nRepaired: " + state.replace('\n', ' '));
             air.message.setText(msg.toString());
             air.message.setVisibility(View.VISIBLE);
         } catch (Throwable t) {
