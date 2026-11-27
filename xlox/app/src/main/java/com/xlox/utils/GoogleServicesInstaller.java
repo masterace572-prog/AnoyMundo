@@ -234,6 +234,7 @@ public final class GoogleServicesInstaller {
             return false;
         }
         File dir = null;
+        int rc = 0;
         try {
             if (splits != null && splits.length > 0) {
                 // Modern GMS/Play Store ship as split APKs. Installing base.apk
@@ -245,9 +246,9 @@ public final class GoogleServicesInstaller {
                     out.append(pkg).append(" copy failed — free up storage and retry. ");
                     return false;
                 }
-                MetaApplicationInstaller.installAppsByPath(dir.getAbsolutePath());
+                rc = MetaApplicationInstaller.installAppsByPath(dir.getAbsolutePath());
             } else {
-                MetaApplicationInstaller.installAppByPath(apkPath);
+                rc = MetaApplicationInstaller.installAppByPath(apkPath);
             }
             // Register while the staged files still exist: the fix-up reinstall
             // reads them again.
@@ -263,7 +264,14 @@ public final class GoogleServicesInstaller {
             ok = MetaPackageManager.isInnerAppInstalled(pkg);
         } catch (Exception ignored) {
         }
-        if (!ok) out.append(pkg).append(" install failed. ");
+        if (!ok) {
+            out.append(pkg).append(" install failed");
+            try {
+                out.append(" (").append(MetaApplicationInstaller.convertResultToString(rc)).append(")");
+            } catch (Exception ignored) {
+            }
+            out.append(". ");
+        }
         return ok;
     }
 
@@ -329,6 +337,11 @@ public final class GoogleServicesInstaller {
             if (info != null && info.versionName != null) {
                 if (s.length() > 0) s.append(", ");
                 s.append(label).append(' ').append(info.versionName);
+                try {
+                    s.append(MetaPackageManager.isAppInstalledAsInternal(pkg)
+                            ? " [internal]" : " [not internal]");
+                } catch (Exception ignored) {
+                }
             }
         } catch (Exception ignored) {
         }

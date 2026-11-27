@@ -219,6 +219,8 @@ class AndroidWiring(unittest.TestCase):
         mact = (JAVA / 'MAct.java').read_text()
         self.assertIn('GoogleServicesInstaller.repairInternalInstall(app)', mact)
         self.assertIn('MicroGInstaller.repairInternalInstall(app)', mact)
+        # The sheet can open the provider inside Mundo for the manual sign-in.
+        self.assertIn('MetaActivityManager.launchApp(pkg)', mact)
         # BGMI's Google button rides on Play Games; it is cloned too (optional).
         self.assertEqual(services.count('installOneClone(ctx, PLAY_GAMES_PKG, out)'), 2)
         for src in (microg, services):
@@ -241,6 +243,7 @@ class AndroidWiring(unittest.TestCase):
         self.assertIn('@+id/googleStatusValue', settings)
         sheet = (ROOT / 'app/src/main/res/layout/sheet_google_login.xml').read_text()
         for view_id in ('googleUsePhone', 'googleUseMicrog', 'googleRepair',
+                        'googleOpenProvider', 'googleOpenProviderCaption',
                         'googleProgress', 'googleProgressText', 'googleResultText', 'googleCancel'):
             self.assertIn('@+id/' + view_id, sheet)
         strings = (ROOT / 'app/src/main/res/values/strings.xml').read_text()

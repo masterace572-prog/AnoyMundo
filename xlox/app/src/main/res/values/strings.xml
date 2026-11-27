@@ -334,6 +334,11 @@
     <string name="google_working_microg">Downloading Google Software…</string>
     <string name="google_working_repair">Repairing microG…</string>
     <string name="google_progress_file">%1$s — %2$s of %3$s</string>
+    <string name="google_open_store">Open Play Store in Mundo</string>
+    <string name="google_open_microg">Open Google Software in Mundo</string>
+    <string name="google_open_store_caption">Sign in to Google there once, then restart the game and try Google login.</string>
+    <string name="google_open_microg_caption">Sign in to Google and enable device registration there, then restart the game.</string>
+    <string name="google_open_failed">Couldn\'t open it in Mundo.</string>
     <string name="done">Done</string>
     <string name="settings_section_report">Report a problem</string>
     <string name="settings_section_account">Account</string>

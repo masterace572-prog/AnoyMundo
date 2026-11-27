@@ -2568,6 +2568,8 @@ public class MAct extends AppCompatActivity {
         final MaterialButton useMicrog;
         final TextView microgCaption;
         final MaterialButton repair;
+        final MaterialButton openProvider;
+        final TextView openCaption;
         final View progressWrap;
         final LinearProgressIndicator progress;
         final TextView progressText;
@@ -2581,6 +2583,8 @@ public class MAct extends AppCompatActivity {
             useMicrog = root.findViewById(R.id.googleUseMicrog);
             microgCaption = root.findViewById(R.id.googleMicrogCaption);
             repair = root.findViewById(R.id.googleRepair);
+            openProvider = root.findViewById(R.id.googleOpenProvider);
+            openCaption = root.findViewById(R.id.googleOpenProviderCaption);
             progressWrap = root.findViewById(R.id.googleProgressWrap);
             progress = root.findViewById(R.id.googleProgress);
             progressText = root.findViewById(R.id.googleProgressText);
@@ -2617,6 +2621,10 @@ public class MAct extends AppCompatActivity {
             Ui.tap(v);
             runGoogleTask(sheet, views, GoogleLoginSetup.Task.REPAIR);
         });
+        views.openProvider.setOnClickListener(v -> {
+            Ui.tap(v);
+            if (openGoogleProviderInMundo(probeGoogleStatus())) sheet.dismiss();
+        });
         views.cancel.setOnClickListener(v -> sheet.dismiss());
         sheet.show();
     }
@@ -2629,7 +2637,10 @@ public class MAct extends AppCompatActivity {
     private void renderGoogleSheet(GoogleSheetViews views, GoogleLoginSetup.Status status) {
         applyGoogleStatus(views.status, status);
         boolean phoneOk = GoogleServicesInstaller.availableOnPhone(this);
-        boolean showPhone = status != GoogleLoginSetup.Status.GOOGLE_SERVICES;
+        boolean stockReady = status == GoogleLoginSetup.Status.GOOGLE_SERVICES;
+        boolean storeIn = stockReady && GoogleServicesInstaller.isPlayStoreInstalled(this);
+        // Stock without a Play Store can't sign in anywhere — offer the copy again.
+        boolean showPhone = !stockReady || !storeIn;
         views.usePhone.setVisibility(showPhone ? View.VISIBLE : View.GONE);
         views.usePhone.setEnabled(showPhone && phoneOk && !googleRunning);
         views.phoneCaption.setVisibility(showPhone && !phoneOk ? View.VISIBLE : View.GONE);
@@ -2639,7 +2650,34 @@ public class MAct extends AppCompatActivity {
         views.useMicrog.setEnabled(!googleRunning);
         views.repair.setVisibility(GoogleLoginSetup.showRepair(status) ? View.VISIBLE : View.GONE);
         views.repair.setEnabled(!googleRunning);
+        // Once a provider is in, the next step lives inside Mundo: sign in to
+        // Google there (Play Store for stock, microG settings for microG).
+        boolean microgReady = status == GoogleLoginSetup.Status.MICROG;
+        boolean showOpen = stockReady ? storeIn : microgReady;
+        views.openProvider.setVisibility(showOpen ? View.VISIBLE : View.GONE);
+        views.openCaption.setVisibility(showOpen ? View.VISIBLE : View.GONE);
+        if (showOpen) {
+            views.openProvider.setText(stockReady ? R.string.google_open_store : R.string.google_open_microg);
+            views.openCaption.setText(stockReady
+                    ? R.string.google_open_store_caption : R.string.google_open_microg_caption);
+        }
+        views.openProvider.setEnabled(!googleRunning);
         views.cancel.setEnabled(!googleRunning);
+    }
+
+    /** Opens the provider's own app inside the container; false when the
+     *  container refused the launch (sheet stays open so the user can retry). */
+    private boolean openGoogleProviderInMundo(GoogleLoginSetup.Status status) {
+        String pkg = status == GoogleLoginSetup.Status.GOOGLE_SERVICES
+                ? GoogleServicesInstaller.PLAY_STORE_PKG : GoogleServicesInstaller.GMS_PKG;
+        try {
+            MetaActivityManager.launchApp(pkg);
+            return true;
+        } catch (Throwable t) {
+            Log.e(TAG, "Google login: open in Mundo failed", t);
+            Ui.snackbar(this, getString(R.string.google_open_failed));
+            return false;
+        }
     }
 
     /** Runs one installer on the setup executor; the sheet cannot leave while it works. */

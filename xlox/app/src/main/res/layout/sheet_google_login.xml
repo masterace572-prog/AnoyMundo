@@ -97,6 +97,24 @@
             android:text="@string/google_repair"
             android:visibility="gone" />
 
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/googleOpenProvider"
+            style="@style/Widget.Anoy.Button.Tonal"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/space_12"
+            android:text="@string/google_open_store"
+            android:visibility="gone" />
+
+        <TextView
+            android:id="@+id/googleOpenProviderCaption"
+            style="@style/Text.Dashboard.Meta"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/space_8"
+            android:text="@string/google_open_store_caption"
+            android:visibility="gone" />
+
         <LinearLayout
             android:id="@+id/googleProgressWrap"
             android:layout_width="match_parent"
