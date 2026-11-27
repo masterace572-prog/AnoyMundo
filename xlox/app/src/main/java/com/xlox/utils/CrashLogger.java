@@ -96,4 +96,46 @@ public final class CrashLogger {
         } catch (Exception ignored) {
         }
     }
+
+    /** Remembers what the app was about to do; survives a native (non-Java) death. */
+    public static void noteAction(Context ctx, String action) {
+        FileOutputStream out = null;
+        try {
+            out = new FileOutputStream(new File(ctx.getFilesDir(), ACTION_FILE));
+            out.write(action.getBytes(StandardCharsets.UTF_8));
+        } catch (Exception ignored) {
+        } finally {
+            try {
+                if (out != null) out.close();
+            } catch (Exception ignored) {
+            }
+        }
+    }
+
+    /** The unfinished action recorded before the process last died, or null. */
+    public static String pendingAction(Context ctx) {
+        File file = new File(ctx.getFilesDir(), ACTION_FILE);
+        if (!file.isFile()) return null;
+        FileInputStream in = null;
+        try {
+            byte[] data = new byte[(int) Math.min(file.length(), 512L)];
+            in = new FileInputStream(file);
+            int n = in.read(data);
+            return n > 0 ? new String(data, 0, n, StandardCharsets.UTF_8) : null;
+        } catch (Exception e) {
+            return null;
+        } finally {
+            try {
+                if (in != null) in.close();
+            } catch (Exception ignored) {
+            }
+        }
+    }
+
+    public static void clearAction(Context ctx) {
+        try {
+            new File(ctx.getFilesDir(), ACTION_FILE).delete();
+        } catch (Exception ignored) {
+        }
+    }
 }
