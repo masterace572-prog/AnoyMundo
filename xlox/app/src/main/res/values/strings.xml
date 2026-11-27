@@ -340,6 +340,7 @@
     <string name="google_open_microg_caption">Sign in to Google and enable device registration there, then restart the game.</string>
     <string name="google_open_failed">Couldn\'t open it in Mundo.</string>
     <string name="crash_report_title">Anoy crashed last time</string>
+    <string name="crash_action_title">Anoy closed while opening an app in Mundo</string>
     <string name="crash_report_copy">Copy report</string>
     <string name="crash_report_dismiss">Dismiss</string>
     <string name="done">Done</string>

@@ -24,6 +24,7 @@ public final class CrashLogger {
 
     private static final String TAG = "CrashLogger";
     private static final String FILE = "last-crash.txt";
+    private static final String ACTION_FILE = "last-action.txt";
     /** A report keeps at most this much text (a full trace is ~2-4 KB). */
     private static final int MAX_REPORT = 6000;
 

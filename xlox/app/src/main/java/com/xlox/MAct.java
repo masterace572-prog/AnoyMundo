@@ -2101,19 +2101,44 @@ public class MAct extends AppCompatActivity {
 
     /** After a crash, home offers the saved report once: copy it for support, or dismiss. */
     private boolean crashReportShown;
+    /** Survives onDestroy (unlike `main`): clears the action breadcrumb on a live process. */
+    private final Handler crashHandler = new Handler(Looper.getMainLooper());
 
     private void showCrashReport() {
         if (crashReportShown || preview) return;
         crashReportShown = true;
-        final String report;
+        String report;
         try {
             report = CrashLogger.read(this);
         } catch (Throwable t) {
+            report = null;
+        }
+        if (report != null && !report.trim().isEmpty()) {
+            CrashLogger.clearAction(this); // the Java trace supersedes the breadcrumb
+            showCrashDialog(getString(R.string.crash_report_title), report);
             return;
         }
-        if (report == null || report.trim().isEmpty()) return;
+        // No Java trace: a native container crash leaves no exception behind,
+        // only the breadcrumb written before the risky call.
+        String action;
+        try {
+            action = CrashLogger.pendingAction(this);
+        } catch (Throwable t) {
+            return;
+        }
+        if (action == null || action.trim().isEmpty()) return;
+        CrashLogger.clearAction(this);
+        showCrashDialog(getString(R.string.crash_action_title),
+                "Anoy " + BuildConfig.VERSION_NAME + " (" + BuildConfig.VERSION_CODE + ")\n"
+                        + "Android " + Build.VERSION.RELEASE + " (API " + Build.VERSION.SDK_INT + ")\n"
+                        + "Device: " + deviceName() + "\n\n"
+                        + "The process died without a Java error (a native crash inside the container).\n\n"
+                        + "Last action: " + action);
+    }
+
+    private void showCrashDialog(String title, final String report) {
         new androidx.appcompat.app.AlertDialog.Builder(this)
-                .setTitle(R.string.crash_report_title)
+                .setTitle(title)
                 .setMessage(report)
                 .setPositiveButton(R.string.crash_report_copy, (d, w) -> {
                     try {
@@ -2705,16 +2730,23 @@ public class MAct extends AppCompatActivity {
         String pkg = status == GoogleLoginSetup.Status.GOOGLE_SERVICES
                 ? GoogleServicesInstaller.PLAY_STORE_PKG : GoogleServicesInstaller.GMS_PKG;
         try {
+            // A native container crash kills the process before any Java catch
+            // runs; the breadcrumb lets the next start say what was being opened.
+            CrashLogger.noteAction(this, "open in Mundo: " + pkg);
             // The splash-intent path is the one game launches already prove on
             // device; the direct launchApp call is the fallback.
             Intent intent = MetaActivityManager.obtainSplashLaunchIntent(pkg, this);
             if (intent != null) {
                 startActivity(intent);
-                return true;
+            } else {
+                MetaActivityManager.launchApp(pkg);
             }
-            MetaActivityManager.launchApp(pkg);
+            // Still alive 15 s later: the launch did not kill the process. Uses
+            // crashHandler because onDestroy wipes `main` while the process lives.
+            crashHandler.postDelayed(() -> CrashLogger.clearAction(getApplicationContext()), 15000L);
             return true;
         } catch (Throwable t) {
+            CrashLogger.clearAction(this);
             Log.e(TAG, "Google login: open in Mundo failed", t);
             Ui.snackbar(this, getString(R.string.google_open_failed));
             return false;
