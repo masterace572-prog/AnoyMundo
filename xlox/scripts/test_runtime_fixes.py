@@ -207,6 +207,12 @@ class AndroidWiring(unittest.TestCase):
         self.assertIn('info.applicationInfo.splitSourceDirs', services)
         self.assertIn('MetaApplicationInstaller.installAppsByPath(dir.getAbsolutePath())', services)
         self.assertNotIn('http://', services)
+        # BOTH stock paths (fresh install and the microG->stock switch) must
+        # register GMS as internal and reload the container registry, or the
+        # game's Google button spins and dies with no account picker.
+        self.assertEqual(services.count('installOne(ctx, GMS_PKG, true, out)'), 2)
+        self.assertIn('MetaPackageManager.fixInternalAppAndReinstall(pkg)', services)
+        self.assertIn('reloadRegistry()', services)
         for src in (microg, services):
             self.assertNotIn('getExtras(', src)
             self.assertNotIn('FLAG_GRANT_', src)

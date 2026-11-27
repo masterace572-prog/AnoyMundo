@@ -71,22 +71,12 @@ public final class GoogleServicesInstaller {
                 return "Google Services install failed: " + out.toString().trim();
             }
         }
-        boolean gms = installOne(ctx, GMS_PKG, out);
+        boolean gms = installOne(ctx, GMS_PKG, true, out);
         boolean gsf = installOne(ctx, GSF_PKG, out);
         boolean store = installOneClone(ctx, PLAY_STORE_PKG, out);
         boolean webview = installOneClone(ctx, WEBVIEW_PKG, out);
         if (gms && gsf) {
-            try {
-                if (!MetaPackageManager.isAppInstalledAsInternal(GMS_PKG)) {
-                    MetaPackageManager.fixInternalAppAndReinstall(GMS_PKG);
-                }
-            } catch (Exception ignored) {
-            }
-            try {
-                MetaPackageManager.reloadAllApps();
-                MetaPackageManager.waitForBackgroundScanner();
-            } catch (Exception ignored) {
-            }
+            reloadRegistry();
             String extra = "";
             if (store) extra += " Play Store installed.";
             if (webview) extra += " WebView installed.";
@@ -95,6 +85,27 @@ public final class GoogleServicesInstaller {
                     + extra + " Restart the game, then try Google login.";
         }
         return "Google Services install incomplete: " + out.toString().trim();
+    }
+
+    /** GMS must be an internal container app, or the game's sign-in intent
+     *  finds no Google activity and silently dies. */
+    private static void registerInternal(String pkg) {
+        try {
+            if (!MetaPackageManager.isAppInstalledAsInternal(pkg)) {
+                MetaPackageManager.fixInternalAppAndReinstall(pkg);
+            }
+        } catch (Exception ignored) {
+        }
+    }
+
+    /** The container only wires GMS's activities/services after a registry reload;
+     *  without it the game's Google button spins for a second and does nothing. */
+    private static void reloadRegistry() {
+        try {
+            MetaPackageManager.reloadAllApps();
+            MetaPackageManager.waitForBackgroundScanner();
+        } catch (Exception ignored) {
+        }
     }
 
     private static boolean removePackage(String pkg) {
@@ -135,11 +146,15 @@ public final class GoogleServicesInstaller {
 
     public static String install(Context ctx) {
         StringBuilder out = new StringBuilder();
-        boolean gms = installOne(ctx, GMS_PKG, out);
+        boolean gms = installOne(ctx, GMS_PKG, true, out);
         boolean gsf = installOne(ctx, GSF_PKG, out);
         boolean store = installOneClone(ctx, PLAY_STORE_PKG, out);
         boolean webview = installOneClone(ctx, WEBVIEW_PKG, out);
         if (gms && gsf) {
+            // The microG->stock switch lands here: GMS must be registered as an
+            // internal container app and the registry reloaded, or the game's
+            // sign-in intent finds no Google activity and dies silently.
+            reloadRegistry();
             String extra = "";
             if (store) extra += " Play Store installed.";
             if (webview) extra += " WebView installed.";
@@ -172,8 +187,15 @@ public final class GoogleServicesInstaller {
     }
 
     private static boolean installOne(Context ctx, String pkg, StringBuilder out) {
+        return installOne(ctx, pkg, false, out);
+    }
+
+    private static boolean installOne(Context ctx, String pkg, boolean registerInternal, StringBuilder out) {
         try {
-            if (MetaPackageManager.isInnerAppInstalled(pkg)) return true;
+            if (MetaPackageManager.isInnerAppInstalled(pkg)) {
+                if (registerInternal) registerInternal(pkg);
+                return true;
+            }
         } catch (Exception ignored) {
         }
         String apkPath;
@@ -189,28 +211,30 @@ public final class GoogleServicesInstaller {
             out.append(pkg).append(" error. ");
             return false;
         }
+        File dir = null;
         try {
             if (splits != null && splits.length > 0) {
                 // Modern GMS/Play Store ship as split APKs. Installing base.apk
                 // alone leaves a broken package that signs in to nothing, so
                 // copy base + splits into a scratch dir (the /data/app dir is
                 // not listable) and hand the whole set to the container.
-                File dir = new File(ctx.getCacheDir(), "clone-" + pkg);
+                dir = new File(ctx.getCacheDir(), "clone-" + pkg);
                 if (!stageApkSet(dir, apkPath, splits)) {
                     out.append(pkg).append(" copy failed — free up storage and retry. ");
                     return false;
                 }
-                try {
-                    MetaApplicationInstaller.installAppsByPath(dir.getAbsolutePath());
-                } finally {
-                    deleteDir(dir);
-                }
+                MetaApplicationInstaller.installAppsByPath(dir.getAbsolutePath());
             } else {
                 MetaApplicationInstaller.installAppByPath(apkPath);
             }
+            // Register while the staged files still exist: the fix-up reinstall
+            // reads them again.
+            if (registerInternal) registerInternal(pkg);
         } catch (Exception e) {
             out.append(pkg).append(" install failed. ");
             return false;
+        } finally {
+            if (dir != null) deleteDir(dir);
         }
         boolean ok = false;
         try {
