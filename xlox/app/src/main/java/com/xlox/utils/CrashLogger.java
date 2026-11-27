@@ -165,4 +165,57 @@ public final class CrashLogger {
         } catch (Exception ignored) {
         }
     }
+
+    /**
+     * API 30+: the last native/container death the system recorded for this
+     * app, as copyable text. The game runs in a virtualized process whose
+     * native fault (abort/signal in the container, the game's own .so, or a
+     * failed split mount) never reaches a Java catch — this is the only
+     * on-device way to see it without ADB. Returns null when unavailable,
+     * denied, or when there is no native exit to report.
+     */
+    public static String readNativeExit(Context ctx) {
+        if (Build.VERSION.SDK_INT < 30) return null;
+        try {
+            android.app.ActivityManager am =
+                    (android.app.ActivityManager) ctx.getSystemService(Context.ACTIVITY_SERVICE);
+            if (am == null) return null;
+            java.util.List<android.app.ApplicationExitInfo> exits =
+                    am.getHistoricalProcessExitReasons(null, 0, 8);
+            if (exits == null) return null;
+            for (android.app.ApplicationExitInfo info : exits) {
+                if (info.getReason() != android.app.ApplicationExitInfo.REASON_CRASH_NATIVE) continue;
+                StringBuilder out = new StringBuilder();
+                out.append("Process: ").append(info.getProcessName())
+                        .append("  pid ").append(info.getPid()).append('\n')
+                        .append("Importance: ").append(info.getImportance())
+                        .append("  at ").append(info.getTimestamp()).append('\n');
+                try {
+                    java.io.InputStream trace = info.getTraceInputStream();
+                    if (trace != null) {
+                        java.io.ByteArrayOutputStream buf = new java.io.ByteArrayOutputStream();
+                        byte[] chunk = new byte[4096];
+                        int n;
+                        int total = 0;
+                        while ((n = trace.read(chunk)) > 0 && total < MAX_REPORT) {
+                            buf.write(chunk, 0, n);
+                            total += n;
+                        }
+                        trace.close();
+                        out.append("\n--- tombstone ---\n")
+                                .append(new String(buf.toByteArray(), StandardCharsets.UTF_8));
+                    } else {
+                        out.append("(no tombstone trace exposed)");
+                    }
+                } catch (Throwable t) {
+                    out.append("(tombstone unreadable: ").append(t.getClass().getSimpleName()).append(')');
+                }
+                String text = out.toString();
+                return text.length() > MAX_REPORT ? text.substring(0, MAX_REPORT) : text;
+            }
+        } catch (Throwable t) {
+            Log.w(TAG, "Native exit history unavailable", t);
+        }
+        return null;
+    }
 }

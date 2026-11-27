@@ -2231,7 +2231,17 @@ public class MAct extends AppCompatActivity {
                         + "Android " + Build.VERSION.RELEASE + " (API " + Build.VERSION.SDK_INT + ")\n"
                         + "Device: " + deviceName() + "\n\n"
                         + "The process died without a Java error (a native crash inside the container).\n\n"
-                        + "Last action: " + action));
+                        + "Last action: " + action + "\n\n" + nativeExitSection()));
+    }
+
+    /** The system-recorded native fault (API 30+), or a note that none was found. */
+    private String nativeExitSection() {
+        try {
+            String exit = CrashLogger.readNativeExit(this);
+            return exit != null ? exit : "Native exit: none recorded (the container may run as a system/root process Android does not attribute to this app)";
+        } catch (Throwable t) {
+            return "Native exit: unreadable";
+        }
     }
 
     /** Appends the split-repair bookkeeping so a report shows whether the fix fired. */
