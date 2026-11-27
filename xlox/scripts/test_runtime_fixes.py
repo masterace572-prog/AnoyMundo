@@ -213,6 +213,8 @@ class AndroidWiring(unittest.TestCase):
         self.assertEqual(services.count('installOne(ctx, GMS_PKG, true, out)'), 2)
         self.assertIn('MetaPackageManager.fixInternalAppAndReinstall(pkg)', services)
         self.assertIn('reloadRegistry()', services)
+        # BGMI's Google button rides on Play Games; it is cloned too (optional).
+        self.assertEqual(services.count('installOneClone(ctx, PLAY_GAMES_PKG, out)'), 2)
         for src in (microg, services):
             self.assertNotIn('getExtras(', src)
             self.assertNotIn('FLAG_GRANT_', src)

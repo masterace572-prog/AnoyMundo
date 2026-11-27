@@ -20,6 +20,8 @@ public final class GoogleServicesInstaller {
     public static final String GSF_PKG = "com.google.android.gsf";
     public static final String PLAY_STORE_PKG = "com.android.vending";
     public static final String WEBVIEW_PKG = "com.google.android.webview";
+    // BGMI's Google button signs in through Play Games on top of GMS.
+    public static final String PLAY_GAMES_PKG = "com.google.android.play.games";
 
     private GoogleServicesInstaller() {
     }
@@ -74,11 +76,13 @@ public final class GoogleServicesInstaller {
         boolean gms = installOne(ctx, GMS_PKG, true, out);
         boolean gsf = installOne(ctx, GSF_PKG, out);
         boolean store = installOneClone(ctx, PLAY_STORE_PKG, out);
+        boolean games = installOneClone(ctx, PLAY_GAMES_PKG, out);
         boolean webview = installOneClone(ctx, WEBVIEW_PKG, out);
         if (gms && gsf) {
             reloadRegistry();
             String extra = "";
             if (store) extra += " Play Store installed.";
+            if (games) extra += " Play Games installed.";
             if (webview) extra += " WebView installed.";
             String summary = installedSummary();
             return "Google Services installed" + (summary.isEmpty() ? "" : " (" + summary + ")") + "."
@@ -149,6 +153,7 @@ public final class GoogleServicesInstaller {
         boolean gms = installOne(ctx, GMS_PKG, true, out);
         boolean gsf = installOne(ctx, GSF_PKG, out);
         boolean store = installOneClone(ctx, PLAY_STORE_PKG, out);
+        boolean games = installOneClone(ctx, PLAY_GAMES_PKG, out);
         boolean webview = installOneClone(ctx, WEBVIEW_PKG, out);
         if (gms && gsf) {
             // The microG->stock switch lands here: GMS must be registered as an
@@ -157,6 +162,7 @@ public final class GoogleServicesInstaller {
             reloadRegistry();
             String extra = "";
             if (store) extra += " Play Store installed.";
+            if (games) extra += " Play Games installed.";
             if (webview) extra += " WebView installed.";
             String summary = installedSummary();
             return "Google Services installed" + (summary.isEmpty() ? "" : " (" + summary + ")") + "."
@@ -297,6 +303,7 @@ public final class GoogleServicesInstaller {
         appendPkgVersion(s, "gms", GMS_PKG);
         appendPkgVersion(s, "gsf", GSF_PKG);
         appendPkgVersion(s, "store", PLAY_STORE_PKG);
+        appendPkgVersion(s, "games", PLAY_GAMES_PKG);
         return s.toString();
     }
 
