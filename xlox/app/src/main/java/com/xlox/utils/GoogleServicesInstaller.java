@@ -30,7 +30,7 @@ public final class GoogleServicesInstaller {
             return MetaPackageManager.isInnerAppInstalled(GMS_PKG)
                     && MetaPackageManager.isInnerAppInstalled(GSF_PKG)
                     && MetaPackageManager.isInnerAppInstalled(PLAY_STORE_PKG);
-        } catch (Exception e) {
+        } catch (Throwable e) {
             return false;
         }
     }
@@ -40,7 +40,7 @@ public final class GoogleServicesInstaller {
         try {
             return MetaPackageManager.isInnerAppInstalled(GMS_PKG)
                     && MetaPackageManager.isInnerAppInstalled(GSF_PKG);
-        } catch (Exception e) {
+        } catch (Throwable e) {
             return false;
         }
     }
@@ -60,7 +60,7 @@ public final class GoogleServicesInstaller {
     public static boolean isPlayStoreInstalled(Context ctx) {
         try {
             return MetaPackageManager.isInnerAppInstalled(PLAY_STORE_PKG);
-        } catch (Exception e) {
+        } catch (Throwable e) {
             return false;
         }
     }
@@ -100,7 +100,7 @@ public final class GoogleServicesInstaller {
             if (!MetaPackageManager.isAppInstalledAsInternal(pkg)) {
                 MetaPackageManager.fixInternalAppAndReinstall(pkg);
             }
-        } catch (Exception ignored) {
+        } catch (Throwable ignored) {
         }
     }
 
@@ -112,7 +112,7 @@ public final class GoogleServicesInstaller {
             if (!hasCoreServices(ctx)) return;
             registerInternal(GMS_PKG);
             reloadRegistry();
-        } catch (Exception ignored) {
+        } catch (Throwable ignored) {
         }
     }
 
@@ -122,20 +122,20 @@ public final class GoogleServicesInstaller {
         try {
             MetaPackageManager.reloadAllApps();
             MetaPackageManager.waitForBackgroundScanner();
-        } catch (Exception ignored) {
+        } catch (Throwable ignored) {
         }
     }
 
     private static boolean removePackage(String pkg) {
         try {
             if (!MetaPackageManager.isInnerAppInstalled(pkg)) return true;
-        } catch (Exception e) {
+        } catch (Throwable e) {
             return true;
         }
         for (int attempt = 0; attempt < 2; attempt++) {
             try {
                 MetaActivityManager.killAppByPkg(pkg);
-            } catch (Exception ignored) {
+            } catch (Throwable ignored) {
             }
             try {
                 Thread.sleep(500);
@@ -143,7 +143,7 @@ public final class GoogleServicesInstaller {
             }
             try {
                 MetaPackageManager.uninstallAppFully(pkg);
-            } catch (Exception ignored) {
+            } catch (Throwable ignored) {
             }
             try {
                 Thread.sleep(500);
@@ -151,13 +151,13 @@ public final class GoogleServicesInstaller {
             }
             try {
                 if (!MetaPackageManager.isInnerAppInstalled(pkg)) return true;
-            } catch (Exception e) {
+            } catch (Throwable e) {
                 return true;
             }
         }
         try {
             return !MetaPackageManager.isInnerAppInstalled(pkg);
-        } catch (Exception e) {
+        } catch (Throwable e) {
             return true;
         }
     }
@@ -189,20 +189,20 @@ public final class GoogleServicesInstaller {
     private static boolean installOneClone(Context ctx, String pkg, StringBuilder out) {
         try {
             if (MetaPackageManager.isInnerAppInstalled(pkg)) return true;
-        } catch (Exception ignored) {
+        } catch (Throwable ignored) {
         }
         try {
             int rc = MetaApplicationInstaller.cloneApp(pkg);
             boolean ok = false;
             try {
                 ok = MetaPackageManager.isInnerAppInstalled(pkg);
-            } catch (Exception ignored) {
+            } catch (Throwable ignored) {
             }
             if (ok) return true;
             out.append(pkg).append(" clone failed (")
                     .append(MetaApplicationInstaller.convertResultToString(rc))
                     .append("), trying install. ");
-        } catch (Exception e) {
+        } catch (Throwable e) {
             out.append(pkg).append(" clone error, trying install. ");
         }
         return installOne(ctx, pkg, out);
@@ -218,7 +218,7 @@ public final class GoogleServicesInstaller {
                 if (registerInternal) registerInternal(pkg);
                 return true;
             }
-        } catch (Exception ignored) {
+        } catch (Throwable ignored) {
         }
         String apkPath;
         String[] splits;
@@ -229,7 +229,7 @@ public final class GoogleServicesInstaller {
         } catch (PackageManager.NameNotFoundException e) {
             out.append(pkg).append(" not on this phone. ");
             return false;
-        } catch (Exception e) {
+        } catch (Throwable e) {
             out.append(pkg).append(" error. ");
             return false;
         }
@@ -253,7 +253,7 @@ public final class GoogleServicesInstaller {
             // Register while the staged files still exist: the fix-up reinstall
             // reads them again.
             if (registerInternal) registerInternal(pkg);
-        } catch (Exception e) {
+        } catch (Throwable e) {
             out.append(pkg).append(" install failed. ");
             return false;
         } finally {
@@ -262,13 +262,13 @@ public final class GoogleServicesInstaller {
         boolean ok = false;
         try {
             ok = MetaPackageManager.isInnerAppInstalled(pkg);
-        } catch (Exception ignored) {
+        } catch (Throwable ignored) {
         }
         if (!ok) {
             out.append(pkg).append(" install failed");
             try {
                 out.append(" (").append(MetaApplicationInstaller.convertResultToString(rc)).append(")");
-            } catch (Exception ignored) {
+            } catch (Throwable ignored) {
             }
             out.append(". ");
         }
@@ -297,16 +297,16 @@ public final class GoogleServicesInstaller {
             while ((n = in.read(buf)) > 0) out.write(buf, 0, n);
             out.flush();
             return true;
-        } catch (Exception e) {
+        } catch (Throwable e) {
             return false;
         } finally {
             try {
                 if (in != null) in.close();
-            } catch (Exception ignored) {
+            } catch (Throwable ignored) {
             }
             try {
                 if (out != null) out.close();
-            } catch (Exception ignored) {
+            } catch (Throwable ignored) {
             }
         }
     }
@@ -340,10 +340,10 @@ public final class GoogleServicesInstaller {
                 try {
                     s.append(MetaPackageManager.isAppInstalledAsInternal(pkg)
                             ? " [internal]" : " [not internal]");
-                } catch (Exception ignored) {
+                } catch (Throwable ignored) {
                 }
             }
-        } catch (Exception ignored) {
+        } catch (Throwable ignored) {
         }
     }
 }

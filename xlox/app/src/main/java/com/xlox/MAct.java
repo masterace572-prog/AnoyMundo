@@ -40,6 +40,7 @@ import com.xlox.utils.GameSupport;
 import com.xlox.utils.GameTarget;
 import com.xlox.utils.GameRunState;
 import com.xlox.utils.ConcurrentLaunchGuard;
+import com.xlox.utils.CrashLogger;
 import com.xlox.utils.GoogleLoginSetup;
 import com.xlox.utils.GoogleServicesInstaller;
 import com.xlox.utils.LibManager;
@@ -557,6 +558,7 @@ public class MAct extends AppCompatActivity {
         reportLoaderError();
         maybeRecheckLibrary();
         maybeRefreshLicence(false);
+        showCrashReport();
         // Back from the All-files-access page (some phones never send a result).
         if (storagePromptOpen && leftForStoragePrompt) finishStoragePrompt();
     }
@@ -2097,6 +2099,38 @@ public class MAct extends AppCompatActivity {
         gate = silent ? UpdateGate.recheck(this, onReady) : UpdateGate.start(this, onReady);
     }
 
+    /** After a crash, home offers the saved report once: copy it for support, or dismiss. */
+    private boolean crashReportShown;
+
+    private void showCrashReport() {
+        if (crashReportShown || preview) return;
+        crashReportShown = true;
+        final String report;
+        try {
+            report = CrashLogger.read(this);
+        } catch (Throwable t) {
+            return;
+        }
+        if (report == null || report.trim().isEmpty()) return;
+        new androidx.appcompat.app.AlertDialog.Builder(this)
+                .setTitle(R.string.crash_report_title)
+                .setMessage(report)
+                .setPositiveButton(R.string.crash_report_copy, (d, w) -> {
+                    try {
+                        ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+                        if (clipboard != null) {
+                            clipboard.setPrimaryClip(ClipData.newPlainText(
+                                    getString(R.string.crash_report_title), report));
+                        }
+                    } catch (RuntimeException e) {
+                        Log.w(TAG, "Crash report: clipboard unavailable", e);
+                    }
+                    CrashLogger.clear(this);
+                })
+                .setNegativeButton(R.string.crash_report_dismiss, (d, w) -> CrashLogger.clear(this))
+                .show();
+    }
+
     private void reportLoaderError() {
         for (GameSession game : games) {
             String error = LibManager.lastLoadError(this, game.target);
@@ -2671,6 +2705,13 @@ public class MAct extends AppCompatActivity {
         String pkg = status == GoogleLoginSetup.Status.GOOGLE_SERVICES
                 ? GoogleServicesInstaller.PLAY_STORE_PKG : GoogleServicesInstaller.GMS_PKG;
         try {
+            // The splash-intent path is the one game launches already prove on
+            // device; the direct launchApp call is the fallback.
+            Intent intent = MetaActivityManager.obtainSplashLaunchIntent(pkg, this);
+            if (intent != null) {
+                startActivity(intent);
+                return true;
+            }
             MetaActivityManager.launchApp(pkg);
             return true;
         } catch (Throwable t) {

@@ -221,6 +221,12 @@ class AndroidWiring(unittest.TestCase):
         self.assertIn('MicroGInstaller.repairInternalInstall(app)', mact)
         # The sheet can open the provider inside Mundo for the manual sign-in.
         self.assertIn('MetaActivityManager.launchApp(pkg)', mact)
+        self.assertIn('MetaActivityManager.obtainSplashLaunchIntent(pkg, this)', mact)
+        # Crashes are recorded and offered for copying on the next home open.
+        box = (JAVA / 'BoxApplication.java').read_text()
+        self.assertIn('CrashLogger.install(this)', box)
+        self.assertIn('CrashLogger.read(this)', mact)
+        self.assertTrue((JAVA / 'utils' / 'CrashLogger.java').is_file())
         # BGMI's Google button rides on Play Games; it is cloned too (optional).
         self.assertEqual(services.count('installOneClone(ctx, PLAY_GAMES_PKG, out)'), 2)
         for src in (microg, services):

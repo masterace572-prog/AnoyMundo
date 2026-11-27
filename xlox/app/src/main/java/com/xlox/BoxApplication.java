@@ -4,6 +4,7 @@ import android.app.Application;
 import android.content.Context;
 import android.util.Log;
 
+import com.xlox.utils.CrashLogger;
 import com.xlox.utils.LibManager;
 import com.xlox.utils.GameTarget;
 import com.xlox.utils.GameWebRouting;
@@ -44,6 +45,8 @@ public class BoxApplication extends Application
 
     @Override
     protected void attachBaseContext(Context base) {
+        // Earliest point of the process: record any later crash for support.
+        CrashLogger.install(this);
         super.attachBaseContext(base);
         MetaCore.setProcessLifecycleCallback(this);
     }
