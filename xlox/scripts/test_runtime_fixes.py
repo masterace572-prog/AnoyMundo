@@ -213,6 +213,12 @@ class AndroidWiring(unittest.TestCase):
         self.assertEqual(services.count('installOne(ctx, GMS_PKG, true, out)'), 2)
         self.assertIn('MetaPackageManager.fixInternalAppAndReinstall(pkg)', services)
         self.assertIn('reloadRegistry()', services)
+        # The container drops the internal flag across launches: a public repair
+        # exists and MAct re-asserts it on every start (working-loader pattern).
+        self.assertIn('public static void repairInternalInstall(Context ctx)', services)
+        mact = (JAVA / 'MAct.java').read_text()
+        self.assertIn('GoogleServicesInstaller.repairInternalInstall(app)', mact)
+        self.assertIn('MicroGInstaller.repairInternalInstall(app)', mact)
         # BGMI's Google button rides on Play Games; it is cloned too (optional).
         self.assertEqual(services.count('installOneClone(ctx, PLAY_GAMES_PKG, out)'), 2)
         for src in (microg, services):

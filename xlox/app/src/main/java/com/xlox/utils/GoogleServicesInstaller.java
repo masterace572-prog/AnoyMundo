@@ -86,7 +86,9 @@ public final class GoogleServicesInstaller {
             if (webview) extra += " WebView installed.";
             String summary = installedSummary();
             return "Google Services installed" + (summary.isEmpty() ? "" : " (" + summary + ")") + "."
-                    + extra + " Restart the game, then try Google login.";
+                    + extra + " Restart the game, then try Google login."
+                    + " If the game still shows no account picker, open the Play Store inside Mundo once,"
+                    + " sign in to Google there, and try again.";
         }
         return "Google Services install incomplete: " + out.toString().trim();
     }
@@ -98,6 +100,18 @@ public final class GoogleServicesInstaller {
             if (!MetaPackageManager.isAppInstalledAsInternal(pkg)) {
                 MetaPackageManager.fixInternalAppAndReinstall(pkg);
             }
+        } catch (Exception ignored) {
+        }
+    }
+
+    /** The container can drop GMS's internal registration across launches —
+     *  working loaders re-assert it on every app start, before the game runs.
+     *  Safe no-op when stock services are absent or already registered. */
+    public static void repairInternalInstall(Context ctx) {
+        try {
+            if (!hasCoreServices(ctx)) return;
+            registerInternal(GMS_PKG);
+            reloadRegistry();
         } catch (Exception ignored) {
         }
     }
@@ -166,7 +180,9 @@ public final class GoogleServicesInstaller {
             if (webview) extra += " WebView installed.";
             String summary = installedSummary();
             return "Google Services installed" + (summary.isEmpty() ? "" : " (" + summary + ")") + "."
-                    + extra + " Restart the game, then try Google login.";
+                    + extra + " Restart the game, then try Google login."
+                    + " If the game still shows no account picker, open the Play Store inside Mundo once,"
+                    + " sign in to Google there, and try again.";
         }
         return "Google Services install incomplete: " + out.toString().trim();
     }

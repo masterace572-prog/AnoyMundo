@@ -2490,10 +2490,39 @@ public class MAct extends AppCompatActivity {
     private void setupGoogleLogin() {
         googleStatusValue = findViewById(R.id.googleStatusValue);
         refreshGoogleStatus();
+        repairGoogleOnStart();
         findViewById(R.id.googleSetupRow).setOnClickListener(v -> {
             Ui.tap(v);
             showGoogleLoginSheet();
         });
+    }
+
+    /** The container can drop GMS's internal registration across launches —
+     *  working loaders re-assert it on every start, before the game runs.
+     *  Without it the game's Google button spins and shows no account picker. */
+    private void repairGoogleOnStart() {
+        if (anyGameRunning()) return;
+        GoogleLoginSetup.Status status = probeGoogleStatus();
+        if (!GoogleLoginSetup.isReady(status)) return;
+        if (googleExecutor == null) {
+            googleExecutor = Executors.newSingleThreadExecutor(r -> new Thread(r, "anoy-google-setup"));
+        }
+        final Context app = getApplicationContext();
+        final boolean microg = status == GoogleLoginSetup.Status.MICROG;
+        try {
+            googleExecutor.execute(() -> {
+                try {
+                    if (microg) {
+                        MicroGInstaller.repairInternalInstall(app);
+                    } else {
+                        GoogleServicesInstaller.repairInternalInstall(app);
+                    }
+                } catch (Throwable t) {
+                    Log.w(TAG, "Google login: start repair failed", t);
+                }
+            });
+        } catch (RejectedExecutionException ignored) {
+        }
     }
 
     /** A container failure reads as "not set up": the sheet's actions still work. */
