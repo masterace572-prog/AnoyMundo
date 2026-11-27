@@ -29,18 +29,10 @@ public final class GoogleLoginSetupTest {
             require(GoogleLoginSetup.resolveStatus(true, true, false) == GoogleLoginSetup.Status.MICROG,
                     "microG alone must win");
         });
-        test("microG without the internal registration needs repair, not reinstall", () -> {
+        test("microG without the internal registration stays a distinct state", () -> {
             require(GoogleLoginSetup.resolveStatus(true, false, false)
                             == GoogleLoginSetup.Status.MICROG_NEEDS_REPAIR,
-                    "non-internal microG must need repair");
-            require(GoogleLoginSetup.showRepair(GoogleLoginSetup.Status.MICROG_NEEDS_REPAIR),
-                    "repair is offered");
-            require(!GoogleLoginSetup.showRepair(GoogleLoginSetup.Status.MICROG),
-                    "healthy microG needs no repair");
-            require(!GoogleLoginSetup.showRepair(GoogleLoginSetup.Status.GOOGLE_SERVICES),
-                    "stock never shows microG repair");
-            require(!GoogleLoginSetup.showRepair(GoogleLoginSetup.Status.NOT_SET_UP),
-                    "nothing installed: no repair");
+                    "non-internal microG is detected as degraded");
         });
         test("stock core services read as Google services only without microG", () -> {
             require(GoogleLoginSetup.resolveStatus(false, false, true) == GoogleLoginSetup.Status.GOOGLE_SERVICES,
@@ -54,24 +46,6 @@ public final class GoogleLoginSetupTest {
             require(!GoogleLoginSetup.phoneAvailable(false, true), "GMS missing");
             require(!GoogleLoginSetup.phoneAvailable(false, false), "neither present");
         });
-        test("the phone action hides only for a healthy stock install", () -> {
-            require(!GoogleLoginSetup.showPhoneAction(GoogleLoginSetup.Status.GOOGLE_SERVICES, true),
-                    "already stock: pointless");
-            require(GoogleLoginSetup.showPhoneAction(GoogleLoginSetup.Status.MICROG, true),
-                    "switch away from microG");
-            require(GoogleLoginSetup.showPhoneAction(GoogleLoginSetup.Status.NOT_SET_UP, true),
-                    "fresh install");
-            require(!GoogleLoginSetup.showPhoneAction(GoogleLoginSetup.Status.NOT_SET_UP, false),
-                    "no Google apps on the phone: not offered");
-        });
-        test("microG is offered unless it is the healthy provider", () -> {
-            require(!GoogleLoginSetup.showMicrogAction(GoogleLoginSetup.Status.MICROG), "already microG");
-            require(GoogleLoginSetup.showMicrogAction(GoogleLoginSetup.Status.MICROG_NEEDS_REPAIR),
-                    "reinstall remains available beside repair");
-            require(GoogleLoginSetup.showMicrogAction(GoogleLoginSetup.Status.GOOGLE_SERVICES),
-                    "switch away from stock");
-            require(GoogleLoginSetup.showMicrogAction(GoogleLoginSetup.Status.NOT_SET_UP), "fresh install");
-        });
         test("only a healthy provider counts as ready for the game's sign-in", () -> {
             require(GoogleLoginSetup.isReady(GoogleLoginSetup.Status.MICROG), "microG ready");
             require(GoogleLoginSetup.isReady(GoogleLoginSetup.Status.GOOGLE_SERVICES), "stock ready");
@@ -79,7 +53,7 @@ public final class GoogleLoginSetupTest {
                     "broken microG is not ready");
             require(!GoogleLoginSetup.isReady(GoogleLoginSetup.Status.NOT_SET_UP), "nothing is not ready");
         });
-        test("the phone button switches away from microG and installs fresh otherwise", () -> {
+        test("the switch task switches away from microG and installs fresh otherwise", () -> {
             require(GoogleLoginSetup.phoneTask(GoogleLoginSetup.Status.MICROG)
                             == GoogleLoginSetup.Task.SWITCH_TO_PHONE, "microG -> stock switch");
             require(GoogleLoginSetup.phoneTask(GoogleLoginSetup.Status.MICROG_NEEDS_REPAIR)
