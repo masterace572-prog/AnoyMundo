@@ -79,7 +79,7 @@ public class BoxApplication extends Application
         PmCompatShim.install();
         // Android 16+: virtual apps with isolated splits get no dependency
         // table from the container; repair it on every incoming launch.
-        SplitDepsFix.install();
+        SplitDepsFix.install(this);
         AccountTrace.install(this);
     }
 
@@ -95,7 +95,7 @@ public class BoxApplication extends Application
         // package manager before the virtual app's threads first query it
         // (Android 16+ slice types; the Play Store dies on this otherwise).
         PmCompatShim.install();
-        SplitDepsFix.install();
+        SplitDepsFix.install(this);
         AccountTrace.install(this);
         final GameTarget game = GameTarget.forProcess(processName, processName2);
         if (game == null) {
@@ -164,7 +164,7 @@ public class BoxApplication extends Application
     @Override
     public void onInitialized() {
         PmCompatShim.install();
-        SplitDepsFix.install();
+        SplitDepsFix.install(this);
         if (virtualGameProcess) installGameWebRouting(true);
     }
 

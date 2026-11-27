@@ -249,8 +249,8 @@ class AndroidWiring(unittest.TestCase):
         # ApplicationInfo on incoming launches and on PM-returned infos.
         self.assertTrue((JAVA / 'utils' / 'SplitDepsFix.java').is_file())
         self.assertTrue((JAVA / 'utils' / 'SplitDepsTable.java').is_file())
-        self.assertEqual(box.count('SplitDepsFix.install()'), 3)
-        self.assertIn('SplitDepsFix.install()', mact)
+        self.assertEqual(box.count('SplitDepsFix.install(this)'), 3)
+        self.assertIn('SplitDepsFix.install(this)', mact)
         self.assertIn('SplitDepsFix.repair(info)', (JAVA / 'utils' / 'PmCompatShim.java').read_text())
         # Silent in-container sign-in failures are traced into support info.
         self.assertTrue((JAVA / 'utils' / 'AccountTrace.java').is_file())

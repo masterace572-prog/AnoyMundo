@@ -39,6 +39,7 @@ import com.xlox.utils.AppManager;
 import com.xlox.utils.AppUpdater;
 import com.xlox.utils.GameSupport;
 import com.xlox.utils.GameTarget;
+import com.xlox.utils.GameLoginRouter;
 import com.xlox.utils.GameRunState;
 import com.xlox.utils.ConcurrentLaunchGuard;
 import com.xlox.utils.ConfigGuard;
@@ -2000,8 +2001,7 @@ public class MAct extends AppCompatActivity {
             CrashLogger.noteAction(this, "launch: " + launchTarget.target.packageName);
             Intent intent = obtainLaunchIntent();
             if (intent != null) {
-                startActivity(intent);
-                started = true; // startActivity returned normally: the game is launching.
+                started = dispatchLaunch(intent);
             }
         } catch (Throwable t) {
             failure = t;
@@ -2029,6 +2029,29 @@ public class MAct extends AppCompatActivity {
             }
         }
         return MetaActivityManager.obtainSplashLaunchIntent(launchTarget.target.packageName, this);
+    }
+
+    /**
+     * Sends a game launch into the container. The splash intent's explicit
+     * component goes through the SDK's in-container launcher with an explicit
+     * user (the recipe GameLoginCallbackActivity proves out) — the host
+     * startActivity path is what NPEs on Android 16+'s isolated-split
+     * transaction. Host startActivity remains as the fallback for containers
+     * where launchIntent cannot take the component.
+     */
+    private boolean dispatchLaunch(Intent intent) {
+        try {
+            ComponentName component = intent.getComponent();
+            if (component != null) {
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+                MetaActivityManager.launchIntent(intent, GameLoginRouter.USER);
+                return true; // dispatch returned: the container accepted the launch.
+            }
+        } catch (Throwable t) {
+            Log.w(TAG, "In-container launch dispatch failed, trying host startActivity", t);
+        }
+        startActivity(intent);
+        return true; // startActivity returned normally: the game is launching.
     }
 
     /** True when the virtual container reports the game process running. */
@@ -2190,7 +2213,7 @@ public class MAct extends AppCompatActivity {
         }
         if (report != null && !report.trim().isEmpty()) {
             CrashLogger.clearAction(this); // the Java trace supersedes the breadcrumb
-            showCrashDialog(getString(R.string.crash_report_title), report);
+            showCrashDialog(getString(R.string.crash_report_title), withSplitFixState(report));
             return;
         }
         // No Java trace: a native container crash leaves no exception behind,
@@ -2204,11 +2227,22 @@ public class MAct extends AppCompatActivity {
         if (action == null || action.trim().isEmpty()) return;
         CrashLogger.clearAction(this);
         showCrashDialog(getString(R.string.crash_action_title),
-                "Anoy " + BuildConfig.VERSION_NAME + " (" + BuildConfig.VERSION_CODE + ")\n"
+                withSplitFixState("Anoy " + BuildConfig.VERSION_NAME + " (" + BuildConfig.VERSION_CODE + ")\n"
                         + "Android " + Build.VERSION.RELEASE + " (API " + Build.VERSION.SDK_INT + ")\n"
                         + "Device: " + deviceName() + "\n\n"
                         + "The process died without a Java error (a native crash inside the container).\n\n"
-                        + "Last action: " + action);
+                        + "Last action: " + action));
+    }
+
+    /** Appends the split-repair bookkeeping so a report shows whether the fix fired. */
+    private String withSplitFixState(String report) {
+        try {
+            String state = SplitDepsFix.readState(this);
+            if (state.isEmpty()) return report + "\n\nSplit repair: never fired";
+            return report + "\n\nSplit repair fired for:\n" + state;
+        } catch (Throwable t) {
+            return report;
+        }
     }
 
     private void showCrashDialog(String title, final String report) {
@@ -2788,15 +2822,22 @@ public class MAct extends AppCompatActivity {
             // runs; the breadcrumb lets the next start say what was being opened.
             CrashLogger.noteAction(this, "open in Mundo: Google account");
             guardContainerLaunch();
-            MetaActivityManager.launchIntent(new Intent().setComponent(minutemaid));
+            // The proven in-container launch recipe (the web-login router uses
+            // exactly this): explicit container user, NEW_TASK | SINGLE_TOP.
+            Intent target = new Intent().setComponent(minutemaid);
+            target.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+            MetaActivityManager.launchIntent(target, GameLoginRouter.USER);
             views.result.setText(R.string.google_add_account_opening);
             views.result.setVisibility(View.VISIBLE);
             // Six seconds later GMS must be running in the container; otherwise
             // the launch was silently swallowed — say so instead of "nothing".
+            // Only scheduled when dispatch returned cleanly: a throw already
+            // showed the failure in the catch below.
             crashHandler.postDelayed(() -> {
                 boolean up;
                 try {
-                    up = MetaActivityManager.isAppRunning(GoogleServicesInstaller.GMS_PKG);
+                    up = MetaActivityManager.isAppRunning(GoogleServicesInstaller.GMS_PKG,
+                            GameLoginRouter.USER);
                 } catch (Throwable t) {
                     up = true; // probe failed: do not cry wolf
                 }
@@ -2865,7 +2906,7 @@ public class MAct extends AppCompatActivity {
             ConfigGuard.install(app);
             ConfigGuard.repairNow(app);
             PmCompatShim.install();
-            SplitDepsFix.install();
+            SplitDepsFix.install(this);
         } catch (Throwable ignored) {
         }
     }

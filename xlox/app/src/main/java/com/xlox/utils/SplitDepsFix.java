@@ -7,6 +7,7 @@ import android.os.Message;
 import android.util.Log;
 import android.util.SparseArray;
 
+import java.io.File;
 import java.lang.ref.Reference;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
@@ -52,8 +53,58 @@ public final class SplitDepsFix {
     private static final String SPLIT_LOADER_IMPL = "android.app.LoadedApk$SplitDependencyLoaderImpl";
 
     private static boolean installed;
+    private static File stateDir;
 
     private SplitDepsFix() {
+    }
+
+    /** Records the files dir for repair bookkeeping, then installs the hook. */
+    public static void install(android.content.Context ctx) {
+        try {
+            if (ctx != null) stateDir = ctx.getApplicationContext().getFilesDir();
+        } catch (Throwable ignored) {
+        }
+        install();
+    }
+
+    /** Packages the repair fired for, newest last; "" when none or unreadable. */
+    public static String readState(android.content.Context ctx) {
+        File dir = stateDir;
+        try {
+            if (ctx != null) dir = ctx.getFilesDir();
+        } catch (Throwable ignored) {
+        }
+        if (dir == null) return "";
+        File file = new File(dir, "splitfix_state.txt");
+        if (!file.isFile()) return "";
+        try {
+            byte[] data = new byte[(int) Math.min(file.length(), 4096)];
+            java.io.FileInputStream in = new java.io.FileInputStream(file);
+            try {
+                int n = in.read(data);
+                return n > 0 ? new String(data, 0, n, java.nio.charset.StandardCharsets.UTF_8).trim() : "";
+            } finally {
+                in.close();
+            }
+        } catch (Throwable t) {
+            return "";
+        }
+    }
+
+    private static void noteRepair(String packageName) {
+        File dir = stateDir;
+        if (dir == null) return;
+        java.io.FileOutputStream out = null;
+        try {
+            out = new java.io.FileOutputStream(new File(dir, "splitfix_state.txt"), true);
+            out.write((packageName + "\n").getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        } catch (Throwable ignored) {
+        } finally {
+            try {
+                if (out != null) out.close();
+            } catch (Throwable ignored) {
+            }
+        }
     }
 
     /** Installs the repair hook once per process; safe to call repeatedly. */
@@ -210,6 +261,7 @@ public final class SplitDepsFix {
             if (deps.get(info) != null) return false;
             deps.set(info, toSparseArray(SplitDepsTable.synthesize(splitNames)));
             ensureClassLoaderNames(info, splitNames.length);
+            noteRepair(info.packageName);
             Log.i(TAG, "Repaired split dependencies for " + info.packageName);
             return true;
         } catch (Throwable t) {
