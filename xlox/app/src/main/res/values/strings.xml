@@ -325,7 +325,7 @@
     <string name="google_use_phone">Use this phone\'s Google apps</string>
     <string name="google_use_phone_unavailable">This phone has no Google apps to copy.</string>
     <string name="google_use_microg">Download microG instead</string>
-    <string name="google_microg_caption">For phones without Google. Downloads about 115 MB once and checks every file.</string>
+    <string name="google_microg_caption">For phones without Google. Downloads about 115 MB once and checks every file. Some games still refuse microG; the phone option above is more reliable.</string>
     <string name="google_repair">Repair microG</string>
     <string name="google_repair_done">microG repaired. Restart the game, then try Google login.</string>
     <string name="google_repair_failed">Repair didn\'t work. Set microG up again instead.</string>

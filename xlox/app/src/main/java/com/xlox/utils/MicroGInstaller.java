@@ -114,7 +114,11 @@ public final class MicroGInstaller {
         }
         if (allOk) {
             repairInternalInstall(ctx);
-            return "Google Software installed in Mundo. Open Google Software Settings, sign in to Google, enable device registration, then restart the game and try Google login.";
+            return "Google Software installed in Mundo. Open Google Software Settings, sign in to Google, "
+                    + "enable device registration, then restart the game and try Google login. "
+                    + "If the game still says the Play services version is unusable, that game currently "
+                    + "blocks microG itself (a known microG limit) — remove microG here and use the "
+                    + "phone's Google apps option instead.";
         }
         return "Google Software install incomplete: " + out.toString().trim();
     }

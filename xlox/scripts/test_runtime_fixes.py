@@ -200,9 +200,12 @@ class AndroidWiring(unittest.TestCase):
         self.assertIn('outFile.length() != expectedSize', microg)
         self.assertIn('HTTP_OK', microg)
         self.assertNotIn('http://', microg)
-        # The stock path only clones/installs apps already on the phone.
+        # The stock path only clones/installs apps already on the phone, and a
+        # split APK (modern GMS) is staged as base + splits, never base-only.
         self.assertIn('info.applicationInfo.sourceDir', services)
         self.assertIn('MetaApplicationInstaller.cloneApp(pkg)', services)
+        self.assertIn('info.applicationInfo.splitSourceDirs', services)
+        self.assertIn('MetaApplicationInstaller.installAppsByPath(dir.getAbsolutePath())', services)
         self.assertNotIn('http://', services)
         for src in (microg, services):
             self.assertNotIn('getExtras(', src)

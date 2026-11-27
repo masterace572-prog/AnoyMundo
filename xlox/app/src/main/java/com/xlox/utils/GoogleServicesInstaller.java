@@ -4,6 +4,12 @@ import android.content.Context;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.InputStream;
+import java.io.OutputStream;
+
 import net_62v.external.MetaActivityManager;
 import net_62v.external.MetaApplicationInstaller;
 import net_62v.external.MetaPackageManager;
@@ -84,7 +90,9 @@ public final class GoogleServicesInstaller {
             String extra = "";
             if (store) extra += " Play Store installed.";
             if (webview) extra += " WebView installed.";
-            return "Google Services installed." + extra + " Restart the game, then try Google login.";
+            String summary = installedSummary();
+            return "Google Services installed" + (summary.isEmpty() ? "" : " (" + summary + ")") + "."
+                    + extra + " Restart the game, then try Google login.";
         }
         return "Google Services install incomplete: " + out.toString().trim();
     }
@@ -135,7 +143,9 @@ public final class GoogleServicesInstaller {
             String extra = "";
             if (store) extra += " Play Store installed.";
             if (webview) extra += " WebView installed.";
-            return "Google Services installed." + extra + " Restart the game, then try Google login.";
+            String summary = installedSummary();
+            return "Google Services installed" + (summary.isEmpty() ? "" : " (" + summary + ")") + "."
+                    + extra + " Restart the game, then try Google login.";
         }
         return "Google Services install incomplete: " + out.toString().trim();
     }
@@ -167,9 +177,11 @@ public final class GoogleServicesInstaller {
         } catch (Exception ignored) {
         }
         String apkPath;
+        String[] splits;
         try {
             PackageInfo info = ctx.getPackageManager().getPackageInfo(pkg, 0);
             apkPath = info.applicationInfo.sourceDir;
+            splits = info.applicationInfo.splitSourceDirs;
         } catch (PackageManager.NameNotFoundException e) {
             out.append(pkg).append(" not on this phone. ");
             return false;
@@ -178,7 +190,24 @@ public final class GoogleServicesInstaller {
             return false;
         }
         try {
-            MetaApplicationInstaller.installAppByPath(apkPath);
+            if (splits != null && splits.length > 0) {
+                // Modern GMS/Play Store ship as split APKs. Installing base.apk
+                // alone leaves a broken package that signs in to nothing, so
+                // copy base + splits into a scratch dir (the /data/app dir is
+                // not listable) and hand the whole set to the container.
+                File dir = new File(ctx.getCacheDir(), "clone-" + pkg);
+                if (!stageApkSet(dir, apkPath, splits)) {
+                    out.append(pkg).append(" copy failed — free up storage and retry. ");
+                    return false;
+                }
+                try {
+                    MetaApplicationInstaller.installAppsByPath(dir.getAbsolutePath());
+                } finally {
+                    deleteDir(dir);
+                }
+            } else {
+                MetaApplicationInstaller.installAppByPath(apkPath);
+            }
         } catch (Exception e) {
             out.append(pkg).append(" install failed. ");
             return false;
@@ -190,5 +219,71 @@ public final class GoogleServicesInstaller {
         }
         if (!ok) out.append(pkg).append(" install failed. ");
         return ok;
+    }
+
+    /** Copies base.apk and every split into {@code dir}; false when any part fails. */
+    private static boolean stageApkSet(File dir, String base, String[] splits) {
+        deleteDir(dir);
+        if (!dir.mkdirs()) return false;
+        if (!copyFile(new File(base), new File(dir, new File(base).getName()))) return false;
+        for (String split : splits) {
+            if (!copyFile(new File(split), new File(dir, new File(split).getName()))) return false;
+        }
+        return true;
+    }
+
+    private static boolean copyFile(File from, File to) {
+        InputStream in = null;
+        OutputStream out = null;
+        try {
+            in = new FileInputStream(from);
+            out = new FileOutputStream(to);
+            byte[] buf = new byte[65536];
+            int n;
+            while ((n = in.read(buf)) > 0) out.write(buf, 0, n);
+            out.flush();
+            return true;
+        } catch (Exception e) {
+            return false;
+        } finally {
+            try {
+                if (in != null) in.close();
+            } catch (Exception ignored) {
+            }
+            try {
+                if (out != null) out.close();
+            } catch (Exception ignored) {
+            }
+        }
+    }
+
+    private static void deleteDir(File dir) {
+        File[] files = dir.listFiles();
+        if (files != null) {
+            for (File f : files) {
+                if (f.isDirectory()) deleteDir(f); else f.delete();
+            }
+        }
+        dir.delete();
+    }
+
+    /** "gms 25.41.31, gsf 10" — what the container actually ended up with, for support reports. */
+    public static String installedSummary() {
+        StringBuilder s = new StringBuilder();
+        appendPkgVersion(s, "gms", GMS_PKG);
+        appendPkgVersion(s, "gsf", GSF_PKG);
+        appendPkgVersion(s, "store", PLAY_STORE_PKG);
+        return s.toString();
+    }
+
+    private static void appendPkgVersion(StringBuilder s, String label, String pkg) {
+        try {
+            PackageInfo info = MetaPackageManager.getInnerAppPackageInfo(pkg, 0);
+            if (info != null && info.versionName != null) {
+                if (s.length() > 0) s.append(", ");
+                s.append(label).append(' ').append(info.versionName);
+            }
+        } catch (Exception ignored) {
+        }
     }
 }
