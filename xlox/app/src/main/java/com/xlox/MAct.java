@@ -43,6 +43,7 @@ import com.xlox.utils.GameRunState;
 import com.xlox.utils.ConcurrentLaunchGuard;
 import com.xlox.utils.ConfigGuard;
 import com.xlox.utils.CrashLogger;
+import com.xlox.utils.SplitDepsFix;
 import com.xlox.utils.GoogleLoginSetup;
 import com.xlox.utils.GoogleServicesInstaller;
 import com.xlox.utils.LibManager;
@@ -2864,6 +2865,7 @@ public class MAct extends AppCompatActivity {
             ConfigGuard.install(app);
             ConfigGuard.repairNow(app);
             PmCompatShim.install();
+            SplitDepsFix.install();
         } catch (Throwable ignored) {
         }
     }

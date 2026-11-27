@@ -243,6 +243,15 @@ class AndroidWiring(unittest.TestCase):
         self.assertTrue((JAVA / 'utils' / 'PmCompatShim.java').is_file())
         self.assertIn('PmCompatShim.install()', box)
         self.assertIn('PmCompatShim.install()', mact)
+        # Android 16+ isolated-split launches: the container never computes the
+        # split dependency table, so every virtual-app activity launch NPEs in
+        # SplitDependencyLoader.collectConfigSplitIndices. The fix repairs the
+        # ApplicationInfo on incoming launches and on PM-returned infos.
+        self.assertTrue((JAVA / 'utils' / 'SplitDepsFix.java').is_file())
+        self.assertTrue((JAVA / 'utils' / 'SplitDepsTable.java').is_file())
+        self.assertEqual(box.count('SplitDepsFix.install()'), 3)
+        self.assertIn('SplitDepsFix.install()', mact)
+        self.assertIn('SplitDepsFix.repair(info)', (JAVA / 'utils' / 'PmCompatShim.java').read_text())
         # Silent in-container sign-in failures are traced into support info.
         self.assertTrue((JAVA / 'utils' / 'AccountTrace.java').is_file())
         self.assertIn('AccountTrace.install(this)', box)
@@ -409,12 +418,12 @@ def main() -> None:
     ecj = os.environ.get('ECJ_JAR')
     if not java or not (javac or ecj):
         raise RuntimeError('A JDK is needed (or JAVA + ECJ_JAR for a JRE-only local environment)')
-    sources = [JAVA / 'utils' / name for name in ('GameLoginRouter.java', 'UpdateRequest.java', 'LibraryHttp.java', 'GameWebPolicy.java', 'GameWebCallRouter.java', 'GameWebNavigator.java', 'GoogleLoginSetup.java')]
-    sources.extend(ROOT / 'tests/runtime' / name for name in ('RuntimeFixesTest.java', 'GameWebFlowTest.java', 'GoogleLoginSetupTest.java'))
+    sources = [JAVA / 'utils' / name for name in ('GameLoginRouter.java', 'UpdateRequest.java', 'LibraryHttp.java', 'GameWebPolicy.java', 'GameWebCallRouter.java', 'GameWebNavigator.java', 'GoogleLoginSetup.java', 'SplitDepsTable.java')]
+    sources.extend(ROOT / 'tests/runtime' / name for name in ('RuntimeFixesTest.java', 'GameWebFlowTest.java', 'GoogleLoginSetupTest.java', 'SplitDepsTableTest.java'))
     with tempfile.TemporaryDirectory(prefix='loader-runtime-test-') as output:
         compiler = [javac, '-source', '8', '-target', '8'] if javac else [java, '-jar', ecj, '-8', '-warn:none']
         subprocess.run([*compiler, '-d', output, *map(str, sources)], check=True)
-        for test in ('RuntimeFixesTest', 'GameWebFlowTest', 'GoogleLoginSetupTest'):
+        for test in ('RuntimeFixesTest', 'GameWebFlowTest', 'GoogleLoginSetupTest', 'SplitDepsTableTest'):
             subprocess.run([java, '-ea', '-cp', output, 'com.xlox.tests.' + test], check=True, timeout=30)
     # SDK-free structural checks (host Android UI behavior runs separately in Gradle).
     subprocess.run([sys.executable, '-B', str(ROOT / 'scripts/test_navigation.py')], check=True)

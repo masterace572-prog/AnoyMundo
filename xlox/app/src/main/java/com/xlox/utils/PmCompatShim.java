@@ -1,5 +1,7 @@
 package com.xlox.utils;
 
+import android.content.pm.ApplicationInfo;
+import android.content.pm.PackageInfo;
 import android.os.IBinder;
 import android.util.Log;
 
@@ -98,8 +100,22 @@ public final class PmCompatShim {
                     return invokeSystem(method, args);
                 }
             }
+            // Second layer of the Android 16+ split fix: infos the framework
+            // pulls through the PM also get a repaired dependency table.
+            try {
+                ApplicationInfo info = pmResultInfo(result);
+                if (info != null) SplitDepsFix.repair(info);
+            } catch (Throwable ignored) {
+            }
             return result;
         }
+    }
+
+    /** The ApplicationInfo a PM result carries, or null. */
+    private static ApplicationInfo pmResultInfo(Object result) {
+        if (result instanceof ApplicationInfo) return (ApplicationInfo) result;
+        if (result instanceof PackageInfo) return ((PackageInfo) result).applicationInfo;
+        return null;
     }
 
     /** True when clazz is android.content.pm.ParceledListSlice or a subclass of it. */
