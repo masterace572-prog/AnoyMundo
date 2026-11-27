@@ -236,6 +236,11 @@ class AndroidWiring(unittest.TestCase):
         self.assertTrue((JAVA / 'utils' / 'ConfigGuard.java').is_file())
         self.assertIn('ConfigGuard.install(this)', box)
         self.assertIn('guardContainerLaunch()', mact)
+        # Android 16+ PM slice types: the shim re-wraps ParceledListSlice into
+        # the PackageInfoList-style subclass the current Android expects.
+        self.assertTrue((JAVA / 'utils' / 'PmCompatShim.java').is_file())
+        self.assertIn('PmCompatShim.install()', box)
+        self.assertIn('PmCompatShim.install()', mact)
         # BGMI's Google button rides on Play Games; it is cloned too (optional).
         self.assertEqual(services.count('installOneClone(ctx, PLAY_GAMES_PKG, out)'), 2)
         for src in (microg, services):

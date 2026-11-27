@@ -9,6 +9,7 @@ import com.xlox.utils.CrashLogger;
 import com.xlox.utils.LibManager;
 import com.xlox.utils.GameTarget;
 import com.xlox.utils.GameWebRouting;
+import com.xlox.utils.PmCompatShim;
 
 import java.io.File;
 
@@ -71,6 +72,9 @@ public class BoxApplication extends Application
         // Activation may hook the main handler after attachBaseContext: re-chain
         // the config guard so it survives whatever the container installed.
         ConfigGuard.install(this);
+        // Same for the package manager hook: wrap it with the Android 16+
+        // slice-type shim once the container's proxy is in place.
+        PmCompatShim.install();
     }
 
     /**
@@ -81,6 +85,10 @@ public class BoxApplication extends Application
     public void onCreate(String processName, String processName2) {
         Log.i(LOAD_TAG, "Virtual process started: " + processName + " / " + processName2
                 + " — " + LibManager.diagnostics(this));
+        // The vprocess is fully hooked when this callback runs: wrap the hooked
+        // package manager before the virtual app's threads first query it
+        // (Android 16+ slice types; the Play Store dies on this otherwise).
+        PmCompatShim.install();
         final GameTarget game = GameTarget.forProcess(processName, processName2);
         if (game == null) {
             Log.d(LOAD_TAG, "Ignoring non-game process: " + processName);
@@ -147,6 +155,7 @@ public class BoxApplication extends Application
 
     @Override
     public void onInitialized() {
+        PmCompatShim.install();
         if (virtualGameProcess) installGameWebRouting(true);
     }
 

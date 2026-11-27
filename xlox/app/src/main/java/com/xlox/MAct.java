@@ -47,6 +47,7 @@ import com.xlox.utils.GoogleServicesInstaller;
 import com.xlox.utils.LibManager;
 import com.xlox.utils.MicroGInstaller;
 import com.xlox.utils.Net;
+import com.xlox.utils.PmCompatShim;
 import com.xlox.utils.Prefs;
 import com.xlox.utils.StorageAccess;
 import com.xlox.utils.UpdateException;
@@ -2734,6 +2735,7 @@ public class MAct extends AppCompatActivity {
             if (app == null) return;
             ConfigGuard.install(app);
             ConfigGuard.repairNow(app);
+            PmCompatShim.install();
         } catch (Throwable ignored) {
         }
     }
