@@ -227,12 +227,13 @@ public final class CrashLogger {
     public static String sweepContainerLogs(Context ctx, String pkg) {
         java.util.List<File> roots = new java.util.ArrayList<>();
         try {
-            roots.add(ctx.getFilesDir());
+            File files = ctx.getFilesDir();
+            if (files != null) roots.add(files);
         } catch (Throwable ignored) {
         }
         try {
             File engine = net_62v.external.MetaStorageManager.obtainAppDataDir(pkg);
-            if (engine != null) roots.add(engine);
+            if (engine != null && engine.isDirectory()) roots.add(engine);
         } catch (Throwable ignored) {
         }
         // The engine is root-adjacent; when it is, the system tombstones and
@@ -248,12 +249,25 @@ public final class CrashLogger {
         long bestTime = -1;
         String bestHead = null;
         for (File root : roots) {
-            File hit = newestMentioning(root, pkg, 0);
-            if (hit != null && hit.lastModified() > bestTime) {
+            if (root == null) continue;
+            File hit;
+            try {
+                hit = newestMentioning(root, pkg, 0);
+            } catch (Throwable t) {
+                continue; // a mocked/absent filesystem must never break the report
+            }
+            if (hit == null) continue;
+            long mtime;
+            try {
+                mtime = hit.lastModified();
+            } catch (Throwable t) {
+                continue;
+            }
+            if (mtime > bestTime) {
                 String tail = readTail(hit, 2500);
                 if (tail != null) {
                     best = hit;
-                    bestTime = hit.lastModified();
+                    bestTime = mtime;
                     bestHead = tail;
                 }
             }
