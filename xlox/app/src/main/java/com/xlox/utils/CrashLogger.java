@@ -35,6 +35,15 @@ public final class CrashLogger {
     public static void install(final Application app) {
         final Thread.UncaughtExceptionHandler previous = Thread.getDefaultUncaughtExceptionHandler();
         Thread.setDefaultUncaughtExceptionHandler((thread, error) -> {
+            if (isBenignFrameworkRace(error)) {
+                // The container's broadcast relay can double-finish a
+                // PendingResult on Android 16+: finish() defers sendFinished to
+                // the queued-work thread, and a second finish re-runs it after
+                // the result was already marked finished. The broadcast's work
+                // is complete either way — fatal only because nobody catches it.
+                Log.w(TAG, "Ignoring a benign framework race on " + thread.getName(), error);
+                return;
+            }
             try {
                 write(app, thread, error);
             } catch (Throwable ignored) {
@@ -46,6 +55,16 @@ public final class CrashLogger {
                 System.exit(10);
             }
         });
+    }
+
+    /** The Android 16+ double-finish race: a deferred sendFinished ran after
+     *  the PendingResult was already finished. Exactly that, nothing else. */
+    private static boolean isBenignFrameworkRace(Throwable error) {
+        if (!(error instanceof IllegalStateException)) return false;
+        if (!"Broadcast already finished".equals(error.getMessage())) return false;
+        StackTraceElement[] trace = error.getStackTrace();
+        return trace.length > 0
+                && trace[0].getClassName().startsWith("android.content.BroadcastReceiver");
     }
 
     private static void write(Context ctx, Thread thread, Throwable error) {

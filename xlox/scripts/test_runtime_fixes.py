@@ -231,6 +231,9 @@ class AndroidWiring(unittest.TestCase):
         # breadcrumb is written before the launch and reported next start.
         self.assertIn('CrashLogger.noteAction(', mact)
         self.assertIn('CrashLogger.pendingAction(this)', mact)
+        # The Android 16+ broadcast double-finish race is benign and swallowed.
+        crash = (JAVA / 'utils' / 'CrashLogger.java').read_text()
+        self.assertIn('Broadcast already finished', crash)
         # Android 16+ split-APK launch NPE: the config guard is installed at
         # process start and re-armed right before every container launch.
         self.assertTrue((JAVA / 'utils' / 'ConfigGuard.java').is_file())
