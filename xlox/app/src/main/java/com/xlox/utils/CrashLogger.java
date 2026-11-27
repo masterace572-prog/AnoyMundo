@@ -218,4 +218,112 @@ public final class CrashLogger {
         }
         return null;
     }
+    /**
+     * Last resort when ApplicationExitInfo is empty: walk every log/crash
+     * location the app (or the root engine) can read and return the newest
+     * file that names the dead package — its tail usually carries the abort
+     * message or faulting library. Returns null when nothing readable matches.
+     */
+    public static String sweepContainerLogs(Context ctx, String pkg) {
+        java.util.List<File> roots = new java.util.ArrayList<>();
+        try {
+            roots.add(ctx.getFilesDir());
+        } catch (Throwable ignored) {
+        }
+        try {
+            File engine = net_62v.external.MetaStorageManager.obtainAppDataDir(pkg);
+            if (engine != null) roots.add(engine);
+        } catch (Throwable ignored) {
+        }
+        // The engine is root-adjacent; when it is, the system tombstones and
+        // dropbox are the authoritative record of a native death.
+        for (String p : new String[]{"/data/tombstones", "/data/system/dropbox",
+                "/data/misc/perfetto_traces", "/sdcard/Android/data/" + ctx.getPackageName()}) {
+            try {
+                roots.add(new File(p));
+            } catch (Throwable ignored) {
+            }
+        }
+        File best = null;
+        long bestTime = -1;
+        String bestHead = null;
+        for (File root : roots) {
+            File hit = newestMentioning(root, pkg, 0);
+            if (hit != null && hit.lastModified() > bestTime) {
+                String tail = readTail(hit, 2500);
+                if (tail != null) {
+                    best = hit;
+                    bestTime = hit.lastModified();
+                    bestHead = tail;
+                }
+            }
+        }
+        if (best == null) return null;
+        return "Log: " + best.getAbsolutePath() + "\n\n" + bestHead;
+    }
+
+    /** Deepest-first search for the newest readable file whose contents name pkg. */
+    private static File newestMentioning(File root, String pkg, int depth) {
+        if (root == null || depth > 5) return null;
+        File best = null;
+        File[] kids;
+        try {
+            kids = root.listFiles();
+        } catch (Throwable t) {
+            return null;
+        }
+        if (kids == null) return null;
+        for (File f : kids) {
+            try {
+                if (f.isDirectory()) {
+                    File sub = newestMentioning(f, pkg, depth + 1);
+                    if (sub != null && (best == null || sub.lastModified() > best.lastModified())) best = sub;
+                } else if (f.isFile() && f.length() > 0 && f.length() < 2_000_000 && mentions(f, pkg)) {
+                    if (best == null || f.lastModified() > best.lastModified()) best = f;
+                }
+            } catch (Throwable ignored) {
+            }
+        }
+        return best;
+    }
+
+    private static boolean mentions(File f, String pkg) {
+        java.io.FileInputStream in = null;
+        try {
+            in = new java.io.FileInputStream(f);
+            byte[] chunk = new byte[8192];
+            int n;
+            while ((n = in.read(chunk)) > 0) {
+                if (new String(chunk, 0, n, StandardCharsets.ISO_8859_1).contains(pkg)) return true;
+            }
+        } catch (Throwable t) {
+            return false;
+        } finally {
+            try {
+                if (in != null) in.close();
+            } catch (Throwable ignored) {
+            }
+        }
+        return false;
+    }
+
+    private static String readTail(File f, int max) {
+        java.io.RandomAccessFile raf = null;
+        try {
+            raf = new java.io.RandomAccessFile(f, "r");
+            long len = raf.length();
+            long start = Math.max(0, len - max);
+            raf.seek(start);
+            byte[] buf = new byte[(int) (len - start)];
+            raf.readFully(buf);
+            return new String(buf, StandardCharsets.UTF_8);
+        } catch (Throwable t) {
+            return null;
+        } finally {
+            try {
+                if (raf != null) raf.close();
+            } catch (Throwable ignored) {
+            }
+        }
+    }
 }
