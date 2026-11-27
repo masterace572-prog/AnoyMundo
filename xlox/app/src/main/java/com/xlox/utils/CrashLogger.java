@@ -176,6 +176,13 @@ public final class CrashLogger {
      */
     public static String readNativeExit(Context ctx) {
         if (Build.VERSION.SDK_INT < 30) return null;
+        // ApplicationExitInfo is API 30+; an instrumented/host runtime at a
+        // lower API (or one whose jar predates 30) must never load the class.
+        try {
+            Class.forName("android.app.ApplicationExitInfo");
+        } catch (Throwable t) {
+            return null;
+        }
         try {
             android.app.ActivityManager am =
                     (android.app.ActivityManager) ctx.getSystemService(Context.ACTIVITY_SERVICE);
@@ -232,6 +239,7 @@ public final class CrashLogger {
         } catch (Throwable ignored) {
         }
         try {
+            Class.forName("net_62v.external.MetaStorageManager");
             File engine = net_62v.external.MetaStorageManager.obtainAppDataDir(pkg);
             if (engine != null && engine.isDirectory()) roots.add(engine);
         } catch (Throwable ignored) {
