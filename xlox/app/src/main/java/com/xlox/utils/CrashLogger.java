@@ -58,13 +58,21 @@ public final class CrashLogger {
     }
 
     /** The Android 16+ double-finish race: a deferred sendFinished ran after
-     *  the PendingResult was already finished. Exactly that, nothing else. */
+     *  the PendingResult was already finished. Matches the bare throw and the
+     *  wrapped form (Play Services' LightweightExecutor rethrows it inside a
+     *  RuntimeException, which is what used to kill the sign-in flow). */
     private static boolean isBenignFrameworkRace(Throwable error) {
-        if (!(error instanceof IllegalStateException)) return false;
-        if (!"Broadcast already finished".equals(error.getMessage())) return false;
-        StackTraceElement[] trace = error.getStackTrace();
-        return trace.length > 0
-                && trace[0].getClassName().startsWith("android.content.BroadcastReceiver");
+        for (Throwable t = error; t != null; t = t.getCause()) {
+            if (t instanceof IllegalStateException
+                    && "Broadcast already finished".equals(t.getMessage())) {
+                StackTraceElement[] trace = t.getStackTrace();
+                if (trace.length > 0
+                        && trace[0].getClassName().startsWith("android.content.BroadcastReceiver")) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     private static void write(Context ctx, Thread thread, Throwable error) {
