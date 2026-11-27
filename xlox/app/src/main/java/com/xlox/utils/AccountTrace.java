@@ -140,14 +140,10 @@ public final class AccountTrace {
         }
 
         @Override
-        public boolean transact(int code, Parcel data, Parcel reply, int flags)
+        protected boolean onTransact(int code, Parcel data, Parcel reply, int flags)
                 throws android.os.RemoteException {
+            // Binder.transact is final; direct binder traffic flows through here.
             return delegate.transact(code, data, reply, flags);
-        }
-
-        @Override
-        public boolean isBinderAlive() {
-            return delegate.isBinderAlive();
         }
     }
 
