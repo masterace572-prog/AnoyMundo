@@ -68,6 +68,7 @@ import java.util.regex.Pattern;
 
 import net_62v.external.MetaActivationManager;
 import net_62v.external.MetaActivityManager;
+import net_62v.external.MetaPackageManager;
 
 /**
  * Home screen after a successful sign in. JNI: exdate / modStatus / credit
@@ -1825,9 +1826,7 @@ public class MAct extends AppCompatActivity {
         if (!launchTarget.target.needsObb) {
             // BGMI Air has no game files: the copy step is skipped entirely.
             Log.d(TAG, "Launch: " + gameName(launchTarget) + " needs no game files, launching");
-            hideMessage();
-            setBusy(true, getString(R.string.launching));
-            main.postDelayed(MAct.this::launchGame, LAUNCH_DELAY_MS);
+            ensureGameInContainerThenLaunch();
             return;
         }
         setBusy(true, getString(R.string.action_preparing));
@@ -1924,6 +1923,47 @@ public class MAct extends AppCompatActivity {
         }, RESTART_DELAY_MS);
     }
 
+    /**
+     * Air has no game files, but the container still needs the game itself. The
+     * SDK's implicit first-launch install is where Air died natively on Android
+     * 17, so the game goes in through the staged base+splits path that reliably
+     * installs GMS. Already installed: straight to launch.
+     */
+    private void ensureGameInContainerThenLaunch() {
+        if (!Ui.alive(this)) return;
+        hideMessage();
+        setBusy(true, getString(R.string.launching));
+        final GameSession launching = launchTarget;
+        final Context app = getApplicationContext();
+        new Thread(() -> {
+            boolean ok = true;
+            try {
+                if (!MetaPackageManager.isInnerAppInstalled(launching.target.packageName)) {
+                    // A native death inside the container installer leaves no
+                    // Java trace; the breadcrumb names the step on next start.
+                    CrashLogger.noteAction(app, "container install: " + launching.target.packageName);
+                    ok = GoogleServicesInstaller.installFromPhone(app, launching.target.packageName);
+                    CrashLogger.clearAction(app);
+                }
+            } catch (Throwable t) {
+                Log.e(TAG, "Container game install failed", t);
+                ok = false;
+            }
+            final boolean installed = ok;
+            main.post(() -> {
+                if (!Ui.alive(MAct.this) || launchTarget != launching) return;
+                if (!installed) {
+                    setBusy(false, null);
+                    hideProgress();
+                    showMessage(getString(R.string.game_container_install_failed,
+                            gameName(launching)), true);
+                    return;
+                }
+                main.postDelayed(MAct.this::launchGame, LAUNCH_DELAY_MS);
+            });
+        }, "anoy-game-install").start();
+    }
+
     private void launchGame() {
         if (!Ui.alive(this)) return;
         if (!preview && (expired || (expiryMillis > 0 && expiryMillis <= System.currentTimeMillis()))) {
@@ -1954,6 +1994,9 @@ public class MAct extends AppCompatActivity {
         boolean started = false;
         Throwable failure = null;
         try {
+            // A native container death during launch leaves no Java trace; the
+            // breadcrumb names the game on the next start. Cleared on success.
+            CrashLogger.noteAction(this, "launch: " + launchTarget.target.packageName);
             Intent intent = obtainLaunchIntent();
             if (intent != null) {
                 startActivity(intent);
@@ -2036,6 +2079,9 @@ public class MAct extends AppCompatActivity {
         launchTarget.runtime.launched(SystemClock.elapsedRealtime());
         concurrentLaunchApproved = false;
         launchErrorShown = false;
+        // The game is up: the launch breadcrumb has served its purpose. A short
+        // delay keeps it alive through the container's fragile first seconds.
+        crashHandler.postDelayed(() -> CrashLogger.clearAction(getApplicationContext()), 15000L);
         try {
             hideMessage();
             if (haptic) Ui.confirm(launchTarget.action);
@@ -2057,6 +2103,7 @@ public class MAct extends AppCompatActivity {
     /** The game truly did not start: log the real cause and say so. */
     private void onLaunchFailed(Throwable cause) {
         concurrentLaunchApproved = false;
+        CrashLogger.clearAction(this);
         Log.e(TAG, "Launch failed: the game did not start", cause != null ? cause
                 : new IllegalStateException("No launch intent and the container reports the game is not running"));
         showMessage(getString(R.string.error_launch), true);
@@ -2651,6 +2698,8 @@ public class MAct extends AppCompatActivity {
         final TextView status;
         final MaterialSwitch enableSwitch;
         final TextView switchCaption;
+        final MaterialButton addAccount;
+        final TextView addAccountHint;
         final View progressWrap;
         final LinearProgressIndicator progress;
         final TextView progressText;
@@ -2661,6 +2710,8 @@ public class MAct extends AppCompatActivity {
             status = root.findViewById(R.id.googleSheetStatus);
             enableSwitch = root.findViewById(R.id.googleEnableSwitch);
             switchCaption = root.findViewById(R.id.googleSwitchCaption);
+            addAccount = root.findViewById(R.id.googleAddAccount);
+            addAccountHint = root.findViewById(R.id.googleAddAccountHint);
             progressWrap = root.findViewById(R.id.googleProgressWrap);
             progress = root.findViewById(R.id.googleProgress);
             progressText = root.findViewById(R.id.googleProgressText);
@@ -2697,8 +2748,62 @@ public class MAct extends AppCompatActivity {
             // switch restores the install; a healthy install can never be turned off.
             runGoogleTask(sheet, views, GoogleLoginSetup.phoneTask(status));
         });
+        views.addAccount.setOnClickListener(v -> {
+            Ui.tap(v);
+            openGoogleAddAccountInMundo(views);
+        });
         views.cancel.setOnClickListener(v -> sheet.dismiss());
         sheet.show();
+    }
+
+    /**
+     * Opens GMS's own add-account flow (MinuteMaidActivity — the exact activity a
+     * real phone shows when an account is added) inside the container. Once an
+     * account exists in Mundo, the game's Google button offers it in the picker.
+     * No Play Store is involved anywhere in this flow.
+     */
+    private void openGoogleAddAccountInMundo(GoogleSheetViews views) {
+        if (googleRunning || !Ui.alive(this)) return;
+        if (anyGameRunning()) {
+            Ui.snackbar(this, getString(R.string.google_stop_game_first));
+            return;
+        }
+        if (!GoogleServicesInstaller.signInUiResolvable()) {
+            // The registry may still be reloading right after the copy; never
+            // launch a component the container cannot resolve.
+            views.result.setText(R.string.google_add_account_settling);
+            views.result.setVisibility(View.VISIBLE);
+            return;
+        }
+        try {
+            // A native container crash kills the process before any Java catch
+            // runs; the breadcrumb lets the next start say what was being opened.
+            CrashLogger.noteAction(this, "open in Mundo: Google account");
+            guardContainerLaunch();
+            // The splash-intent path is the one game launches already prove on
+            // device; the explicit pkg+activity and raw intent are the fallbacks.
+            Intent intent = MetaActivityManager.obtainSplashLaunchIntent(
+                    GoogleServicesInstaller.GMS_PKG, GoogleServicesInstaller.MINUTEMAID_ACTIVITY, this);
+            if (intent != null) {
+                startActivity(intent);
+            } else {
+                try {
+                    MetaActivityManager.launchApp(GoogleServicesInstaller.GMS_PKG,
+                            GoogleServicesInstaller.MINUTEMAID_ACTIVITY);
+                } catch (Throwable direct) {
+                    MetaActivityManager.launchIntent(new Intent().setComponent(new ComponentName(
+                            GoogleServicesInstaller.GMS_PKG, GoogleServicesInstaller.MINUTEMAID_ACTIVITY)));
+                }
+            }
+            // Still alive 15 s later: the launch did not kill the process. Uses
+            // crashHandler because onDestroy wipes `main` while the process lives.
+            crashHandler.postDelayed(() -> CrashLogger.clearAction(getApplicationContext()), 15000L);
+        } catch (Throwable t) {
+            CrashLogger.clearAction(this);
+            Log.e(TAG, "Google login: add-account launch failed", t);
+            views.result.setText(R.string.google_add_account_failed);
+            views.result.setVisibility(View.VISIBLE);
+        }
     }
 
     /**
@@ -2718,6 +2823,9 @@ public class MAct extends AppCompatActivity {
         views.enableSwitch.setEnabled(!googleRunning && (on || phoneOk));
         views.switchCaption.setText(on ? R.string.google_switch_caption_on
                 : phoneOk ? R.string.google_switch_caption_off : R.string.google_use_phone_unavailable);
+        views.addAccount.setVisibility(ready ? View.VISIBLE : View.GONE);
+        views.addAccount.setEnabled(!googleRunning);
+        views.addAccountHint.setVisibility(ready ? View.VISIBLE : View.GONE);
         views.cancel.setEnabled(!googleRunning);
     }
 

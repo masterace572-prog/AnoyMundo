@@ -267,17 +267,28 @@ class AndroidWiring(unittest.TestCase):
         self.assertIn('@+id/googleSetupRow', settings)
         self.assertIn('@+id/googleStatusValue', settings)
         sheet = (ROOT / 'app/src/main/res/layout/sheet_google_login.xml').read_text()
-        for view_id in ('googleEnableSwitch', 'googleSwitchCaption',
+        for view_id in ('googleEnableSwitch', 'googleSwitchCaption', 'googleAddAccount',
                         'googleProgress', 'googleProgressText', 'googleResultText', 'googleCancel'):
             self.assertIn('@+id/' + view_id, sheet)
         # microG and the in-container Play Store button are gone: the phone's
         # Google apps are the only provider, driven by one latching switch.
         self.assertNotIn('googleUseMicrog', sheet)
         self.assertNotIn('googleOpenProvider', sheet)
+        # The account the game picks comes from GMS's own add-account flow
+        # (MinuteMaidActivity, verified on a real phone), opened inside Mundo.
+        self.assertIn('openGoogleAddAccountInMundo', home)
+        self.assertIn('GoogleServicesInstaller.MINUTEMAID_ACTIVITY', home)
+        self.assertIn('MetaActivityManager.obtainSplashLaunchIntent(', home)
+        self.assertIn('MetaActivityManager.launchApp(GoogleServicesInstaller.GMS_PKG', home)
+        self.assertIn('MetaActivityManager.launchIntent(', home)
+        services = (JAVA / 'utils/GoogleServicesInstaller.java').read_text()
+        self.assertIn('com.google.android.gms.auth.uiflows.minutemaid.MinuteMaidActivity', services)
+        self.assertIn('public static boolean signInUiResolvable()', services)
         strings = (ROOT / 'app/src/main/res/values/strings.xml').read_text()
         for name in ('google_setup_row', 'google_status_none', 'google_status_stock',
                      'google_status_microg', 'google_status_repair', 'google_stop_game_first',
-                     'google_switch_label', 'google_switch_caption_on', 'google_switch_caption_off'):
+                     'google_switch_label', 'google_switch_caption_on', 'google_switch_caption_off',
+                     'google_add_account', 'google_add_account_settling', 'google_add_account_failed'):
             self.assertIn('name="' + name + '"', strings)
         # The switch latches on and is only reset by clearing the app's data.
         self.assertIn('google_login_enabled', home)
@@ -294,6 +305,17 @@ class AndroidWiring(unittest.TestCase):
         self.assertIn('public final boolean needsObb', target)
         self.assertIn('if (!launchTarget.target.needsObb)', mact)
         self.assertIn('if (!game.target.needsObb)', mact)
+        # Air still needs the game inside the container, installed through the
+        # staged base+splits path (the SDK's implicit first-launch install is
+        # where Air died natively on Android 17).
+        self.assertIn('ensureGameInContainerThenLaunch()', mact)
+        self.assertIn('MetaPackageManager.isInnerAppInstalled(launching.target.packageName)', mact)
+        self.assertIn('GoogleServicesInstaller.installFromPhone(app, launching.target.packageName)', mact)
+        services = (JAVA / 'utils/GoogleServicesInstaller.java').read_text()
+        self.assertIn('public static boolean installFromPhone(Context ctx, String pkg)', services)
+        # A native death during install or launch is attributed by a breadcrumb.
+        self.assertIn('"container install: "', mact)
+        self.assertIn('"launch: "', mact)
 
     def test_one_fresh_manifest_also_updates_the_game_support_notice(self):
         client = (JAVA / 'utils/Downtwo.java').read_text()

@@ -72,6 +72,24 @@
             android:layout_marginTop="@dimen/space_8"
             android:text="@string/google_switch_caption_off" />
 
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/googleAddAccount"
+            style="@style/Widget.Anoy.Button"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/space_16"
+            android:text="@string/google_add_account"
+            android:visibility="gone" />
+
+        <TextView
+            android:id="@+id/googleAddAccountHint"
+            style="@style/Text.Dashboard.Meta"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/space_8"
+            android:text="@string/google_add_account_hint"
+            android:visibility="gone" />
+
         <LinearLayout
             android:id="@+id/googleProgressWrap"
             android:layout_width="match_parent"

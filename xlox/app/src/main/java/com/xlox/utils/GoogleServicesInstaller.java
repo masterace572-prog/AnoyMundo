@@ -1,8 +1,10 @@
 package com.xlox.utils;
 
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
+import android.util.Log;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -22,6 +24,16 @@ public final class GoogleServicesInstaller {
     public static final String WEBVIEW_PKG = "com.google.android.webview";
     // BGMI's Google button signs in through Play Games on top of GMS.
     public static final String PLAY_GAMES_PKG = "com.google.android.play.games";
+    // GMS's add-account flow (verified on a real phone: adding an account opens
+    // exactly this activity). Opened inside Mundo so the game's account picker
+    // has an account to offer — no Play Store anywhere in the flow.
+    public static final String MINUTEMAID_ACTIVITY =
+            "com.google.android.gms.auth.uiflows.minutemaid.MinuteMaidActivity";
+    // The activity the game's Google button starts (again verified on-device).
+    public static final String SIGNIN_ACTIVITY =
+            "com.google.android.gms.auth.api.signin.ui.SignInActivity";
+
+    private static final String TAG = "GoogleServicesInstaller";
 
     private GoogleServicesInstaller() {
     }
@@ -42,6 +54,39 @@ public final class GoogleServicesInstaller {
         } catch (Throwable e) {
             return false;
         }
+    }
+
+    /** True when GMS's add-account/sign-in activities resolve inside the container. */
+    public static boolean signInUiResolvable() {
+        try {
+            return MetaPackageManager.resolveActivityInfo(new ComponentName(GMS_PKG, MINUTEMAID_ACTIVITY)) != null
+                    && MetaPackageManager.resolveActivityInfo(new ComponentName(GMS_PKG, SIGNIN_ACTIVITY)) != null;
+        } catch (Throwable e) {
+            return false;
+        }
+    }
+
+    /**
+     * Installs a phone app into the container through the same staged base+splits
+     * path that reliably installs GMS. Used for games whose first container launch
+     * dies inside the SDK's own implicit installer (BGMI Air on Android 17).
+     * Idempotent: an already-installed inner app is left untouched.
+     */
+    public static boolean installFromPhone(Context ctx, String pkg) {
+        StringBuilder out = new StringBuilder();
+        boolean ok;
+        try {
+            ok = installOne(ctx, pkg, false, out);
+        } catch (Throwable t) {
+            Log.e(TAG, "installFromPhone crashed for " + pkg, t);
+            return false;
+        }
+        if (ok) {
+            reloadRegistry();
+        } else {
+            Log.w(TAG, "installFromPhone " + pkg + ": " + out);
+        }
+        return ok;
     }
 
     /** The phone itself carries the Google apps to clone (Play Store / WebView stay optional). */
