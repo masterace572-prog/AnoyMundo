@@ -2,9 +2,10 @@
 <!--
   Google login setup (test build): the shared sheet with a handle. Kicker
   GOOGLE LOGIN + Title M, one BodyS explainer, the current provider state, then
-  the actions: copy this phone's Google apps, download microG instead, or
-  repair a broken microG. Progress and the installer's result show inline; the
-  tonal Cancel becomes Done once a task has finished.
+  the latching switch that copies this phone's Google apps into Mundo. Once on
+  it stays on (until the app is reinstalled or its data is cleared). Progress
+  and the installer's result show inline; the tonal Cancel becomes Done once a
+  task has finished.
 -->
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/googleSheetRoot"
@@ -55,65 +56,21 @@
             android:drawablePadding="@dimen/space_8"
             android:text="@string/google_status_none" />
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/googleUsePhone"
-            style="@style/Widget.Anoy.Button.Sheet"
+        <com.google.android.material.materialswitch.MaterialSwitch
+            android:id="@+id/googleEnableSwitch"
+            style="@style/Widget.Anoy.Switch"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/space_16"
-            android:text="@string/google_use_phone" />
+            android:text="@string/google_switch_label" />
 
         <TextView
-            android:id="@+id/googlePhoneCaption"
+            android:id="@+id/googleSwitchCaption"
             style="@style/Text.Dashboard.Meta"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/space_8"
-            android:text="@string/google_use_phone_unavailable"
-            android:visibility="gone" />
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/googleUseMicrog"
-            style="@style/Widget.Anoy.Button.Tonal"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/space_12"
-            android:text="@string/google_use_microg" />
-
-        <TextView
-            android:id="@+id/googleMicrogCaption"
-            style="@style/Text.Dashboard.Meta"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/space_8"
-            android:text="@string/google_microg_caption" />
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/googleRepair"
-            style="@style/Widget.Anoy.Button.Tonal"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/space_12"
-            android:text="@string/google_repair"
-            android:visibility="gone" />
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/googleOpenProvider"
-            style="@style/Widget.Anoy.Button.Tonal"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/space_12"
-            android:text="@string/google_open_store"
-            android:visibility="gone" />
-
-        <TextView
-            android:id="@+id/googleOpenProviderCaption"
-            style="@style/Text.Dashboard.Meta"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/space_8"
-            android:text="@string/google_open_store_caption"
-            android:visibility="gone" />
+            android:text="@string/google_switch_caption_off" />
 
         <LinearLayout
             android:id="@+id/googleProgressWrap"

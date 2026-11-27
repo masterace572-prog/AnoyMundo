@@ -219,21 +219,18 @@ class AndroidWiring(unittest.TestCase):
         mact = (JAVA / 'MAct.java').read_text()
         self.assertIn('GoogleServicesInstaller.repairInternalInstall(app)', mact)
         self.assertIn('MicroGInstaller.repairInternalInstall(app)', mact)
-        # The sheet can open the provider inside Mundo for the manual sign-in.
-        self.assertIn('MetaActivityManager.launchApp(pkg)', mact)
-        self.assertIn('MetaActivityManager.obtainSplashLaunchIntent(pkg, this)', mact)
         # Crashes are recorded and offered for copying on the next home open.
         box = (JAVA / 'BoxApplication.java').read_text()
         self.assertIn('CrashLogger.install(this)', box)
         self.assertIn('CrashLogger.read(this)', mact)
         self.assertTrue((JAVA / 'utils' / 'CrashLogger.java').is_file())
-        # A native container death leaves no Java trace: the open-in-Mundo
-        # breadcrumb is written before the launch and reported next start.
-        self.assertIn('CrashLogger.noteAction(', mact)
+        # A native container death leaves no Java trace: the breadcrumb written
+        # before a risky action is reported on the next start.
+        crash = (JAVA / 'utils' / 'CrashLogger.java').read_text()
+        self.assertIn('noteAction', crash)
         self.assertIn('CrashLogger.pendingAction(this)', mact)
         # The Android 16+ broadcast double-finish race is benign and swallowed,
         # including the Play-Services-executor-wrapped variant.
-        crash = (JAVA / 'utils' / 'CrashLogger.java').read_text()
         self.assertIn('Broadcast already finished', crash)
         self.assertIn('t.getCause()', crash)
         # Android 16+ split-APK launch NPE: the config guard is installed at
@@ -261,7 +258,6 @@ class AndroidWiring(unittest.TestCase):
         self.assertIn('GoogleLoginSetup.resolveStatus', home)
         self.assertIn('R.layout.sheet_google_login', home)
         self.assertIn('R.id.googleSetupRow', home)
-        self.assertIn('MicroGInstaller.installMicroG(app, downloadProgress)', home)
         self.assertIn('GoogleServicesInstaller.installFresh(app)', home)
         self.assertIn('MicroGInstaller.installStock(app)', home)
         self.assertIn('MicroGInstaller.repairInternalInstall(app)', home)
@@ -271,14 +267,33 @@ class AndroidWiring(unittest.TestCase):
         self.assertIn('@+id/googleSetupRow', settings)
         self.assertIn('@+id/googleStatusValue', settings)
         sheet = (ROOT / 'app/src/main/res/layout/sheet_google_login.xml').read_text()
-        for view_id in ('googleUsePhone', 'googleUseMicrog', 'googleRepair',
-                        'googleOpenProvider', 'googleOpenProviderCaption',
+        for view_id in ('googleEnableSwitch', 'googleSwitchCaption',
                         'googleProgress', 'googleProgressText', 'googleResultText', 'googleCancel'):
             self.assertIn('@+id/' + view_id, sheet)
+        # microG and the in-container Play Store button are gone: the phone's
+        # Google apps are the only provider, driven by one latching switch.
+        self.assertNotIn('googleUseMicrog', sheet)
+        self.assertNotIn('googleOpenProvider', sheet)
         strings = (ROOT / 'app/src/main/res/values/strings.xml').read_text()
         for name in ('google_setup_row', 'google_status_none', 'google_status_stock',
-                     'google_status_microg', 'google_status_repair', 'google_stop_game_first'):
+                     'google_status_microg', 'google_status_repair', 'google_stop_game_first',
+                     'google_switch_label', 'google_switch_caption_on', 'google_switch_caption_off'):
             self.assertIn('name="' + name + '"', strings)
+        # The switch latches on and is only reset by clearing the app's data.
+        self.assertIn('google_login_enabled', home)
+        # Switches and CheckBoxes have Anoy-themed widget styles.
+        styles = (ROOT / 'app/src/main/res/values/styles.xml').read_text()
+        self.assertIn('Widget.Anoy.Switch', styles)
+        self.assertIn('Widget.Anoy.CheckBox', styles)
+
+    def test_bgmi_air_launches_without_game_files(self):
+        target = (JAVA / 'utils/GameTarget.java').read_text()
+        mact = (JAVA / 'MAct.java').read_text()
+        # Air carries no OBB: the launch flow skips the copy and the inspection.
+        self.assertIn('BGMI_AIR("com.krafton.bgmilite", "libbgmilite.so", "BGMI Air", false)', target)
+        self.assertIn('public final boolean needsObb', target)
+        self.assertIn('if (!launchTarget.target.needsObb)', mact)
+        self.assertIn('if (!game.target.needsObb)', mact)
 
     def test_one_fresh_manifest_also_updates_the_game_support_notice(self):
         client = (JAVA / 'utils/Downtwo.java').read_text()

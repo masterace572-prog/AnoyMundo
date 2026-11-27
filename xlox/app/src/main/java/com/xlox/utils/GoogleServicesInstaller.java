@@ -28,8 +28,7 @@ public final class GoogleServicesInstaller {
     public static boolean isInstalled(Context ctx) {
         try {
             return MetaPackageManager.isInnerAppInstalled(GMS_PKG)
-                    && MetaPackageManager.isInnerAppInstalled(GSF_PKG)
-                    && MetaPackageManager.isInnerAppInstalled(PLAY_STORE_PKG);
+                    && MetaPackageManager.isInnerAppInstalled(GSF_PKG);
         } catch (Throwable e) {
             return false;
         }
@@ -75,20 +74,16 @@ public final class GoogleServicesInstaller {
         }
         boolean gms = installOne(ctx, GMS_PKG, true, out);
         boolean gsf = installOne(ctx, GSF_PKG, out);
-        boolean store = installOneClone(ctx, PLAY_STORE_PKG, out);
         boolean games = installOneClone(ctx, PLAY_GAMES_PKG, out);
         boolean webview = installOneClone(ctx, WEBVIEW_PKG, out);
         if (gms && gsf) {
             reloadRegistry();
             String extra = "";
-            if (store) extra += " Play Store installed.";
             if (games) extra += " Play Games installed.";
             if (webview) extra += " WebView installed.";
             String summary = installedSummary();
             return "Google Services installed" + (summary.isEmpty() ? "" : " (" + summary + ")") + "."
-                    + extra + " Restart the game, then try Google login."
-                    + " If the game still shows no account picker, open the Play Store inside Mundo once,"
-                    + " sign in to Google there, and try again.";
+                    + extra + " Restart the game, then try Google login again.";
         }
         return "Google Services install incomplete: " + out.toString().trim();
     }
@@ -166,7 +161,6 @@ public final class GoogleServicesInstaller {
         StringBuilder out = new StringBuilder();
         boolean gms = installOne(ctx, GMS_PKG, true, out);
         boolean gsf = installOne(ctx, GSF_PKG, out);
-        boolean store = installOneClone(ctx, PLAY_STORE_PKG, out);
         boolean games = installOneClone(ctx, PLAY_GAMES_PKG, out);
         boolean webview = installOneClone(ctx, WEBVIEW_PKG, out);
         if (gms && gsf) {
@@ -175,14 +169,11 @@ public final class GoogleServicesInstaller {
             // sign-in intent finds no Google activity and dies silently.
             reloadRegistry();
             String extra = "";
-            if (store) extra += " Play Store installed.";
             if (games) extra += " Play Games installed.";
             if (webview) extra += " WebView installed.";
             String summary = installedSummary();
             return "Google Services installed" + (summary.isEmpty() ? "" : " (" + summary + ")") + "."
-                    + extra + " Restart the game, then try Google login."
-                    + " If the game still shows no account picker, open the Play Store inside Mundo once,"
-                    + " sign in to Google there, and try again.";
+                    + extra + " Restart the game, then try Google login again.";
         }
         return "Google Services install incomplete: " + out.toString().trim();
     }
@@ -326,7 +317,6 @@ public final class GoogleServicesInstaller {
         StringBuilder s = new StringBuilder();
         appendPkgVersion(s, "gms", GMS_PKG);
         appendPkgVersion(s, "gsf", GSF_PKG);
-        appendPkgVersion(s, "store", PLAY_STORE_PKG);
         appendPkgVersion(s, "games", PLAY_GAMES_PKG);
         return s.toString();
     }

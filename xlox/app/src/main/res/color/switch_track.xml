@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Switch track: accent when checked, surface-2 otherwise. -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:color="@color/blue" android:state_checked="true" />
+    <item android:color="@color/surface_2" />
+</selector>

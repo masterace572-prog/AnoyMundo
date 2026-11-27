@@ -466,6 +466,20 @@
         <item name="backgroundTint">@color/tonal_bg_on_black</item>
     </style>
 
+    <!-- Switch: Anoy accent track, on-accent thumb when checked. -->
+    <style name="Widget.Anoy.Switch" parent="Widget.Material3.CompoundButton.MaterialSwitch">
+        <item name="thumbTint">@color/switch_thumb</item>
+        <item name="trackTint">@color/switch_track</item>
+        <item name="android:textColor">@color/text_primary</item>
+    </style>
+
+    <!-- CheckBox: Anoy accent when checked. -->
+    <style name="Widget.Anoy.CheckBox" parent="Widget.Material3.CompoundButton.CheckBox">
+        <item name="buttonTint">@color/checkbox_tint</item>
+        <item name="android:textColor">@color/text_primary</item>
+        <item name="android:minHeight">@dimen/touch_target</item>
+    </style>
+
     <!-- Text button: Link style (Inter 500 15), 48 dp target. -->
     <style name="Widget.Anoy.Button.Text" parent="Widget.Material3.Button.TextButton">
         <item name="android:minHeight">@dimen/touch_target</item>

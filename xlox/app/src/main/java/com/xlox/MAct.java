@@ -25,6 +25,7 @@ import androidx.core.content.ContextCompat;
 
 import com.google.android.material.bottomsheet.BottomSheetDialog;
 import com.google.android.material.button.MaterialButton;
+import com.google.android.material.materialswitch.MaterialSwitch;
 import com.google.android.material.progressindicator.LinearProgressIndicator;
 import com.google.android.material.snackbar.Snackbar;
 
@@ -229,8 +230,6 @@ public class MAct extends AppCompatActivity {
     private BottomSheetDialog googleSheet;
     private ExecutorService googleExecutor;
     private boolean googleRunning;
-    /** microG is three verified files; the sheet bar shows overall progress. */
-    private static final int MICROG_FILE_COUNT = 3;
     private TextView serverValue;
     private MaterialButton primaryAction;
 
@@ -1372,6 +1371,11 @@ public class MAct extends AppCompatActivity {
                 game.obbState = AppManager.ObbState.AVAILABLE;
                 continue;
             }
+            if (!game.target.needsObb) {
+                // BGMI Air carries no game files: nothing to inspect or copy.
+                game.obbState = AppManager.ObbState.AVAILABLE;
+                continue;
+            }
             game.checkingObb = true;
             try {
                 ioExecutor.execute(() -> {
@@ -1818,6 +1822,14 @@ public class MAct extends AppCompatActivity {
      */
     private void prepareObbThenLaunch() {
         Log.d(TAG, "Launch: preparing game files");
+        if (!launchTarget.target.needsObb) {
+            // BGMI Air has no game files: the copy step is skipped entirely.
+            Log.d(TAG, "Launch: " + gameName(launchTarget) + " needs no game files, launching");
+            hideMessage();
+            setBusy(true, getString(R.string.launching));
+            main.postDelayed(MAct.this::launchGame, LAUNCH_DELAY_MS);
+            return;
+        }
         setBusy(true, getString(R.string.action_preparing));
         showProgress(0, true);
         // 2.3.4 (text only; the copy itself is unchanged): nothing new for the
@@ -2637,13 +2649,8 @@ public class MAct extends AppCompatActivity {
     /** Every view the sheet flow touches, resolved once. */
     private static final class GoogleSheetViews {
         final TextView status;
-        final MaterialButton usePhone;
-        final TextView phoneCaption;
-        final MaterialButton useMicrog;
-        final TextView microgCaption;
-        final MaterialButton repair;
-        final MaterialButton openProvider;
-        final TextView openCaption;
+        final MaterialSwitch enableSwitch;
+        final TextView switchCaption;
         final View progressWrap;
         final LinearProgressIndicator progress;
         final TextView progressText;
@@ -2652,13 +2659,8 @@ public class MAct extends AppCompatActivity {
 
         GoogleSheetViews(View root) {
             status = root.findViewById(R.id.googleSheetStatus);
-            usePhone = root.findViewById(R.id.googleUsePhone);
-            phoneCaption = root.findViewById(R.id.googlePhoneCaption);
-            useMicrog = root.findViewById(R.id.googleUseMicrog);
-            microgCaption = root.findViewById(R.id.googleMicrogCaption);
-            repair = root.findViewById(R.id.googleRepair);
-            openProvider = root.findViewById(R.id.googleOpenProvider);
-            openCaption = root.findViewById(R.id.googleOpenProviderCaption);
+            enableSwitch = root.findViewById(R.id.googleEnableSwitch);
+            switchCaption = root.findViewById(R.id.googleSwitchCaption);
             progressWrap = root.findViewById(R.id.googleProgressWrap);
             progress = root.findViewById(R.id.googleProgress);
             progressText = root.findViewById(R.id.googleProgressText);
@@ -2683,60 +2685,58 @@ public class MAct extends AppCompatActivity {
         });
         GoogleSheetViews views = new GoogleSheetViews(sheetView);
         renderGoogleSheet(views, probeGoogleStatus());
-        views.usePhone.setOnClickListener(v -> {
-            Ui.tap(v);
-            runGoogleTask(sheet, views, GoogleLoginSetup.phoneTask(probeGoogleStatus()));
-        });
-        views.useMicrog.setOnClickListener(v -> {
-            Ui.tap(v);
-            runGoogleTask(sheet, views, GoogleLoginSetup.Task.INSTALL_MICROG);
-        });
-        views.repair.setOnClickListener(v -> {
-            Ui.tap(v);
-            runGoogleTask(sheet, views, GoogleLoginSetup.Task.REPAIR);
-        });
-        views.openProvider.setOnClickListener(v -> {
-            Ui.tap(v);
-            if (openGoogleProviderInMundo(probeGoogleStatus())) sheet.dismiss();
+        views.enableSwitch.setOnCheckedChangeListener((button, checked) -> {
+            if (!button.isPressed() || googleRunning) return; // programmatic render or busy
+            Ui.tap(button);
+            GoogleLoginSetup.Status status = probeGoogleStatus();
+            if (status == GoogleLoginSetup.Status.GOOGLE_SERVICES) {
+                renderGoogleSheet(views, status); // already on: the switch stays on
+                return;
+            }
+            // Off or degraded: (re)run the phone copy. A tap on a latched-but-degraded
+            // switch restores the install; a healthy install can never be turned off.
+            runGoogleTask(sheet, views, GoogleLoginSetup.phoneTask(status));
         });
         views.cancel.setOnClickListener(v -> sheet.dismiss());
         sheet.show();
     }
 
     /**
-     * Action visibility for a state. The phone row stays visible (disabled,
-     * with its caption) when the phone has no Google apps, so the option is
-     * discoverable; a healthy stock install hides it entirely.
+     * Switch state for a status. Once Google services are live the switch
+     * latches on and stays on — the only way back is clearing the app's data
+     * or reinstalling, per the product decision. A latched switch whose
+     * install degraded (services gone from the container) stays on and a tap
+     * re-runs the copy.
      */
     private void renderGoogleSheet(GoogleSheetViews views, GoogleLoginSetup.Status status) {
         applyGoogleStatus(views.status, status);
+        boolean ready = status == GoogleLoginSetup.Status.GOOGLE_SERVICES;
+        if (ready) setGoogleLoginLatched();
+        boolean on = ready || isGoogleLoginLatched();
         boolean phoneOk = GoogleServicesInstaller.availableOnPhone(this);
-        boolean stockReady = status == GoogleLoginSetup.Status.GOOGLE_SERVICES;
-        boolean storeIn = stockReady && GoogleServicesInstaller.isPlayStoreInstalled(this);
-        // Stock without a Play Store can't sign in anywhere — offer the copy again.
-        boolean showPhone = !stockReady || !storeIn;
-        views.usePhone.setVisibility(showPhone ? View.VISIBLE : View.GONE);
-        views.usePhone.setEnabled(showPhone && phoneOk && !googleRunning);
-        views.phoneCaption.setVisibility(showPhone && !phoneOk ? View.VISIBLE : View.GONE);
-        boolean showMicrog = GoogleLoginSetup.showMicrogAction(status);
-        views.useMicrog.setVisibility(showMicrog ? View.VISIBLE : View.GONE);
-        views.microgCaption.setVisibility(showMicrog ? View.VISIBLE : View.GONE);
-        views.useMicrog.setEnabled(!googleRunning);
-        views.repair.setVisibility(GoogleLoginSetup.showRepair(status) ? View.VISIBLE : View.GONE);
-        views.repair.setEnabled(!googleRunning);
-        // Once a provider is in, the next step lives inside Mundo: sign in to
-        // Google there (Play Store for stock, microG settings for microG).
-        boolean microgReady = status == GoogleLoginSetup.Status.MICROG;
-        boolean showOpen = stockReady ? storeIn : microgReady;
-        views.openProvider.setVisibility(showOpen ? View.VISIBLE : View.GONE);
-        views.openCaption.setVisibility(showOpen ? View.VISIBLE : View.GONE);
-        if (showOpen) {
-            views.openProvider.setText(stockReady ? R.string.google_open_store : R.string.google_open_microg);
-            views.openCaption.setText(stockReady
-                    ? R.string.google_open_store_caption : R.string.google_open_microg_caption);
-        }
-        views.openProvider.setEnabled(!googleRunning);
+        views.enableSwitch.setChecked(on);
+        views.enableSwitch.setEnabled(!googleRunning && (on || phoneOk));
+        views.switchCaption.setText(on ? R.string.google_switch_caption_on
+                : phoneOk ? R.string.google_switch_caption_off : R.string.google_use_phone_unavailable);
         views.cancel.setEnabled(!googleRunning);
+    }
+
+    private static final String PREF_GOOGLE_LOGIN = "google_login_enabled";
+
+    private boolean isGoogleLoginLatched() {
+        try {
+            return "1".equals(new Prefs(this).getSt(PREF_GOOGLE_LOGIN, ""));
+        } catch (Throwable t) {
+            return false;
+        }
+    }
+
+    private void setGoogleLoginLatched() {
+        try {
+            new Prefs(this).setSt(PREF_GOOGLE_LOGIN, "1");
+        } catch (Throwable t) {
+            Log.w(TAG, "Google login: could not persist the switch", t);
+        }
     }
 
     /** Android 16+ split-APK launch guard: the framework NPEs when the
@@ -2752,37 +2752,7 @@ public class MAct extends AppCompatActivity {
         }
     }
 
-    /** Opens the provider's own app inside the container; false when the
-     *  container refused the launch (sheet stays open so the user can retry). */
-    private boolean openGoogleProviderInMundo(GoogleLoginSetup.Status status) {
-        String pkg = status == GoogleLoginSetup.Status.GOOGLE_SERVICES
-                ? GoogleServicesInstaller.PLAY_STORE_PKG : GoogleServicesInstaller.GMS_PKG;
-        try {
-            // A native container crash kills the process before any Java catch
-            // runs; the breadcrumb lets the next start say what was being opened.
-            CrashLogger.noteAction(this, "open in Mundo: " + pkg);
-            guardContainerLaunch();
-            // The splash-intent path is the one game launches already prove on
-            // device; the direct launchApp call is the fallback.
-            Intent intent = MetaActivityManager.obtainSplashLaunchIntent(pkg, this);
-            if (intent != null) {
-                startActivity(intent);
-            } else {
-                MetaActivityManager.launchApp(pkg);
-            }
-            // Still alive 15 s later: the launch did not kill the process. Uses
-            // crashHandler because onDestroy wipes `main` while the process lives.
-            crashHandler.postDelayed(() -> CrashLogger.clearAction(getApplicationContext()), 15000L);
-            return true;
-        } catch (Throwable t) {
-            CrashLogger.clearAction(this);
-            Log.e(TAG, "Google login: open in Mundo failed", t);
-            Ui.snackbar(this, getString(R.string.google_open_failed));
-            return false;
-        }
-    }
-
-    /** Runs one installer on the setup executor; the sheet cannot leave while it works. */
+    /** Runs the phone-copy installer on the setup executor; the sheet cannot leave while it works. */
     private void runGoogleTask(BottomSheetDialog sheet, GoogleSheetViews views, GoogleLoginSetup.Task task) {
         if (googleRunning || !Ui.alive(this)) return;
         googleRunning = true;
@@ -2790,58 +2760,22 @@ public class MAct extends AppCompatActivity {
         sheet.setCanceledOnTouchOutside(false);
         views.result.setVisibility(View.GONE);
         views.progressWrap.setVisibility(View.VISIBLE);
-        boolean microgDownload = task == GoogleLoginSetup.Task.INSTALL_MICROG;
-        views.progress.setIndeterminate(!microgDownload);
-        if (microgDownload) views.progress.setProgressCompat(0, false);
-        views.progressText.setText(getString(task == GoogleLoginSetup.Task.REPAIR
-                ? R.string.google_working_repair
-                : microgDownload ? R.string.google_working_microg : R.string.google_working_phone));
+        views.progress.setIndeterminate(true);
+        views.progressText.setText(R.string.google_working_phone);
         renderGoogleSheet(views, probeGoogleStatus());
         if (googleExecutor == null) {
             googleExecutor = Executors.newSingleThreadExecutor(r -> new Thread(r, "anoy-google-setup"));
         }
         final Context app = getApplicationContext();
-        // Per-file completion: a file counts when a report opens it (downloaded
-        // 0) and later reaches its total. Verified-cache files report nothing.
-        final int[] filesDone = {0};
-        final boolean[] fileOpen = {false};
-        final MicroGInstaller.DownloadProgress downloadProgress = microgDownload
-                ? (file, downloaded, total) -> {
-                    if (downloaded <= 0) fileOpen[0] = true;
-                    if (fileOpen[0] && total > 0 && downloaded >= total) {
-                        filesDone[0]++;
-                        fileOpen[0] = false;
-                    }
-                    int filePercent = total > 0 ? (int) Math.min(100L, downloaded * 100L / total) : 0;
-                    int overall = Math.min(99, (filesDone[0] * 100 + filePercent) / MICROG_FILE_COUNT);
-                    String line = getString(R.string.google_progress_file,
-                            file, Ui.bytes(downloaded), Ui.bytes(Math.max(total, 0L)));
-                    main.post(() -> {
-                        if (!sheet.isShowing() || googleSheet != sheet) return;
-                        views.progress.setProgressCompat(overall, false);
-                        views.progressText.setText(line);
-                    });
-                }
-                : null;
         try {
             googleExecutor.execute(() -> {
                 String result;
                 try {
-                    switch (task) {
-                        case INSTALL_PHONE:
-                            result = GoogleServicesInstaller.installFresh(app);
-                            break;
-                        case SWITCH_TO_PHONE:
-                            result = MicroGInstaller.installStock(app);
-                            break;
-                        case REPAIR:
-                            result = getString(MicroGInstaller.repairInternalInstall(app)
-                                    ? R.string.google_repair_done : R.string.google_repair_failed);
-                            break;
-                        default:
-                            result = MicroGInstaller.installMicroG(app, downloadProgress);
-                            break;
-                    }
+                    // SWITCH_TO_PHONE covers phones where a previous build
+                    // installed microG: it removes microG and installs stock.
+                    result = task == GoogleLoginSetup.Task.SWITCH_TO_PHONE
+                            ? MicroGInstaller.installStock(app)
+                            : GoogleServicesInstaller.installFresh(app);
                 } catch (Throwable t) {
                     Log.e(TAG, "Google login: setup task crashed", t);
                     result = getString(R.string.net_generic);

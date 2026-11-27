@@ -16,8 +16,8 @@ public final class GoogleLoginSetup {
         MICROG_NEEDS_REPAIR
     }
 
-    /** One sheet action. The phone button maps to INSTALL_PHONE or SWITCH_TO_PHONE. */
-    public enum Task { INSTALL_PHONE, SWITCH_TO_PHONE, INSTALL_MICROG, REPAIR }
+    /** One sheet action. The switch maps to INSTALL_PHONE or SWITCH_TO_PHONE. */
+    public enum Task { INSTALL_PHONE, SWITCH_TO_PHONE }
 
     private GoogleLoginSetup() { }
 
@@ -37,27 +37,12 @@ public final class GoogleLoginSetup {
         return phoneHasGms && phoneHasGsf;
     }
 
-    /** Repair is only meaningful while microG sits as a non-internal install. */
-    public static boolean showRepair(Status status) {
-        return status == Status.MICROG_NEEDS_REPAIR;
-    }
-
-    /** The phone action is pointless while a healthy stock install is already live. */
-    public static boolean showPhoneAction(Status status, boolean phoneAvailable) {
-        return status != Status.GOOGLE_SERVICES && phoneAvailable;
-    }
-
-    /** microG is offered unless it is already the (healthy) provider. */
-    public static boolean showMicrogAction(Status status) {
-        return status != Status.MICROG;
-    }
-
-    /** True once either provider can answer the game's Google sign-in. */
+    /** True once a provider can answer the game's Google sign-in. */
     public static boolean isReady(Status status) {
         return status == Status.GOOGLE_SERVICES || status == Status.MICROG;
     }
 
-    /** The phone button's task: a switch away from microG, else a fresh stock install. */
+    /** The switch's task: a switch away from microG, else a fresh stock install. */
     public static Task phoneTask(Status status) {
         return status == Status.MICROG || status == Status.MICROG_NEEDS_REPAIR
                 ? Task.SWITCH_TO_PHONE : Task.INSTALL_PHONE;
