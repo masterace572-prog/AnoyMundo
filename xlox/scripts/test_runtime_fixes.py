@@ -231,6 +231,11 @@ class AndroidWiring(unittest.TestCase):
         # breadcrumb is written before the launch and reported next start.
         self.assertIn('CrashLogger.noteAction(', mact)
         self.assertIn('CrashLogger.pendingAction(this)', mact)
+        # Android 16+ split-APK launch NPE: the config guard is installed at
+        # process start and re-armed right before every container launch.
+        self.assertTrue((JAVA / 'utils' / 'ConfigGuard.java').is_file())
+        self.assertIn('ConfigGuard.install(this)', box)
+        self.assertIn('guardContainerLaunch()', mact)
         # BGMI's Google button rides on Play Games; it is cloned too (optional).
         self.assertEqual(services.count('installOneClone(ctx, PLAY_GAMES_PKG, out)'), 2)
         for src in (microg, services):

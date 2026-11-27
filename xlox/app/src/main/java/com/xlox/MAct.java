@@ -40,6 +40,7 @@ import com.xlox.utils.GameSupport;
 import com.xlox.utils.GameTarget;
 import com.xlox.utils.GameRunState;
 import com.xlox.utils.ConcurrentLaunchGuard;
+import com.xlox.utils.ConfigGuard;
 import com.xlox.utils.CrashLogger;
 import com.xlox.utils.GoogleLoginSetup;
 import com.xlox.utils.GoogleServicesInstaller;
@@ -1924,6 +1925,7 @@ public class MAct extends AppCompatActivity {
         launchTarget.qaLaunchAt = SystemClock.elapsedRealtime();
         // 1. Launch. Only this block decides whether the game started; the
         //    container call itself is unchanged.
+        guardContainerLaunch();
         boolean started = false;
         Throwable failure = null;
         try {
@@ -2724,6 +2726,18 @@ public class MAct extends AppCompatActivity {
         views.cancel.setEnabled(!googleRunning);
     }
 
+    /** Android 16+ split-APK launch guard: the framework NPEs when the
+     *  container leaves no current Application across the vprocess handoff. */
+    private void guardContainerLaunch() {
+        try {
+            BoxApplication app = BoxApplication.get();
+            if (app == null) return;
+            ConfigGuard.install(app);
+            ConfigGuard.repairNow(app);
+        } catch (Throwable ignored) {
+        }
+    }
+
     /** Opens the provider's own app inside the container; false when the
      *  container refused the launch (sheet stays open so the user can retry). */
     private boolean openGoogleProviderInMundo(GoogleLoginSetup.Status status) {
@@ -2733,6 +2747,7 @@ public class MAct extends AppCompatActivity {
             // A native container crash kills the process before any Java catch
             // runs; the breadcrumb lets the next start say what was being opened.
             CrashLogger.noteAction(this, "open in Mundo: " + pkg);
+            guardContainerLaunch();
             // The splash-intent path is the one game launches already prove on
             // device; the direct launchApp call is the fallback.
             Intent intent = MetaActivityManager.obtainSplashLaunchIntent(pkg, this);

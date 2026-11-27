@@ -4,6 +4,7 @@ import android.app.Application;
 import android.content.Context;
 import android.util.Log;
 
+import com.xlox.utils.ConfigGuard;
 import com.xlox.utils.CrashLogger;
 import com.xlox.utils.LibManager;
 import com.xlox.utils.GameTarget;
@@ -47,6 +48,10 @@ public class BoxApplication extends Application
     protected void attachBaseContext(Context base) {
         // Earliest point of the process: record any later crash for support.
         CrashLogger.install(this);
+        gApp = this;
+        // Android 16+: the container's process handoff can leave the framework
+        // without an Application; the next config change then NPEs (see ConfigGuard).
+        ConfigGuard.install(this);
         super.attachBaseContext(base);
         MetaCore.setProcessLifecycleCallback(this);
     }
@@ -63,6 +68,9 @@ public class BoxApplication extends Application
             // Exception, and would otherwise kill the process at startup.
             Log.e(TAG, "Activation Error", e);
         }
+        // Activation may hook the main handler after attachBaseContext: re-chain
+        // the config guard so it survives whatever the container installed.
+        ConfigGuard.install(this);
     }
 
     /**
