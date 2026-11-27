@@ -67,7 +67,7 @@ public final class SplitDepsFix {
         install();
     }
 
-    /** Packages the repair fired for, newest last; "" when none or unreadable. */
+    /** Packages the repair fired for, deduplicated with counts; "" when none. */
     public static String readState(android.content.Context ctx) {
         File dir = stateDir;
         try {
@@ -78,11 +78,27 @@ public final class SplitDepsFix {
         File file = new File(dir, "splitfix_state.txt");
         if (!file.isFile()) return "";
         try {
-            byte[] data = new byte[(int) Math.min(file.length(), 4096)];
+            byte[] data = new byte[(int) Math.min(file.length(), 8192)];
             java.io.FileInputStream in = new java.io.FileInputStream(file);
             try {
                 int n = in.read(data);
-                return n > 0 ? new String(data, 0, n, java.nio.charset.StandardCharsets.UTF_8).trim() : "";
+                if (n <= 0) return "";
+                String raw = new String(data, 0, n, java.nio.charset.StandardCharsets.UTF_8).trim();
+                if (raw.isEmpty()) return "";
+                java.util.LinkedHashMap<String, Integer> counts = new java.util.LinkedHashMap<>();
+                for (String line : raw.split("\\n")) {
+                    String pkg = line.trim();
+                    if (pkg.isEmpty()) continue;
+                    Integer c = counts.get(pkg);
+                    counts.put(pkg, c == null ? 1 : c + 1);
+                }
+                StringBuilder out = new StringBuilder();
+                for (java.util.Map.Entry<String, Integer> e : counts.entrySet()) {
+                    out.append(e.getKey());
+                    if (e.getValue() > 1) out.append(" x").append(e.getValue());
+                    out.append('\n');
+                }
+                return out.toString().trim();
             } finally {
                 in.close();
             }
