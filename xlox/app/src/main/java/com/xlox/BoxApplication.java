@@ -9,6 +9,7 @@ import com.xlox.utils.CrashLogger;
 import com.xlox.utils.LibManager;
 import com.xlox.utils.GameTarget;
 import com.xlox.utils.GameWebRouting;
+import com.xlox.utils.AccountTrace;
 import com.xlox.utils.PmCompatShim;
 
 import java.io.File;
@@ -75,6 +76,7 @@ public class BoxApplication extends Application
         // Same for the package manager hook: wrap it with the Android 16+
         // slice-type shim once the container's proxy is in place.
         PmCompatShim.install();
+        AccountTrace.install(this);
     }
 
     /**
@@ -89,6 +91,7 @@ public class BoxApplication extends Application
         // package manager before the virtual app's threads first query it
         // (Android 16+ slice types; the Play Store dies on this otherwise).
         PmCompatShim.install();
+        AccountTrace.install(this);
         final GameTarget game = GameTarget.forProcess(processName, processName2);
         if (game == null) {
             Log.d(LOAD_TAG, "Ignoring non-game process: " + processName);

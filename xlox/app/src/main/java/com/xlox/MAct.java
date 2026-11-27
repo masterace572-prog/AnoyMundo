@@ -47,6 +47,7 @@ import com.xlox.utils.GoogleServicesInstaller;
 import com.xlox.utils.LibManager;
 import com.xlox.utils.MicroGInstaller;
 import com.xlox.utils.Net;
+import com.xlox.utils.AccountTrace;
 import com.xlox.utils.PmCompatShim;
 import com.xlox.utils.Prefs;
 import com.xlox.utils.StorageAccess;
@@ -1570,6 +1571,17 @@ public class MAct extends AppCompatActivity {
                 b.append("\n").append(gameName(game)).append(" status: ")
                         .append(redactStatus(game.message.getText().toString()));
             }
+        }
+        // Virtual account calls (method names and outcomes only, no secrets):
+        // the Play Store's in-container sign-in fails silently without this.
+        String accountTrace;
+        try {
+            accountTrace = AccountTrace.read(this);
+        } catch (Throwable t) {
+            accountTrace = null;
+        }
+        if (accountTrace != null && !accountTrace.trim().isEmpty()) {
+            b.append("\nAccount calls in Mundo:\n").append(accountTrace.trim());
         }
         return b.toString();
     }

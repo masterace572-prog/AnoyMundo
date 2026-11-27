@@ -244,6 +244,10 @@ class AndroidWiring(unittest.TestCase):
         self.assertTrue((JAVA / 'utils' / 'PmCompatShim.java').is_file())
         self.assertIn('PmCompatShim.install()', box)
         self.assertIn('PmCompatShim.install()', mact)
+        # Silent in-container sign-in failures are traced into support info.
+        self.assertTrue((JAVA / 'utils' / 'AccountTrace.java').is_file())
+        self.assertIn('AccountTrace.install(this)', box)
+        self.assertIn('AccountTrace.read(this)', mact)
         # BGMI's Google button rides on Play Games; it is cloned too (optional).
         self.assertEqual(services.count('installOneClone(ctx, PLAY_GAMES_PKG, out)'), 2)
         for src in (microg, services):
