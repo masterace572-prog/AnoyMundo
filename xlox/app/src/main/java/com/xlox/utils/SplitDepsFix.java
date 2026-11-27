@@ -107,6 +107,38 @@ public final class SplitDepsFix {
         }
     }
 
+    /** The vprocess bind diagnostics (newest last); "" when none. */
+    public static String readDiag(android.content.Context ctx) {
+        File dir = stateDir;
+        try {
+            if (ctx != null) dir = ctx.getFilesDir();
+        } catch (Throwable ignored) {
+        }
+        if (dir == null) return "";
+        File file = new File(dir, "splitfix_diag.txt");
+        if (!file.isFile()) return "";
+        try {
+            byte[] data = new byte[(int) Math.min(file.length(), 2048)];
+            java.io.FileInputStream in = new java.io.FileInputStream(file);
+            try {
+                int n = in.read(data);
+                if (n <= 0) return "";
+                String raw = new String(data, 0, n, java.nio.charset.StandardCharsets.UTF_8).trim();
+                // Keep only the last few lines: the interesting one is the most recent bind.
+                String[] lines = raw.split("\\n");
+                StringBuilder out = new StringBuilder();
+                for (int i = Math.max(0, lines.length - 8); i < lines.length; i++) {
+                    out.append(lines[i]).append('\n');
+                }
+                return out.toString().trim();
+            } finally {
+                in.close();
+            }
+        } catch (Throwable t) {
+            return "";
+        }
+    }
+
     private static void noteRepair(String packageName) {
         File dir = stateDir;
         if (dir == null) return;
@@ -175,6 +207,13 @@ public final class SplitDepsFix {
 
         @Override
         public boolean handleMessage(Message msg) {
+            // Android 17 NPEs in the LoadedApk constructor on a null split table.
+            // The constructor runs during the bind/launch, so the repair must happen
+            // BEFORE the framework (and the container's own callback) build it. For
+            // a bind, the ApplicationInfo is already in the message: repair first.
+            if (msg.what == bindWhat) {
+                repairBindData(msg.obj);
+            }
             boolean handled = previous != null && previous.handleMessage(msg);
             if (!handled) {
                 if (msg.what == executeWhat) {
@@ -234,25 +273,54 @@ public final class SplitDepsFix {
         try {
             Class<?> threadClass = Class.forName("android.app.ActivityThread");
             Object thread = threadClass.getMethod("currentActivityThread").invoke(null);
-            if (thread == null) return;
+            if (thread == null) {
+                recordDiag("repairBoundApp: no ActivityThread");
+                return;
+            }
             Field bound = threadClass.getDeclaredField("mBoundApplication");
             bound.setAccessible(true);
             Object bindData = bound.get(thread);
-            repairBindData(bindData);
-            // If the constructor already built a null-table loader for this package,
-            // rebuild it from the just-repaired info so the first activity context
-            // does not NPE on the stale loader.
-            if (bindData != null) {
-                try {
-                    Field appInfo = bindData.getClass().getDeclaredField("appInfo");
-                    appInfo.setAccessible(true);
-                    ApplicationInfo info = (ApplicationInfo) appInfo.get(bindData);
-                    if (info != null) repairLoadedApkCache(thread, info.packageName);
-                } catch (Throwable ignored) {
-                }
+            if (bindData == null) {
+                recordDiag("repairBoundApp: not bound yet");
+                return;
             }
+            String pkg = null;
+            try {
+                Field appInfo = bindData.getClass().getDeclaredField("appInfo");
+                appInfo.setAccessible(true);
+                ApplicationInfo info = (ApplicationInfo) appInfo.get(bindData);
+                if (info != null) {
+                    pkg = info.packageName;
+                    recordDiag("repairBoundApp: bound pkg=" + pkg
+                            + " splits=" + splitNames(info).length
+                            + " isolated=" + requestsIsolatedSplitLoading(info)
+                            + " deps=" + (splitDependenciesField().get(info) != null));
+                    repair(info);
+                    repairLoadedApkCache(thread, pkg);
+                }
+            } catch (Throwable inner) {
+                recordDiag("repairBoundApp: appInfo read failed " + inner.getClass().getSimpleName());
+            }
+            repairBindData(bindData);
         } catch (Throwable t) {
-            Log.w(TAG, "Bound-app repair unavailable", t);
+            recordDiag("repairBoundApp: " + t.getClass().getSimpleName());
+        }
+    }
+
+    /** Diagnostic that survives a native death: appended to the action breadcrumb file. */
+    private static void recordDiag(String line) {
+        File dir = stateDir;
+        if (dir == null) return;
+        java.io.FileOutputStream out = null;
+        try {
+            out = new java.io.FileOutputStream(new File(dir, "splitfix_diag.txt"), true);
+            out.write((line + "\n").getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        } catch (Throwable ignored) {
+        } finally {
+            try {
+                if (out != null) out.close();
+            } catch (Throwable ignored) {
+            }
         }
     }
 

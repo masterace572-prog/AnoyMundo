@@ -2267,6 +2267,8 @@ public class MAct extends AppCompatActivity {
     /** Appends the split-repair bookkeeping so a report shows whether the fix fired. */
     private String withSplitFixState(String report) {
         try {
+            String diag = SplitDepsFix.readDiag(this);
+            if (!diag.isEmpty()) report += "\n\nSplit bind diag:\n" + diag;
             String state = SplitDepsFix.readState(this);
             if (state.isEmpty()) return report + "\n\nSplit repair: never fired";
             return report + "\n\nSplit repair fired for:\n" + state;
