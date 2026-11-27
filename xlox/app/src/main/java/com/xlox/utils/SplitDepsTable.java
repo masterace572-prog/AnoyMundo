@@ -24,7 +24,7 @@ public final class SplitDepsTable {
         table[0] = base;
         for (int i = 0; i < splitNames.length; i++) {
             String name = splitNames[i];
-            if (name == null || isBaseConfig(name)) continue; // pure config split
+            if (name == null || isBaseConfig(name) || isFeatureConfig(splitNames, name)) continue;
             int[] config = configIndices(splitNames, name);
             int[] entry = new int[config.length + 1];
             entry[0] = 0; // feature splits depend on the base
@@ -36,6 +36,17 @@ public final class SplitDepsTable {
 
     private static boolean isBaseConfig(String name) {
         return name.startsWith("config.");
+    }
+
+    /** "<feature>.config.<...>" where <feature> is itself a split: no own entry. */
+    private static boolean isFeatureConfig(String[] splitNames, String name) {
+        int at = name.indexOf(".config.");
+        if (at <= 0) return false;
+        String owner = name.substring(0, at);
+        for (String split : splitNames) {
+            if (owner.equals(split)) return true;
+        }
+        return false;
     }
 
     /** 1-based indices of the config splits of {@code feature} (null = base). */
