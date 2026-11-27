@@ -56,27 +56,31 @@ public final class GoogleServicesInstaller {
         }
     }
 
-    /** True when GMS's add-account/sign-in activities resolve inside the container. */
-    public static boolean signInUiResolvable() {
+    /**
+     * True when the container reports this component resolvable. An unsupported
+     * probe (the call itself throws) means "try the launch and let it decide".
+     */
+    public static boolean resolvableInContainer(ComponentName component) {
         try {
-            return MetaPackageManager.resolveActivityInfo(new ComponentName(GMS_PKG, MINUTEMAID_ACTIVITY)) != null
-                    && MetaPackageManager.resolveActivityInfo(new ComponentName(GMS_PKG, SIGNIN_ACTIVITY)) != null;
+            return MetaPackageManager.resolveActivityInfo(component) != null;
         } catch (Throwable e) {
-            return false;
+            return true;
         }
     }
 
     /**
-     * Installs a phone app into the container through the same staged base+splits
-     * path that reliably installs GMS. Used for games whose first container launch
-     * dies inside the SDK's own implicit installer (BGMI Air on Android 17).
-     * Idempotent: an already-installed inner app is left untouched.
+     * Installs a phone app into the container. cloneApp goes first: the SDK's
+     * native clone carries the split set itself. The staged base+splits path
+     * (the one that reliably installs GMS) is the fallback. Used for games
+     * whose first container launch dies inside the SDK's own implicit
+     * installer (BGMI Air on Android 17). Idempotent: an already-installed
+     * inner app is left untouched.
      */
     public static boolean installFromPhone(Context ctx, String pkg) {
         StringBuilder out = new StringBuilder();
         boolean ok;
         try {
-            ok = installOne(ctx, pkg, false, out);
+            ok = installOneClone(ctx, pkg, out);
         } catch (Throwable t) {
             Log.e(TAG, "installFromPhone crashed for " + pkg, t);
             return false;
@@ -273,12 +277,15 @@ public final class GoogleServicesInstaller {
         int rc = 0;
         try {
             if (splits != null && splits.length > 0) {
-                // Modern GMS/Play Store ship as split APKs. Installing base.apk
+                // Modern GMS/games ship as split APKs. Installing base.apk
                 // alone leaves a broken package that signs in to nothing, so
-                // copy base + splits into a scratch dir (the /data/app dir is
-                // not listable) and hand the whole set to the container.
+                // copy base + the splits THIS device can use into a scratch
+                // dir (the /data/app dir is not listable) and hand the whole
+                // set to the container. Foreign-ABI/density splits make the
+                // container's installer produce a broken package (big games
+                // crash where small packages survived), so they are filtered.
                 dir = new File(ctx.getCacheDir(), "clone-" + pkg);
-                if (!stageApkSet(dir, apkPath, splits)) {
+                if (!stageApkSet(dir, apkPath, filterSplits(ctx, splits))) {
                     out.append(pkg).append(" copy failed — free up storage and retry. ");
                     return false;
                 }
@@ -309,6 +316,53 @@ public final class GoogleServicesInstaller {
             out.append(". ");
         }
         return ok;
+    }
+
+    /** Known ABI config-split markers, normalized like split file names. */
+    private static final String[] ABI_MARKERS = {
+            "arm64_v8a", "armeabi_v7a", "armeabi", "x86_64", "x86", "mips64", "mips"};
+    private static final String[] DENSITY_MARKERS = {
+            "xxxhdpi", "xxhdpi", "xhdpi", "hdpi", "mdpi", "ldpi", "tvdpi"};
+
+    /** Drops config splits for other ABIs/densities; keeps feature and language splits. */
+    private static String[] filterSplits(Context ctx, String[] splits) {
+        int densityDpi = 0;
+        try {
+            densityDpi = ctx.getResources().getDisplayMetrics().densityDpi;
+        } catch (Throwable ignored) {
+        }
+        java.util.List<String> kept = new java.util.ArrayList<>();
+        for (String split : splits) {
+            if (splitAllowed(new File(split).getName(), densityDpi)) kept.add(split);
+        }
+        return kept.toArray(new String[0]);
+    }
+
+    private static boolean splitAllowed(String fileName, int densityDpi) {
+        String name = fileName.toLowerCase(java.util.Locale.US);
+        for (String abi : ABI_MARKERS) {
+            if (name.contains(abi)) {
+                for (String deviceAbi : android.os.Build.SUPPORTED_ABIS) {
+                    if (abi.equals(deviceAbi.toLowerCase(java.util.Locale.US).replace('-', '_'))) {
+                        return true;
+                    }
+                }
+                return false;
+            }
+        }
+        for (String bucket : DENSITY_MARKERS) {
+            if (name.contains(bucket)) return bucket.equals(densityBucket(densityDpi));
+        }
+        return true;
+    }
+
+    private static String densityBucket(int densityDpi) {
+        if (densityDpi <= 120) return "ldpi";
+        if (densityDpi <= 160) return "mdpi";
+        if (densityDpi <= 240) return "hdpi";
+        if (densityDpi <= 320) return "xhdpi";
+        if (densityDpi <= 480) return "xxhdpi";
+        return "xxxhdpi";
     }
 
     /** Copies base.apk and every split into {@code dir}; false when any part fails. */

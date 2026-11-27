@@ -2761,6 +2761,11 @@ public class MAct extends AppCompatActivity {
      * real phone shows when an account is added) inside the container. Once an
      * account exists in Mundo, the game's Google button offers it in the picker.
      * No Play Store is involved anywhere in this flow.
+     *
+     * NOTE: the SDK's launchApp(pkg, string) / obtainSplashLaunchIntent(pkg,
+     * string, ctx) overloads take a container USER name as the middle argument,
+     * not an activity — passing the activity name silently launches nothing.
+     * launchIntent(Intent) is the arbitrary-component entry point.
      */
     private void openGoogleAddAccountInMundo(GoogleSheetViews views) {
         if (googleRunning || !Ui.alive(this)) return;
@@ -2768,7 +2773,9 @@ public class MAct extends AppCompatActivity {
             Ui.snackbar(this, getString(R.string.google_stop_game_first));
             return;
         }
-        if (!GoogleServicesInstaller.signInUiResolvable()) {
+        final ComponentName minutemaid = new ComponentName(
+                GoogleServicesInstaller.GMS_PKG, GoogleServicesInstaller.MINUTEMAID_ACTIVITY);
+        if (!GoogleServicesInstaller.resolvableInContainer(minutemaid)) {
             // The registry may still be reloading right after the copy; never
             // launch a component the container cannot resolve.
             views.result.setText(R.string.google_add_account_settling);
@@ -2780,21 +2787,22 @@ public class MAct extends AppCompatActivity {
             // runs; the breadcrumb lets the next start say what was being opened.
             CrashLogger.noteAction(this, "open in Mundo: Google account");
             guardContainerLaunch();
-            // The splash-intent path is the one game launches already prove on
-            // device; the explicit pkg+activity and raw intent are the fallbacks.
-            Intent intent = MetaActivityManager.obtainSplashLaunchIntent(
-                    GoogleServicesInstaller.GMS_PKG, GoogleServicesInstaller.MINUTEMAID_ACTIVITY, this);
-            if (intent != null) {
-                startActivity(intent);
-            } else {
+            MetaActivityManager.launchIntent(new Intent().setComponent(minutemaid));
+            views.result.setText(R.string.google_add_account_opening);
+            views.result.setVisibility(View.VISIBLE);
+            // Six seconds later GMS must be running in the container; otherwise
+            // the launch was silently swallowed — say so instead of "nothing".
+            crashHandler.postDelayed(() -> {
+                boolean up;
                 try {
-                    MetaActivityManager.launchApp(GoogleServicesInstaller.GMS_PKG,
-                            GoogleServicesInstaller.MINUTEMAID_ACTIVITY);
-                } catch (Throwable direct) {
-                    MetaActivityManager.launchIntent(new Intent().setComponent(new ComponentName(
-                            GoogleServicesInstaller.GMS_PKG, GoogleServicesInstaller.MINUTEMAID_ACTIVITY)));
+                    up = MetaActivityManager.isAppRunning(GoogleServicesInstaller.GMS_PKG);
+                } catch (Throwable t) {
+                    up = true; // probe failed: do not cry wolf
                 }
-            }
+                if (!up && Ui.alive(this) && googleSheet != null && googleSheet.isShowing()) {
+                    views.result.setText(R.string.google_add_account_failed);
+                }
+            }, 6000L);
             // Still alive 15 s later: the launch did not kill the process. Uses
             // crashHandler because onDestroy wipes `main` while the process lives.
             crashHandler.postDelayed(() -> CrashLogger.clearAction(getApplicationContext()), 15000L);

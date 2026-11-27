@@ -276,19 +276,23 @@ class AndroidWiring(unittest.TestCase):
         self.assertNotIn('googleOpenProvider', sheet)
         # The account the game picks comes from GMS's own add-account flow
         # (MinuteMaidActivity, verified on a real phone), opened inside Mundo.
+        # NB: the SDK's launchApp/obtainSplashLaunchIntent String overloads take
+        # a container USER name, not an activity — launchIntent(Intent) is the
+        # arbitrary-component entry point and the only correct call here.
         self.assertIn('openGoogleAddAccountInMundo', home)
         self.assertIn('GoogleServicesInstaller.MINUTEMAID_ACTIVITY', home)
-        self.assertIn('MetaActivityManager.obtainSplashLaunchIntent(', home)
-        self.assertIn('MetaActivityManager.launchApp(GoogleServicesInstaller.GMS_PKG', home)
         self.assertIn('MetaActivityManager.launchIntent(', home)
+        self.assertNotIn('obtainSplashLaunchIntent(GoogleServicesInstaller.GMS_PKG', home)
+        self.assertNotIn('MetaActivityManager.launchApp(GoogleServicesInstaller.GMS_PKG', home)
         services = (JAVA / 'utils/GoogleServicesInstaller.java').read_text()
         self.assertIn('com.google.android.gms.auth.uiflows.minutemaid.MinuteMaidActivity', services)
-        self.assertIn('public static boolean signInUiResolvable()', services)
+        self.assertIn('public static boolean resolvableInContainer(ComponentName component)', services)
         strings = (ROOT / 'app/src/main/res/values/strings.xml').read_text()
         for name in ('google_setup_row', 'google_status_none', 'google_status_stock',
                      'google_status_microg', 'google_status_repair', 'google_stop_game_first',
                      'google_switch_label', 'google_switch_caption_on', 'google_switch_caption_off',
-                     'google_add_account', 'google_add_account_settling', 'google_add_account_failed'):
+                     'google_add_account', 'google_add_account_settling', 'google_add_account_failed',
+                     'google_add_account_opening'):
             self.assertIn('name="' + name + '"', strings)
         # The switch latches on and is only reset by clearing the app's data.
         self.assertIn('google_login_enabled', home)
@@ -313,6 +317,11 @@ class AndroidWiring(unittest.TestCase):
         self.assertIn('GoogleServicesInstaller.installFromPhone(app, launching.target.packageName)', mact)
         services = (JAVA / 'utils/GoogleServicesInstaller.java').read_text()
         self.assertIn('public static boolean installFromPhone(Context ctx, String pkg)', services)
+        # cloneApp goes first (the SDK's native clone carries the split set);
+        # the staged fallback drops foreign-ABI/density config splits.
+        self.assertIn('ok = installOneClone(ctx, pkg, out);', services)
+        self.assertIn('filterSplits(ctx, splits)', services)
+        self.assertIn('Build.SUPPORTED_ABIS', services)
         # A native death during install or launch is attributed by a breadcrumb.
         self.assertIn('"container install: "', mact)
         self.assertIn('"launch: "', mact)

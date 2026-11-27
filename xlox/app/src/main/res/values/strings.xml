@@ -332,6 +332,7 @@
     <string name="google_add_account_hint">If the game shows no account to pick, add your Google account inside Mundo once.</string>
     <string name="google_add_account_settling">Google sign-in is still settling inside Mundo. Close this, wait a few seconds and try again.</string>
     <string name="google_add_account_failed">Could not open Google sign-in inside Mundo. Restart the app and try again.</string>
+    <string name="google_add_account_opening">Opening Google sign-in inside Mundo…</string>
     <string name="game_container_install_failed">%1$s could not be prepared inside Mundo. Restart the app and try again.</string>    <string name="crash_report_title">Anoy crashed last time</string>
     <string name="crash_action_title">Anoy closed while opening an app in Mundo</string>
     <string name="crash_report_copy">Copy report</string>
