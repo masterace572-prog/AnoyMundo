@@ -1579,6 +1579,26 @@ public class MAct extends AppCompatActivity {
                         .append(redactStatus(game.message.getText().toString()));
             }
         }
+        // What's actually inside the container for Google sign-in: gms/gsf/games
+        // versions and whether GMS is registered internal (the game's button dies
+        // silently when it is not).
+        String googleState;
+        try {
+            googleState = GoogleServicesInstaller.installedSummary();
+        } catch (Throwable t) {
+            googleState = null;
+        }
+        b.append("\nGoogle in Mundo: ").append(googleState != null && !googleState.trim().isEmpty()
+                ? googleState.trim() : "none installed");
+        String splitState;
+        try {
+            splitState = SplitDepsFix.readState(this);
+        } catch (Throwable t) {
+            splitState = null;
+        }
+        if (splitState != null && !splitState.trim().isEmpty()) {
+            b.append("\nSplit repair fired for: ").append(splitState.trim());
+        }
         // Virtual account calls (method names and outcomes only, no secrets):
         // the Play Store's in-container sign-in fails silently without this.
         String accountTrace;
