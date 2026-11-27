@@ -97,6 +97,13 @@ public class BoxApplication extends Application
         PmCompatShim.install();
         SplitDepsFix.install(this);
         AccountTrace.install(this);
+        // Android 17 NPEs on a null split table in the LoadedApk constructor during
+        // the bind — before any H callback fires. Repair the freshly-bound app's
+        // ApplicationInfo now, and once more shortly after (the container can finish
+        // the bind a beat after this callback returns).
+        SplitDepsFix.repairBoundApp();
+        new android.os.Handler(android.os.Looper.getMainLooper())
+                .postDelayed(SplitDepsFix::repairBoundApp, 120);
         final GameTarget game = GameTarget.forProcess(processName, processName2);
         if (game == null) {
             Log.d(LOAD_TAG, "Ignoring non-game process: " + processName);

@@ -222,6 +222,41 @@ public final class SplitDepsFix {
     }
 
     /**
+     * Repairs the game's ApplicationInfo the moment its process is bound, before
+     * any activity runs. Android 17 builds the LoadedApk's SplitDependencyLoader
+     * in the constructor and NPEs on a null table there (Android 15 deferred the
+     * null check to activity creation, which is why Air survives 15 but not 17).
+     * The container hands the freshly-bound app to its process-lifecycle callback;
+     * a scan of ActivityThread.mBoundApplication catches that bound info whether or
+     * not the H BIND_APPLICATION hook has fired yet. Best-effort, never throws.
+     */
+    public static void repairBoundApp() {
+        try {
+            Class<?> threadClass = Class.forName("android.app.ActivityThread");
+            Object thread = threadClass.getMethod("currentActivityThread").invoke(null);
+            if (thread == null) return;
+            Field bound = threadClass.getDeclaredField("mBoundApplication");
+            bound.setAccessible(true);
+            Object bindData = bound.get(thread);
+            repairBindData(bindData);
+            // If the constructor already built a null-table loader for this package,
+            // rebuild it from the just-repaired info so the first activity context
+            // does not NPE on the stale loader.
+            if (bindData != null) {
+                try {
+                    Field appInfo = bindData.getClass().getDeclaredField("appInfo");
+                    appInfo.setAccessible(true);
+                    ApplicationInfo info = (ApplicationInfo) appInfo.get(bindData);
+                    if (info != null) repairLoadedApkCache(thread, info.packageName);
+                } catch (Throwable ignored) {
+                }
+            }
+        } catch (Throwable t) {
+            Log.w(TAG, "Bound-app repair unavailable", t);
+        }
+    }
+
+    /**
      * The container can create the game's LoadedApk through its own reflective
      * bind before any framework message runs. That instance caches a split
      * loader whose dependency table is null; rebuild it from the repaired
