@@ -236,7 +236,7 @@ class NavigationWiring(unittest.TestCase):
 
     def test_source_version_and_compatible_runtime_pins(self):
         gradle = (ROOT / 'app/build.gradle').read_text()
-        for value in ("versionName '2.4.3'", 'versionCode 21', 'minSdk 21', 'targetSdk 28',
+        for value in ("versionName '2.5.0'", 'versionCode 22', 'minSdk 21', 'targetSdk 28',
                       'compileSdk 36', "androidx.viewpager:viewpager:1.0.0", "namespace 'com.xlox'"):
             self.assertIn(value, gradle)
         self.assertIn("testImplementation 'org.robolectric:robolectric:4.14.1'", gradle)

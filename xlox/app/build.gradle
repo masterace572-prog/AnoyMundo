@@ -87,8 +87,10 @@ android {
         // 2.4.3: browser-to-virtual-game login return; cancellable, bounded library requests.
         // Owner-requested replacement 2.4.3 (21): BGMI Air + sliding Home/Settings.
         // Existing code-21 installations require a manual same-signer APK update.
-        versionCode 21
-        versionName '2.4.3'
+        // 2.5.0 (22): latching Google-login switch (phone GMS only), BGMI Air
+        // launches without game files, no in-app Play Store or microG.
+        versionCode 22
+        versionName '2.5.0'
 
         vectorDrawables {
             useSupportLibrary true
