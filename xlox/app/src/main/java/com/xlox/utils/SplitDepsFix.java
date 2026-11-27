@@ -196,12 +196,14 @@ public final class SplitDepsFix {
      * Fills a missing split dependency table on an isolated-split app; true
      * when the info was repaired. Shared with PmCompatShim, which repairs
      * ApplicationInfos the framework pulls through the hooked package manager.
-     * No-op for unsplit or healthy apps.
+     * No-op for unsplit or healthy apps. splitNames is read reflectively: it
+     * only exists from API 26 up, and the repair is pointless below it anyway
+     * (the framework path that needs it is Android 16+).
      */
     public static boolean repair(ApplicationInfo info) {
         if (info == null) return false;
         try {
-            String[] splitNames = info.splitNames;
+            String[] splitNames = splitNames(info);
             if (splitNames == null || splitNames.length == 0) return false;
             if (!requestsIsolatedSplitLoading(info)) return false;
             Field deps = splitDependenciesField();
@@ -214,6 +216,12 @@ public final class SplitDepsFix {
             Log.w(TAG, "Could not repair " + info.packageName, t);
             return false;
         }
+    }
+
+    private static String[] splitNames(ApplicationInfo info) throws Exception {
+        Field field = ApplicationInfo.class.getField("splitNames");
+        field.setAccessible(true);
+        return (String[]) field.get(info);
     }
 
     /** Null rows (pure config splits) carry no entry, matching the AOSP layout. */
