@@ -1329,12 +1329,12 @@ public class MAct extends AppCompatActivity {
                 setDot(game.state, getString(R.string.state_not_installed), 0, R.color.text_secondary);
             } else if (!available) {
                 setDot(game.state, getString(R.string.state_library_needed), R.color.warning, R.color.text_secondary);
-            } else if (StorageAccess.firstMissing(this) != null
+            } else if (StorageAccess.firstMissing(this) != null && !game.target.optionalObb()
                     || game.obbState == AppManager.ObbState.ACCESS_REQUIRED) {
                 setDot(game.state, getString(R.string.state_files_access), R.color.warning, R.color.text_secondary);
-            } else if (game.obbState == AppManager.ObbState.MISSING) {
+            } else if (game.obbState == AppManager.ObbState.MISSING && !game.target.optionalObb()) {
                 setDot(game.state, getString(R.string.state_obb_missing), R.color.warning, R.color.text_secondary);
-            } else if (readyToLaunch(game)) {
+            } else if (readyToLaunch(game) || game.target.optionalObb()) {
                 setDot(game.state, getString(R.string.state_ready), R.color.success, R.color.text_primary);
             } else if (game.checkingObb) {
                 setDot(game.state, getString(R.string.state_checking_files), 0, R.color.text_secondary);
@@ -1354,7 +1354,10 @@ public class MAct extends AppCompatActivity {
             final int request = ++game.obbRequest;
             game.checkingObb = false;
             game.obbState = AppManager.ObbState.UNKNOWN;
-            if (!game.installed || !libraryAvailable(game) || StorageAccess.firstMissing(this) != null) continue;
+            // An optional-OBB game inspects its files even without storage access,
+            // so a missing OBB settles into MISSING (and never blocks launch).
+            if (!game.installed || !libraryAvailable(game)
+                    || StorageAccess.firstMissing(this) != null && !game.target.optionalObb()) continue;
             if (preview) {
                 game.obbState = AppManager.ObbState.AVAILABLE;
                 continue;
@@ -1599,8 +1602,12 @@ public class MAct extends AppCompatActivity {
 
     /** Read-only readiness hint. Launch still performs the full, verified OBB preparation. */
     private boolean readyToLaunch(GameSession game) {
-        if (!libraryAvailable(game) || game.obbState != AppManager.ObbState.AVAILABLE) return false;
-        if (StorageAccess.firstMissing(this) != null) return false;
+        if (!libraryAvailable(game)) return false;
+        // BGMI needs a confirmed OBB and storage access; BGMI Air launches without them.
+        if (!game.target.optionalObb()) {
+            if (game.obbState != AppManager.ObbState.AVAILABLE) return false;
+            if (StorageAccess.firstMissing(this) != null) return false;
+        }
         if (preview) return true; // The preview is not a native/container integration test.
         try {
             return MetaActivationManager.getActivationStatus();
@@ -1749,7 +1756,12 @@ public class MAct extends AppCompatActivity {
             else refreshGameState();
             return;
         }
-        if (!StorageAccess.has(this)) {
+        // BGMI needs storage to reach its OBB. BGMI Air only needs it when there
+        // is an OBB to copy; when its files were already seen as missing, Air
+        // launches untouched instead of asking for access it does not need.
+        if (!StorageAccess.has(this)
+                && !(launchTarget.target.optionalObb()
+                        && launchTarget.obbState == AppManager.ObbState.MISSING)) {
             requestStorage(true);
             return;
         }
@@ -1853,23 +1865,30 @@ public class MAct extends AppCompatActivity {
                 cancelPrepTimers();
                 preparingGame.obbRequest++;
                 preparingGame.checkingObb = false;
-                preparingGame.obbState = success ? AppManager.ObbState.AVAILABLE
-                        : getString(R.string.main_obb_not_found).equals(error)
-                                || getString(R.string.obb_folder_not_found).equals(error)
+                // A device with no OBB to copy is fine for an optional-OBB game:
+                // "not found" (and a blocked folder it never asked to read) both
+                // mean "nothing to copy", so launch straight away instead of
+                // showing "Game files not found". BGMI (required) still stops here.
+                boolean missingObb = getString(R.string.main_obb_not_found).equals(error)
+                        || getString(R.string.obb_folder_not_found).equals(error);
+                boolean obbOk = success || (preparingGame.target.optionalObb()
+                        && (missingObb || getString(R.string.obb_folder_blocked).equals(error)));
+                preparingGame.obbState = obbOk ? AppManager.ObbState.AVAILABLE
+                        : missingObb
                                 ? AppManager.ObbState.MISSING
                                 : getString(R.string.obb_folder_blocked).equals(error)
                                         ? AppManager.ObbState.ACCESS_REQUIRED : AppManager.ObbState.UNKNOWN;
                 refreshGameState();
-                if (success) new Prefs(MAct.this).setSt(preparedKey, OBB_PREPARED_YES);
+                if (obbOk) new Prefs(MAct.this).setSt(preparedKey, OBB_PREPARED_YES);
                 hideProgress();
-                if (!success && getString(R.string.obb_folder_blocked).equals(error)
+                if (!obbOk && getString(R.string.obb_folder_blocked).equals(error)
                         && StorageAccess.installGrantedThisRun(MAct.this)) {
                     // Install unknown apps was just granted: Android opens the
                     // game-files folder only to a freshly started app.
                     restartForGameFiles();
                     return;
                 }
-                if (!success) {
+                if (!obbOk) {
                     Log.d(TAG, "Launch stopped: game files not ready (" + error + ")");
                     setBusy(false, null);
                     String reason = error == null || error.isEmpty() ? getString(R.string.net_generic) : error;

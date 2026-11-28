@@ -3,6 +3,8 @@ package com.xlox.utils;
 /** Package/native-library identities shared by Home and the virtual process. */
 public enum GameTarget {
     BGMI("com.pubg.imobile", "libbgmi.so", "BGMI"),
+    // BGMI Air: its OBB is OPTIONAL. Files present get copied into the container
+    // exactly like BGMI's; a device that has none still launches straight away.
     BGMI_AIR("com.krafton.bgmilite", "libbgmilite.so", "BGMI Air");
 
     public final String packageName;
@@ -13,6 +15,11 @@ public enum GameTarget {
         this.packageName = packageName;
         this.libraryName = libraryName;
         this.displayName = displayName;
+    }
+
+    /** True when the game runs without an OBB: BGMI's is required, BGMI Air's is optional. */
+    public boolean optionalObb() {
+        return this == BGMI_AIR;
     }
 
     public static GameTarget fromPackage(String packageName) {

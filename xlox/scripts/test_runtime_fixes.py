@@ -217,13 +217,22 @@ class AndroidWiring(unittest.TestCase):
         self.assertIn('AccountTrace.install(this)', box)
         self.assertIn('AccountTrace.read(this)', mact)
 
-    def test_bgmi_air_uses_the_same_game_files_path_as_bgmi(self):
+    def test_bgmi_air_obb_is_optional_but_still_copied_when_present(self):
         target = (JAVA / 'utils/GameTarget.java').read_text()
         mact = (JAVA / 'MAct.java').read_text()
-        # Air goes through the SAME game-files copy as BGMI: the working 25be3c6
-        # build proves the copy succeeds and the container needs those files.
-        # The needsObb skip (dropping Air's copy) was the regression — keep it out.
+        # Air goes through the SAME game-files copy as BGMI when the files exist
+        # (the working 25be3c6 build proves the container needs them), but a
+        # device with NO OBB must not be stopped or asked for files.
         self.assertIn('BGMI_AIR("com.krafton.bgmilite", "libbgmilite.so", "BGMI Air")', target)
+        # Both games still run the copy step; only its missing-file outcome differs.
+        self.assertIn('copyObbAsync(preparingGame.target.packageName', mact)
+        self.assertIn('main.postDelayed(MAct.this::launchGame, LAUNCH_DELAY_MS);', mact)
+        # The optional-OBB escape: a not-found OBB never blocks or prompts on Air.
+        self.assertIn('optionalObb()', mact)
+        self.assertIn('public boolean optionalObb()', target)
+        self.assertIn('preparingGame.target.optionalObb()', mact)
+        self.assertIn('missingObb', mact)
+        # The needsObb skip (dropping Air's copy entirely) was the crash regression.
         self.assertNotIn('needsObb', target)
         self.assertNotIn('needsObb', mact)
         # The staged installFromPhone pre-install (with split filtering) was the
@@ -233,8 +242,6 @@ class AndroidWiring(unittest.TestCase):
         self.assertNotIn('airUnsupportedOs', mact)
         self.assertNotIn('game_air_os_unsupported', mact)
         self.assertFalse((JAVA / 'utils/GoogleServicesInstaller.java').exists())
-        # Both games launch after the OBB copy completes.
-        self.assertIn('main.postDelayed(MAct.this::launchGame, LAUNCH_DELAY_MS);', mact)
         # A native death during launch is still attributed by a breadcrumb.
         self.assertIn('"launch: "', mact)
 
