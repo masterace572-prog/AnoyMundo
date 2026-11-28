@@ -232,6 +232,13 @@ class AndroidWiring(unittest.TestCase):
         self.assertIn('public boolean optionalObb()', target)
         self.assertIn('preparingGame.target.optionalObb()', mact)
         self.assertIn('missingObb', mact)
+        # The container storage is provisioned BEFORE the source lookup, and an
+        # optional-OBB game succeeds with no source: that obtain call is the
+        # side effect whose absence crashed Air (cbc4e3d).
+        appmanager = (JAVA / 'utils/AppManager.java').read_text()
+        prep = appmanager.split('private boolean prepareObb', 1)[1]
+        self.assertLess(prep.index('readyContainerObbDir(pkg)'), prep.index('findSource(pkg, error)'))
+        self.assertIn('if (game != null && game.optionalObb())', prep)
         # The needsObb skip (dropping Air's copy entirely) was the crash regression.
         self.assertNotIn('needsObb', target)
         self.assertNotIn('needsObb', mact)

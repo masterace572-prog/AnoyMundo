@@ -153,16 +153,11 @@ public final class AppManager {
     // ------------------------------------------------------------- the work
 
     private boolean prepareObb(String pkg, CopyCallback callback, String[] error) throws IOException {
-        // 1. Source on the device.
-        Source source = findSource(pkg, error);
-        if (source == null) {
-            Log.d(TAG, "No source OBB for " + pkg + ": " + error[0]);
-            return false;
-        }
-        Log.d(TAG, "Source " + source.dir + " main=" + describe(source.mainObb)
-                + (source.patchObb != null ? " patch=" + describe(source.patchObb) : " patch=none"));
-
-        // 2. The container's own OBB folder - never the device folder.
+        // 1. The container's own OBB folder FIRST - never the device folder.
+        //    obtainAppExternalStorageDir inside also provisions the game's
+        //    virtual storage; BGMI Air dies at launch when that never ran,
+        //    even with no OBB files to copy (the 25be3c6 copy did it as a
+        //    side effect, the needsObb skip dropped it and crashed).
         File destDir = readyContainerObbDir(pkg);
         if (destDir == null) {
             error[0] = ctx.getString(R.string.obb_container_not_ready);
@@ -174,6 +169,21 @@ public final class AppManager {
             error[0] = ctx.getString(R.string.obb_copy_write_failed);
             return false;
         }
+
+        // 2. Source on the device. An optional-OBB game (BGMI Air) launches
+        //    with none: the container storage above is all it needs.
+        Source source = findSource(pkg, error);
+        if (source == null) {
+            Log.d(TAG, "No source OBB for " + pkg + ": " + error[0]);
+            GameTarget game = GameTarget.fromPackage(pkg);
+            if (game != null && game.optionalObb()) {
+                Log.d(TAG, pkg + " needs no OBB; container storage prepared, launching");
+                return true;
+            }
+            return false;
+        }
+        Log.d(TAG, "Source " + source.dir + " main=" + describe(source.mainObb)
+                + (source.patchObb != null ? " patch=" + describe(source.patchObb) : " patch=none"));
 
         // 3. Decide per file: skip only what is truly current.
         List<File> toCopy = new ArrayList<>();
