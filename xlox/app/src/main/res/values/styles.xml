@@ -546,7 +546,7 @@
     </style>
 
     <!-- ===================================================== Surfaces -->
-    <!-- Home cards: surface-1, radius 20, fill only (no stroke on black). -->
+    <!-- Home cards: lifted surface-2, radius 20, hairline edge for depth. -->
     <style name="Widget.Anoy.Card" parent="Widget.Material3.CardView.Filled">
         <item name="cardBackgroundColor">@color/surface_2</item>
         <item name="strokeWidth">@dimen/hairline</item>
