@@ -22,11 +22,18 @@ jobs:
       - uses: actions/setup-java@v6
         with:
           distribution: temurin
-          java-version: '11'
+          java-version: |
+            17
+            11
 
+      # sdkmanager (cmdline-tools;latest) needs JDK 17+, while AGP 4.0.1 /
+      # Gradle 6.5 need JDK 11. setup-java makes the LAST listed version the
+      # default, so Gradle runs on 11 and sdkmanager gets 17 explicitly here.
       - name: Install the Android SDK pieces the 2020-era build expects
         run: |
           SDKMANAGER="${ANDROID_SDK_ROOT}/cmdline-tools/latest/bin/sdkmanager"
+          export JAVA_HOME="$JAVA_HOME_17_X64"
+          export PATH="$JAVA_HOME/bin:$PATH"
           yes | "$SDKMANAGER" --sdk_root="${ANDROID_SDK_ROOT}" --licenses > /dev/null || true
           "$SDKMANAGER" --sdk_root="${ANDROID_SDK_ROOT}" \
             "platforms;android-30" "build-tools;30.0.3" \
