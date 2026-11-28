@@ -1359,11 +1359,6 @@ public class MAct extends AppCompatActivity {
                 game.obbState = AppManager.ObbState.AVAILABLE;
                 continue;
             }
-            if (!game.target.needsObb) {
-                // BGMI Air has no game files: nothing to inspect or copy.
-                game.obbState = AppManager.ObbState.AVAILABLE;
-                continue;
-            }
             game.checkingObb = true;
             try {
                 ioExecutor.execute(() -> {
@@ -1821,12 +1816,6 @@ public class MAct extends AppCompatActivity {
      */
     private void prepareObbThenLaunch() {
         Log.d(TAG, "Launch: preparing game files");
-        if (!launchTarget.target.needsObb) {
-            // BGMI Air carries no game files: straight to the container launch.
-            setBusy(true, getString(R.string.launching));
-            main.postDelayed(this::launchGame, LAUNCH_DELAY_MS);
-            return;
-        }
         setBusy(true, getString(R.string.action_preparing));
         showProgress(0, true);
         // 2.3.4 (text only; the copy itself is unchanged): nothing new for the

@@ -217,23 +217,24 @@ class AndroidWiring(unittest.TestCase):
         self.assertIn('AccountTrace.install(this)', box)
         self.assertIn('AccountTrace.read(this)', mact)
 
-    def test_bgmi_air_launches_without_game_files(self):
+    def test_bgmi_air_uses_the_same_game_files_path_as_bgmi(self):
         target = (JAVA / 'utils/GameTarget.java').read_text()
         mact = (JAVA / 'MAct.java').read_text()
-        # Air carries no OBB: the launch flow skips the copy and the inspection.
-        self.assertIn('BGMI_AIR("com.krafton.bgmilite", "libbgmilite.so", "BGMI Air", false)', target)
-        self.assertIn('public final boolean needsObb', target)
-        self.assertIn('if (!launchTarget.target.needsObb)', mact)
-        self.assertIn('if (!game.target.needsObb)', mact)
-        # The no-OBB path launches DIRECTLY through the SDK's own container
-        # install — the working 25be3c6 behaviour. The staged installFromPhone
-        # pre-install (with split filtering) was the regression and stays out.
+        # Air goes through the SAME game-files copy as BGMI: the working 25be3c6
+        # build proves the copy succeeds and the container needs those files.
+        # The needsObb skip (dropping Air's copy) was the regression — keep it out.
+        self.assertIn('BGMI_AIR("com.krafton.bgmilite", "libbgmilite.so", "BGMI Air")', target)
+        self.assertNotIn('needsObb', target)
+        self.assertNotIn('needsObb', mact)
+        # The staged installFromPhone pre-install (with split filtering) was the
+        # other regression and stays out; no Android-version gate on Air either.
         self.assertNotIn('ensureGameInContainerThenLaunch', mact)
         self.assertNotIn('installFromPhone', mact)
         self.assertNotIn('airUnsupportedOs', mact)
         self.assertNotIn('game_air_os_unsupported', mact)
         self.assertFalse((JAVA / 'utils/GoogleServicesInstaller.java').exists())
-        self.assertIn('main.postDelayed(this::launchGame, LAUNCH_DELAY_MS);', mact)
+        # Both games launch after the OBB copy completes.
+        self.assertIn('main.postDelayed(MAct.this::launchGame, LAUNCH_DELAY_MS);', mact)
         # A native death during launch is still attributed by a breadcrumb.
         self.assertIn('"launch: "', mact)
 
