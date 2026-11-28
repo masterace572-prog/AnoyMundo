@@ -1,5 +1,5 @@
 // Build-time validation: templates compile, every module imports, the Owner
-// password hash verifies, the stylesheet exists and key rules hold.
+// password compatibility verifies with ephemeral fixtures, the stylesheet exists and key rules hold.
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -20,9 +20,11 @@ Handlebars.registerHelper('alertClass', () => 'alert-info');
 const { templates } = await import('../src/templates.generated.mjs');
 Handlebars.registerPartial('header', templates.header);
 Handlebars.registerPartial('msgStatus', templates.msgStatus);
+Handlebars.registerPartial('release_channel', templates.release_channel);
 for (const [name, source] of Object.entries(templates)) {
   try {
     // Handlebars.compile is lazy, so parse explicitly to catch syntax errors.
+    if (source !== fs.readFileSync(path.join(root, 'views', `${name}.hbs`), 'utf8')) errors.push(`template ${name}: bundle is stale (run npm run build)`);
     Handlebars.parse(source);
     Handlebars.compile(source);
     process.stdout.write(`  ok  template ${name}\n`);
@@ -33,7 +35,8 @@ for (const [name, source] of Object.entries(templates)) {
 
 for (const mod of ['../src/config.mjs', '../src/memory-db.mjs', '../src/db.mjs',
   '../src/auth.mjs', '../src/render.mjs', '../src/http.mjs',
-  '../src/licensing.mjs', '../src/key-service.mjs', '../src/api-keys.mjs',
+  '../src/licensing.mjs', '../src/key-service.mjs',
+  '../src/channels.mjs', '../src/owners.mjs', '../src/referrals.mjs', '../src/library-package.mjs', '../src/library-release.mjs', '../src/library-storage.mjs', '../src/library-storage-core.mjs', '../src/library-storage-worker.mjs', '../src/library-link.mjs',
   '../src/app.mjs', '../api/index.js']) {
   try { await import(mod); process.stdout.write(`  ok  module ${mod}\n`); }
   catch (e) { errors.push(`module ${mod}: ${e.stack || e.message}`); }
@@ -41,13 +44,14 @@ for (const mod of ['../src/config.mjs', '../src/memory-db.mjs', '../src/db.mjs',
 
 try {
   const { verifyPassword, hashPassword } = await import('../src/auth.mjs');
-  const owner = '$2a$08$sQefH.l6cnpeUwuTifoZvuF1SSh7U6Mw4UwddAO9cawj5pip8blOa';
-  if (!verifyPassword('Anoy1764', owner)) errors.push('Owner bcrypt hash did not verify');
-  else process.stdout.write('  ok  Owner password hash (Anoy)\n');
-  const legacy = '$2y$08$/CsSVgrGgCqVcievCuR2COPnlMIpRz6kA.hzItBD/xd1Cx0hj0kMK';
-  if (!verifyPassword('admin123', legacy)) errors.push('legacy $2y$ bcrypt hash did not verify');
-  const fresh = hashPassword('test1234');
-  if (!verifyPassword('test1234', fresh) || verifyPassword('wrong', fresh)) errors.push('password hashing round-trip failed');
+  const { randomBytes } = await import('node:crypto');
+  const sample = randomBytes(24).toString('base64url');
+  const fresh = hashPassword(sample);
+  const legacy = fresh.replace(/^\$2a\$/, '$2y$');
+  if (!verifyPassword(sample, legacy)) errors.push('PHP-compatible bcrypt check failed');
+  if (!verifyPassword(sample, fresh) || verifyPassword('wrong', fresh)) errors.push('password hashing round-trip failed');
+  if (verifyPassword(sample, '!setup-required!')) errors.push('unprovisioned account must remain locked');
+  process.stdout.write('  ok  password compatibility (ephemeral fixture)\n');
 } catch (e) { errors.push(`password check: ${e.message}`); }
 
 // ---- static assets ----------------------------------------------------------

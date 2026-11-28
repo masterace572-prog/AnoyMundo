@@ -1,3 +1,4 @@
+import { ownerPassword, randomReferral } from './offline-fixtures.mjs';
 // Captures the panel at desktop and phone sizes for visual review.
 // Runs in CI (.github/workflows/web-ui-qa.yml): starts the offline dev server
 // (memory DB), signs in as the Owner and saves PNGs to docs/ui-redesign/web.
@@ -7,18 +8,20 @@ import { spawn } from 'node:child_process';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { channelBrowserTests } from './channel-browser-tests.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, '..');
 const out = path.resolve(root, '..', 'docs', 'ui-redesign', 'web');
 mkdirSync(out, { recursive: true });
 
+const kennyReferral = randomReferral();
 const PORT = 3177;
 const BASE = `http://127.0.0.1:${PORT}`;
 const { chromium } = await import('playwright');
 
-const server = spawn(process.execPath, ['scripts/dev-server.mjs'], {
-  cwd: root, env: { ...process.env, PORT: String(PORT), HOST: '127.0.0.1' }, stdio: 'inherit',
+const server = spawn(process.execPath, ['scripts/dev-server.mjs', '--memory'], {
+  cwd: root, env: { ...process.env, DB_DRIVER: 'memory', APK_VERIFY_STUB: '1', MEMORY_KENNY_REFERRAL: kennyReferral, PORT: String(PORT) }, stdio: 'inherit',
 });
 const stop = () => { try { server.kill('SIGTERM'); } catch { /* gone */ } };
 process.on('exit', stop);
@@ -45,10 +48,7 @@ const pages = [
   ['referral', '/admin/create-referral'],
   ['lib', '/lib'],
   ['app_update', '/app-update'],
-  ['api_docs', '/api-docs'],
-  ['api_keys', '/api-keys'],
   ['settings', '/settings'],
-  ['docs', '/docs'],
   ['not_found', '/does-not-exist'],
 ];
 
@@ -96,7 +96,7 @@ try {
 
     await page.goto(`${BASE}/login`);
     await page.fill('#username', 'Anoy');
-    await page.fill('#password', 'Anoy1764');
+    await page.fill('#password', ownerPassword);
     await Promise.all([page.waitForNavigation(), page.click('button[type=submit]')]);
 
     // A batch of keys so the lists are not empty.
@@ -209,27 +209,8 @@ try {
     report.push(`[${size.name}] expiry row: label ${JSON.stringify(exp && exp.label)} value ${JSON.stringify(exp && exp.value)}`);
     await shot(page, `${size.name}_dashboard_expiry`, { fullPage: false });
 
-    // 2. Docs callouts: ordinary flowing text, links inline and tappable.
-    for (const [name, url] of [['docs', '/docs'], ['api_docs', '/api-docs']]) {
-      await page.goto(`${BASE}${url}`);
-      const notes = await page.evaluate(() => [...document.querySelectorAll('.doc-note')].map((n) => {
-        const parts = [...n.querySelectorAll('a, strong, .doc-inline')].map((el) => [...el.getClientRects()].map((r) => ({ left: r.left, right: r.right, top: r.top, bottom: r.bottom, h: r.height })));
-        return { display: getComputedStyle(n).display, parts, links: [...n.querySelectorAll('a')].map((a) => a.textContent.trim()) };
-      }));
-      if (!notes.length) problem(`${name}: no .doc-note callouts found`);
-      notes.forEach((note, i) => {
-        if (note.display !== 'block') problem(`${name}: callout ${i} is display:${note.display}, not flowing text`);
-        for (let a = 0; a < note.parts.length; a += 1) {
-          for (let b = a + 1; b < note.parts.length; b += 1) {
-            if (note.parts[a].some((ra) => note.parts[b].some((rb) => overlaps(ra, rb)))) problem(`${name}: callout ${i} has overlapping words/links`);
-          }
-          if (note.parts[a].some((r) => r.h < 12)) problem(`${name}: callout ${i} has a squeezed link/word`);
-        }
-      });
-    }
-
-    // 4. Referral codes + API keys: stacked on a phone, side by side on desktop, never overlapping.
-    for (const [name, url] of [['referral', '/admin/create-referral'], ['api_keys', '/api-keys']]) {
+    // 4. Referral codes: stacked on a phone, side by side on desktop, never overlapping.
+    for (const [name, url] of [['referral', '/admin/create-referral']]) {
       await page.goto(`${BASE}${url}`);
       const cards = await page.evaluate(() => [...document.querySelectorAll('.grid-split > .card')].slice(0, 2).map((c) => {
         const b = c.getBoundingClientRect(); return { left: b.left, right: b.right, top: b.top, bottom: b.bottom };
@@ -272,6 +253,7 @@ try {
     }
     await ctx.close();
   }
+  await channelBrowserTests(browser, BASE, out, { kennyReferral });
   await browser.close();
 } finally {
   stop();

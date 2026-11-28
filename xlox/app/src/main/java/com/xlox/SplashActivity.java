@@ -15,6 +15,7 @@ import android.view.animation.LinearInterpolator;
 import android.view.animation.PathInterpolator;
 import android.content.res.ColorStateList;
 import android.graphics.drawable.Drawable;
+import android.graphics.Rect;
 import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
@@ -34,40 +35,16 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 /**
- * Launcher entry: a ~3 s typography film on true black, then sign in / the
- * update check exactly as before.
+ * Loader-only startup typography on black, sharing Home's Manrope and blue.
+ * One 2.85s clock drives composited alpha/translation: arrive, lift the name,
+ * then a small fade-through/vertical exchange from Loader to Hax. Words are
+ * measured once and the changing slot never requests layout during a frame.
  *
- * <p>The system splash (core-splashscreen) shows the static Anoy wordmark
- * (res/drawable/splash_mark.xml, the launcher icon's outlines). This activity
- * starts on the same image in the same place, then:
- * <pre>
- *   0.00-0.40 s  arrive   kicker "WELCOME TO" fades in (400 ms) while the system
- *                         wordmark cross-fades out; "Anoy Loader" follows 120 ms
- *                         later (no rise); the version at ~0.26 s, status ~0.6 s
- *   0.52-1.15 s  read     hold
- *   1.15-1.67 s  leave    the kicker fades out while drifting up 8 dp
- *   1.20-1.72 s  move     "Anoy Loader" glides up onto the lockup's centre line
- *   1.56-2.01 s  swap     "Loader" dissolves into "Hax" in the same slot, opacity
- *                         only, 450 ms, while the pair re-centres. The fades
- *                         overlap: "Hax" is in by 70 % and "Loader" only leaves
- *                         from 30 %, so the slot never looks empty
- *   2.01-2.85 s  settle   hold "Anoy Hax"
- *   2.85 s       handoff  280 ms cross-fade into LogAct (~3.13 s)
- * </pre>
- * 2.2.0: meanwhile the app (APK) update check runs and the bottom status line
- * reports it. The hand-off waits for BOTH the film and the check: up to date
- * goes on to sign in (whose library UpdateGate is unchanged); a newer release
- * opens {@link AppUpdateActivity}; a failed check shows the reason and Try
- * again and never continues on its own. If the check outlasts the film, "Anoy
- * Hax" breathes until it answers. 2.3.4: a check still running after 6 s says
- * "Taking longer than usual…" (spinner kept, no amber); after 15 s the detail
- * line adds "Still trying. Your connection may be slow." Try again appears only
- * after a real failure.
- * Every property is a pure function of time ({@link #applyTime}) driven by one
- * animator, so the moves stay locked together as one gesture. Text is only
- * faded and translated - never clipped and never scaled - on hardware layers.
- * Reduced motion: "Welcome To Anoy Loader" holds, then cuts straight to the
- * final "Anoy Hax" and hands off - no choreography.
+ * The app-update check still runs asynchronously. BOTH the film and the check
+ * must finish before hand-off: a failure keeps its reason and retry, slow
+ * checks keep their existing status/detail thresholds. Reduced motion holds
+ * the welcome and then cuts straight to the final lockup. Waiting after the
+ * film uses only the status arc, not a second perpetual decorative animation.
  */
 public class SplashActivity extends AppCompatActivity {
 
@@ -91,13 +68,10 @@ public class SplashActivity extends AppCompatActivity {
      */
     private static final long SWAP_AT_MS = MOVE_AT_MS + 360L;
     private static final long SWAP_MS = 450L;
-    /**
-     * Overlapping fade windows within the swap: "Hax" fades in over 0-70 % and
-     * "Loader" fades out over 30-100 %. Mid-way both are 84 % visible, so the
-     * words genuinely overlap - the slot never dims, empties or pops.
-     */
-    private static final float HAX_IN_END = 0.70f;
-    private static final float LOADER_OUT_START = 0.30f;
+    /** Fade-through, not two opaque words superimposed in the same slot. */
+    private static final float LOADER_OUT_END = 0.60f;
+    private static final float HAX_IN_START = 0.30f;
+    private static final float WORD_DRIFT_DP = 6f;
     /** Version fades in early; the status line at ~600 ms. */
     private static final long VERSION_AT_MS = 260L;
     private static final long VERSION_MS = 320L;
@@ -108,14 +82,8 @@ public class SplashActivity extends AppCompatActivity {
     /** Reduced motion: hold the welcome, cut to the final line, hold, hand off. */
     private static final long REDUCED_WELCOME_MS = 1000L;
     private static final long REDUCED_FINAL_MS = 700L;
-    /** Startup slower than the film: very slow opacity breathe on "Anoy Hax". */
-    private static final long BREATHE_MS = 2400L;
-    private static final float BREATHE_MIN_ALPHA = 0.72f;
     /** Safety net if the first frame never arrives. */
     private static final long SAFETY_MS = FILM_MS + 2500L;
-
-    /** Inter cap height (1490 / 2048 em): used to centre the line optically. */
-    private static final float CAP_HEIGHT_EM = 1490f / 2048f;
 
     private static final Interpolator FAST_OUT_SLOW_IN = new PathInterpolator(0.4f, 0f, 0.2f, 1f);
     /**
@@ -189,8 +157,8 @@ public class SplashActivity extends AppCompatActivity {
     private String qaUpdate;
     private AppUpdater.Release qaReal;
     private ValueAnimator film;
-    private ValueAnimator breath;
     private float driftPx;
+    private float wordDriftPx;
     /** Measured after layout: vertical move to the centre, horizontal re-centre. */
     private float moveDy;
     private float recentreDx;
@@ -247,6 +215,7 @@ public class SplashActivity extends AppCompatActivity {
                 startCheck();
             });
             driftPx = Ui.dp(this, CUT_DRIFT_DP);
+            wordDriftPx = Ui.dp(this, WORD_DRIFT_DP);
             // One real word space between "Anoy" and the Loader/Hax slot.
             TextView anoy = findViewById(R.id.splashAnoy);
             View slotView = findViewById(R.id.splashSlot);
@@ -254,8 +223,8 @@ public class SplashActivity extends AppCompatActivity {
             slot.setMarginStart(Math.round(anoy.getPaint().measureText(" ")));
             slotView.setLayoutParams(slot);
             final int footerMargin = getResources().getDimensionPixelSize(R.dimen.space_32);
-            final int versionTop = getResources().getDimensionPixelSize(R.dimen.gutter_wide);
-            final int versionEnd = getResources().getDimensionPixelSize(R.dimen.gutter_wide);
+            final int versionTop = getResources().getDimensionPixelSize(R.dimen.screen_padding);
+            final int versionEnd = getResources().getDimensionPixelSize(R.dimen.screen_padding);
             Ui.onInsets(root, (bars, bottom, ime) -> {
                 // Only re-lays out when an inset really changes - never per frame.
                 ViewGroup.MarginLayoutParams lp = (ViewGroup.MarginLayoutParams) version.getLayoutParams();
@@ -337,7 +306,7 @@ public class SplashActivity extends AppCompatActivity {
         if (filmDone || !Ui.alive(this)) return;
         filmDone = true;
         handler.removeCallbacks(next);
-        if (!maybeProceed()) breathe();
+        maybeProceed();
     }
 
     /** (Re)runs the check; the status line follows its real state. */
@@ -404,10 +373,7 @@ public class SplashActivity extends AppCompatActivity {
         }
         // The slow-connection detail (if it came up) leaves with the answer.
         Ui.fadeReserved(statusDetail, false);
-        if (maybeProceed() && breath != null) {
-            breath.cancel();
-            name.setAlpha(1f);
-        }
+        maybeProceed();
     }
 
     private void onCheckFailed(int run, String reason) {
@@ -528,7 +494,7 @@ public class SplashActivity extends AppCompatActivity {
 
     private static AppUpdater.Release sampleRelease(boolean mandatory) {
         return new AppUpdater.Release("2.4.0", BuildConfig.VERSION_CODE + 1,
-                "https://github.com/masterace572-prog/AnoyMundo/releases/download/sample/Anoy.apk",
+                "https://example.com/" + BuildConfig.DISPLAY_BRAND + ".apk",
                 "Faster start-up\nClearer update messages\nFixes for the game files copy", mandatory);
     }
 
@@ -548,9 +514,11 @@ public class SplashActivity extends AppCompatActivity {
         if (measured) return true;
         if (root.getHeight() == 0 || name.getHeight() == 0) return false;
         TextView anoy = findViewById(R.id.splashAnoy);
-        // Optical centre of the line = middle of the cap band above the baseline.
+        // Use the actual bundled face's cap band, not the old Inter metrics.
+        Rect caps = new Rect();
+        anoy.getPaint().getTextBounds("H", 0, 1, caps);
         float capCentre = lockup.getTop() + name.getTop() + anoy.getTop() + anoy.getBaseline()
-                - CAP_HEIGHT_EM * anoy.getTextSize() / 2f;
+                + (caps.top + caps.bottom) / 2f;
         // Once the kicker has left, the name settles on the lockup's centre line
         // (~42 % of the height), so the screen keeps its composition.
         moveDy = lockup.getTop() + lockup.getHeight() / 2f - capCentre;
@@ -566,7 +534,7 @@ public class SplashActivity extends AppCompatActivity {
 
         lockup.setAlpha(1f);
         float arrive = progress(t, 0, ARRIVE_FADE_MS, FAST_OUT_SLOW_IN);
-        if (breath == null) name.setAlpha(progress(t, NAME_AT_MS, ARRIVE_FADE_MS, FAST_OUT_SLOW_IN));
+        name.setAlpha(progress(t, NAME_AT_MS, ARRIVE_FADE_MS, FAST_OUT_SLOW_IN));
 
         // Greeting leaves: fade + gentle upward drift, sub-pixel. It stays
         // VISIBLE until its alpha is exactly 0.
@@ -578,11 +546,17 @@ public class SplashActivity extends AppCompatActivity {
         // The name glides into the space the greeting left.
         name.setTranslationY(progress(t, MOVE_AT_MS, MOVE_MS, FAST_OUT_SLOW_IN) * moveDy);
 
-        // Loader -> Hax: overlapping fades plus one slide, all on one clock.
+        // An intentional fade-through keeps the two words legible. Both remain
+        // in the measured slot, with a small opposing drift, so no text/layout
+        // changes or per-frame allocations interrupt the gesture.
         float swap = linear(t, SWAP_AT_MS, SWAP_MS);
+        float out = DISSOLVE.getInterpolation(window(swap, 0f, LOADER_OUT_END));
+        float in = DISSOLVE.getInterpolation(window(swap, HAX_IN_START, 1f));
         name.setTranslationX(DISSOLVE.getInterpolation(swap) * recentreDx);
-        hax.setAlpha(DISSOLVE.getInterpolation(window(swap, 0f, HAX_IN_END)));
-        loader.setAlpha(1f - DISSOLVE.getInterpolation(window(swap, LOADER_OUT_START, 1f)));
+        loader.setAlpha(1f - out);
+        loader.setTranslationY(-out * wordDriftPx);
+        hax.setAlpha(in);
+        hax.setTranslationY((1f - in) * wordDriftPx);
 
         version.setAlpha(progress(t, VERSION_AT_MS, VERSION_MS, FAST_OUT_SLOW_IN));
         // Once shown, the status line stays (it may carry an error and Try again).
@@ -591,13 +565,13 @@ public class SplashActivity extends AppCompatActivity {
     }
 
     /**
-     * Hardware layers for the moving text while the film runs, so alpha,
-     * translation and scale are composited instead of re-rasterising the glyphs
-     * every frame. Off again at the hand-off.
+     * Individual text layers only while moving. A parent layer around the
+     * changing children would need re-rendering as those children animate.
+     * No scaling, blur, layout animation or permanent offscreen textures.
      */
     private void setTextLayers(boolean on) {
         int type = on ? View.LAYER_TYPE_HARDWARE : View.LAYER_TYPE_NONE;
-        for (View v : new View[] {greeting, name, loader, hax}) {
+        for (View v : new View[] {greeting, findViewById(R.id.splashAnoy), loader, hax}) {
             if (v != null && v.getLayerType() != type) v.setLayerType(type, null);
         }
     }
@@ -641,18 +615,6 @@ public class SplashActivity extends AppCompatActivity {
         handler.postDelayed(next, REDUCED_WELCOME_MS + REDUCED_FINAL_MS + 2500L);
     }
 
-    /** Startup outlasted the film: keep "Anoy Hax" with a very slow opacity breathe. */
-    private void breathe() {
-        if (!Ui.alive(this) || Ui.reducedMotion(this) || breath != null) return;
-        breath = ValueAnimator.ofFloat(1f, BREATHE_MIN_ALPHA);
-        breath.setDuration(BREATHE_MS / 2);
-        breath.setInterpolator(FAST_OUT_SLOW_IN);
-        breath.setRepeatMode(ValueAnimator.REVERSE);
-        breath.setRepeatCount(ValueAnimator.INFINITE);
-        breath.addUpdateListener(a -> name.setAlpha((float) a.getAnimatedValue()));
-        breath.start();
-    }
-
     private void openLogin() {
         if (opened || !Ui.alive(this)) return;
         opened = true;
@@ -665,8 +627,14 @@ public class SplashActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         handler.removeCallbacksAndMessages(null);
-        if (film != null) film.cancel();
-        if (breath != null) breath.cancel();
+        if (film != null) {
+            // cancel() invokes end listeners: detach them first so destruction
+            // cannot trigger a cosmetic-film hand-off or schedule new work.
+            film.removeAllListeners();
+            film.removeAllUpdateListeners();
+            film.cancel();
+        }
+        if (statusMark != null) statusMark.cancelAnimation();
         checker.shutdownNow();
         setTextLayers(false);
         super.onDestroy();

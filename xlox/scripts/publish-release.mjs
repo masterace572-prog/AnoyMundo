@@ -1,86 +1,75 @@
 #!/usr/bin/env node
-/**
- * Publish a loader ZIP (containing libbgmi.so) to the Anoy panel.
+/** Publish a .so or ZIP (up to 20 MiB) to the signed-in Owner's own channel.
+ * Files go straight to private Storage; no large base64 Vercel request.
  *
- *   PANEL_BASE_URL=https://anoymundo-panel.vercel.app \
- *   PANEL_ADMIN_USERNAME=Anoy PANEL_ADMIN_PASSWORD=... \
- *   node scripts/publish-release.mjs ../dist/xlox-loader.zip 1.0.1
+ * PANEL_CHANNEL=anoy PANEL_ADMIN_USERNAME=Anoy PANEL_ADMIN_PASSWORD=... \
+ *   node scripts/publish-release.mjs path/to/library.so 1.4
  *
- * The panel stores the ZIP in client_release.content_base64 and serves it at
- * GET /api/lib/download; GET /api/lib/version returns the version string.
+ * For KennyPvt use PANEL_CHANNEL=kenny and that Owner's own credentials.
+ * A channel mismatch is rejected by the panel, never silently redirected.
  */
 import fs from 'node:fs';
 import path from 'node:path';
+import crypto from 'node:crypto';
 
 const base = (process.env.PANEL_BASE_URL || 'https://anoymundo-panel.vercel.app').replace(/\/$/, '');
-const zipPath = process.argv[2];
+const input = process.argv[2];
 const version = (process.argv[3] || '1.0').trim();
-const username = process.env.PANEL_ADMIN_USERNAME || 'Anoy';
+const channel = process.env.PANEL_CHANNEL || 'anoy';
+const username = process.env.PANEL_ADMIN_USERNAME || (channel === 'anoy' ? 'Anoy' : '');
 const password = process.env.PANEL_ADMIN_PASSWORD;
+const MAX = 20 * 1024 * 1024;
+const sha = (bytes) => crypto.createHash('sha256').update(bytes).digest('hex');
 
-if (!zipPath) {
-  console.error('Usage: node scripts/publish-release.mjs <loader.zip> [version]');
-  process.exit(1);
-}
-if (!password) {
-  console.error('Set PANEL_ADMIN_PASSWORD (and optionally PANEL_ADMIN_USERNAME).');
-  process.exit(1);
-}
-
-const bytes = fs.readFileSync(path.resolve(zipPath));
-if (bytes.length < 4 || bytes[0] !== 0x50 || bytes[1] !== 0x4b) {
-  console.error('Not a ZIP file: ' + zipPath);
-  process.exit(1);
-}
-if (bytes.length > 4 * 1024 * 1024) {
-  console.error('ZIP is larger than the panel upload limit (4 MB).');
-  process.exit(1);
-}
-
-const cookie = (res) => (res.headers.getSetCookie ? res.headers.getSetCookie() : [res.headers.get('set-cookie')])
-  .filter(Boolean)
-  .map((c) => c.split(';')[0])
-  .join('; ');
+const cookie = (res) => res.headers.getSetCookie().map(c => c.split(';')[0]).join('; ');
 
 async function main() {
+  if (!input) throw new Error('Usage: node scripts/publish-release.mjs <library.so|release.zip> [version]');
+  if (!['anoy', 'kenny'].includes(channel)) throw new Error('PANEL_CHANNEL must be anoy or kenny.');
+  if (!username || !password) throw new Error('Set PANEL_ADMIN_USERNAME and PANEL_ADMIN_PASSWORD for the channel Owner.');
+  const bytes = fs.readFileSync(path.resolve(input));
+  if (bytes.length < 64 || bytes.length > MAX) throw new Error('Choose a .so or ZIP between 64 bytes and 20 MiB.');
+
   const login = await fetch(`${base}/login`, {
-    method: 'POST',
+    method: 'POST', redirect: 'manual', signal: AbortSignal.timeout(30000),
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({ username, password, stay_log: '1' }),
-    redirect: 'manual',
   });
   const session = cookie(login);
-  if (!session.includes('am_session=')) {
-    throw new Error(`Login failed (HTTP ${login.status}). Check PANEL_ADMIN_PASSWORD.`);
-  }
+  if (!session.includes('am_session=')) throw new Error(`Sign-in failed (HTTP ${login.status}). Check the Owner credentials.`);
 
-  const upload = await fetch(`${base}/lib`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Cookie: session },
-    body: JSON.stringify({
-      version,
-      file_name: path.basename(zipPath),
-      content_base64: bytes.toString('base64'),
-      notes: 'XLOX loader release published by build-xlox workflow',
-    }),
+  const post = async (body) => {
+    const r = await fetch(`${base}/lib`, {
+      method: 'POST', redirect: 'manual', signal: AbortSignal.timeout(120000),
+      headers: { 'Content-Type': 'application/json', Cookie: session },
+      body: JSON.stringify({ ...body, channel }),
+    });
+    const result = await r.json().catch(() => ({}));
+    if (!r.ok || !result.ok) throw new Error(`Panel HTTP ${r.status}: ${result.error || 'publication not confirmed; reload the channel before retrying'}`);
+    return result;
+  };
+  const ticket = await post({ action: 'prepare_upload', file_size: bytes.length, file_name: path.basename(input) });
+  const upload = await fetch(new URL(ticket.upload_url, base), {
+    method: 'PUT', signal: AbortSignal.timeout(180000),
+    headers: { 'Content-Type': 'application/octet-stream' }, body: bytes,
   });
-  const result = await upload.json().catch(() => ({}));
-  if (!upload.ok || !result.ok) {
-    throw new Error(`Upload failed (HTTP ${upload.status}): ${result.error || 'unknown error'}`);
-  }
+  if (!upload.ok) throw new Error(`Direct Storage upload failed (HTTP ${upload.status}).`);
+  await upload.body?.cancel();
+  const result = await post({ action: 'upload', version, upload_path: ticket.upload_path,
+    notes: process.env.PANEL_RELEASE_NOTES || 'Library published with the release uploader' });
 
-  const ver = (await (await fetch(`${base}/api/lib/version`)).text()).trim();
-  const dl = await fetch(`${base}/api/lib/download`);
-  const body = Buffer.from(await dl.arrayBuffer());
-  const ok = dl.status === 200 && body.length === bytes.length
-    && body[0] === 0x50 && body[1] === 0x4b && ver === version;
-  console.log(`version endpoint = ${ver}`);
-  console.log(`download endpoint = HTTP ${dl.status}, ${body.length} bytes, ${dl.headers.get('content-type')}`);
-  if (!ok) throw new Error('Post-upload verification failed.');
-  console.log('OK: panel lib + version are live and the ZIP round-trips byte-for-byte.');
+  // Normalization changes the uploaded ZIP, so compare its published SHA256,
+  // not the caller's original filename/ZIP layout/bytes.
+  const manifestResponse = await fetch(`${base}/api/lib/manifest?channel=${channel}`, { signal: AbortSignal.timeout(30000) });
+  const manifest = await manifestResponse.json();
+  const dl = await fetch(`${base}/api/lib/download?channel=${channel}`, { signal: AbortSignal.timeout(120000) });
+  const output = Buffer.from(await dl.arrayBuffer());
+  if (!dl.ok || manifest.channel !== channel || manifest.version !== version
+    || manifest.file_name !== 'libbgmi.so' || output[0] !== 0x50 || output[1] !== 0x4b
+    || sha(output) !== result.sha256 || manifest.sha256 !== result.sha256) {
+    throw new Error('Post-publication verification failed. Reload your channel before trying again.');
+  }
+  console.log(`OK: ${channel} library ${version}, libbgmi.so in ZIP, ${output.length} bytes, sha256 ${result.sha256}`);
 }
 
-main().catch((error) => {
-  console.error(error.message);
-  process.exit(1);
-});
+main().catch(error => { console.error(error.message); process.exitCode = 1; });

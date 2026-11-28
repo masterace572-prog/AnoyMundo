@@ -1,21 +1,23 @@
-<div class="page-head">
+<div class="page-head" data-release-channel="{{releaseChannel}}">
     <div>
         <h1 class="page-title">Library</h1>
-        <p class="page-sub">Every loader updates before sign-in.</p>
+        <p class="page-sub">{{releaseBrand}} library. Only this channel is changed when you publish.</p>
     </div>
     <div class="page-actions">
-        <a href="/api/lib/download" class="btn btn-secondary">{{icon "download"}}Download current</a>
+        <a href="/api/lib/download?channel={{releaseChannel}}" class="btn btn-secondary">{{icon "download"}}Download current</a>
     </div>
 </div>
 
 {{> msgStatus}}
+{{> release_channel}}
+{{#if cleanupPending}}<p class="hint" role="status">Old files are queued for automatic cleanup. Current downloads have a short grace period.</p>{{/if}}
 
 <section class="card" style="margin-bottom:20px">
     <div class="hero">
         <div class="tile tile-lg purple">{{icon "package"}}</div>
         <div style="flex:1;min-width:180px">
             <div class="hero-label">Current version</div>
-            <div class="hero-value mono">{{currentVersion}}</div>
+            <div class="hero-value mono">{{#if currentVersion}}{{currentVersion}}{{else}}—{{/if}}</div>
             <button type="button" class="btn btn-secondary btn-sm" id="lib-reset" style="margin-top:12px">{{icon "rotate-ccw"}}Reset to 0.1</button>
             <div id="reset-result" aria-live="polite"></div>
         </div>
@@ -46,7 +48,7 @@
 <section class="card publish-card" id="publish-card">
     <div class="card-head">
         <div class="tile">{{icon "upload"}}</div>
-        <div><h2 class="card-title">Publish a release</h2><div class="card-sub">A .so or .zip (max {{maxUploadMb}} MB), or an https:// link.</div></div>
+        <div><h2 class="card-title">Publish a release</h2><div class="card-sub">A .so or .zip, up to {{maxUploadMb}} MB uploaded and {{maxUploadMb}} MB total unpacked, or an HTTPS link. ZIPs can include libbgmi.so and libbgmilite.so together. Old files clear automatically.</div></div>
     </div>
     <form id="lib-form" class="form" novalidate>
         <div class="field">
@@ -94,6 +96,7 @@
 (function () {
     'use strict';
     var MAX = Number('{{maxUploadMb}}') * 1024 * 1024;
+    var channel = '{{releaseChannel}}';
     var byId = function (id) { return document.getElementById(id); };
 
     function say(box, text, ok) {
@@ -130,19 +133,26 @@
         try { return new URL(u).protocol === 'https:'; } catch (e) { return false; }
     }
 
-    function readBase64(file, onProgress) {
+    function uploadFile(url, file) {
         return new Promise(function (resolve, reject) {
-            var reader = new FileReader();
-            reader.onprogress = function (e) { if (e.lengthComputable) onProgress(e.loaded / e.total); };
-            reader.onload = function () {
-                var s = String(reader.result || ''); var i = s.indexOf(',');
-                resolve(i >= 0 ? s.slice(i + 1) : '');
+            var xhr = new XMLHttpRequest();
+            xhr.open('PUT', url, true);
+            xhr.setRequestHeader('Content-Type', 'application/octet-stream');
+            xhr.timeout = 180000;
+            xhr.upload.onprogress = function (e) {
+                if (e.lengthComputable) progress(5 + 80 * e.loaded / e.total, 'Uploading… ' + bytes(e.loaded) + ' of ' + bytes(e.total));
             };
-            reader.onerror = function () { reject(new Error('Could not read the selected file.')); };
-            reader.readAsDataURL(file);
+            xhr.onload = function () {
+                if (xhr.status >= 200 && xhr.status < 300) resolve();
+                else reject(new Error('Storage upload failed (HTTP ' + xhr.status + '). Try again.'));
+            };
+            xhr.onerror = function () { reject(new Error('Storage upload failed. Check your connection.')); };
+            xhr.ontimeout = function () { reject(new Error('The upload timed out. Try again.')); };
+            xhr.send(file);
         });
     }
     function send(payload, onProgress) {
+        payload.channel = channel;
         return new Promise(function (resolve, reject) {
             var xhr = new XMLHttpRequest();
             xhr.open('POST', '/lib', true);
@@ -153,11 +163,11 @@
                 var data = null;
                 try { data = JSON.parse(xhr.responseText); } catch (e) { /* not JSON */ }
                 if (xhr.status >= 200 && xhr.status < 300 && data && data.ok) resolve(data);
-                else if (xhr.status === 413) reject(new Error('The file is too large for the server. Use an external link.'));
-                else reject(new Error((data && data.error) || ('The server answered ' + xhr.status + '. Nothing was changed.')));
+                else if (xhr.status === 413) reject(new Error('The upload exceeds the supported limit. Choose a smaller .so or ZIP.'));
+                else reject(new Error((data && data.error) || ('The server answered ' + xhr.status + '. Reload before retrying.')));
             };
-            xhr.onerror = function () { reject(new Error('Network error. Check your connection; nothing was changed.')); };
-            xhr.ontimeout = function () { reject(new Error('The upload timed out. Nothing was changed.')); };
+            xhr.onerror = function () { reject(new Error('Network error. Check your channel before retrying.')); };
+            xhr.ontimeout = function () { reject(new Error('Publication timed out. Reload your library page before retrying.')); };
             xhr.send(JSON.stringify(payload));
         });
     }
@@ -246,24 +256,32 @@
         if (!validVersion(version)) return say(result, 'Enter a version like 1.3.');
         if (!file && !url) return say(result, 'Choose a file or enter an https:// link.');
         if (url && !validUrl(url)) return say(result, 'The link must be a full https:// address (http:// is not allowed).');
-        if (file && file.size > MAX) return say(result, 'The file is larger than {{maxUploadMb}} MB. Use an external link instead.');
+        if (file && file.size > MAX) return say(result, 'The file is larger than {{maxUploadMb}} MB. Choose a smaller .so or ZIP.');
         if (file && file.size < 4) return say(result, 'The selected file is empty.');
         busy(button, true, 'Publishing…');
-        progress(1, 'Reading file…');
-        var prepare = file ? readBase64(file, function (f) { progress(1 + f * 19, 'Reading file…'); }) : Promise.resolve('');
-        prepare.then(function (b64) {
-            progress(20, file ? 'Uploading ' + bytes(file.size) + '…' : 'Saving link…');
+        progress(1, file ? 'Preparing secure upload…' : 'Saving link…');
+        var pendingUpload = '';
+        var prepare = file
+            ? send({ action: 'prepare_upload', file_size: file.size, file_name: file.name }, function () {})
+                .then(function (ticket) {
+                    pendingUpload = ticket.upload_path;
+                    return uploadFile(ticket.upload_url, file).then(function () { return ticket.upload_path; });
+                })
+            : Promise.resolve('');
+        prepare.then(function (uploadPath) {
+            progress(90, file ? 'Verifying and publishing as libbgmi.so…' : 'Publishing link…');
             return send({
                 action: 'upload', version: version, notes: byId('lib-notes').value.trim(), external_url: url,
-                file_name: file ? file.name : '', content_base64: b64
-            }, function (loaded, total) { progress(20 + (loaded / total) * 75, 'Uploading… ' + bytes(loaded) + ' of ' + bytes(total)); });
+                upload_path: uploadPath
+            }, function () {});
         }).then(function (data) {
             progress(100, 'Published', 'done');
-            say(result, 'Version ' + data.version + ' is live. Reloading…', true);
+            say(result, 'Version ' + data.version + ' is live.' + (data.cleanup_pending ? ' Old files will be cleaned automatically.' : ' Old stored files cleaned.') + ' Reloading…', true);
             setTimeout(function () { location.reload(); }, 1200);
         }).catch(function (err) {
+            if (pendingUpload) send({ action: 'cancel_upload', upload_path: pendingUpload }, function () {}).catch(function () {});
             progress(100, 'Failed', 'error');
-            say(result, (err && err.message ? err.message : 'Publishing failed.') + ' The previous version is still active.');
+            say(result, (err && err.message ? err.message : 'Could not confirm publication. Reload your library page before retrying.'));
             busy(button, false);
         });
     });

@@ -1,0 +1,2 @@
+# Development/CI artwork checks only; not an Android runtime dependency.
+Pillow==12.3.0

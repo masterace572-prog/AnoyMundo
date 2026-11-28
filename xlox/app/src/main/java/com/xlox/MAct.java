@@ -29,13 +29,26 @@ import com.google.android.material.progressindicator.LinearProgressIndicator;
 import com.google.android.material.snackbar.Snackbar;
 
 import com.xlox.ui.Ui;
+import com.xlox.ui.StatusText;
+import com.xlox.ui.HomeSettingsPager;
+import com.xlox.ui.HomeSettingsNavigation;
 import com.xlox.ui.PermissionSheet;
 import com.xlox.ui.UpdateGate;
 import com.xlox.utils.AppManager;
 import com.xlox.utils.AppUpdater;
+import com.xlox.utils.GameStatus;
 import com.xlox.utils.GameSupport;
+import com.xlox.utils.GameTarget;
+import com.xlox.utils.GameLoginRouter;
+import com.xlox.utils.GameRunState;
+import com.xlox.utils.ConcurrentLaunchGuard;
+import com.xlox.utils.ConfigGuard;
+import com.xlox.utils.CrashLogger;
+import com.xlox.utils.SplitDepsFix;
 import com.xlox.utils.LibManager;
 import com.xlox.utils.Net;
+import com.xlox.utils.AccountTrace;
+import com.xlox.utils.PmCompatShim;
 import com.xlox.utils.Prefs;
 import com.xlox.utils.StorageAccess;
 import com.xlox.utils.UpdateException;
@@ -77,7 +90,7 @@ public class MAct extends AppCompatActivity {
     }
 
     private static final String TAG = "MAct";
-    private static final String PKG_BGMI = "com.pubg.imobile";
+    private static final String PKG_BGMI = GameTarget.BGMI.packageName;
     /** The saved licence key (written by sign in, LogAct.PREF_USER). */
     private static final String PREF_USER = "USER";
     /** Debug-only: lets CI screenshot this screen without a live session. */
@@ -88,6 +101,8 @@ public class MAct extends AppCompatActivity {
     private static final String STATE_LAUNCH_AFTER_STORAGE = "launch_after_storage";
     private static final String STATE_PENDING_NEED = "pending_permission";
     private static final String STATE_ASKED_ROUND = "asked_permissions";
+    private static final String STATE_LAUNCH_GAME = "launch_game_package";
+    private static final String STATE_PAGE = "home_settings_page";
     /** Home asks for missing files access after the content has settled. */
     private static final long HOME_STORAGE_ASK_DELAY_MS = 700L;
     /** Status text kept in the support info, at most this long. */
@@ -104,11 +119,6 @@ public class MAct extends AppCompatActivity {
     private static final long LAUNCH_POLL_MS = 400L;
     /** While home is visible, the container is asked this often whether the game runs. */
     private static final long RUNNING_CHECK_MS = 3000L;
-    /** After Launch / Stop, the running check waits this long before acting. */
-    private static final long RUNNING_SETTLE_MS = 2000L;
-    /** A launched game that the container never reports is dropped after this. */
-    private static final long RUNNING_FIRST_SEEN_MS = 30_000L;
-    /** Skeletons pulse for at most this long, then stay static. */
     /** Settings > Check for app updates: the row's states. */
     private static final int APP_CHECK_IDLE = 0;
     private static final int APP_CHECK_CHECKING = 1;
@@ -121,8 +131,6 @@ public class MAct extends AppCompatActivity {
     private static final long KEY_COPIED_MS = 1200L;
     /** Debug: Settings > Check for app updates answers current | available | failed. */
     static final String EXTRA_QA_APP_CHECK = "qa_app_check";
-    /** The countdown line follows the font scale up to 1.3x. */
-    private static final float COUNTDOWN_MAX_FONT_SCALE = 1.3f;
     /** Licence refresh: on return to home at most this often... */
     private static final long LICENCE_REFRESH_MIN_MS = 60_000L;
     /** ...and quietly this often while home stays open. */
@@ -136,7 +144,7 @@ public class MAct extends AppCompatActivity {
     /** Duration segment of a licence key: ANOY-7D-XXXXX, ANOY-2H-XXXXX. */
     private static final Pattern KEY_DURATION = Pattern.compile("^[A-Z0-9]+-(\\d{1,4})([HD])-", Pattern.CASE_INSENSITIVE);
 
-    /** Debug builds only (screenshot QA) - see docs/ui-redesign/README.md. */
+    /** Debug builds only (screenshot QA); release builds ignore every qa_* extra. */
     public static final String EXTRA_QA_EXPIRY = "qa_expiry";
     public static final String EXTRA_QA_STATUS = "qa_status";
     public static final String EXTRA_QA_NOTE = "qa_note";
@@ -164,6 +172,8 @@ public class MAct extends AppCompatActivity {
     public static final String EXTRA_QA_LAUNCH = "qa_launch";
     /** Debug builds only: the stand-in game closes this many ms after the launch. */
     public static final String EXTRA_QA_GAME_MS = "qa_game_ms";
+    /** Debug launch stand-in target; full package name, BGMI by default. */
+    public static final String EXTRA_QA_GAME = "qa_game";
 
     private final Handler main = new Handler(Looper.getMainLooper());
 
@@ -172,22 +182,20 @@ public class MAct extends AppCompatActivity {
     /** 2.3.5: "BGMI updated" warning (installed BGMI newer than the library supports). */
     private View gameUpdateCard;
     private TextView gameUpdateText;
-    private long gameSupportCheckedAt;
-    private boolean gameSupportChecking;
-    private View licenceCard;
+    private View licenceSummary;
     private int statusLook = -1;
     private TextView statusValue;
-    private TextView expiresValue;
-    /** Countdown (2.3.1): one line, "29d 23h 59m 58s", "Expired" or "—". */
+    private String formattedExpiry;
+    /** Compact header expiry; the exact IST date remains in Settings and TalkBack. */
     private TextView timeLeftValue;
     private TextView gameVersionText;
     private TextView gameStateValue;
-    /** Settings page (2.2.0): device, access + OBB, report, version, sign out. */
-    private View settingsPage;
-    private View actionBarView;
+    /** Retained Home / Settings pages; only Home owns the two game controls. */
+    private HomeSettingsNavigation navigation;
+    private boolean homeStarted;
     private TextView gameTitle;
     private OnBackPressedCallback settingsBack;
-    /** OBB state and the game icon are read off the main thread. */
+    /** Read-only OBB inspection never blocks touch/scroll dispatch. */
     private final ExecutorService ioExecutor =
             Executors.newSingleThreadExecutor(r -> new Thread(r, "anoy-home-io"));
     /** Settings > Licence (2.3.1). */
@@ -216,11 +224,36 @@ public class MAct extends AppCompatActivity {
     private ExecutorService appCheckExecutor;
     private UpdateGate redownloadGate;
     private BottomSheetDialog helpSheet;
-    private TextView libraryValue;
     private TextView serverValue;
-    private TextView statusMessage;
-    private LinearProgressIndicator taskProgress;
     private MaterialButton primaryAction;
+
+    private static final class GameSession {
+        final GameTarget target;
+        final GameRunState runtime = new GameRunState();
+        TextView title;
+        TextView version;
+        TextView state;
+        TextView message;
+        LinearProgressIndicator progress;
+        AppManager.ObbState obbState = AppManager.ObbState.UNKNOWN;
+        boolean checkingObb;
+        int obbRequest;
+        MaterialButton action;
+        boolean installed;
+        long qaLaunchAt;
+
+        GameSession(GameTarget target) { this.target = target; }
+    }
+
+    private final GameSession bgmi = new GameSession(GameTarget.BGMI);
+    private final GameSession air = new GameSession(GameTarget.BGMI_AIR);
+    private final GameSession[] games = {bgmi, air};
+    /** Pinned for the whole copy/permission/launch transaction; controls cannot switch it mid-flight. */
+    private GameSession launchTarget = bgmi;
+    private GameSession qaLaunchTarget = bgmi;
+    private BottomSheetDialog concurrentSheet;
+    private Runnable concurrentTick;
+    private boolean concurrentLaunchApproved;
 
     private long expiryMillis = -1L;
     private SimpleDateFormat expiryFormat;
@@ -242,18 +275,10 @@ public class MAct extends AppCompatActivity {
     private boolean qaFreezeClock;
     private SimpleDateFormat longDate;
     private boolean expired;
-    private boolean gameInstalled;
-    private boolean gameRunning;
     /** A launch is waiting for the container to confirm the game started. */
     private boolean launchPending;
     /** Anoy went to the background while a launch was pending (the game came up). */
     private boolean leftDuringLaunch;
-    /** Running reconcile (see reconcileRunning). */
-    private int runningMisses;
-    private int runningHits;
-    private long runningSettleUntil;
-    private long gameLaunchedAt;
-    private boolean seenRunningSinceLaunch;
     /** Debug: the stand-in game "closes" this long after the launch (0 = stays open). */
     private long qaGameMs;
     /** The "Couldn't launch" message is on screen. */
@@ -271,7 +296,6 @@ public class MAct extends AppCompatActivity {
     private BottomSheetDialog permissionSheet;
     /** Debug only: after the permissions, run the OBB copy directly (no container activation on the emulator). */
     private boolean qaPermissionsThenCopy;
-    private long qaLaunchAt;
     private boolean busy;
     private UpdateGate gate;
     private long lastRecheck;
@@ -284,8 +308,8 @@ public class MAct extends AppCompatActivity {
     private Runnable prepShow;
     private final Runnable prepSlow = () -> {
         if (!Ui.alive(this) || !this.busy) return;
-        if (this.statusMessage.getVisibility() == View.VISIBLE) {
-            Ui.swapText(this.statusMessage, getString(R.string.preparing_slow));
+        if (launchTarget.message.getVisibility() == View.VISIBLE) {
+            Ui.swapText(launchTarget.message, getString(R.string.preparing_slow));
         } else {
             showMessage(getString(R.string.preparing_slow), false);
         }
@@ -315,9 +339,9 @@ public class MAct extends AppCompatActivity {
         @Override
         public void run() {
             renderCountdown();
-            // Paused while Settings covers home (closeSettings restarts it).
-            boolean hidden = settingsPage != null && settingsPage.getVisibility() == View.VISIBLE;
-            if (!expired && expiryMillis > 0 && !qaFreezeClock && !hidden) {
+            // Both pager pages remain VISIBLE. Pause by selection / motion, not visibility.
+            boolean onHome = navigation == null || navigation.homeIsSettled();
+            if (homeStarted && !expired && expiryMillis > 0 && !qaFreezeClock && onHome) {
                 long now = System.currentTimeMillis();
                 main.postDelayed(this, 1000L - (now % 1000L));
             }
@@ -353,19 +377,29 @@ public class MAct extends AppCompatActivity {
         panelNoteCard = findViewById(R.id.panelNoteCard);
         gameUpdateCard = findViewById(R.id.gameUpdateCard);
         gameUpdateText = findViewById(R.id.gameUpdateText);
-        licenceCard = findViewById(R.id.licenceCard);
+        licenceSummary = findViewById(R.id.licenceSummary);
         statusValue = findViewById(R.id.statusValue);
-        expiresValue = findViewById(R.id.expiresValue);
         timeLeftValue = findViewById(R.id.timeLeftValue);
-        // One countdown line: it follows the font scale up to 1.3x, then holds (it can't wrap).
-        Ui.capFontScale(timeLeftValue, COUNTDOWN_MAX_FONT_SCALE);
         gameVersionText = findViewById(R.id.gameVersion);
         gameStateValue = findViewById(R.id.gameStateValue);
-        libraryValue = findViewById(R.id.libraryValue);
         serverValue = findViewById(R.id.serverValue);
-        statusMessage = findViewById(R.id.statusMessage);
-        taskProgress = findViewById(R.id.taskProgress);
+        bgmi.message = findViewById(R.id.statusMessage);
+        bgmi.progress = findViewById(R.id.taskProgress);
+        air.message = findViewById(R.id.airStatusMessage);
+        air.progress = findViewById(R.id.airTaskProgress);
         primaryAction = findViewById(R.id.primaryAction);
+        bgmi.action = primaryAction;
+        bgmi.title = findViewById(R.id.gameValue);
+        bgmi.version = gameVersionText;
+        bgmi.state = gameStateValue;
+        air.action = findViewById(R.id.airPrimaryAction);
+        air.title = findViewById(R.id.airGameValue);
+        air.version = findViewById(R.id.airGameVersion);
+        air.state = findViewById(R.id.airGameStateValue);
+        if (preview) {
+            qaLaunchTarget = sessionFor(GameTarget.fromPackage(getIntent().getStringExtra(EXTRA_QA_GAME)));
+            launchTarget = qaLaunchTarget;
+        }
         setupInsets();
 
         gameTitle = findViewById(R.id.gameValue);
@@ -385,11 +419,8 @@ public class MAct extends AppCompatActivity {
             Ui.tap(v);
             showHelp();
         });
-        findViewById(R.id.settingsButton).setOnClickListener(v -> {
-            Ui.tap(v);
-            openSettings();
-        });
-        primaryAction.setOnClickListener(v -> onPrimaryAction());
+        primaryAction.setOnClickListener(v -> onPrimaryAction(bgmi));
+        air.action.setOnClickListener(v -> onPrimaryAction(air));
 
         if (preview && getIntent().hasExtra(EXTRA_QA_SAVED_KEY)) {
             // Debug: a saved key for the Sign out / Forget this key checks.
@@ -398,7 +429,7 @@ public class MAct extends AppCompatActivity {
         String savedKey = new Prefs(this).getSt(PREF_USER, "");
         if (preview) {
             expiry = qaExpiry();
-            savedKey = "ANOY-30D-QA7K2";
+            savedKey = (BuildConfig.DISPLAY_BRAND.toUpperCase(Locale.US) + "-30D-QA7K2");
         }
         totalMillis = keyDurationMillis(savedKey);
         // Expiry is shown in Indian Standard Time, like the panel, whatever
@@ -423,8 +454,11 @@ public class MAct extends AppCompatActivity {
             pendingNeed = pending >= 0 && pending < StorageAccess.Need.values().length
                     ? StorageAccess.Need.values()[pending] : null;
             askedThisRound = savedInstanceState.getInt(STATE_ASKED_ROUND, 0);
+            launchTarget = sessionFor(GameTarget.fromPackage(savedInstanceState.getString(STATE_LAUNCH_GAME)));
         }
-        if (savedInstanceState == null && StorageAccess.consumeLaunchAfterRestart(this)) {
+        GameTarget restartedGame = savedInstanceState == null ? StorageAccess.consumeGameAfterRestart(this) : null;
+        if (restartedGame != null) {
+            launchTarget = sessionFor(restartedGame);
             // Anoy restarted itself for the game files: carry on with that Launch.
             Log.d(TAG, "Launch: resuming after the restart");
             main.postDelayed(preview ? this::prepareObbThenLaunch : this::startLaunch, LAUNCH_RESUME_DELAY_MS);
@@ -440,43 +474,17 @@ public class MAct extends AppCompatActivity {
                 if (Ui.alive(this) && shouldAskOnHome()) requestStorage(false);
             }, HOME_STORAGE_ASK_DELAY_MS);
         }
-        if (preview && getIntent().getBooleanExtra(EXTRA_QA_SETTINGS, false)) openSettings();
-        // Login -> home is the activity transition (anim/fade_in: 280 ms, 8 dp up).
-        setupActionDivider();
+        setupNavigation(savedInstanceState);
     }
 
-    /** The pinned Launch bar gets its hairline only while content is under it. */
-    private void setupActionDivider() {
-        View scroll = findViewById(R.id.mainScroll);
-        View divider = findViewById(R.id.actionDivider);
-        if (scroll == null || divider == null) return;
-        Runnable update = () -> divider.setVisibility(
-                scroll.canScrollVertically(1) ? View.VISIBLE : View.INVISIBLE);
-        scroll.getViewTreeObserver().addOnScrollChangedListener(update::run);
-        scroll.getViewTreeObserver().addOnGlobalLayoutListener(update::run);
-    }
-
-    /** Status bar above the content; navigation bar under the action bar. */
+    /** Status bar above both pages; only navigation owns the bottom inset. */
     private void setupInsets() {
         View root = findViewById(R.id.mainRoot);
-        View content = findViewById(R.id.mainContent);
-        View actionBar = findViewById(R.id.actionBar);
-        View actionPanel = findViewById(R.id.actionPanel);
-        Ui.maxWidth(content, 600);
-        Ui.maxWidth(actionPanel, 600);
-        View settingsContent = findViewById(R.id.settingsContent);
+        Ui.maxWidth(findViewById(R.id.mainContent), 600);
+        View bottomNavigation = findViewById(R.id.bottomNavigationHost);
         Ui.onInsets(root, (bars, bottom, ime) -> {
             root.setPadding(bars.left, bars.top, bars.right, 0);
-            Ui.padBottom(actionPanel, bars.bottom);
-            Ui.padBottom(settingsContent, bars.bottom);
-        });
-        // Content can always scroll clear of the pinned action bar.
-        actionBar.addOnLayoutChangeListener((v, l, t, r, b, ol, ot, or, ob) -> {
-            int needed = (b - t) + Ui.dp(this, 8);
-            if (content.getPaddingBottom() != needed) {
-                content.setPadding(content.getPaddingLeft(), content.getPaddingTop(),
-                        content.getPaddingRight(), needed);
-            }
+            Ui.padBottom(bottomNavigation, bars.bottom);
         });
     }
 
@@ -508,6 +516,7 @@ public class MAct extends AppCompatActivity {
     @Override
     protected void onStart() {
         super.onStart();
+        homeStarted = true;
         main.removeCallbacks(ticker);
         main.removeCallbacks(runningCheck);
         main.removeCallbacks(licenceTimer);
@@ -520,11 +529,15 @@ public class MAct extends AppCompatActivity {
 
     @Override
     protected void onStop() {
+        homeStarted = false;
+        maskLicenceKey();
         main.removeCallbacks(ticker);
         main.removeCallbacks(runningCheck);
         main.removeCallbacks(licenceTimer);
         if (launchPending) leftDuringLaunch = true;
         if (storagePromptOpen) leftForStoragePrompt = true;
+        // Leaving the warning cancels it. A background timer can never authorize a launch.
+        if (concurrentSheet != null) concurrentSheet.dismiss();
         super.onStop();
     }
 
@@ -536,11 +549,13 @@ public class MAct extends AppCompatActivity {
         // A launch reported as failed, but the game is up after all: drop the stale error.
         if (launchErrorShown && containerRunning()) onGameLaunched(false);
         refreshLibrary();
+        refreshGameFiles();
         if (!preview) applyPanelStatus();
-        maybeCheckGameSupport();
         reportLoaderError();
         maybeRecheckLibrary();
         maybeRefreshLicence(false);
+        showCrashReport();
+        showAirCrashIfPending();
         // Back from the All-files-access page (some phones never send a result).
         if (storagePromptOpen && leftForStoragePrompt) finishStoragePrompt();
     }
@@ -557,6 +572,7 @@ public class MAct extends AppCompatActivity {
         if (storagePromptOpen || (permissionSheet != null && permissionSheet.isShowing())) return;
         launchAfterStorage = thenLaunch;
         askedThisRound = 0;
+        refreshPrimary();
         askNextPermission();
     }
 
@@ -635,6 +651,8 @@ public class MAct extends AppCompatActivity {
         launchAfterStorage = false;
         askedThisRound = 0;
         Log.d(TAG, "Permissions granted" + (launch ? ": continuing the launch" : ""));
+        refreshGameFiles();
+        refreshPrimary();
         if (!launch) return;
         if (qaPermissionsThenCopy) {
             prepareObbThenLaunch();
@@ -655,6 +673,7 @@ public class MAct extends AppCompatActivity {
             permissionRefused(need);
         } else {
             askedThisRound = 0;
+            refreshPrimary();
         }
     }
 
@@ -676,6 +695,7 @@ public class MAct extends AppCompatActivity {
                 break;
         }
         showMessage(getString(message), true);
+        refreshPrimary();
     }
 
     @Override
@@ -685,6 +705,8 @@ public class MAct extends AppCompatActivity {
         outState.putBoolean(STATE_LAUNCH_AFTER_STORAGE, launchAfterStorage);
         outState.putInt(STATE_PENDING_NEED, pendingNeed != null ? pendingNeed.ordinal() : -1);
         outState.putInt(STATE_ASKED_ROUND, askedThisRound);
+        outState.putString(STATE_LAUNCH_GAME, launchTarget.target.packageName);
+        if (navigation != null) outState.putInt(STATE_PAGE, navigation.currentPage());
     }
 
     @Override
@@ -709,6 +731,7 @@ public class MAct extends AppCompatActivity {
         main.removeCallbacksAndMessages(null);
         licenceExecutor.shutdown();
         ioExecutor.shutdownNow();
+        if (concurrentSheet != null) concurrentSheet.dismiss();
         if (permissionSheet != null) {
             permissionSheet.setOnDismissListener(null);
             permissionSheet.dismiss();
@@ -717,6 +740,7 @@ public class MAct extends AppCompatActivity {
         if (gate != null) gate.dispose();
         if (redownloadGate != null) redownloadGate.dispose();
         if (appCheckExecutor != null) appCheckExecutor.shutdownNow();
+        if (navigation != null) navigation.dispose();
         super.onDestroy();
     }
 
@@ -915,7 +939,7 @@ public class MAct extends AppCompatActivity {
         long wait = preview ? QA_LICENCE_REFRESH_MIN_MS
                 : fromTimer ? LICENCE_REFRESH_EVERY_MS - 5000L : LICENCE_REFRESH_MIN_MS;
         if (now - lastLicenceAttempt < wait) return;
-        final String key = preview ? "ANOY-30D-QA7K2" : new Prefs(this).getSt(PREF_USER, "");
+        final String key = preview ? (BuildConfig.DISPLAY_BRAND.toUpperCase(Locale.US) + "-30D-QA7K2") : new Prefs(this).getSt(PREF_USER, "");
         if (key == null || key.trim().isEmpty()) return;
         lastLicenceAttempt = now;
         if (!preview && (!Net.isOnline(this) || Net.isVpn(this))) {
@@ -974,13 +998,13 @@ public class MAct extends AppCompatActivity {
         main.post(ticker);
     }
 
-    /** New expiry from the panel: the card, the countdown and Launch follow it. */
+    /** New expiry from the panel: header, Settings and Launch follow it. */
     private void setExpiry(String expiry) {
         expiryMillis = parseExpiryMillis(expiry);
         if (expiryMillis > 0) {
-            expiresValue.setTag(expiryFormat.format(new Date(expiryMillis)));
+            formattedExpiry = expiryFormat.format(new Date(expiryMillis));
         } else if (hasExpiry(expiry)) {
-            expiresValue.setTag(expiry);
+            formattedExpiry = expiry;
         }
         lastA11yMinute = Long.MIN_VALUE;
         if (expired && expiryMillis > System.currentTimeMillis()) {
@@ -1035,12 +1059,8 @@ public class MAct extends AppCompatActivity {
     private void renderCountdown() {
         if (timeLeftValue == null) return;
         boolean loading = preview && getIntent().getBooleanExtra(EXTRA_QA_LOADING, false);
-        Object raw = expiresValue.getTag();
-        // Row 3: the IST expiry date alone ("12 Dec 2026, 6:30 PM IST").
-        expiresValue.setText(raw != null ? String.valueOf(raw) : "");
-        expiresValue.setVisibility(raw != null ? View.VISIBLE : View.GONE);
         if (licenceExpiresValue != null) {
-            String settingsExpiry = raw != null ? String.valueOf(raw) : getString(R.string.dash);
+            String settingsExpiry = formattedExpiry != null ? formattedExpiry : getString(R.string.dash);
             if (!settingsExpiry.contentEquals(licenceExpiresValue.getText())) licenceExpiresValue.setText(settingsExpiry);
         }
         if (expiryMillis <= 0 || loading) {
@@ -1087,23 +1107,24 @@ public class MAct extends AppCompatActivity {
         }
     }
 
-    /** "29d 23h 59m 58s"; under a day "23h 59m 58s". Always ticking. */
+    /** Two useful units fit the header; exact expiry is available in Settings. */
     static String formatCountdown(long days, long hours, long minutes, long seconds) {
-        return days > 0
-                ? String.format(Locale.US, "%dd %02dh %02dm %02ds", days, hours, minutes, seconds)
-                : String.format(Locale.US, "%dh %02dm %02ds", hours, minutes, seconds);
+        if (days > 0) return String.format(Locale.US, "%dd %02dh", days, hours);
+        if (hours > 0) return String.format(Locale.US, "%dh %02dm", hours, minutes);
+        return String.format(Locale.US, "%dm %02ds", minutes, seconds);
     }
 
     private void showCountdownText(String text, int colourRes) {
         if (!text.contentEquals(timeLeftValue.getText())) timeLeftValue.setText(text);
-        timeLeftValue.setTextColor(ContextCompat.getColor(this, colourRes));
+        int colour = ContextCompat.getColor(this, colourRes);
+        if (timeLeftValue.getCurrentTextColor() != colour) timeLeftValue.setTextColor(colour);
     }
 
-    /** TalkBack reads the licence card as one sentence; updated once a minute. */
+    /** TalkBack reads the compact expiry summary as one sentence, once a minute. */
     private void announce(String sentence, long minuteKey) {
         if (minuteKey == lastA11yMinute) return;
         lastA11yMinute = minuteKey;
-        licenceCard.setContentDescription(sentence);
+        licenceSummary.setContentDescription(sentence);
     }
 
     private static final int LOOK_UNKNOWN = 0;
@@ -1145,20 +1166,7 @@ public class MAct extends AppCompatActivity {
      * no chips, at most three dots per screen). {@code dotColour} 0 = no dot.
      */
     private void setDot(TextView view, CharSequence text, int dotColour, int textColour) {
-        view.setVisibility(View.VISIBLE);
-        view.setText(text);
-        view.setTextColor(ContextCompat.getColor(this, textColour));
-        android.graphics.drawable.Drawable dot = null;
-        if (dotColour != 0) {
-            dot = ContextCompat.getDrawable(this, R.drawable.dot);
-            if (dot != null) {
-                dot = androidx.core.graphics.drawable.DrawableCompat.wrap(dot.mutate());
-                androidx.core.graphics.drawable.DrawableCompat.setTint(dot, ContextCompat.getColor(this, dotColour));
-                int size = getResources().getDimensionPixelSize(R.dimen.dot);
-                dot.setBounds(0, 0, size, size);
-            }
-        }
-        view.setCompoundDrawablesRelative(dot, null, null, null);
+        StatusText.set(view, text, dotColour, textColour);
     }
 
     /** Licence length from the saved key ("ANOY-7D-..." = 7 days), or -1. */
@@ -1300,61 +1308,124 @@ public class MAct extends AppCompatActivity {
 
     // ----------------------------------------------------------- game state
 
-    /**
-     * Game chip: Not installed, Running, Ready (everything Launch needs is in
-     * place) or Installed (BGMI is there, but the library, a permission or the
-     * container is still missing - Launch sorts those out or explains).
-     */
+    /** One concise package-specific state; no server/library metadata in game cards. */
     private void refreshGameState() {
-        gameInstalled = isInstalled(PKG_BGMI) || qaLaunch != null;
-        if (!gameInstalled) gameRunning = false;
-        String gameVersion = installedVersionName(PKG_BGMI);
-        gameTitle.setText(R.string.game_name);
-        gameTitle.setContentDescription(gameVersion != null ? getString(R.string.game_title_version, gameVersion) : null);
-        if (gameVersion != null) {
-            gameVersionText.setText(getString(R.string.splash_version, gameVersion));
-            gameVersionText.setVisibility(View.VISIBLE);
-        } else {
-            gameVersionText.setVisibility(View.GONE);
+        for (GameSession game : games) {
+            game.installed = isInstalled(game.target.packageName) || (qaLaunch != null && game == qaLaunchTarget);
+            if (!game.installed && game.runtime.isRunning()) game.runtime.stopped(SystemClock.elapsedRealtime());
+            String version = installedVersionName(game.target.packageName);
+            game.title.setText(gameName(game));
+            game.title.setContentDescription(version != null
+                    ? getString(R.string.game_version_named, gameName(game), version) : null);
+            game.version.setVisibility(version != null ? View.VISIBLE : View.GONE);
+            if (version != null) game.version.setText(getString(R.string.splash_version, version));
+            boolean available = libraryAvailable(game);
+            if (game.runtime.isRunning()) {
+                setDot(game.state, getString(R.string.state_running), R.color.success, R.color.text_primary);
+            } else if (game == air && !available) {
+                // Its disabled button is the ONLY "Coming soon" copy on Home.
+                game.state.setText("");
+                game.state.setVisibility(View.GONE);
+            } else if (!game.installed) {
+                setDot(game.state, getString(R.string.state_not_installed), 0, R.color.text_secondary);
+            } else if (!available) {
+                setDot(game.state, getString(R.string.state_library_needed), R.color.warning, R.color.text_secondary);
+            } else if (!GameStatus.isPlayable(this, game.target)) {
+                // Panel-set availability: the owner's message wins, else a short default.
+                String statusMessage = GameStatus.message(this, game.target);
+                setDot(game.state, !statusMessage.isEmpty() ? statusMessage : gameStatusLabel(game),
+                        R.color.warning, R.color.text_secondary);
+            } else if (StorageAccess.firstMissing(this) != null && !game.target.optionalObb()
+                    || game.obbState == AppManager.ObbState.ACCESS_REQUIRED) {
+                setDot(game.state, getString(R.string.state_files_access), R.color.warning, R.color.text_secondary);
+            } else if (game.obbState == AppManager.ObbState.MISSING && !game.target.optionalObb()) {
+                setDot(game.state, getString(R.string.state_obb_missing), R.color.warning, R.color.text_secondary);
+            } else if (readyToLaunch(game) || game.target.optionalObb()) {
+                setDot(game.state, getString(R.string.state_ready), R.color.success, R.color.text_primary);
+            } else if (game.checkingObb) {
+                setDot(game.state, getString(R.string.state_checking_files), 0, R.color.text_secondary);
+            } else if (game.obbState == AppManager.ObbState.UNKNOWN) {
+                setDot(game.state, getString(R.string.state_check_files), 0, R.color.text_secondary);
+            } else {
+                setDot(game.state, getString(R.string.state_installed), 0, R.color.text_secondary);
+            }
         }
-        if (!gameInstalled) {
-            setDot(gameStateValue, getString(R.string.state_not_installed), R.color.warning, R.color.text_primary);
-        } else if (gameRunning) {
-            setDot(gameStateValue, getString(R.string.state_running), R.color.success, R.color.text_primary);
-        } else if (readyToLaunch()) {
-            setDot(gameStateValue, getString(R.string.state_ready), R.color.success, R.color.text_primary);
-        } else {
-            // Installed, but the library, a permission or the container isn't ready.
-            setDot(gameStateValue, getString(R.string.state_installed), R.color.warning, R.color.text_primary);
-        }
-        showGameSupport(gameVersion);
+        showGameSupport(installedVersionName(PKG_BGMI));
         refreshPrimary();
     }
 
-    // ---------------------------------------- BGMI newer than the library
-
-    private static final long GAME_SUPPORT_MIN_MS = 10L * 60L * 1000L;
-
-    /** 2.3.5: ask the panel which BGMI the library works with (at most every 10 minutes). */
-    private void maybeCheckGameSupport() {
-        if (preview || gameSupportChecking) return;
-        long now = SystemClock.elapsedRealtime();
-        if (gameSupportCheckedAt != 0L && now - gameSupportCheckedAt < GAME_SUPPORT_MIN_MS) return;
-        gameSupportChecking = true;
-        gameSupportCheckedAt = now;
-        final Context app = getApplicationContext();
-        try {
-            ioExecutor.execute(() -> {
-                GameSupport.refresh(app);
-                main.post(() -> {
-                    gameSupportChecking = false;
-                    if (Ui.alive(this)) showGameSupport(installedVersionName(PKG_BGMI));
+    /** Refresh on resume/access/library changes, never on a countdown tick or touch event. */
+    private void refreshGameFiles() {
+        for (GameSession game : games) {
+            final int request = ++game.obbRequest;
+            game.checkingObb = false;
+            game.obbState = AppManager.ObbState.UNKNOWN;
+            // An optional-OBB game inspects its files even without storage access,
+            // so a missing OBB settles into MISSING (and never blocks launch).
+            if (!game.installed || !libraryAvailable(game)
+                    || StorageAccess.firstMissing(this) != null && !game.target.optionalObb()) continue;
+            if (preview) {
+                game.obbState = AppManager.ObbState.AVAILABLE;
+                continue;
+            }
+            game.checkingObb = true;
+            try {
+                ioExecutor.execute(() -> {
+                    AppManager.ObbState state = new AppManager(MAct.this).inspectObb(game.target.packageName);
+                    main.post(() -> {
+                        if (!Ui.alive(MAct.this) || game.obbRequest != request) return;
+                        game.checkingObb = false;
+                        game.obbState = state;
+                        refreshGameState();
+                    });
                 });
-            });
-        } catch (RejectedExecutionException e) {
-            gameSupportChecking = false;
+            } catch (RejectedExecutionException ignored) {
+                game.checkingObb = false; // Activity is shutting down; do not claim readiness.
+            }
         }
+        refreshGameState();
     }
+
+    private GameSession sessionFor(GameTarget game) {
+        return game == GameTarget.BGMI_AIR ? air : bgmi;
+    }
+
+    private String gameName(GameSession game) {
+        return getString(game == air ? R.string.game_air_name : R.string.game_name);
+    }
+
+    /** Short default for a panel-blocked game when the owner left no message. */
+    private String gameStatusLabel(GameSession game) {
+        return getString(GameStatus.MAINTENANCE.equals(GameStatus.status(this, game.target))
+                ? R.string.state_game_maintenance : R.string.state_game_unavailable);
+    }
+
+    private boolean libraryAvailable(GameSession game) {
+        return (preview && qaLaunch != null && game == qaLaunchTarget)
+                || LibManager.isUsableLib(this, game.target);
+    }
+
+    private boolean controlsBlocked() {
+        return busy || launchPending || launchAfterStorage || storagePromptOpen || permissionSheet != null
+                || concurrentSheet != null || (gate != null && gate.isShowing())
+                || (redownloadGate != null && redownloadGate.isShowing());
+    }
+
+    private boolean anyGameRunning() {
+        for (GameSession game : games) {
+            if (game.runtime.isRunning() || containerRunning(game)) return true;
+        }
+        return false;
+    }
+
+    private GameSession otherRunningGame() {
+        for (GameSession game : games) {
+            if (game != launchTarget && (game.runtime.isRunning() || containerRunning(game))) return game;
+        }
+        return null;
+    }
+
+    // ---------------------------------------- BGMI newer than the library
 
     /** Shows the warning card when BGMI is newer than the library supports. Only a notice: Launch is unchanged. */
     private void showGameSupport(String installed) {
@@ -1467,7 +1538,7 @@ public class MAct extends AppCompatActivity {
      */
     private String supportInfo() {
         StringBuilder b = new StringBuilder();
-        b.append("Anoy ").append(BuildConfig.VERSION_NAME).append(" (").append(BuildConfig.VERSION_CODE).append(")\n");
+        b.append(BuildConfig.DISPLAY_BRAND).append(" ").append(BuildConfig.VERSION_NAME).append(" (").append(BuildConfig.VERSION_CODE).append(")\n");
         String library = null;
         try {
             library = LibManager.installedVersion(this);
@@ -1477,7 +1548,12 @@ public class MAct extends AppCompatActivity {
         b.append("Library: ").append(library != null && !library.isEmpty() ? library : "not installed").append('\n');
         b.append("Android: ").append(Build.VERSION.RELEASE).append(" (API ").append(Build.VERSION.SDK_INT).append(")\n");
         b.append("Device: ").append(deviceName()).append('\n');
-        b.append("Game: ").append(gameStateValue.getText()).append('\n');
+        for (GameSession game : games) {
+            b.append(game.target.displayName).append(": ").append(game.state.getVisibility() == View.GONE
+                            ? getString(R.string.coming_soon) : game.state.getText())
+                    .append("; ").append(game.target.libraryName).append(" ")
+                    .append(LibManager.isUsableLib(this, game.target) ? "installed" : "not installed").append('\n');
+        }
         StringBuilder missing = new StringBuilder();
         for (StorageAccess.Need need : StorageAccess.Need.values()) {
             if (StorageAccess.has(this, need)) continue;
@@ -1492,8 +1568,33 @@ public class MAct extends AppCompatActivity {
         b.append("Licence status: ").append(lookWord()).append('\n');
         b.append("Expires (IST): ").append(expiryMillis > 0
                 ? istFormat("d MMM yyyy, h:mm a").format(new Date(expiryMillis)) : "unknown");
-        if (statusMessage.getVisibility() == View.VISIBLE && statusMessage.getText().length() > 0) {
-            b.append("\nStatus: ").append(redactStatus(statusMessage.getText().toString()));
+        for (GameSession game : games) {
+            if (game.message.getVisibility() == View.VISIBLE && game.message.getText().length() > 0) {
+                b.append("\n").append(gameName(game)).append(" status: ")
+                        .append(redactStatus(game.message.getText().toString()));
+            }
+        }
+        // Native-crash breadcrumbs (milestones survive a process death; the split
+        // diag names what the container bound). Only present after a crash.
+        try {
+            for (GameTarget t : GameTarget.values()) {
+                String steps = LibManager.milestones(this, t);
+                if (!steps.isEmpty()) b.append("\n").append(t.displayName).append(" last steps: ").append(steps);
+            }
+            String diag = SplitDepsFix.readDiag(this);
+            if (!diag.isEmpty()) b.append('\n').append(diag);
+        } catch (Throwable ignored) {
+        }
+        // Virtual account calls (method names and outcomes only, no secrets):
+        // the Play Store's in-container sign-in fails silently without this.
+        String accountTrace;
+        try {
+            accountTrace = AccountTrace.read(this);
+        } catch (Throwable t) {
+            accountTrace = null;
+        }
+        if (accountTrace != null && !accountTrace.trim().isEmpty()) {
+            b.append("\nAccount calls in Mundo:\n").append(accountTrace.trim());
         }
         return b.toString();
     }
@@ -1501,7 +1602,7 @@ public class MAct extends AppCompatActivity {
     /** Drops keys, file paths, links and e-mail addresses from a status line and shortens it. */
     static String redactStatus(String text) {
         if (text == null) return "";
-        String s = text.replaceAll("(?i)\\bANOY-[A-Z0-9]+-[A-Z0-9]+\\b", "[key]")
+        String s = text.replaceAll("(?i)\\b[A-Z0-9]+-[0-9]+[HD]-[A-Z0-9]+\\b", "[key]")
                 .replaceAll("(?i)\\b[a-z][a-z0-9+.-]*://\\S+", "[link]")
                 .replaceAll("\\S+@\\S+\\.\\S+", "[email]")
                 .replaceAll("(?:/[^\\s/]+){2,}/?", "[path]")
@@ -1511,11 +1612,15 @@ public class MAct extends AppCompatActivity {
         return s;
     }
 
-    /** Library installed, the three permissions granted and the container activated. */
-    private boolean readyToLaunch() {
-        if (LibManager.installedVersion(this) == null) return false;
-        if (StorageAccess.firstMissing(this) != null) return false;
-        if (preview) return true; // Sample screen: the emulator has no activated container.
+    /** Read-only readiness hint. Launch still performs the full, verified OBB preparation. */
+    private boolean readyToLaunch(GameSession game) {
+        if (!libraryAvailable(game)) return false;
+        // BGMI needs a confirmed OBB and storage access; BGMI Air launches without them.
+        if (!game.target.optionalObb()) {
+            if (game.obbState != AppManager.ObbState.AVAILABLE) return false;
+            if (StorageAccess.firstMissing(this) != null) return false;
+        }
+        if (preview) return true; // The preview is not a native/container integration test.
         try {
             return MetaActivationManager.getActivationStatus();
         } catch (Throwable t) {
@@ -1523,54 +1628,26 @@ public class MAct extends AppCompatActivity {
         }
     }
 
-    /**
-     * Keeps Launch / Stop honest while home is visible: the game can be closed
-     * (or started) outside Anoy. Two misses in a row are needed before
-     * "Running" is dropped, so a brief blip from the container changes nothing,
-     * and a pending launch is left to its own confirmation. Never shows an error.
-     */
+    /** Reconcile each package independently; a transient miss never stops the other game. */
     private void reconcileRunning() {
-        if (primaryAction == null || busy || launchPending || !gameInstalled || expired) {
-            runningMisses = 0;
-            runningHits = 0;
-            return;
-        }
-        long now = SystemClock.elapsedRealtime();
-        if (now < runningSettleUntil) return; // Just launched / stopped: let the container catch up.
-        boolean running = containerRunning();
-        if (running) {
-            runningMisses = 0;
-            seenRunningSinceLaunch = true;
-            if (!gameRunning && ++runningHits >= 2) {
-                runningHits = 0;
-                Log.d(TAG, "Game: running outside Anoy, showing Stop");
-                gameRunning = true;
-                if (launchErrorShown) hideMessage();
-                refreshGameState();
+        boolean changed = false;
+        for (GameSession game : games) {
+            if (primaryAction == null || busy || launchPending || !game.installed) {
+                game.runtime.resetObservations();
+                continue;
             }
-            return;
+            if (game.runtime.observe(containerRunning(game), SystemClock.elapsedRealtime())) {
+                changed = true;
+                Log.d(TAG, "Container state changed: " + game.target.packageName);
+                if (game == launchTarget && game.runtime.isRunning() && launchErrorShown) hideMessage();
+            }
         }
-        runningHits = 0;
-        if (!gameRunning) {
-            runningMisses = 0;
-            return;
-        }
-        // Until the container has reported the game once, give it time to start.
-        if (!seenRunningSinceLaunch && now - gameLaunchedAt < RUNNING_FIRST_SEEN_MS) return;
-        if (++runningMisses >= 2) {
-            runningMisses = 0;
-            Log.d(TAG, "Game: closed outside Anoy, back to Launch");
-            gameRunning = false;
-            refreshGameState();
-        }
+        if (changed) refreshGameState();
     }
 
     private void refreshLibrary() {
-        String version = LibManager.installedVersion(this);
-        libraryValue.setText(version != null ? getString(R.string.library_version, version)
-                : getString(R.string.library_not_installed));
-        libraryValue.setTextColor(ContextCompat.getColor(this,
-                version != null ? R.color.text_tertiary : R.color.warning));
+        // Detailed library metadata belongs in Settings, not the game cards.
+        refreshLibraryVersion();
     }
 
     private boolean isInstalled(String pkg) {
@@ -1586,32 +1663,36 @@ public class MAct extends AppCompatActivity {
     }
 
     private void refreshPrimary() {
-        if (busy) return;
-        int label;
-        if (expired) {
-            label = R.string.sign_in_again;
-        } else if (!gameInstalled) {
-            label = R.string.install_game;
-        } else if (gameRunning) {
-            label = R.string.stop;
-        } else {
-            label = R.string.launch;
-        }
-        Ui.setLoading(primaryAction, false, getString(label));
-        // Running: Stop is surface-2 with danger text - never a red slab.
-        boolean stop = gameRunning && !expired && gameInstalled;
-        primaryAction.setBackgroundTintList(ContextCompat.getColorStateList(this,
-                stop ? R.color.tonal_bg_on_black : R.color.button_bg));
-        primaryAction.setTextColor(ContextCompat.getColorStateList(this, stop ? R.color.danger_text : R.color.button_text));
-        // 2.3.2: a play / stop glyph before Launch / Stop (Lucide, 20 dp, 8 dp gap,
-        // tinted like the label). The icon and label stay centred as one group
-        // (iconGravity textStart); other labels have none, busy shows the spinner.
-        if (stop || label == R.string.launch) {
-            primaryAction.setIconResource(stop ? R.drawable.ic_stop : R.drawable.ic_play);
-            primaryAction.setIconSize(getResources().getDimensionPixelSize(R.dimen.icon_inline));
-            primaryAction.setIconPadding(Ui.dp(this, 8));
-            primaryAction.setIconTint(ContextCompat.getColorStateList(this,
+        boolean blocked = controlsBlocked();
+        for (GameSession game : games) {
+            if (game.action == null) continue;
+            if (busy && game == launchTarget) continue; // Keep its live copy/launch label and spinner.
+            boolean stop = game.runtime.isRunning(); // Stopping is always allowed, including after expiry.
+            boolean comingSoon = game == air && !libraryAvailable(game) && !stop;
+            // A game the panel marks unavailable/maintenance cannot be launched.
+            boolean off = !stop && game.installed && !GameStatus.isPlayable(this, game.target);
+            CharSequence label = stop ? getString(R.string.game_stop_named, gameName(game))
+                    : comingSoon ? getString(R.string.game_air_coming_soon_action)
+                    : off ? gameStatusLabel(game)
+                    : expired ? getString(R.string.sign_in_again)
+                    : !game.installed ? getString(R.string.game_install_named, gameName(game))
+                    : getString(R.string.game_launch_named, gameName(game));
+            Ui.setLoading(game.action, false, label);
+            game.action.setEnabled(!blocked && !comingSoon && !off);
+            game.action.setBackgroundTintList(ContextCompat.getColorStateList(this,
+                    stop ? R.color.tonal_bg_on_black : R.color.button_bg));
+            game.action.setTextColor(ContextCompat.getColorStateList(this,
                     stop ? R.color.danger_text : R.color.button_text));
+            boolean play = !comingSoon && !off && !expired && game.installed;
+            if (stop || play) {
+                game.action.setIconResource(stop ? R.drawable.ic_stop : R.drawable.ic_play);
+                game.action.setIconSize(getResources().getDimensionPixelSize(R.dimen.icon_inline));
+                game.action.setIconPadding(Ui.dp(this, 8));
+                game.action.setIconTint(ContextCompat.getColorStateList(this,
+                        stop ? R.color.danger_text : R.color.button_text));
+            } else {
+                game.action.setIcon(null);
+            }
         }
     }
 
@@ -1619,39 +1700,68 @@ public class MAct extends AppCompatActivity {
         busy = value;
         if (!value) {
             cancelPrepTimers();
-            // Idle: a hidden status line gives its reserved space back.
-            if (statusMessage.getVisibility() == View.INVISIBLE) statusMessage.setVisibility(View.GONE);
-        }
-        if (value) {
-            primaryAction.setBackgroundTintList(ContextCompat.getColorStateList(this, R.color.button_bg));
-            primaryAction.setTextColor(ContextCompat.getColorStateList(this, R.color.button_text));
-            // Back to the spinner's own size and tint (Launch / Stop use a 20 dp glyph).
-            primaryAction.setIconSize(getResources().getDimensionPixelSize(R.dimen.button_progress));
-            primaryAction.setIconTint(ContextCompat.getColorStateList(this, R.color.button_text));
-            Ui.setLoading(primaryAction, true, label);
+            if (launchTarget.message.getVisibility() == View.INVISIBLE) launchTarget.message.setVisibility(View.GONE);
         } else {
-            refreshPrimary();
+            MaterialButton action = launchTarget.action;
+            action.setEnabled(true);
+            action.setBackgroundTintList(ContextCompat.getColorStateList(this, R.color.button_bg));
+            action.setTextColor(ContextCompat.getColorStateList(this, R.color.button_text));
+            action.setIconSize(getResources().getDimensionPixelSize(R.dimen.button_progress));
+            action.setIconTint(ContextCompat.getColorStateList(this, R.color.button_text));
+            Ui.setLoading(action, true, label);
         }
+        refreshPrimary();
     }
 
     // --------------------------------------------------------------- actions
 
-    private void onPrimaryAction() {
-        if (busy) return;
-        Ui.tap(primaryAction);
-        if (expired) {
-            openLogin();
-        } else if (!gameInstalled) {
-            openStore();
-        } else if (gameRunning) {
+    private void onPrimaryAction(GameSession game) {
+        if (controlsBlocked()) return;
+        Ui.tap(game.action);
+        // A silent metadata response must not open an update gate over a new launch.
+        if (gate != null) {
+            gate.dispose();
+            gate = null;
+        }
+        launchTarget = game;
+        concurrentLaunchApproved = false;
+        refreshGameState();
+        if (game.runtime.isRunning() || containerRunning(game)) {
             stopGame();
+        } else if (game == air && !libraryAvailable(game)) {
+            refreshPrimary();
+        } else if (expired) {
+            openLogin();
+        } else if (!game.installed) {
+            openStore();
         } else {
             startLaunch();
         }
     }
 
     private void startLaunch() {
+        if (!Ui.alive(this) || busy || launchPending) return;
         hideMessage();
+        if (expired || (expiryMillis > 0 && expiryMillis <= System.currentTimeMillis())) {
+            openLogin();
+            return;
+        }
+        // The panel can disable one game at a time (e.g. BGMI unsafe, Air stays up).
+        if (!GameStatus.isPlayable(this, launchTarget.target)) {
+            String statusMessage = GameStatus.message(this, launchTarget.target);
+            showMessage(!statusMessage.isEmpty() ? statusMessage : gameStatusLabel(launchTarget), true);
+            refreshGameState();
+            return;
+        }
+        if (launchTarget == air && !libraryAvailable(air)) {
+            refreshGameState();
+            return;
+        }
+        if (!isInstalled(launchTarget.target.packageName)) {
+            refreshGameState();
+            openStore();
+            return;
+        }
         try {
             if (!MetaActivationManager.getActivationStatus()) {
                 showMessage(getString(R.string.error_activation), true);
@@ -1662,17 +1772,75 @@ public class MAct extends AppCompatActivity {
             showMessage(getString(R.string.error_activation), true);
             return;
         }
-        if (!LibManager.isUsableLib(this)) {
-            // Mandatory: no launch without a current library.
-            openGate(false);
+        if (!LibManager.isUsableLib(this, launchTarget.target)) {
+            // BGMI's existing mandatory gate remains; Air never borrows libbgmi.so.
+            if (launchTarget == bgmi) openGate(false);
+            else refreshGameState();
             return;
         }
-        if (!StorageAccess.has(this)) {
-            // Ask for files access; startLaunch() runs again once it is granted.
+        // BGMI needs storage to reach its OBB. BGMI Air only needs it when there
+        // is an OBB to copy; when its files were already seen as missing, Air
+        // launches untouched instead of asking for access it does not need.
+        if (!StorageAccess.has(this)
+                && !(launchTarget.target.optionalObb()
+                        && launchTarget.obbState == AppManager.ObbState.MISSING)) {
             requestStorage(true);
             return;
         }
+        GameSession other = otherRunningGame();
+        if (other != null && !concurrentLaunchApproved) {
+            showConcurrentLaunchWarning(other);
+            return;
+        }
         prepareObbThenLaunch();
+    }
+
+    private void showConcurrentLaunchWarning(GameSession other) {
+        if (concurrentSheet != null || !Ui.alive(this)) return;
+        View content = LayoutInflater.from(this).inflate(R.layout.sheet_concurrent_games, null, false);
+        ((TextView) content.findViewById(R.id.concurrentGamesMessage)).setText(
+                getString(R.string.concurrent_games_message, gameName(other), gameName(launchTarget)));
+        BottomSheetDialog sheet = Ui.sheet(this, content, true);
+        concurrentSheet = sheet;
+        ConcurrentLaunchGuard confirmation = new ConcurrentLaunchGuard(SystemClock.elapsedRealtime());
+        MaterialButton confirm = content.findViewById(R.id.concurrentGamesConfirm);
+        confirm.setEnabled(false);
+        confirm.setOnClickListener(v -> {
+            if (!Ui.alive(this) || concurrentSheet != sheet || !sheet.isShowing()
+                    || !confirmation.confirm(SystemClock.elapsedRealtime())) return;
+            Ui.tap(v);
+            concurrentLaunchApproved = true;
+            sheet.dismiss();
+            startLaunch(); // Recheck licence, package, library and permissions after the wait.
+        });
+        content.findViewById(R.id.concurrentGamesCancel).setOnClickListener(v -> {
+            Ui.tap(v);
+            sheet.dismiss();
+        });
+        sheet.setOnDismissListener(d -> {
+            confirmation.cancel();
+            if (concurrentSheet == sheet) {
+                if (concurrentTick != null) main.removeCallbacks(concurrentTick);
+                concurrentTick = null;
+                concurrentSheet = null;
+                if (Ui.alive(this)) refreshPrimary();
+            }
+        });
+        concurrentTick = new Runnable() {
+            @Override public void run() {
+                if (concurrentSheet != sheet || !sheet.isShowing()) return;
+                int seconds = confirmation.secondsRemaining(SystemClock.elapsedRealtime());
+                boolean wasEnabled = confirm.isEnabled();
+                confirm.setEnabled(seconds == 0);
+                confirm.setText(seconds == 0 ? getString(R.string.concurrent_games_confirm)
+                        : getString(R.string.concurrent_games_wait, seconds));
+                if (seconds > 0) main.postDelayed(this, 250L);
+                else if (!wasEnabled) confirm.announceForAccessibility(getString(R.string.concurrent_games_confirm));
+            }
+        };
+        refreshPrimary();
+        sheet.show();
+        concurrentTick.run();
     }
 
     /**
@@ -1688,21 +1856,24 @@ public class MAct extends AppCompatActivity {
         // first 400 ms, then the line. The very first copy explains itself;
         // 15 s without a new percent says it is still going.
         cancelPrepTimers();
-        statusMessage.setVisibility(View.INVISIBLE);
-        final boolean firstCopy = !OBB_PREPARED_YES.equals(new Prefs(this).getSt(PREF_OBB_PREPARED, ""));
+        launchTarget.message.setVisibility(View.INVISIBLE);
+        final GameSession preparingGame = launchTarget;
+        final String preparedKey = preparingGame == bgmi ? PREF_OBB_PREPARED
+                : PREF_OBB_PREPARED + "_" + preparingGame.target.packageName;
+        final boolean firstCopy = !OBB_PREPARED_YES.equals(new Prefs(this).getSt(preparedKey, ""));
         main.postDelayed(prepShow = () -> {
             if (!Ui.alive(MAct.this) || !busy) return;
             showMessage(getString(firstCopy ? R.string.preparing_first : R.string.preparing), false);
         }, Ui.QUIET_MS);
         main.postDelayed(prepSlow, PREP_SLOW_MS);
-        new AppManager(this).copyObbAsync(PKG_BGMI, new AppManager.CopyCallback() {
+        new AppManager(this).copyObbAsync(preparingGame.target.packageName, new AppManager.CopyCallback() {
             private int lastPercent = -1;
 
             @Override
             public void onProgressUpdate(int percent) {
-                if (!Ui.alive(MAct.this)) return;
+                if (!Ui.alive(MAct.this) || launchTarget != preparingGame) return;
                 showProgress(percent, false);
-                primaryAction.setText(getString(R.string.action_preparing_progress, percent));
+                preparingGame.action.setText(getString(R.string.action_preparing_progress, percent));
                 if (percent != lastPercent) {
                     lastPercent = percent;
                     main.removeCallbacks(prepSlow);
@@ -1712,30 +1883,46 @@ public class MAct extends AppCompatActivity {
 
             @Override
             public void onCopyCompleted(boolean success, String error) {
-                if (!Ui.alive(MAct.this)) return;
+                if (!Ui.alive(MAct.this) || launchTarget != preparingGame) return;
                 cancelPrepTimers();
-                if (success) new Prefs(MAct.this).setSt(PREF_OBB_PREPARED, OBB_PREPARED_YES);
+                preparingGame.obbRequest++;
+                preparingGame.checkingObb = false;
+                // A device with no OBB to copy is fine for an optional-OBB game:
+                // "not found" (and a blocked folder it never asked to read) both
+                // mean "nothing to copy", so launch straight away instead of
+                // showing "Game files not found". BGMI (required) still stops here.
+                boolean missingObb = getString(R.string.main_obb_not_found).equals(error)
+                        || getString(R.string.obb_folder_not_found).equals(error);
+                boolean obbOk = success || (preparingGame.target.optionalObb()
+                        && (missingObb || getString(R.string.obb_folder_blocked).equals(error)));
+                preparingGame.obbState = obbOk ? AppManager.ObbState.AVAILABLE
+                        : missingObb
+                                ? AppManager.ObbState.MISSING
+                                : getString(R.string.obb_folder_blocked).equals(error)
+                                        ? AppManager.ObbState.ACCESS_REQUIRED : AppManager.ObbState.UNKNOWN;
+                refreshGameState();
+                if (obbOk) new Prefs(MAct.this).setSt(preparedKey, OBB_PREPARED_YES);
                 hideProgress();
-                if (!success && getString(R.string.obb_folder_blocked).equals(error)
+                if (!obbOk && getString(R.string.obb_folder_blocked).equals(error)
                         && StorageAccess.installGrantedThisRun(MAct.this)) {
                     // Install unknown apps was just granted: Android opens the
                     // game-files folder only to a freshly started app.
                     restartForGameFiles();
                     return;
                 }
-                if (!success) {
+                if (!obbOk) {
                     Log.d(TAG, "Launch stopped: game files not ready (" + error + ")");
                     setBusy(false, null);
                     String reason = error == null || error.isEmpty() ? getString(R.string.net_generic) : error;
                     showMessage(getString(R.string.main_obb_not_found).equals(reason)
                             || getString(R.string.obb_folder_not_found).equals(reason)
-                            ? getString(R.string.error_obb_missing)
+                            ? getString(R.string.game_error_obb_missing, gameName(preparingGame))
                             : getString(R.string.error_obb_copy, reason), true);
                     return;
                 }
                 Log.d(TAG, "Launch: game files ready, launching");
                 hideMessage(); // The pill itself reads "Launching…".
-                primaryAction.setText(R.string.launching);
+                preparingGame.action.setText(R.string.launching);
                 main.postDelayed(MAct.this::launchGame, LAUNCH_DELAY_MS);
             }
         });
@@ -1754,7 +1941,7 @@ public class MAct extends AppCompatActivity {
      */
     private void restartForGameFiles() {
         Log.d(TAG, "Launch: restarting to finish setting up game files");
-        StorageAccess.markLaunchAfterRestart(this);
+        StorageAccess.markLaunchAfterRestart(this, launchTarget.target);
         setBusy(true, getString(R.string.action_preparing));
         showMessage(getString(R.string.restarting_for_game_files), false);
         main.postDelayed(() -> {
@@ -1766,16 +1953,40 @@ public class MAct extends AppCompatActivity {
 
     private void launchGame() {
         if (!Ui.alive(this)) return;
-        qaLaunchAt = SystemClock.elapsedRealtime();
+        if (!preview && (expired || (expiryMillis > 0 && expiryMillis <= System.currentTimeMillis()))) {
+            setBusy(false, null);
+            hideProgress();
+            showMessage(getString(R.string.licence_expired_message), true);
+            refreshGameState();
+            return;
+        }
+        if (launchTarget == air && !libraryAvailable(air)) {
+            setBusy(false, null);
+            hideProgress();
+            refreshGameState();
+            return;
+        }
+        // Another package can start while a large OBB is being copied.
+        GameSession other = otherRunningGame();
+        if (other != null && !concurrentLaunchApproved) {
+            setBusy(false, null);
+            hideProgress();
+            showConcurrentLaunchWarning(other);
+            return;
+        }
+        launchTarget.qaLaunchAt = SystemClock.elapsedRealtime();
         // 1. Launch. Only this block decides whether the game started; the
         //    container call itself is unchanged.
+        guardContainerLaunch();
         boolean started = false;
         Throwable failure = null;
         try {
+            // A native container death during launch leaves no Java trace; the
+            // breadcrumb names the game on the next start. Cleared on success.
+            CrashLogger.noteAction(this, "launch: " + launchTarget.target.packageName);
             Intent intent = obtainLaunchIntent();
             if (intent != null) {
-                startActivity(intent);
-                started = true; // startActivity returned normally: the game is launching.
+                started = dispatchLaunch(intent);
             }
         } catch (Throwable t) {
             failure = t;
@@ -1802,22 +2013,49 @@ public class MAct extends AppCompatActivity {
                     return null;
             }
         }
-        return MetaActivityManager.obtainSplashLaunchIntent(PKG_BGMI, this);
+        return MetaActivityManager.obtainSplashLaunchIntent(launchTarget.target.packageName, this);
+    }
+
+    /**
+     * Sends a game launch into the container. The splash intent's explicit
+     * component goes through the SDK's in-container launcher with an explicit
+     * user (the recipe GameLoginCallbackActivity proves out) — the host
+     * startActivity path is what NPEs on Android 16+'s isolated-split
+     * transaction. Host startActivity remains as the fallback for containers
+     * where launchIntent cannot take the component.
+     */
+    private boolean dispatchLaunch(Intent intent) {
+        try {
+            ComponentName component = intent.getComponent();
+            if (component != null) {
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+                MetaActivityManager.launchIntent(intent, GameLoginRouter.USER);
+                return true; // dispatch returned: the container accepted the launch.
+            }
+        } catch (Throwable t) {
+            Log.w(TAG, "In-container launch dispatch failed, trying host startActivity", t);
+        }
+        startActivity(intent);
+        return true; // startActivity returned normally: the game is launching.
     }
 
     /** True when the virtual container reports the game process running. */
     private boolean containerRunning() {
-        if (qaLaunch != null) {
+        return containerRunning(launchTarget);
+    }
+
+    private boolean containerRunning(GameSession game) {
+        if (qaLaunch != null && game == qaLaunchTarget) {
             // Debug stand-in: nothing runs before Launch; a started game runs
             // until qa_game_ms (if given) has passed.
-            if (qaLaunchAt <= 0) return false;
-            long since = SystemClock.elapsedRealtime() - qaLaunchAt;
+            if (game.qaLaunchAt <= 0) return false;
+            long since = SystemClock.elapsedRealtime() - game.qaLaunchAt;
             if (qaGameMs > 0 && since >= qaGameMs) return false;
             if ("null_running".equals(qaLaunch)) return since > 1200L;
             return "started".equals(qaLaunch) || "started_polish_throws".equals(qaLaunch);
         }
         try {
-            return MetaActivityManager.isAppRunning(PKG_BGMI);
+            return MetaActivityManager.isAppRunning(game.target.packageName);
         } catch (Throwable t) {
             Log.w(TAG, "Container state unavailable", t);
             return false;
@@ -1847,16 +2085,15 @@ public class MAct extends AppCompatActivity {
 
     /** 2. The game started. Nothing here can turn that into a launch error. */
     private void onGameLaunched(boolean haptic) {
-        gameRunning = true;
+        launchTarget.runtime.launched(SystemClock.elapsedRealtime());
+        concurrentLaunchApproved = false;
         launchErrorShown = false;
-        gameLaunchedAt = SystemClock.elapsedRealtime();
-        runningSettleUntil = gameLaunchedAt + RUNNING_SETTLE_MS;
-        seenRunningSinceLaunch = false;
-        runningMisses = 0;
-        runningHits = 0;
+        // The game is up: the launch breadcrumb has served its purpose. A short
+        // delay keeps it alive through the container's fragile first seconds.
+        crashHandler.postDelayed(() -> CrashLogger.clearAction(getApplicationContext()), 15000L);
         try {
             hideMessage();
-            if (haptic) Ui.confirm(primaryAction);
+            if (haptic) Ui.confirm(launchTarget.action);
             if ("started_polish_throws".equals(qaLaunch)) {
                 throw new IllegalStateException("QA: post-launch UI failure");
             }
@@ -1874,6 +2111,8 @@ public class MAct extends AppCompatActivity {
 
     /** The game truly did not start: log the real cause and say so. */
     private void onLaunchFailed(Throwable cause) {
+        concurrentLaunchApproved = false;
+        CrashLogger.clearAction(this);
         Log.e(TAG, "Launch failed: the game did not start", cause != null ? cause
                 : new IllegalStateException("No launch intent and the container reports the game is not running"));
         showMessage(getString(R.string.error_launch), true);
@@ -1884,12 +2123,11 @@ public class MAct extends AppCompatActivity {
 
     private void stopGame() {
         try {
-            MetaActivityManager.killAppByPkg(PKG_BGMI);
-            gameRunning = false;
-            runningSettleUntil = SystemClock.elapsedRealtime() + RUNNING_SETTLE_MS;
-            runningMisses = 0;
-            runningHits = 0;
-            showMessage(getString(R.string.game_stopped), false);
+            MetaActivityManager.killAppByPkg(launchTarget.target.packageName);
+            launchTarget.runtime.stopped(SystemClock.elapsedRealtime());
+            launchTarget.qaLaunchAt = 0L;
+            concurrentLaunchApproved = false;
+            showMessage(getString(R.string.game_stopped_named, gameName(launchTarget)), false);
         } catch (Throwable t) {
             Log.e(TAG, "Stop failed", t);
             showMessage(getString(R.string.error_stop), true);
@@ -1899,11 +2137,11 @@ public class MAct extends AppCompatActivity {
 
     private void openStore() {
         try {
-            startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=" + PKG_BGMI)));
+            startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=" + launchTarget.target.packageName)));
         } catch (ActivityNotFoundException e) {
             try {
                 startActivity(new Intent(Intent.ACTION_VIEW,
-                        Uri.parse("https://play.google.com/store/apps/details?id=" + PKG_BGMI)));
+                        Uri.parse("https://play.google.com/store/apps/details?id=" + launchTarget.target.packageName)));
             } catch (ActivityNotFoundException nested) {
                 showMessage(getString(R.string.error_store), true);
             }
@@ -1926,8 +2164,7 @@ public class MAct extends AppCompatActivity {
     // ----------------------------------------------------- library updates
 
     private void maybeRecheckLibrary() {
-        if (busy || gameRunning || (gate != null && gate.isShowing())
-                || (redownloadGate != null && redownloadGate.isShowing())) return;
+        if (preview || controlsBlocked() || anyGameRunning()) return;
         long now = SystemClock.elapsedRealtime();
         if (now - lastRecheck < RECHECK_INTERVAL_MS) return;
         lastRecheck = now;
@@ -1938,37 +2175,149 @@ public class MAct extends AppCompatActivity {
         if (gate != null) gate.dispose();
         UpdateGate.Listener onReady = () -> {
             refreshLibrary();
-            hideMessage();
+            refreshLibraryVersion();
+            refreshGameFiles();
+            if (!silent) hideMessage();
         };
         gate = silent ? UpdateGate.recheck(this, onReady) : UpdateGate.start(this, onReady);
     }
 
-    private void reportLoaderError() {
-        String error = LibManager.lastLoadError(this);
-        if (error != null && !error.isEmpty()) {
-            showMessage(getString(R.string.error_library, error), true);
-            LibManager.clearLoadError(this);
+    /** After a crash, home offers the saved report once: copy it for support, or dismiss. */
+    private boolean crashReportShown;
+    /** Survives onDestroy (unlike `main`): clears the action breadcrumb on a live process. */
+    private final Handler crashHandler = new Handler(Looper.getMainLooper());
+
+    private void showCrashReport() {
+        if (crashReportShown || preview) return;
+        crashReportShown = true;
+        String report;
+        try {
+            report = CrashLogger.read(this);
+        } catch (Throwable t) {
+            report = null;
+        }
+        if (report != null && !report.trim().isEmpty()) {
+            CrashLogger.clearAction(this); // the Java trace supersedes the breadcrumb
+            showCrashDialog(getString(R.string.crash_report_title), withSplitFixState(report));
             return;
         }
-        File lib = LibManager.libFile(this);
-        if (lib.isFile()) {
-            String problem = LibManager.alignmentProblem(lib);
-            if (problem != null) showMessage(getString(R.string.error_library, problem), true);
+        // No Java trace: a native container crash leaves no exception behind,
+        // only the breadcrumb written before the risky call.
+        String action;
+        try {
+            action = CrashLogger.pendingAction(this);
+        } catch (Throwable t) {
+            return;
+        }
+        if (action == null || action.trim().isEmpty()) return;
+        CrashLogger.clearAction(this);
+        showCrashDialog(getString(R.string.crash_action_title),
+                withSplitFixState("Anoy " + BuildConfig.VERSION_NAME + " (" + BuildConfig.VERSION_CODE + ")\n"
+                        + "Android " + Build.VERSION.RELEASE + " (API " + Build.VERSION.SDK_INT + ")\n"
+                        + "Device: " + deviceName() + "\n\n"
+                        + "The process died without a Java error (a native crash inside the container).\n\n"
+                        + "Last action: " + action + "\n\n" + nativeExitSection()));
+    }
+
+    /** The system-recorded native fault (API 30+), or a note that none was found. */
+    private String nativeExitSection() {
+        try {
+            String exit = CrashLogger.readNativeExit(this);
+            return exit != null ? exit : "Native exit: none recorded (the container may run as a system/root process Android does not attribute to this app)";
+        } catch (Throwable t) {
+            return "Native exit: unreadable";
+        }
+    }
+
+    /** Appends the split-repair bookkeeping so a report shows whether the fix fired. */
+    private String withSplitFixState(String report) {
+        try {
+            String diag = SplitDepsFix.readDiag(this);
+            if (!diag.isEmpty()) report += "\n\nSplit bind diag:\n" + diag;
+            String state = SplitDepsFix.readState(this);
+            if (state.isEmpty()) return report + "\n\nSplit repair: never fired";
+            return report + "\n\nSplit repair fired for:\n" + state;
+        } catch (Throwable t) {
+            return report;
+        }
+    }
+
+    /**
+     * Persistent Air crash line on the Air card. A native container death can
+     * restart the app at the splash without ever re-showing this activity, so the
+     * crash dialog never appears. Mirror the report here — it survives restarts and
+     * is always visible on Home. Tap-to-copy stays available via the crash dialog
+     * whenever MAct does come back.
+     */
+    private void showAirCrashIfPending() {
+        try {
+            if (air == null || air.message == null) return;
+            String action = CrashLogger.pendingAction(this);
+            if (action == null || !action.contains(GameTarget.BGMI_AIR.packageName)) return;
+            // The card stays one short line; the full breadcrumbs are in the
+            // support info (Copy support info) for support to read.
+            air.message.setText(R.string.crash_action_title);
+            air.message.setVisibility(View.VISIBLE);
+        } catch (Throwable t) {
+            Log.w(TAG, "Air crash status unavailable", t);
+        }
+    }
+
+    private void showCrashDialog(String title, final String report) {
+        new androidx.appcompat.app.AlertDialog.Builder(this)
+                .setTitle(title)
+                .setMessage(report)
+                .setPositiveButton(R.string.crash_report_copy, (d, w) -> {
+                    try {
+                        ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+                        if (clipboard != null) {
+                            clipboard.setPrimaryClip(ClipData.newPlainText(
+                                    getString(R.string.crash_report_title), report));
+                        }
+                    } catch (RuntimeException e) {
+                        Log.w(TAG, "Crash report: clipboard unavailable", e);
+                    }
+                    CrashLogger.clear(this);
+                })
+                .setNegativeButton(R.string.crash_report_dismiss, (d, w) -> CrashLogger.clear(this))
+                .show();
+    }
+
+    private void reportLoaderError() {
+        for (GameSession game : games) {
+            String error = LibManager.lastLoadError(this, game.target);
+            if (error != null && !error.isEmpty()) {
+                showMessage(game, getString(R.string.game_library_error, gameName(game), error), true);
+                LibManager.clearLoadError(this, game.target);
+                return;
+            }
+            File lib = LibManager.libFile(this, game.target);
+            if (lib.isFile()) {
+                String problem = LibManager.alignmentProblem(lib);
+                if (problem != null) {
+                    showMessage(game, getString(R.string.game_library_error, gameName(game), problem), true);
+                    return;
+                }
+            }
         }
     }
 
     // ---------------------------------------------------------------- status
 
-    /** Caption above Launch; errors are danger text with a REJECT haptic. */
+    /** Each game keeps its own inline feedback; errors retain the REJECT haptic. */
     private void showMessage(String text, boolean error) {
+        showMessage(launchTarget, text, error);
+    }
+
+    private void showMessage(GameSession game, String text, boolean error) {
         launchErrorShown = false;
-        statusMessage.animate().cancel();
-        statusMessage.setAlpha(1f);
-        statusMessage.setTag(R.id.tag_swap_text, null);
-        statusMessage.setText(text);
-        statusMessage.setTextColor(ContextCompat.getColor(this, error ? R.color.danger : R.color.text_secondary));
-        if (error) Ui.rejectHaptic(statusMessage);
-        Ui.fade(statusMessage, true);
+        game.message.animate().cancel();
+        game.message.setAlpha(1f);
+        game.message.setTag(R.id.tag_swap_text, null);
+        game.message.setText(text);
+        game.message.setTextColor(ContextCompat.getColor(this, error ? R.color.danger : R.color.text_secondary));
+        if (error) Ui.rejectHaptic(game.message);
+        Ui.fade(game.message, true);
     }
 
     /** While a task runs the line keeps its space (INVISIBLE), so nothing jumps. */
@@ -1976,23 +2325,23 @@ public class MAct extends AppCompatActivity {
         launchErrorShown = false;
         cancelPrepTimers();
         if (busy) {
-            Ui.fadeReserved(statusMessage, false);
+            Ui.fadeReserved(launchTarget.message, false);
         } else {
-            Ui.fade(statusMessage, false);
+            Ui.fade(launchTarget.message, false);
         }
     }
 
     private void showProgress(int percent, boolean indeterminate) {
-        if (taskProgress.isIndeterminate() != indeterminate) {
-            taskProgress.setVisibility(View.INVISIBLE);
-            taskProgress.setIndeterminate(indeterminate);
+        if (launchTarget.progress.isIndeterminate() != indeterminate) {
+            launchTarget.progress.setVisibility(View.INVISIBLE);
+            launchTarget.progress.setIndeterminate(indeterminate);
         }
-        taskProgress.setVisibility(View.VISIBLE);
-        if (!indeterminate) taskProgress.setProgressCompat(percent, !Ui.reducedMotion(this));
+        launchTarget.progress.setVisibility(View.VISIBLE);
+        if (!indeterminate) launchTarget.progress.setProgressCompat(percent, !Ui.reducedMotion(this));
     }
 
     private void hideProgress() {
-        taskProgress.setVisibility(View.GONE);
+        launchTarget.progress.setVisibility(View.GONE);
     }
 
     private String deviceName() {
@@ -2020,29 +2369,14 @@ public class MAct extends AppCompatActivity {
 
     // --------------------------------------------------------- header + icon
 
-    /**
-     * "Welcome back" kicker over the user's display name when the panel sends
-     * one. The /connect payload has no name today (only expiry, status and the
-     * note), so the title itself reads "Welcome back" and the kicker stays
-     * hidden - never "Anoy", never the key, never an invented name.
-     */
+    /** A smaller greeting; the kicker retains each flavor's wordmark. */
     private void setupHeader() {
-        // 2.3.0: the kicker is the product name (ANOY HAX), the title "Welcome back".
-        String name = displayName();
-        TextView title = findViewById(R.id.homeTitle);
-        title.setText(name != null ? name : getString(R.string.home_title));
-    }
-
-    /** No name field in the session payload yet: see setupHeader. */
-    private String displayName() {
-        return null;
+        ((TextView) findViewById(R.id.homeTitle)).setText(R.string.home_title);
     }
 
     // ---------------------------------------------------------------- settings
 
     private void setupSettings() {
-        settingsPage = findViewById(R.id.settingsPage);
-        actionBarView = findViewById(R.id.actionBar);
         licenceKeyValue = findViewById(R.id.licenceKeyValue);
         licenceKeyEye = findViewById(R.id.licenceKeyEye);
         licenceStatusValue = findViewById(R.id.licenceStatusValue);
@@ -2077,10 +2411,6 @@ public class MAct extends AppCompatActivity {
                 BuildConfig.VERSION_NAME, BuildConfig.VERSION_CODE));
         // Insets: mainRoot pads the status bar and sides; setupInsets pads the bottom.
         Ui.maxWidth(findViewById(R.id.settingsContent), 600);
-        findViewById(R.id.settingsBack).setOnClickListener(v -> {
-            Ui.tap(v);
-            closeSettings();
-        });
         findViewById(R.id.settingsTelegram).setOnClickListener(v -> {
             Ui.tap(v);
             Ui.openUrl(this, getString(R.string.telegram_url));
@@ -2103,7 +2433,7 @@ public class MAct extends AppCompatActivity {
     /** The saved key (debug preview: the QA key when none is saved). */
     private String licenceKey() {
         String key = new Prefs(this).getSt(PREF_USER, "");
-        if ((key == null || key.trim().isEmpty()) && preview) key = "ANOY-30D-QA7K2";
+        if ((key == null || key.trim().isEmpty()) && preview) key = (BuildConfig.DISPLAY_BRAND.toUpperCase(Locale.US) + "-30D-QA7K2");
         return key == null ? "" : key.trim();
     }
 
@@ -2211,7 +2541,7 @@ public class MAct extends AppCompatActivity {
                         if ("failed".equals(qa)) throw new UpdateException(getString(R.string.net_offline), true);
                         if ("available".equals(qa)) {
                             found = new AppUpdater.Release("2.4.0", BuildConfig.VERSION_CODE + 1,
-                                    "https://github.com/masterace572-prog/AnoyMundo/releases/download/sample/Anoy.apk",
+                                    "https://example.com/" + BuildConfig.DISPLAY_BRAND + ".apk",
                                     "Faster start-up\nClearer update messages", false);
                         }
                     } else {
@@ -2304,7 +2634,11 @@ public class MAct extends AppCompatActivity {
 
     /** Re-download library: a confirmation first, then the usual library sheet. */
     private void confirmRedownload() {
-        if (busy || launchPending || (redownloadGate != null && redownloadGate.isShowing())
+        if (anyGameRunning()) {
+            showMessage(getString(R.string.game_libraries_in_use), false);
+            return;
+        }
+        if (controlsBlocked() || busy || launchPending || (redownloadGate != null && redownloadGate.isShowing())
                 || (gate != null && gate.isShowing())) {
             return;
         }
@@ -2320,61 +2654,80 @@ public class MAct extends AppCompatActivity {
     }
 
     private void startRedownload() {
-        if (busy || launchPending) return;
+        if (anyGameRunning()) {
+            showMessage(getString(R.string.game_libraries_in_use), false);
+            return;
+        }
+        if (controlsBlocked()) return;
         Log.i(TAG, "Settings: re-downloading the library");
         if (redownloadGate != null) redownloadGate.dispose();
         redownloadGate = UpdateGate.redownload(this, () -> {
             // Installed or not (a failure keeps the old library): show what is there now.
             refreshLibraryVersion();
             refreshLibrary();
-            refreshGameState();
+            refreshGameFiles();
         });
     }
 
-    private void openSettings() {
-        if (settingsPage == null || settingsPage.getVisibility() == View.VISIBLE) return;
-        Log.d(TAG, "Settings: open");
-        // The key is always masked again when Settings opens.
+    /** Android 16+ split-APK launch guard: the framework NPEs when the
+     *  container leaves no current Application across the vprocess handoff. */
+    private void guardContainerLaunch() {
+        try {
+            BoxApplication app = BoxApplication.get();
+            if (app == null) return;
+            ConfigGuard.install(app);
+            ConfigGuard.repairNow(app);
+            PmCompatShim.install();
+            SplitDepsFix.install(this);
+        } catch (Throwable ignored) {
+        }
+    }
+
+    private void setupNavigation(Bundle savedInstanceState) {
+        navigation = new HomeSettingsNavigation(findViewById(R.id.mainRoot),
+                new HomeSettingsNavigation.Listener() {
+                    @Override
+                    public void onPageSelected(boolean settings) {
+                        Log.d(TAG, settings ? "Settings: open" : "Home: open");
+                        maskLicenceKey();
+                        settingsBack.setEnabled(settings);
+                        if (settings) {
+                            refreshLibraryVersion();
+                            renderAppCheckCaption();
+                        }
+                        resumeHomeCountdown();
+                    }
+
+                    @Override
+                    public void onMotionChanged(boolean moving) {
+                        // Never expose a revealed account key in a partial page preview.
+                        if (moving) maskLicenceKey();
+                        resumeHomeCountdown();
+                    }
+                });
+        int page = savedInstanceState != null
+                ? savedInstanceState.getInt(STATE_PAGE, HomeSettingsPager.HOME)
+                : preview && getIntent().getBooleanExtra(EXTRA_QA_SETTINGS, false)
+                ? HomeSettingsPager.SETTINGS : HomeSettingsPager.HOME;
+        navigation.select(page == HomeSettingsPager.SETTINGS
+                ? HomeSettingsPager.SETTINGS : HomeSettingsPager.HOME, false);
+        settingsBack.setEnabled(navigation.currentPage() == HomeSettingsPager.SETTINGS);
+        maskLicenceKey();
+        refreshLibraryVersion();
+    }
+
+    private void maskLicenceKey() {
         keyRevealed = false;
         main.removeCallbacks(restoreKey);
         renderLicenceKey();
-        refreshLibraryVersion();
-        renderAppCheckCaption();
-        ((android.widget.ScrollView) findViewById(R.id.settingsScroll)).scrollTo(0, 0);
-        // 12 dp horizontal + fade, 280 ms decelerate; instant with animations off.
-        settingsPage.animate().cancel();
-        settingsPage.setVisibility(View.VISIBLE);
-        if (Ui.reducedMotion(this)) {
-            settingsPage.setAlpha(1f);
-            settingsPage.setTranslationX(0f);
-        } else {
-            settingsPage.setAlpha(0f);
-            settingsPage.setTranslationX(Ui.dp(this, 12));
-            settingsPage.animate().alpha(1f).translationX(0f).setDuration(Ui.MEDIUM)
-                    .setInterpolator(Ui.ENTER).start();
-        }
-        // Launch / Stop stay on home only.
-        actionBarView.setVisibility(View.INVISIBLE);
-        settingsBack.setEnabled(true);
+    }
+
+    private void resumeHomeCountdown() {
+        main.removeCallbacks(ticker);
+        if (homeStarted && navigation != null && navigation.homeIsSettled()) main.post(ticker);
     }
 
     private void closeSettings() {
-        if (settingsPage == null || settingsPage.getVisibility() != View.VISIBLE) return;
-        Log.d(TAG, "Settings: close");
-        settingsBack.setEnabled(false);
-        settingsPage.animate().cancel();
-        actionBarView.setVisibility(View.VISIBLE);
-        if (Ui.reducedMotion(this)) {
-            settingsPage.setVisibility(View.GONE);
-        } else {
-            settingsPage.animate().alpha(0f).translationX(Ui.dp(this, 12)).setDuration(Ui.SHORT)
-                    .setInterpolator(Ui.EXIT).withEndAction(() -> {
-                        settingsPage.setVisibility(View.GONE);
-                        settingsPage.setAlpha(1f);
-                        settingsPage.setTranslationX(0f);
-                    }).start();
-        }
-        main.removeCallbacks(ticker);
-        main.post(ticker);
+        if (navigation != null) navigation.select(HomeSettingsPager.HOME, true);
     }
 }

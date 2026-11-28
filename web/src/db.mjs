@@ -65,15 +65,45 @@ export async function countRows(table, column = '*') {
 // ---------------------------------------------------------------------------
 // settings / lookup tables
 // ---------------------------------------------------------------------------
-export async function getSettings() {
+
+const GAME_STATUS_DEFAULTS = () => ({
+  bgmi: { status: 'available', message: '' },
+  bgmi_air: { status: 'available', message: '' },
+});
+
+/**
+ * Per-game availability shown on the Server page and served to the loader in
+ * the library manifest. Fail-open on purpose: a missing table (migration not
+ * applied yet) or a hiccup must never block players.
+ */
+export async function getGameStatuses() {
+  const out = GAME_STATUS_DEFAULTS();
+  try {
+    const { data, error } = await db().from('game_status').select('game,status,message');
+    if (error) throw new Error(error.message);
+    for (const row of data || []) {
+      if (Object.hasOwn(out, row.game)) {
+        out[row.game] = {
+          status: ['available', 'unavailable', 'maintenance'].includes(row.status) ? row.status : 'available',
+          message: String(row.message || '').slice(0, 200),
+        };
+      }
+    }
+  } catch (error) {
+    console.error('[anoymundo] game_status read failed (defaulting to available):', error.message);
+  }
+  return out;
+}
+
+export async function getSettings(channel = 'anoy') {
   const [onoff, ftext, feature, modname, credit, libRows, release] = await Promise.all([
     db().from('onoff').select('*').eq('id', 1).maybeSingle(),
     db().from('_ftext').select('*').eq('id', 1).maybeSingle(),
     db().from('feature').select('*').eq('id', 1).maybeSingle(),
     db().from('modname').select('*').eq('id', 1).maybeSingle(),
     db().from('credit').select('*').eq('id', 1).maybeSingle(),
-    db().from('lib').select('*').order('id', { ascending: false }).limit(1),
-    db().from('client_release').select('id,version,file_name,file_size,sha256,external_url,notes,game_version,is_current,uploaded_by,created_at').eq('is_current', true).maybeSingle(),
+    db().from('lib').select('*').eq('channel', channel).order('id', { ascending: false }).limit(1),
+    db().from('client_release').select('id,version,file_name,file_size,sha256,external_url,storage_path,notes,game_version,is_current,uploaded_by,created_at').eq('channel', channel).eq('is_current', true).maybeSingle(),
   ]);
   for (const r of [onoff, ftext, feature, modname, credit, libRows, release]) {
     if (r.error) throw new Error(r.error.message);
@@ -119,7 +149,7 @@ export async function getRecentHistory(limit = 10) {
 }
 
 export async function getReferralCodes(limit = 10) {
-  return unwrap(await db().from('referral_code').select('*').order('id_reff', { ascending: false }).limit(limit));
+  return unwrap(await db().from('referral_code').select('*').is('revoked_at', null).order('id_reff', { ascending: false }).limit(limit));
 }
 
 // ---------------------------------------------------------------------------

@@ -2,6 +2,7 @@ import Handlebars from 'handlebars';
 import { templates } from './templates.generated.mjs';
 import { icons, uiSprite } from './icons.generated.mjs';
 import { config } from './config.mjs';
+import { CHANNELS, ownerChannel } from './channels.mjs';
 import { readFlash } from './auth.mjs';
 
 // ---------------------------------------------------------------------------
@@ -44,6 +45,7 @@ Handlebars.registerHelper('icon', (name, cls) => new Handlebars.SafeString(
 
 Handlebars.registerPartial('header', templates.header);
 Handlebars.registerPartial('msgStatus', templates.msgStatus);
+Handlebars.registerPartial('release_channel', templates.release_channel);
 
 const compiled = new Map();
 function compile(name) {
@@ -212,6 +214,8 @@ export function renderPage(req, res, name, data = {}) {
 
   const base = {
     brand: config.brand,
+    releaseBrand: CHANNELS[ownerChannel(user) || 'anoy'].name,
+    releaseChannel: ownerChannel(user) || 'anoy',
     telegram: {
       handle: `@${config.telegramHandle}`,
       url: `https://t.me/${config.telegramHandle}`,
@@ -221,9 +225,6 @@ export function renderPage(req, res, name, data = {}) {
     navKeys: on('/keys') && !on('/keys/generate'),
     navGenerate: on('/keys/generate'),
     navSettings: on('/settings'),
-    navApiKeys: on('/api-keys'),
-    navApiDocs: on('/api-docs'),
-    navIntegration: on('/docs'),
     navServer: on('/server'),
     navUsers: on('/admin/manage-users') || on('/admin/user'),
     navReferral: on('/admin/create-referral'),
@@ -252,7 +253,7 @@ export function renderPage(req, res, name, data = {}) {
     ? {
       ...user,
       initial: String(user.displayName || user.username || 'U').trim().charAt(0).toUpperCase(),
-      // The single Owner account has an unlimited balance.
+      // Both fixed Owner accounts have an unlimited balance.
       unlimited: !!user.isOwner,
       saldoLabel: Number(user.saldo || 0).toLocaleString('en-IN'),
     }
@@ -274,6 +275,9 @@ export function renderPage(req, res, name, data = {}) {
 
 // Everything is no-store unless a caller passes an explicit Cache-Control
 // (2.3.3: only the public, identical-for-everyone /api/app/update does).
+function storageOrigin() {
+  try { const u = new URL(config.supabaseUrl); return u.protocol === 'https:' ? u.origin : ''; } catch { return ''; }
+}
 function securityHeaders(res, html, cacheControl = 'no-store') {
   res.setHeader('Cache-Control', cacheControl);
   res.setHeader('X-Content-Type-Options', 'nosniff');
@@ -283,7 +287,7 @@ function securityHeaders(res, html, cacheControl = 'no-store') {
     res.setHeader('Content-Security-Policy',
       "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; " +
       "script-src 'self' 'unsafe-inline'; font-src 'self' data:; " +
-      "connect-src 'self'; base-uri 'self'; form-action 'self'; object-src 'none'");
+      `connect-src 'self' ${storageOrigin()}; base-uri 'self'; form-action 'self'; object-src 'none'`);
   }
 }
 

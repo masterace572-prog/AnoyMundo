@@ -4,6 +4,164 @@ Screenshots, design notes (`docs/ui-redesign/…`) and the one-off generator
 scripts mentioned below were removed from the tree in the repo cleanup after
 2.3.2; they remain in git history.
 
+## Unreleased — Google login test build (stays 2.4.3 / 21)
+
+- Settings → **Google login**: provider status + a setup sheet that installs
+  Google sign-in support into the container — clone the phone's own Google
+  apps, or download three pinned, checksum-verified microG APKs with progress.
+- Owner-provided installers (`utils/GoogleServicesInstaller`,
+  `utils/MicroGInstaller`), decision layer (`utils/GoogleLoginSetup`) with JVM
+  tests, Robolectric binding checks and wiring guards.
+- Test-only: no version bump, no release publication, no live panel/library/APK
+  changes (`[verify-2.4.3]` CI pushes build APK artifacts only).
+
+## 2.4.3 — owner-requested restoration (versionCode 21)
+
+- Restore the released normal APK + OBB launch/preparation flow for both brands,
+  with the original library-dependent **Coming soon** state for BGMI Air.
+- Remove later split-import/native-copy experiments, injection-isolation mode,
+  and crash/root-report UI and readers. Split installs are not certified working.
+- Keep the released Home/Login/Splash design, original SDK/signer, separate
+  identities, licence/saves and version 2.4.3 (21). No uninstall or data reset.
+- Preserve 20 MiB panel uploads, live library/APK choices and existing public
+  release assets. [Restoration source, boundaries and checks](../docs/RESTORE_2.4.3.md).
+
+## 2.4.3 — short release changelog (versionCode 21)
+
+[Simple 2.4.2 → 2.4.3 changelog](CHANGELOG-2.4.3.md).
+The [first user-facing 2.4.3 release](https://github.com/masterace572-prog/AnoyMundo/releases/tag/loaders-v2.4.3-21) includes the verified
+loader-UI and announcement follow-ups below. Publication source `f8f5884` /
+[run 45443061179](https://github.com/masterace572-prog/AnoyMundo/actions/runs/45443061179)
+repeated both brands' build/lint/compiled/signature gates and **180/180** host
+checks. App/test inputs are unchanged from accepted source `cfc442e`. Only the
+older internal 2.4.3 GitHub test artifacts were replaced; all four releases
+through 2.4.2 and their exact refs/assets remain unchanged.
+**2.4.2 (20) is the last version distributed to users.** Earlier 2.4.3 builds were
+internal tests only. Users upgrade normally to **2.4.3 (21)** in place, without
+uninstalling or clearing app/container data.
+
+## 2.4.3 loader-UI follow-up — pre-publication verification (versionCode 21)
+
+- Match the announcement background and no-stroke treatment to the game cards;
+  keep its heading/icon blue and make the server-fetched message explicitly white.
+  Server fetching and all other card colors/behavior stay unchanged.
+- Extend the accepted Home design to Login and Splash with static Manrope,
+  consistent gutters, black surfaces and blue actions/final Hax word.
+- Replace Login's Paste text button with a clipboard icon. Keep two 48dp icon
+  targets and more key space; long keys scroll in-place. Show/hide changes only
+  the transformation, preserving text, cursor range, typeface and IME input type.
+  Use clear next-action icons/labels, visible/hidden accessibility state and
+  re-mask on background without clearing the key.
+- Replace Splash's strong overlapping words with a measured fade-through and
+  small vertical exchange; animate render properties only, use individual
+  temporary text layers, remove idle name breathing and clean up animator
+  listeners before cancellation. Keep reduced motion and update/error/retry gates.
+- Put Active and Safe on one baseline below the end-aligned expiry; wrap statuses
+  into end-aligned rows when their measured widths do not fit. Skip redundant
+  status text/color writes and reuse unchanged dot drawables.
+- Reproduce the missing bottom-capsule drag path on host Android 21/28, then add
+  touch-slop/axis arbitration, pixel tracking, label-press cancellation and
+  cancelled/multi-pointer gesture cleanup. Both pages and the actual selector
+  now have drag paths; retain native page scroll and existing button safety.
+- Inset only the blue selector by 2dp per edge. Preserve full tab-pitch travel
+  and at least 48dp hit targets. Keep the successful Home/game-card direction.
+- Expand host coverage and add an opt-in non-destructive device frame-stat tool.
+  **60fps is a target, not a phone-measured guarantee.** Games, native/runtime,
+  version/signing, live panel choices and published releases are unchanged.
+  [UI details and device acceptance](LOADER-UI-QA.md).
+
+## Internal 2.4.3 UI test iteration — GitHub artifacts only (versionCode 21)
+
+- Put each game's controls, task feedback and progress **inside its own scrolling
+  card**. Keep only the Home / Settings capsule persistent, with a blue selected
+  segment and contrasting white active text.
+- Restore the smaller **Welcome back** greeting. Move a compact, two-unit expiry
+  to the top right, with licence/server statuses below it; keep the exact IST
+  expiry in Settings and accessibility text. Remove the separate Home licence
+  card and the game-card server/library metadata.
+- Use a matching dark-blue announcement, cleaner grouped Settings and bundled
+  static **Manrope 400/500/600** dashboard fonts. Keep existing login/splash
+  branding and monospaced licence/support text. No SDK/dependency upgrade or
+  runtime font download; Android 21-compatible font instances include the OFL.
+- Remove Air's explanatory paragraph and duplicate state copy. Without its own
+  usable library, its disabled button says only **Coming soon**.
+- Read OBB source availability off the UI thread through the existing copier's
+  lookup. Distinguish missing files from blocked access; **Ready** requires
+  readable source files, the game's own library, permissions and activation.
+  This hint does not replace verified OBB preparation or authorize a launch.
+- Reproduce a previously missed diagonal swipe failure through scrolled Android
+  content. Lock each real touch stream to its predominant axis before a child
+  ScrollView can claim it; retain ViewPager's native drag/velocity/settling.
+  Verify button cancellation, vertical scrolling, real in-flight page geometry,
+  both swipe directions, taps and retained navigation in host Android tests.
+- Keep **2.4.3 / code 21**, both identities/original signer, every release through
+  2.4.2 and live panel library/APK choices unchanged. This replaces only the
+  current 2.4.3 release after fresh build-only verification and its own backup.
+  This was an internal test iteration, not an update distributed to users.
+
+## Internal 2.4.3 test iteration — BGMI Air and sliding navigation (versionCode 21)
+
+- Add BGMI Air (`com.krafton.bgmilite`) with the supplied game icon and its own
+  Launch/Stop action. BGMI retains `com.pubg.imobile` / `libbgmi.so`; Air loads
+  only `libbgmilite.so` and remains Coming soon when it is unavailable.
+- Install optional Air support from the same library bundle. A later BGMI-only
+  bundle removes old Air support; an Air-only archive cannot stand in for BGMI.
+- Allow simultaneous running only after a fresh RAM/heat/crash warning, a full
+  ten-second wait, and explicit confirmation. Cancel never launches anything.
+- Scope OBB preparation, launch/stop, running reconciliation, load diagnostics
+  and permission/restart continuation to the selected game. Block Home library
+  updates while either game is running. Keep existing licence/JNI/build contracts.
+- Add credential-free dual-game JVM regressions and source wiring checks.
+  Actual Air/container/linker/provider compatibility requires device QA.
+- Replace the Settings overlay with native, opaque Home / Settings pages and a
+  persistent bottom capsule. Tap either label or swipe horizontally; at midpoint,
+  half of each page is visible. Page state, scroll position and Home's actions
+  are retained; reduced-motion taps switch immediately.
+- Name the loader page Home; move the `?` Help control to Settings and center
+  Sign out with a red label. Keep its existing confirmation / Forget behavior.
+- Re-mask the licence key on page movement/backgrounding; tie Back and the Home
+  countdown to the selected/settled page, not retained-page visibility. Reserve
+  system navigation/gesture insets below the capsule once.
+- Owner requested version **2.4.3 / code 21**, the next user release after
+  **2.4.2 / code 20**. Earlier 2.4.3 APKs were internal test builds only, not
+  distributed updates. Preserve app/container data during an in-place upgrade.
+  Panel, database and live library/APK choices are unchanged.
+- Add host Android 21/28 view-inflation, tap, touch-swipe, half-page geometry,
+  accessibility, reduced-motion and recreation regressions for both brands.
+  [Release scope and verification](RELEASE-2.4.3.md).
+
+## Earlier 2.4.4-webtest source candidate — Contained game web login (versionCode 21)
+
+- Tester confirmed 2.4.3 did not fix login: stock BGMI keeps web login in-game;
+  the loader opens it outside and the successful return targets real BGMI.
+- Address the outbound path through the original SDK's public activity-handler
+  chaining API, installed only in virtual game processes. Prefer the game's own
+  handler; otherwise open a private in-loader WebView instead of an OS browser.
+- Match returns dynamically against virtual BGMI's manifest, including App Links
+  and scoped intent URIs; never send an unhandled URL to the outside game. Keep
+  original activity-result arguments, private WebView profile, normal provider
+  user agent, strict TLS and no native JavaScript bridge or credential logging.
+- Non-latest prerelease, not a claimed phone-validated fix. Same code 21 allows
+  an in-place return to 2.4.3 without deleting app/container data. Old APKs and
+  both AARs are retained. Existing library-download fixes are unchanged.
+
+## Original 2.4.3 — Game login returns and library waits (versionCode 21; superseded)
+
+**Tester follow-up: Twitter's reported flow is still not fixed by this version.**
+
+- Keep the original Mundo AAR; the quarantined replacement test is not used.
+- Receive known Twitter/BGMI browser-return schemes and forward the unchanged
+  URI to the running virtual BGMI, not the outside installed game. Facebook
+  continues through Mundo's original handler. No new login WebView or credential
+  logging. In-game browser selection and actual provider login still need device QA.
+- Cancel a closed screen's network connection and queued work; separate silent
+  library checks from interactive work. Bound retries/check time, use CDN caching
+  for hash-verified binary downloads, and fetch fresh metadata on manual retry.
+- Remove the duplicate BGMI-support manifest request. Slow text identifies server
+  wait, transfer stall, or installation; received bytes count even if percentage
+  has not changed. Integrity checks and existing installed data are retained.
+- Credential-free JVM regressions and compiled callback-manifest checks run in CI.
+
 ## 2.3.8 — Splash motion only (versionCode 17)
 
 - The Lottie animations stay only on the splash update check (quiet arc while

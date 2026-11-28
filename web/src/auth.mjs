@@ -1,6 +1,7 @@
 import crypto from 'node:crypto';
 import bcrypt from 'bcryptjs';
 import { config } from './config.mjs';
+import { ownerChannel, isRealOwner } from './channels.mjs';
 import { getUserById, getUserByUsername } from './db.mjs';
 
 export const SESSION_COOKIE = 'am_session';
@@ -160,7 +161,8 @@ export function getClientIp(req) {
   return req.headers?.['x-real-ip'] || req.socket?.remoteAddress || '0.0.0.0';
 }
 
-export function levelName(level) {
+export function levelName(level, user = null) {
+  if (Number(level) === 1 && isRealOwner(user)) return 'Real Owner';
   return ({ 1: 'Owner', 2: 'Admin', 3: 'Reseller' })[Number(level)] || 'Unknown';
 }
 
@@ -233,15 +235,16 @@ export async function currentUser(req) {
   // newer session is void as soon as the password hash changes.
   if (session.pv && String(user.password || '').slice(0, 12) !== String(session.pv)) return null;
   if (Number(user.status) !== 1 || Number(user.level) > 3) return null;
-  if (user.expiration_date && new Date(user.expiration_date).getTime() < Date.now()) return null;
-  const isOwner = Number(user.level) === 1 && user.username === config.ownerUsername;
+  if (!ownerChannel(user) && user.expiration_date && new Date(user.expiration_date).getTime() < Date.now()) return null;
+  const isOwner = !!ownerChannel(user);
   return {
     ...user,
     isAdmin: isOwner || Number(user.level) === 2,
     isOwner,
+    isRealOwner: isOwner && isRealOwner(user),
     notLevel2: Number(user.level) !== 2,
     displayName: displayName(user),
-    levelName: levelName(user.level),
+    levelName: levelName(user.level, user),
     session,
   };
 }
@@ -251,7 +254,7 @@ export async function authenticate(username, password) {
   if (!user) return { ok: false, reason: 'The username is not registered.' };
   if (!verifyPassword(password, user.password)) return { ok: false, reason: 'Wrong password, please try again.' };
   if (Number(user.status) !== 1) return { ok: false, reason: 'Account is not active.' };
-  if (user.expiration_date && new Date(user.expiration_date).getTime() < Date.now()) {
+  if (!ownerChannel(user) && user.expiration_date && new Date(user.expiration_date).getTime() < Date.now()) {
     return { ok: false, reason: 'Expired - Please Renew Your Account to Login.' };
   }
   return { ok: true, user };

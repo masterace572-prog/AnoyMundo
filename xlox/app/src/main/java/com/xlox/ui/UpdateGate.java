@@ -22,9 +22,11 @@ import com.xlox.BuildConfig;
 import com.xlox.R;
 import com.xlox.utils.Downtwo;
 import com.xlox.utils.UpdateException;
+import com.xlox.utils.UpdateRequest;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
@@ -35,9 +37,10 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * listener only fires once the library is current. When the check itself
  * fails the only action is "Try again".
  *
- * 2.3.4 (UI only): checking, downloading and installing that run past 6 s
- * (downloading: 6 s without progress) say "Taking longer than usual. Keep Anoy
- * open." Failure reasons drop their own "Try again." next to the button.
+ * Requests are cancelled with the screen; silent checks have their own queue.
+ * Slow text distinguishes waiting for the server, waiting for bytes, and local
+ * installation. Any received bytes reset the stall indicator, not just whole
+ * percent changes. The same fresh manifest also supplies the BGMI notice.
  */
 public final class UpdateGate {
 
@@ -54,6 +57,10 @@ public final class UpdateGate {
         return t;
     });
 
+    // Silent home checks must never queue ahead of an explicit update/retry.
+    private static final ExecutorService BACKGROUND = Executors.newSingleThreadExecutor(r ->
+            new Thread(r, "library-background-check"));
+
     public interface Listener {
         void onReady();
     }
@@ -66,15 +73,19 @@ public final class UpdateGate {
         @Override
         public void run() {
             if (message != null && Ui.alive(activity) && !cancelled.get()) {
-                Ui.swapText(message, activity.getString(R.string.update_slow));
+                Ui.swapText(message, activity.getString(slowMessage));
             }
         }
     };
     private final AtomicBoolean cancelled = new AtomicBoolean(false);
+    private final UpdateRequest request = new UpdateRequest();
+    private Future<?> task;
+    private int slowMessage = R.string.update_check_slow;
+    private boolean waitingForResponse;
 
     private BottomSheetDialog dialog;
     private View icon;
-    private volatile long lastUnknownPost;
+    private volatile long lastProgressPost;
     private TextView title;
     private TextView message;
     private TextView detail;
@@ -96,7 +107,6 @@ public final class UpdateGate {
     private boolean finished;
     /** QA preview: keep the "done" state on screen. */
     private boolean holdDone;
-    private int lastPercent = -2;
 
     private UpdateGate(Activity activity, Listener listener) {
         this.activity = activity;
@@ -130,13 +140,18 @@ public final class UpdateGate {
      */
     public static UpdateGate recheck(Activity activity, Listener listener) {
         UpdateGate gate = new UpdateGate(activity, listener);
-        EXECUTOR.execute(() -> {
+        gate.task = BACKGROUND.submit(() -> {
+            if (gate.cancelled.get()) return;
             try {
-                Downtwo.Status status = Downtwo.check(activity);
+                Downtwo.Status status = Downtwo.check(activity, gate.request);
                 if (status.updateRequired) {
                     gate.post(() -> {
                         if (gate.ensureDialog()) gate.showUpdate(status);
                     });
+                } else {
+                    // Refresh cached game-support text with the same manifest,
+                    // even when no library download is needed.
+                    gate.post(gate::finish);
                 }
             } catch (UpdateException e) {
                 Log.i(TAG, "Silent re-check skipped: " + e.getMessage());
@@ -200,6 +215,8 @@ public final class UpdateGate {
     /** Stops callbacks; call from onDestroy. */
     public void dispose() {
         cancelled.set(true);
+        request.cancel();
+        if (task != null) task.cancel(true);
         main.removeCallbacksAndMessages(null);
         keepScreenOn(false);
         dismissQuietly();
@@ -314,6 +331,7 @@ public final class UpdateGate {
     }
 
     private void renderChecking() {
+        slowMessage = R.string.update_check_slow;
         render(R.string.update_checking_title, activity.getString(R.string.update_checking_message), false, null);
         showIndeterminateBar();
         armSlow();
@@ -341,12 +359,15 @@ public final class UpdateGate {
     }
 
     private void renderDownloading() {
+        slowMessage = R.string.update_download_stalled;
+        waitingForResponse = true;
         render(R.string.update_downloading_title, activity.getString(R.string.update_downloading_message),
                 false, null);
         armSlow();
     }
 
     private void renderInstalling() {
+        slowMessage = R.string.update_install_slow;
         render(R.string.update_installing_title, activity.getString(R.string.update_installing_message),
                 false, null);
         showIndeterminateBar();
@@ -366,7 +387,10 @@ public final class UpdateGate {
         render(R.string.update_failed_title, Ui.dropTryAgain(reason), true, activity.getString(R.string.try_again));
         action.setOnClickListener(v -> {
             Ui.tap(v);
-            startDownload();
+            // A release may have changed while downloading. Never retry the
+            // same stale manifest/checksum over and over.
+            if (optional) runRedownload();
+            else runCheck();
         });
     }
 
@@ -384,9 +408,10 @@ public final class UpdateGate {
     private void runCheck() {
         renderChecking();
         final long started = SystemClock.elapsedRealtime();
-        EXECUTOR.execute(() -> {
+        task = EXECUTOR.submit(() -> {
+            if (cancelled.get()) return;
             try {
-                Downtwo.Status status = Downtwo.check(activity);
+                Downtwo.Status status = Downtwo.check(activity, request);
                 long wait = Math.max(0L, MIN_CHECKING_MS - (SystemClock.elapsedRealtime() - started));
                 main.postDelayed(() -> {
                     if (!cancelled.get() && Ui.alive(activity)) onChecked(status);
@@ -405,9 +430,10 @@ public final class UpdateGate {
         working = true;
         renderChecking();
         final long started = SystemClock.elapsedRealtime();
-        EXECUTOR.execute(() -> {
+        task = EXECUTOR.submit(() -> {
+            if (cancelled.get()) return;
             try {
-                Downtwo.Status status = Downtwo.check(activity);
+                Downtwo.Status status = Downtwo.check(activity, request);
                 long wait = Math.max(0L, MIN_CHECKING_MS - (SystemClock.elapsedRealtime() - started));
                 main.postDelayed(() -> {
                     if (cancelled.get() || !Ui.alive(activity)) return;
@@ -496,11 +522,11 @@ public final class UpdateGate {
         working = true;
         renderDownloading();
         final long expected = release.size;
-        lastPercent = -2;
         showProgress(0L, expected, expected > 0 ? 0 : -1);
         keepScreenOn(true);
 
-        EXECUTOR.execute(() -> {
+        task = EXECUTOR.submit(() -> {
+            if (cancelled.get()) return;
             try {
                 Downtwo.download(activity, release, new Downtwo.Progress() {
                     @Override
@@ -508,22 +534,36 @@ public final class UpdateGate {
                         // No Content-Length: fall back to the size from the manifest.
                         final long total = reported > 0 ? reported : (expected >= done ? expected : -1L);
                         int percent = total > 0 ? (int) Math.min(100L, done * 100L / total) : -1;
-                        if (percent == lastPercent && percent >= 0) return;
-                        if (percent < 0) {
-                            // Unknown size: refresh the byte counter at most ~6 times a second.
-                            long now = SystemClock.uptimeMillis();
-                            if (now - lastUnknownPost < 160L) return;
-                            lastUnknownPost = now;
-                        }
-                        lastPercent = percent;
+                        long now = SystemClock.uptimeMillis();
+                        if (done != total && now - lastProgressPost < 160L) return;
+                        lastProgressPost = now;
                         post(() -> showProgress(done, total, percent));
+                    }
+
+                    @Override
+                    public void onConnecting() {
+                        post(() -> {
+                            waitingForResponse = true;
+                            slowMessage = R.string.update_check_slow;
+                            Ui.swapText(message, activity.getString(R.string.update_connecting));
+                            armSlow();
+                        });
+                    }
+
+                    @Override
+                    public void onRetry(int attempt, int maximum) {
+                        post(() -> {
+                            waitingForResponse = true;
+                            Ui.swapText(message, activity.getString(R.string.update_retrying, attempt, maximum));
+                            armSlow();
+                        });
                     }
 
                     @Override
                     public void onInstalling() {
                         post(UpdateGate.this::renderInstalling);
                     }
-                }, cancelled);
+                }, request);
                 post(() -> {
                     keepScreenOn(false);
                     showDone(release.version);
@@ -541,10 +581,12 @@ public final class UpdateGate {
     private void showProgress(long done, long total, int percent) {
         // Progress arrived: the download is moving. Back to the normal line and
         // restart the slow timer.
-        if (message != null && message.getTag(R.id.tag_swap_text) == null
-                && activity.getString(R.string.update_slow).contentEquals(message.getText())) {
+        if (message != null && (waitingForResponse
+                || activity.getString(slowMessage).contentEquals(message.getText()))) {
             Ui.swapText(message, activity.getString(R.string.update_downloading_message));
         }
+        waitingForResponse = false;
+        slowMessage = R.string.update_download_stalled;
         armSlow();
         progress.setVisibility(View.VISIBLE);
         progressText.setVisibility(View.VISIBLE);
@@ -565,6 +607,7 @@ public final class UpdateGate {
     private void finish() {
         if (finished || cancelled.get()) return;
         finished = true;
+        main.removeCallbacks(slowWait);
         keepScreenOn(false);
         dismissQuietly();
         if (listener != null && Ui.alive(activity)) listener.onReady();

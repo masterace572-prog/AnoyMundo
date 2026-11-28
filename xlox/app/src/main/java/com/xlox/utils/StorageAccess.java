@@ -53,6 +53,7 @@ public final class StorageAccess {
     private static final String PREFS = "anoy_permissions";
     private static final String KEY_FILES_ASKED = "files_asked";
     private static final String KEY_LAUNCH_AFTER_RESTART = "launch_after_restart_at";
+    private static final String KEY_GAME_AFTER_RESTART = "launch_after_restart_game";
     /** A Launch interrupted by the restart is continued only if home opens within this time. */
     private static final long LAUNCH_AFTER_RESTART_MS = 10L * 60L * 1000L;
 
@@ -130,17 +131,29 @@ public final class StorageAccess {
     /** Remember that Launch should continue once home opens after the restart. */
     @SuppressLint("ApplySharedPref") // commit(): the process restarts right after, apply() could be lost
     public static void markLaunchAfterRestart(Context context) {
-        prefs(context).edit().putLong(KEY_LAUNCH_AFTER_RESTART, System.currentTimeMillis()).commit();
+        markLaunchAfterRestart(context, GameTarget.BGMI);
     }
 
-    /** True (once) when a Launch interrupted by the restart should continue now. */
+    @SuppressLint("ApplySharedPref")
+    public static void markLaunchAfterRestart(Context context, GameTarget game) {
+        prefs(context).edit().putLong(KEY_LAUNCH_AFTER_RESTART, System.currentTimeMillis())
+                .putString(KEY_GAME_AFTER_RESTART, game.packageName).commit();
+    }
+
+    /** Compatibility wrapper for callers that do not need the game identity. */
     public static boolean consumeLaunchAfterRestart(Context context) {
+        return consumeGameAfterRestart(context) != null;
+    }
+
+    /** One-shot, expiring continuation; an old marker without a game means BGMI. */
+    @Nullable
+    public static GameTarget consumeGameAfterRestart(Context context) {
         SharedPreferences prefs = prefs(context);
         long at = prefs.getLong(KEY_LAUNCH_AFTER_RESTART, 0L);
-        if (at == 0L) return false;
-        prefs.edit().remove(KEY_LAUNCH_AFTER_RESTART).apply();
+        String pkg = prefs.getString(KEY_GAME_AFTER_RESTART, GameTarget.BGMI.packageName);
+        prefs.edit().remove(KEY_LAUNCH_AFTER_RESTART).remove(KEY_GAME_AFTER_RESTART).apply();
         long age = System.currentTimeMillis() - at;
-        return age >= 0 && age < LAUNCH_AFTER_RESTART_MS;
+        return at != 0L && age >= 0 && age < LAUNCH_AFTER_RESTART_MS ? GameTarget.fromPackage(pkg) : null;
     }
 
     // -------------------------------------------------------------- requests

@@ -1,7 +1,9 @@
-# Anoy loader (Android)
+# Anoy / KennyPvt loaders (Android)
 
-Android (arm64-v8a) loader app `com.xlox`, wired to the **Anoy** panel and
-built in CI. minSdk 21, targetSdk 28, compileSdk 36. The current version is in
+Two Android arm64-v8a flavors, **Anoy** (`com.xlox`, channel `anoy`) and
+**KennyPvt** (`com.kennypvt`, channel `kenny`), built together against one panel.
+Each downloads only its own Owner's library and APK updates; licence keys,
+billing and general settings remain shared. minSdk 21, targetSdk 28, compileSdk 36. The current version is in
 `app/build.gradle` (`versionName` / `versionCode`); history in
 [CHANGELOG.md](CHANGELOG.md).
 
@@ -15,27 +17,87 @@ SplashActivity ──► (AppUpdateActivity) ──► LogAct ──► MAct
 
 | Screen | Code / layout | What it does |
 |---|---|---|
-| **Splash** (launcher) | `SplashActivity`, `activity_splash` | Wordmark film (~3 s, reduced motion respected) and a status line while `AppUpdater.check` asks `GET /api/app/update`. A newer version code opens the update screen; "up to date" continues on its own; a failed check shows the reason and **Retry**. |
-| **App update** | `AppUpdateActivity`, `activity_app_update`, `item_changelog` | Changelog, **Update now** (and **Not now** unless mandatory). `AppUpdater` downloads over https (redirects https-only, retries for 5xx/408/429), checks the APK is `com.xlox` with the announced, higher version code, then commits it to a `PackageInstaller` session. Errors are shown inline with **Try again**. |
+| **Splash** (launcher) | `SplashActivity`, `activity_splash` | Manrope wordmark film (~3 s, reduced motion respected), a blue final Hax and a quiet fade-through word change, plus a status line while `AppUpdater.check` asks `GET /api/app/update`. A newer version code opens the update screen; "up to date" continues on its own; a failed check shows the reason and **Retry**. |
+| **App update** | `AppUpdateActivity`, `activity_app_update`, `item_changelog` | Changelog, **Update now** (and **Not now** unless mandatory). `AppUpdater` downloads over https (redirects https-only, retries for 5xx/408/429), checks the APK matches the running app's package (`com.xlox` or `com.kennypvt`) with the announced, higher version code, then commits it to a `PackageInstaller` session. Errors are shown inline with **Try again**. |
 | **Library gate** | `ui/UpdateGate`, `dialog_update` (bottom sheet) | Checks `GET /api/lib/manifest`. When a newer library exists, or none is installed, the only action is **Update now**; Back closes the app; sign in stays blocked until the download is verified (size + SHA-256) and installed. Also re-runs silently when the app returns to the foreground, and backs Settings → Re-download library. |
-| **Sign in** | `LogAct`, `activity_login` | Takes the licence key (`ANOY-7D-GKFHJ`); the native code calls `POST /connect` and verifies the token. Readable errors for unknown / expired / blocked keys, device limit, clock, maintenance, offline, timeout, VPN. |
-| **Home** | `MAct`, `activity_main` | Licence expiry card (IST countdown), game card (bundled BGMI icon, library, state, server), announcement, one primary action: **Launch** / **Stop** / **Install game** / **Sign in again**. Launch copies the OBB (`utils/AppManager`) and starts the game inside the container. |
-| **Settings** | `MAct.openSettings`, sheets `sheet_*` | Licence (masked key, status, expiry), Updates (check for app updates, re-download library), device, support info, Telegram report, Sign out / Forget. Permissions are requested through `ui/PermissionSheet` (`sheet_permission`). |
+| **Sign in** | `LogAct`, `activity_login` | Home-matched typography, a fitted single-line key field, clipboard icon and explicit show/hide control. Visibility changes keep the text, selection and keyboard input type; backgrounding masks again. The native code calls `POST /connect` and verifies the token. Readable errors for unknown / expired / blocked keys, device limit, clock, maintenance, offline, timeout, VPN. |
+| **Home** | `MAct`, `activity_main`, `page_home` | Smaller Welcome back greeting; compact top-right expiry with baseline-aligned Active/Safe statuses that wrap when needed (exact IST date in Settings). Each BGMI/BGMI Air card contains its logo, installed game version, readiness/OBB hint and its own Launch/Stop/Install, feedback and progress. No pinned game-action bar or library-filename paragraphs. Unavailable Air shows only **Coming soon** in its disabled button. The persistent blue Home / Settings capsule supports taps and selector dragging; its blue decoration is only 2dp inset, with 48dp label targets. The pages also support horizontal/diagonal swipes over scrollable content/buttons. Launch still verifies/copies only the selected package’s OBB (`utils/AppManager`); a second game requires the 10-second warning and explicit confirmation. |
+| **Settings** | `HomeSettingsNavigation`, `page_settings`, sheets `sheet_*` | Licence (masked key, status, expiry), Updates (check for app updates, re-download library), device, Help (`?`), support info, Telegram report, centered red Sign out / Forget. Permissions are requested through `ui/PermissionSheet` (`sheet_permission`). |
+
+## BGMI Air in 2.4.3 (21)
+
+The owner-requested [restoration](../docs/RESTORE_2.4.3.md) returns both loaders
+to the released normal APK + OBB flow. Split-import/native-copy experiments and
+root/crash-report diagnostics are removed. This is a rollback, not a new split
+compatibility fix. The original library-dependent Coming soon gate is retained.
+
+- BGMI: `com.pubg.imobile` → `libbgmi.so`.
+- BGMI Air: `com.krafton.bgmilite` → `libbgmilite.so` (not `libbgmiair.so`).
+- Include **both files together at the ZIP root** when enabling Air. Until that
+  bundle is downloaded and installed, Air stays **Coming soon**. Normal game
+  installation, licence, permission and container requirements still apply.
+- Starting a second game is allowed only after ten seconds and **OK, launch
+  anyway**. Cancel/Back/backgrounding never starts it. Stop affects only its game.
+- [Bundle requirements, compatibility boundaries and device QA](BGMI-AIR.md).
+  This is the **2.4.3 / code 21** user release after **2.4.2 / code 20**.
+  Earlier 2.4.3 APKs were internal tests only. Users can upgrade the matching
+  brand in place; live panel/library/APK selections are not changed.
+- [Navigation, release scope and verification](RELEASE-2.4.3.md).
+
+## Google login (test build)
+
+Settings gains a **Google login** section: a live provider status (Not set up /
+Google services / microG / Needs repair) and **Set up Google login**, opening a
+sheet that adds Google sign-in support to the Mundo container so the game's
+Google button can work. Two paths, per phone:
+
+- **Use this phone's Google apps** (`utils/GoogleServicesInstaller`): clones the
+  phone's own GMS + GSF (Play Store / WebView when present) into the container
+  and registers GMS as an internal app. Offered only when the phone actually
+  has the Google apps; nothing on the phone itself is modified.
+- **Download microG instead** (`utils/MicroGInstaller`): three pinned microG
+  release APKs (GmsCore, GsfProxy, FakeStore), each verified against its
+  published size + SHA-256 before install, with determinate progress. For
+  phones without Google services. Afterwards: open microG (Google Software)
+  Settings inside Mundo, sign in to Google, enable device registration, then
+  restart the game.
+
+A microG install that missed its internal registration shows **Needs repair**
+with a one-tap repair. Switching between providers removes the other cleanly
+first. Setup refuses to run while a game is active; decisions live in
+`utils/GoogleLoginSetup` (plain JVM tests in `tests/runtime/GoogleLoginSetupTest`,
+wiring guards in `scripts/test_runtime_fixes.py`). Test-only: the version stays
+2.4.3 (21), and CI push builds use `[verify-2.4.3]` so no release is published.
 
 ## Design
 
 Black background, white text, one accent (`#0A84FF`). Views + XML only (no
 Compose), Material Components 1.13 (`MaterialButton`, cards, bottom sheets),
-Lottie for two small animations (`res/raw/anoy_sync.json`,
-`anoy_success.json`), fonts Inter and JetBrains Mono (`res/font`).
+Lottie for two small splash-status animations (`res/raw/anoy_arc.json`,
+`anoy_check.json`). Home, Settings, Login and Splash share bundled static Manrope;
+legacy sheets use Inter and licence/support text retains JetBrains Mono (`res/font`).
 
 | File | Contents |
 |---|---|
 | `res/values/colors.xml` | every colour token (raw colours appear only here) |
 | `res/values/styles.xml` | `AppTheme`, `Text.*` type scale, `Widget.Anoy.*` buttons / cards / sheets / progress, rows |
 | `res/values/dimens.xml`, `motion.xml`, `strings.xml` | spacing, motion timings, every user-visible string |
-| `res/layout/` | 5 activities (`activity_*`), 5 bottom sheets (`sheet_*`, `dialog_update`), 2 list items |
+| `res/layout/` | activity layouts (`activity_*`), retained Home / Settings pages (`page_*`), sheet/dialog layouts and list items |
 | `java/com/xlox/ui/Ui.java` | helpers: busy buttons, reveal animation, haptics, byte formatting |
+
+Home / Settings uses AndroidX ViewPager 1.0.0 (minSdk-compatible; no SDK,
+Fragment, Material, AppCompat or native dependency upgrade). Its default physical
+scroll places the full-width pages side by side, without an alpha transformer.
+JUnit / Robolectric are host-test-only and are not packaged in either loader.
+
+[Loader UI follow-up and device QA](LOADER-UI-QA.md) explains the gesture surfaces,
+show/hide semantics, host coverage and the opt-in frame-timing tool. **60Hz is a
+performance target, not a measured phone result from host tests.** Game FPS and
+runtime behavior are unchanged. The verified UI is included in the
+[first user-facing 2.4.3 release](https://github.com/masterace572-prog/AnoyMundo/releases/tag/loaders-v2.4.3-21)
+(source `f8f5884`, 180/180 host checks plus both signed-APK gates).
+See the [short 2.4.2 → 2.4.3 changelog](CHANGELOG-2.4.3.md) and
+[release scope](RELEASE-2.4.3.md).
 
 `scripts/ui_quality_gate.py` enforces the rules statically (palette-only
 colours, styled MaterialButtons, no Toast / default ProgressBar, every
@@ -43,12 +105,36 @@ referenced resource exists, format arguments match) and runs in every build.
 
 ## Reliability
 
-- **Downloads** (`utils/Downtwo`): manifest with legacy `/api/lib/version`
-  fallback; up to 3 attempts with back-off for retryable errors; free-space
-  check; 64 MB cap; streams to a temporary file; verifies size and SHA-256
-  from the manifest; checks ZIP and ELF magic; extracts into staging and swaps
-  the library in atomically; the installed version is recorded only after
-  everything succeeded. Cancelling or leaving the screen stops the download.
+- **Downloads** (`utils/Downtwo`, `LibraryHttp`, `UpdateRequest`): fresh manifest
+  with legacy `/api/lib/version` fallback; at most two attempts, a 20-second
+  total metadata budget and 90-second total transfer budget (8-second connect /
+  12-second idle-read limits). Closing the screen cancels queued work and its
+  active connection, including while waiting for headers. Silent checks have a
+  separate queue. The same manifest supplies the supported BGMI version; no
+  duplicate home-screen request. Verified binaries may use the Storage/CDN cache,
+  metadata may not. Retry after a failed transfer rechecks the manifest. Size,
+  SHA-256, free space, ZIP/ELF validation, staging/atomic installation and the
+  64 MB client cap remain in place. Local install time and response-header time
+  are logged separately, without signed URLs or login credentials.
+- **Contained game web login (candidate)** (`GameWebRouting`, `GameWebLoginActivity`):
+  2.4.3's callback-only patch did not fix the tester's external-browser escape.
+  The new game-process-only handler chains the original SDK's public activity
+  interpreter, preserving result binder/request code/options. It prefers a
+  matching virtual game web activity, otherwise opens a private loader WebView
+  instead of the outside browser. The WebView resolves callback schemes, HTTPS
+  App Links and scoped intent URIs dynamically against the running virtual BGMI,
+  never the OS's real-game resolver. No native JS bridge, certificate bypass,
+  user-agent spoofing, token logging, global browser filter or game restart.
+  The old callback alias remains a fallback for already-external flows. See
+  [contained-login QA and limits](../docs/CONTAINED_GAME_WEB_LOGIN.md).
+- **Version/publication:** `-webtest`, `-test`, and `-rc` versions use non-latest
+  prereleases. The owner-requested replacement is named 2.4.3 (21) and includes
+  the existing contained-login candidate; this does not establish real-phone
+  provider compatibility. Both original AARs and the original signer are retained.
+  Preserve 2.4.2 and older releases; one-time replacement is not automated pruning.
+- **Regression checks:** `python3 scripts/test_runtime_fixes.py` compiles and runs
+  the production routing/transport classes on the JVM, plus Android wiring
+  guards. Passing APK paths also verifies the actual merged callback manifest.
 - **Errors** are mapped to short, readable messages (`utils/Net`,
   `utils/UpdateException`) — no raw exception text is shown to users.
 - **Threads:** network, unzip and OBB copy run on background executors;
@@ -61,15 +147,21 @@ referenced resource exists, format arguments match) and runs in every build.
   `reason` shown for every rejection, `Panel returned HTTP <code>` for server
   errors, token verified against `STATIC_WORDS`, replay guard on `rng`.
 
-All panel URLs live in **one** file: `app/src/main/jni/panel_config.h`.
-`ANOY_STATIC_WORDS` must equal the panel's `STATIC_WORDS`.
+Native endpoints live in `app/src/main/jni/panel_config.h` and are compiled
+per Gradle flavor. Java's matching fallback base/channel/brand are in
+`app/build.gradle` (`BuildConfig.PANEL_BASE_URL`, `RELEASE_CHANNEL`,
+`DISPLAY_BRAND`). `ANOY_STATIC_WORDS` and the JNI namespace `com.xlox` stay
+unchanged; the salt must equal the panel's `STATIC_WORDS`. KennyPvt overrides
+all visible Anoy strings and launcher/system-splash wordmarks in
+`app/src/kenny/res/`; class/resource names are deliberately not renamed.
 
 ## Panel contract used by the app
 
-- `GET /api/lib/manifest` → `{ ok, version, available, size, sha256, … }`.
-- `GET /api/lib/download` → ZIP containing `libbgmi.so` (or legacy `lib.so`),
-  headers `X-Release-Version` and `X-Content-SHA256`; 302 for external files;
+- `GET /api/lib/manifest?channel=anoy|kenny` → `{ ok, version, available, size, sha256, … }`.
+- `GET /api/lib/download?channel=anoy|kenny` → ZIP containing `libbgmi.so` (or legacy `lib.so`),
+  headers `X-Release-Version` and `X-Content-SHA256`; 302 for signed private Storage or external files;
   404 when nothing is published.
+- `GET /api/app/update?channel=anoy|kenny&code=<installed>` → your own branded APK metadata.
 - `POST /connect` with `game=PUBG&user_key=…&serial=…` →
   `{ status, data: { token, EXP, mod_status, credit, rng, … }, reason }`.
 
@@ -78,22 +170,31 @@ loads it inside the `com.pubg.imobile` virtual process.
 
 ## Publishing a loader library
 
-Build a ZIP whose root contains the real arm64-v8a `libbgmi.so` (16 KB
-aligned, see below), then upload it at **/lib** in the panel, or:
+Upload a raw arm64 `.so` **or** ZIP at **Library** in your signed-in Owner
+panel, up to **20 MiB input and total expanded contents** (20,971,520 bytes
+for each limit). This separate panel limit is retained during the loader rollback.
+Whatever the input's filename, the main installed file is **libbgmi.so**. Valid sibling `.so`
+dependencies in a ZIP are kept. Each Owner can publish only to their own
+immutable channel. For scripted publication:
 
 ```bash
-zip -j my-loader.zip libbgmi.so
-PANEL_ADMIN_USERNAME=Anoy PANEL_ADMIN_PASSWORD='…' \
-  node scripts/publish-release.mjs my-loader.zip 1.11
+export PANEL_CHANNEL=anoy   # kenny for the other Owner
+export PANEL_ADMIN_USERNAME=Anoy
+# Set PANEL_ADMIN_PASSWORD securely in the environment, never in Git/logs.
+node scripts/publish-release.mjs my-own-filename.so 1.4
+# or: node scripts/publish-release.mjs my-library.zip 1.4
 ```
 
-`scripts/publish-release.mjs` signs in, uploads the ZIP to `/lib`, then checks
-`/api/lib/version` and that `/api/lib/download` returns the same bytes. Every
-installed app must update to the new version before it can sign in again.
+The script signs in, checks the session's channel, obtains a signed private
+Storage PUT ticket, uploads binary bytes directly, then sends a small `/lib`
+publication descriptor. It follows the final signed download and verifies
+the **normalized** manifest size/SHA-256 (not the input ZIP's hash, which can
+change during canonicalization). Old clients with no channel parameter stay
+on Anoy; Kenny never falls back to Anoy. Installed clients must accept their
+own channel's new library before signing in.
 
-`loader-stub/bgmi_stub.c` compiles a harmless test `libbgmi.so`
-(`JNI_OnLoad` only); CI packages it as `xlox-loader.zip`. It is **not** a game
-library.
+`loader-stub/bgmi_stub.c` is an optional harmless test library (`JNI_OnLoad`
+only), **not** a game library. CI does not upload it to either live channel.
 
 ## Android 16 / 17 (API 36 / 37): "lib not loaded / ImGui menu does not show"
 
@@ -114,8 +215,8 @@ than system page size (16384)
 The result is exactly "the lib did not load and the menu never appeared".
 This repository used NDK r24, which links 4 KB-aligned binaries by default.
 `Android.mk` now passes `-Wl,-z,max-page-size=16384` and
-`-Wl,-z,common-page-size=16384`, and the starter ZIP is built with the same
-flags. CI fails the build if `libXloX.so` or `libbgmi.so` regresses.
+`-Wl,-z,common-page-size=16384`, for both flavors. CI fails the build if either APK's `libXloX.so` regresses.
+Your separately uploaded library is not built or modified by Android CI.
 
 **Your real `libbgmi.so` must be rebuilt too.** A 4 KB-aligned library in the
 panel's release ZIP will still fail on a 16 KB device even with a fixed APK:
@@ -133,7 +234,7 @@ no dependencies):
 
 ```bash
 python3 scripts/check_elf_alignment.py my-loader.zip
-python3 scripts/check_elf_alignment.py --fail-on-unaligned app/build/outputs/apk/release/app-release.apk
+python3 scripts/check_elf_alignment.py --fail-on-unaligned app/build/outputs/apk/anoy/release/app-anoy-release.apk
 ```
 
 On the device, confirm the page size and capture the exact linker error:
@@ -201,20 +302,23 @@ and NDK 24.0.8215888):
 
 ```bash
 cd xlox
-./gradlew assembleRelease
+./gradlew :app:assembleAnoyRelease :app:assembleKennyRelease
+./gradlew :app:lintAnoyRelease :app:lintKennyRelease
 ```
 
-CI (`.github/workflows/build-xlox.yml`) runs on pushes touching `xlox/**`:
-static UI gates, SDK/NDK install, signed release APK, Android Lint, APK
-permissions check (`scripts/check_apk_permissions.py`), ELF alignment, the
-`xlox-apk` artifact (7 days) and the GitHub release
-`anoy-v<versionName>-<versionCode>` (Latest; all other releases and tags are
-deleted). Nothing is committed back. `workflow_dispatch` can additionally
-publish the starter ZIP to `/lib` when `publish_loader_zip` is ticked (needs
-the `PANEL_OWNER_PASSWORD` repository secret). Manual workflows:
-`android-ui-qa.yml` (emulator screenshots of every screen, uploaded as the
-`ui-qa` artifact) and `app-update-e2e.yml` (in-app update against the real
-release asset on an emulator).
+CI (`.github/workflows/build-xlox.yml`) runs panel/SQL tests, static UI and
+two-brand isolation gates, **both** release builds/lint tasks, compiled APK
+permissions/package/branding checks, native alignment and signatures. It
+uploads separate `Anoy-APK` and `KennyPvt-APK` artifacts (14 days) and one
+**`loaders-v<versionName>-<versionCode>`** GitHub release with both APKs and
+SHA256SUMS. **No old releases/tags are deleted**, and neither live library nor
+APK-update choice is automatically changed. A different source commit may
+not overwrite an existing version; bump the version before a new app release.
+
+Each Owner uses **App update → Use latest build** to select their own APK and
+publish it independently. The manual Android screenshot and APK-update E2E
+workflows keep using Anoy's preserved package and explicit Anoy flavor tasks;
+compiled APK checks run for **both** flavors on every build.
 
 ### Release signing
 
@@ -231,7 +335,7 @@ gitignored `xlox/local.properties`:
 
 In GitHub Actions, add `XLOX_STORE_PASSWORD` and `XLOX_KEY_PASSWORD` as
 repository secrets (Settings → Secrets and variables → Actions). Without them
-`build-xlox.yml` still compiles and lints, but builds an unsigned APK and
+`build-xlox.yml` still compiles and lints, but builds two clearly labelled unsigned APKs and
 skips the GitHub release. The UI QA workflow re-signs
 its test install with a throwaway key either way. CI never generates a new
 key: APKs signed with a different key cannot update an installed copy.

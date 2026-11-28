@@ -17,6 +17,7 @@
 //     exactly what it cost, once, in one transaction.
 import crypto from 'node:crypto';
 import { config } from './config.mjs';
+import { ownerChannel } from './channels.mjs';
 import { db, isMemory, getUserById, getKeyByUserKey } from './db.mjs';
 
 const nowIso = () => new Date().toISOString();
@@ -329,7 +330,7 @@ function finalResult(result, plan, saldo, licenses) {
 
 /** The single Owner account has an unlimited balance and is never charged. */
 export function isUnlimited(user) {
-  return Number(user?.level) === 1 && String(user?.username) === config.ownerUsername;
+  return !!ownerChannel(user);
 }
 
 /**

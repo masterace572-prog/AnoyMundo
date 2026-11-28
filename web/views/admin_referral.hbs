@@ -1,7 +1,7 @@
 <div class="page-head">
     <div>
         <h1 class="page-title">Referral codes</h1>
-        <p class="page-sub">A code lets one person create a panel account.</p>
+        <p class="page-sub">One code, one account.</p>
     </div>
 </div>
 
@@ -11,7 +11,7 @@
 <section class="card">
     <div class="card-head">
         <div class="tile">{{icon "ticket"}}</div>
-        <div><h2 class="card-title">New code</h2><div class="card-sub">Single use</div></div>
+        <div><h2 class="card-title">New code</h2></div>
     </div>
 <form method="post" action="/admin/create-referral" class="form" novalidate data-busy-form>
     <div class="field {{#if errors.accLevel}}invalid{{/if}}">
@@ -28,7 +28,7 @@
         <label class="label" for="set_saldo">Starting balance (₹)</label>
         <div class="input-wrap">{{icon "wallet" "lead"}}
         <input type="number" class="input" name="set_saldo" id="set_saldo" min="0" max="99999" step="1" inputmode="numeric" required value="{{#if old.set_saldo}}{{old.set_saldo}}{{else}}0{{/if}}"></div>
-        {{#if errors.set_saldo}}<div class="error">{{icon "circle-alert"}}<span>{{errors.set_saldo}}</span></div>{{else}}<div class="hint">{{#if unlimited}}Taken from your unlimited balance.{{else}}Taken from your balance (₹{{user.saldoLabel}}).{{/if}}</div>{{/if}}
+        {{#if errors.set_saldo}}<div class="error">{{icon "circle-alert"}}<span>{{errors.set_saldo}}</span></div>{{else}}<div class="hint">{{#if unlimited}}Unlimited balance.{{else}}From your balance (₹{{user.saldoLabel}}).{{/if}}</div>{{/if}}
     </div>
     <button type="submit" class="btn btn-primary btn-block" data-busy-label="Creating…">{{icon "plus"}}Create code</button>
 </form>
@@ -41,17 +41,25 @@
     </div>
     <div class="table-wrap">
         <table class="responsive">
-            <thead><tr><th>Code</th><th>Role</th><th>Balance</th><th>Used by</th></tr></thead>
+            <thead><tr><th>Code</th><th>Role</th><th>Balance</th><th>Expires</th><th>Used by</th><th aria-label="Actions"></th></tr></thead>
             <tbody>
                 {{#each codes}}
                 <tr>
                     <td class="primary-cell" data-label="Code"><span class="keytext">{{this.referral}}<button type="button" class="icon-btn" data-copy-text="{{this.referral}}" aria-label="Copy code {{this.referral}}" title="Copy">{{icon "copy"}}</button></span></td>
                     <td data-label="Role">{{this.levelName}}</td>
                     <td data-label="Balance" class="num">{{this.saldoLabel}}</td>
+                    <td data-label="Expires">{{this.expiresLabel}}</td>
                     <td data-label="Used by">{{#if this.used_by}}{{this.used_by}}{{else}}<span class="status unused">Available</span>{{/if}}</td>
+                    <td class="actions-cell">
+                        {{#if this.canDelete}}
+                        <form method="post" action="/admin/referral/{{this.id_reff}}/delete" style="display:inline" data-confirm="Delete this referral?" data-confirm-detail="It can no longer be used. Existing accounts stay unchanged.">
+                            <button type="submit" class="icon-btn danger" aria-label="Delete referral {{this.referral}}" title="Delete">{{icon "trash-2"}}</button>
+                        </form>
+                        {{/if}}
+                    </td>
                 </tr>
                 {{else}}
-                <tr class="is-empty"><td colspan="4"><div class="empty">{{icon "ticket"}}<b>No codes yet</b>Create one to invite a reseller.<a href="#set_saldo" class="btn btn-secondary" data-focus="set_saldo">Create a code</a></div></td></tr>
+                <tr class="is-empty"><td colspan="6"><div class="empty">{{icon "ticket"}}<b>No codes yet</b><a href="#set_saldo" class="btn btn-secondary" data-focus="set_saldo">Create a code</a></div></td></tr>
                 {{/each}}
             </tbody>
         </table>

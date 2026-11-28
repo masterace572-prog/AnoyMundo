@@ -14,10 +14,12 @@ const forceMemory = process.argv.includes('--memory');
 if (forceMemory || !process.env.SUPABASE_URL) {
   process.env.DB_DRIVER = 'memory';
   console.log('[dev] DB_DRIVER=memory (offline demo data)');
+  if (!process.env.MEMORY_OWNER_PASSWORD) console.log('[dev] Offline login is locked; configure MEMORY_OWNER_PASSWORD privately to enable it.');
 }
 
 const { default: handler } = await import('../api/index.js');
 
+const { db } = await import('../src/db.mjs');
 const publicDir = path.join(root, 'public');
 const mime = {
   '.css': 'text/css; charset=utf-8',
@@ -35,6 +37,10 @@ const mime = {
 };
 
 const server = http.createServer((req, res) => {
+  if (process.env.DB_DRIVER === 'memory' && (req.url || '').startsWith('/_offline/storage/')) {
+    db().storage.handle(req, res).catch(() => { res.statusCode = 500; res.end(); });
+    return;
+  }
   const urlPath = decodeURIComponent((req.url || '/').split('?')[0]);
   const candidate = path.resolve(publicDir, '.' + urlPath);
   if (candidate.startsWith(publicDir) && fs.existsSync(candidate) && fs.statSync(candidate).isFile()) {

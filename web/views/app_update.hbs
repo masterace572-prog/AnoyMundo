@@ -1,11 +1,12 @@
-<div class="page-head">
+<div class="page-head" data-release-channel="{{releaseChannel}}">
     <div>
         <h1 class="page-title">App update</h1>
-        <p class="page-sub">Publish a new Anoy APK.</p>
+        <p class="page-sub">{{releaseBrand}} APK updates. Only this channel is changed when you publish.</p>
     </div>
 </div>
 
 {{> msgStatus}}
+{{> release_channel}}
 
 <section class="card" style="margin-bottom:20px" id="app-current">
     <div class="hero">
@@ -59,7 +60,7 @@
         <div class="field" data-field="apk_url">
             <label class="label" for="app-apk-url">APK link (https)</label>
             <div class="input-wrap">{{icon "link" "lead"}}
-            <input type="url" class="input" name="apk_url" id="app-apk-url" placeholder="https://github.com/…/releases/download/…/Anoy.apk" autocomplete="off" spellcheck="false" inputmode="url"></div>
+            <input type="url" class="input" name="apk_url" id="app-apk-url" placeholder="https://github.com/…/releases/download/…/{{releaseBrand}}-loader.apk" autocomplete="off" spellcheck="false" inputmode="url"></div>
             <div class="hint">GitHub release APK link. Same signing key as the installed app.</div>
             <div class="error" hidden></div>
         </div>
@@ -86,6 +87,7 @@
 <script>
 (function () {
     'use strict';
+    var channel = '{{releaseChannel}}';
     var byId = function (id) { return document.getElementById(id); };
     var form = byId('app-form'), button = byId('app-submit'), result = byId('app-result');
 
@@ -126,6 +128,7 @@
         try { return new URL(u).protocol === 'https:'; } catch (e) { return false; }
     }
     function post(payload) {
+        payload.channel = channel;
         return fetch('/app-update', {
             method: 'POST', credentials: 'same-origin',
             headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
@@ -191,7 +194,7 @@
     latest.addEventListener('click', function () {
         if (latest.disabled) return;
         busy(latest, true, 'Looking up…');
-        fetch('/app-update/latest-build', { credentials: 'same-origin', headers: { Accept: 'application/json' } })
+        fetch('/app-update/latest-build?channel=' + encodeURIComponent(channel), { credentials: 'same-origin', headers: { Accept: 'application/json' } })
             .then(function (r) { return r.json().catch(function () { return null; }).then(function (d) { return { r: r, d: d }; }); })
             .then(function (x) {
                 busy(latest, false);

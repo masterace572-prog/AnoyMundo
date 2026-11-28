@@ -47,7 +47,6 @@
     <color name="notice_kicker">#D9FF9F0A</color>
 
     <!-- Effects -->
-    <color name="scrim">#A3000000</color>
     <!-- Press feedback is a fill change to surface-3, not a ripple wash. -->
     <color name="ripple_none">#00000000</color>
     <color name="transparent">#00000000</color>

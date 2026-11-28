@@ -1,70 +1,142 @@
-name: Build XLOX loader APK
+name: Build Anoy and KennyPvt APKs
 
-# Builds the Anoy-integrated XLOX loader on GitHub-hosted runners (the sandbox
-# has no Android SDK). Produces a signed release APK + a starter loader ZIP.
-# Signing needs the XLOX_STORE_PASSWORD / XLOX_KEY_PASSWORD repository
-# secrets; without them the APK is built and checked but not published.
-#
-# 2.3.2: this is the only workflow that runs on an app push. It also runs the
-# static UI gates and the permissions-in-APK check (moved from the emulator
-# QA, which is now manual). The release is tagged anoy-v<versionName>-<versionCode>
-# (read from app/build.gradle), marked Latest, and every other release + tag
-# is deleted afterwards - except (2.3.5) a release holding a file the owner
-# uploaded by hand (e.g. a library zip the panel links to): it and its tag stay.
+# One workflow, two separately installable branded APKs. Publishing an APK to
+# GitHub NEVER changes either owner's panel library or live APK-update choice.
+# No automatic pruning: either channel may still point at an older release/tag.
+# The explicit 2.4.3 backup input / [verify-2.4.3] push archives assets only.
+# That verify-only marker also disables publishing; it never replaces a release.
 on:
   workflow_dispatch:
     inputs:
-      publish_loader_zip:
-        description: 'Publish the starter loader ZIP to the live panel (/lib)'
+      publish_release:
+        description: 'Attach both signed APKs to a GitHub release'
+        type: boolean
+        default: true
+      backup_replaced_243:
+        description: 'Build-only: archive the current 2.4.3 (21) release assets before further testing'
         type: boolean
         default: false
-      panel_version:
-        description: 'Version string to publish (only used when publishing)'
-        type: string
-        default: '1.0.0'
-  # Ordinary pushes build and attach the APK; they never touch the live panel.
   push:
-    branches: [arena/2e95185a-anoymundo]
+    branches: [main, arena/dda4cc57-anoymundo]
     paths:
       - 'xlox/**'
+      - 'web/**'
+      - 'supabase/**'
       - '.github/workflows/build-xlox.yml'
 
 permissions:
   contents: write
 
 concurrency:
-  group: build-xlox-${{ github.ref }}
+  group: build-loaders-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  build:
+  panel-tests:
     runs-on: ubuntu-24.04
-    timeout-minutes: 50
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci --no-audit --no-fund
+      - run: npm run build && npm test
+      - name: Generated templates must match their source
+        run: git diff --exit-code -- src/templates.generated.mjs
+
+  build:
+    needs: panel-tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
     defaults:
       run:
         working-directory: xlox
     steps:
-      - name: Checkout
-        uses: actions/checkout@v7
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Install pinned artwork-check dependency (not bundled in APKs)
+        run: python3 -m pip install --disable-pip-version-check -r scripts/icon-requirements.txt
+      - name: Static UI, artwork and two-brand isolation gates
+        run: |
+          python3 scripts/ui_quality_gate.py
+          python3 scripts/check_branding.py
+          python3 scripts/kenny_icons.py --check
+          python3 scripts/test_kenny_icons.py
 
-      - name: Bundle the BGMI icon (downloaded once, then committed)
-        run: python3 scripts/fetch_game_icon.py
+      - name: Back up old 2.4.3 assets (explicit build-only request)
+        if: (github.event_name == 'workflow_dispatch' && inputs.backup_replaced_243) || (github.event_name == 'push' && contains(github.event.head_commit.message, '[verify-2.4.3]'))
+        working-directory: ${{ github.workspace }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PUBLISH_REQUESTED: ${{ inputs.publish_release || false }}
+        run: |
+          set -eu
+          [ "$PUBLISH_REQUESTED" = false ] || { echo '::error::Backup mode must be build-only.'; exit 1; }
+          mkdir -p prior-release-backup
+          gh api repos/${{ github.repository }}/releases/tags/loaders-v2.4.3-21 > prior-release-backup/release.json
+          gh api repos/${{ github.repository }}/git/ref/tags/loaders-v2.4.3-21 > prior-release-backup/tag.json
+          python3 - <<'PYBACKUP'
+          import json
+          from pathlib import Path
+          release = json.loads(Path('prior-release-backup/release.json').read_text())
+          # Pin the first user-facing 2.4.3 release for later build-only backups.
+          # The preceding 2.4.3 GitHub artifacts were internal tests only.
+          assert release['id'] == 457073966, 'Current 2.4.3 release changed; stop for review.'
+          expected_source = 'f8f58847a8e9eebac008913700cd0ff343122016'
+          assert release['target_commitish'] == expected_source, 'Release source changed.'
+          tag = json.loads(Path('prior-release-backup/tag.json').read_text())
+          assert tag['object']['type'] == 'commit' and tag['object']['sha'] == expected_source, 'Tag changed.'
+          expected = {
+              'Anoy-XLOX-loader.apk': (5438227, '7342e7fb67c0f127b51bafdbfde077a0af80101c5d47fc036c250b056b44489e'),
+              'KennyPvt-loader.apk': (8050635, '0c1c11737776a49c66b7ffe7607b504fc7c71df9a30f1fa39b187d5a28a7c438'),
+              'SHA256SUMS.txt': (173, '25acbc67927904ea6eb4316b11df7a41f71c08072c48957c59df66114d609f18'),
+          }
+          assert {asset['name'] for asset in release['assets']} == set(expected), 'Asset set changed.'
+          for asset in release['assets']:
+              size, digest = expected[asset['name']]
+              assert asset['size'] == size and asset['digest'] == 'sha256:' + digest, 'Asset changed: ' + asset['name']
+          PYBACKUP
+          gh release download loaders-v2.4.3-21 --dir prior-release-backup
+          python3 - <<'PYBACKUP'
+          import hashlib, json
+          from pathlib import Path
+          backup = Path('prior-release-backup')
+          release = json.loads((backup / 'release.json').read_text())
+          for asset in release['assets']:
+              path = backup / asset['name']
+              digest = 'sha256:' + hashlib.sha256(path.read_bytes()).hexdigest()
+              assert path.stat().st_size == asset['size'], asset['name'] + ': size mismatch'
+              assert digest == asset['digest'], asset['name'] + ': checksum mismatch'
+              print('Verified old release backup:', asset['name'], digest)
+          PYBACKUP
 
-      - name: Static UI gates (no SDK needed)
-        run: python3 scripts/ui_quality_gate.py
+      - name: Retain verified prior-release backup (no source or release changes)
+        if: (github.event_name == 'workflow_dispatch' && inputs.backup_replaced_243) || (github.event_name == 'push' && contains(github.event.head_commit.message, '[verify-2.4.3]'))
+        uses: actions/upload-artifact@v7
+        with:
+          name: prior-release-2.4.3-21-backup
+          path: prior-release-backup/
+          retention-days: 90
+          if-no-files-found: error
 
-      - name: Read the version from app/build.gradle
+      - name: Read the common version
         run: |
           NAME=$(sed -nE "s/^[[:space:]]*versionName[[:space:]]+'([^']+)'.*/\1/p" app/build.gradle | head -1)
           CODE=$(sed -nE 's/^[[:space:]]*versionCode[[:space:]]+([0-9]+).*/\1/p' app/build.gradle | head -1)
-          [ -n "$NAME" ] && [ -n "$CODE" ] || { echo "::error::Could not read versionName / versionCode from app/build.gradle"; exit 1; }
+          [ -n "$NAME" ] && [ -n "$CODE" ] || { echo '::error::Missing app version'; exit 1; }
           echo "APP_VERSION_NAME=$NAME" >> "$GITHUB_ENV"
           echo "APP_VERSION_CODE=$CODE" >> "$GITHUB_ENV"
-          echo "RELEASE_TAG=anoy-v$NAME-$CODE" >> "$GITHUB_ENV"
-          echo "App $NAME ($CODE) -> release anoy-v$NAME-$CODE"
+          echo "RELEASE_TAG=loaders-v$NAME-$CODE" >> "$GITHUB_ENV"
 
-      - name: JDK 17
-        uses: actions/setup-java@v6
+      - uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: '17'
@@ -74,10 +146,10 @@ jobs:
             xlox/build.gradle
             xlox/app/build.gradle
 
-      # ubuntu-24.04 images already ship an Android SDK. Avoid the third-party
-      # setup action (it breaks on the new runner images); install cmdline-tools
-      # ourselves only when neither ANDROID_HOME nor sdkmanager is available.
-      - name: Install SDK platform, build-tools and pinned NDK
+      - name: Game login routing and cancellable update transport regressions
+        run: python3 scripts/test_runtime_fixes.py
+
+      - name: Install the SDK and pinned NDK
         run: |
           SDK="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-$HOME/android-sdk}}"
           mkdir -p "$SDK"
@@ -86,10 +158,7 @@ jobs:
           elif command -v sdkmanager >/dev/null 2>&1; then
             SM="$(command -v sdkmanager)"
           else
-            echo "Installing Android command line tools"
-            curl -fsSL -o /tmp/cmdtools.zip \
-              https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
-            rm -rf /tmp/cmdtools && mkdir -p /tmp/cmdtools
+            curl -fsSL -o /tmp/cmdtools.zip https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
             unzip -q /tmp/cmdtools.zip -d /tmp/cmdtools
             mkdir -p "$SDK/cmdline-tools/latest"
             cp -r /tmp/cmdtools/cmdline-tools/. "$SDK/cmdline-tools/latest/"
@@ -98,236 +167,285 @@ jobs:
           echo "ANDROID_HOME=$SDK" >> "$GITHUB_ENV"
           echo "ANDROID_SDK_ROOT=$SDK" >> "$GITHUB_ENV"
           yes | "$SM" --sdk_root="$SDK" --licenses > /dev/null 2>&1 || true
-          "$SM" --sdk_root="$SDK" --install "platform-tools" "platforms;android-34" "platforms;android-36" \
-                                           "build-tools;34.0.0" "ndk;24.0.8215888"
-          test -x "$SDK/ndk/24.0.8215888/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android21-clang"
-          "$SM" --sdk_root="$SDK" --list_installed | grep -E 'android-36|34\.0\.0|24\.0\.8215888'
+          "$SM" --sdk_root="$SDK" --install 'platform-tools' 'platforms;android-36' 'build-tools;34.0.0' 'ndk;24.0.8215888'
 
-      # Release signing: the passwords come only from the repository secrets
-      # XLOX_STORE_PASSWORD and XLOX_KEY_PASSWORD (never from a tracked file).
-      # The key in app/xlox.jks is never regenerated - a different key would
-      # stop installed copies from updating. Without the secrets the build is
-      # still compiled and linted, but nothing is published.
-      - name: Check the release signing secrets
+      - name: Check release signing (never regenerate Anoy's key)
         env:
           XLOX_STORE_PASSWORD: ${{ secrets.XLOX_STORE_PASSWORD }}
         run: |
           if [ -z "$XLOX_STORE_PASSWORD" ]; then
-            echo "::warning title=Release APK not signed::Add the XLOX_STORE_PASSWORD and XLOX_KEY_PASSWORD repository secrets (Settings > Secrets and variables > Actions). This build is checked but not published."
-            echo "XLOX_SIGNED=false" >> "$GITHUB_ENV"
-            exit 0
+            echo '::warning::Signing secret missing. Both APKs will be checked and uploaded as UNSIGNED artifacts; no release will be published.'
+            echo 'XLOX_SIGNED=false' >> "$GITHUB_ENV"
+          else
+            keytool -list -keystore app/xlox.jks -storepass:env XLOX_STORE_PASSWORD -alias key0 >/dev/null
+            echo 'XLOX_SIGNED=true' >> "$GITHUB_ENV"
           fi
-          keytool -list -keystore app/xlox.jks -storepass:env XLOX_STORE_PASSWORD -alias key0 >/dev/null 2>&1 || {
-            echo "::error::app/xlox.jks does not open with the XLOX_STORE_PASSWORD secret. Check the secret; the key is never regenerated."
-            exit 1
-          }
-          echo "Release keystore opens with the repository secret"
-          echo "XLOX_SIGNED=true" >> "$GITHUB_ENV"
 
-      - name: Assemble release APK
+      - name: Host runtime preparation regressions (offline fixtures)
+        run: |
+          python3 -B scripts/test_prepare_robolectric.py
+          python3 -B scripts/test_profile_loader_ui.py
+
+      - name: Restore pinned host Android runtimes
+        id: host-runtime-cache
+        uses: actions/cache/restore@v5
+        with:
+          path: ~/.cache/xlox-robolectric
+          key: ${{ runner.os }}-robolectric-4.14.1-i7-api21-28-35-v1
+
+      - name: Prepare checksum-verified host Android runtimes
+        run: |
+          python3 -B scripts/prepare_robolectric.py --dir "$HOME/.cache/xlox-robolectric"
+          echo "XLOX_ROBOLECTRIC_DIR=$HOME/.cache/xlox-robolectric" >> "$GITHUB_ENV"
+
+      - name: Save verified host runtimes before running tests
+        if: steps.host-runtime-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v5
+        with:
+          path: ~/.cache/xlox-robolectric
+          key: ${{ runner.os }}-robolectric-4.14.1-i7-api21-28-35-v1
+
+      - name: Android navigation view regressions for BOTH brands
+        run: |
+          set +e
+          ./gradlew :app:testAnoyDebugUnitTest :app:testKennyDebugUnitTest --no-daemon > /tmp/navigation-tests.log 2>&1
+          rc=$?
+          cat /tmp/navigation-tests.log
+          python3 - <<'PYNAV'
+          import os
+          from pathlib import Path
+          import xml.etree.ElementTree as ET
+          totals = {'tests': 0, 'failures': 0, 'errors': 0, 'skipped': 0}
+          suites = {}
+          for report in sorted(Path('app/build/test-results').rglob('TEST-*.xml')):
+              suite = ET.parse(report).getroot()
+              counts = {key: int(suite.get(key, '0')) for key in totals}
+              suites[(report.parent.name, suite.get('name'))] = counts
+              for key in totals:
+                  totals[key] += counts[key]
+              print('Navigation test report:', report, counts)
+              for case in suite.findall('testcase'):
+                  for failure in list(case.findall('failure')) + list(case.findall('error')):
+                      trace = failure.text or ''
+                      causes = '\n'.join(line for line in trace.splitlines() if 'Caused by:' in line or 'https://' in line)
+                      detail = case.get('name', '') + ': ' + (failure.get('message') or '')[:600]
+                      detail += '\n' + causes[:1800] + '\n' + trace[-1400:]
+                      print('::error title=Android navigation test::' + detail.replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A'))
+          summary = 'Android UI/OBB tests (Anoy + KennyPvt, host Android 21 / 28): ' + str(totals)
+          print(summary)
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as out:
+              out.write(summary + '\n')
+          expected = {'com.xlox.ui.HomeSettingsNavigationTest': 54,
+                      'com.xlox.ui.LoginSplashUiTest': 18,
+                      'com.xlox.utils.AppManagerObbStateTest': 16}
+          for variant in ('testAnoyDebugUnitTest', 'testKennyDebugUnitTest'):
+              for name, count in expected.items():
+                  actual = suites.get((variant, name))
+                  assert actual is not None and actual['tests'] >= count, (variant, name, actual)
+          assert totals['tests'] >= 178, 'Both brands must run all 27 navigation/presentation + 9 login/splash + 8 OBB tests on Android 21 and 28.'
+          assert totals['failures'] == totals['errors'] == totals['skipped'] == 0, summary
+          print('::notice title=Android host test totals::' + summary)
+          PYNAV
+          nav_rc=$?
+          if [ "$rc" -eq 0 ]; then rc=$nav_rc; fi
+          if [ "$rc" -ne 0 ]; then
+            python3 - <<'PYNAVLOG'
+          from pathlib import Path
+          log = '\n'.join(Path('/tmp/navigation-tests.log').read_text(errors='replace').splitlines()[-100:])
+          print('::error title=Android navigation Gradle failure::' + log[-6500:].replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A'))
+          PYNAVLOG
+          fi
+          exit "$rc"
+
+      - name: Build BOTH release variants
         env:
           XLOX_STORE_PASSWORD: ${{ secrets.XLOX_STORE_PASSWORD }}
           XLOX_KEY_PASSWORD: ${{ secrets.XLOX_KEY_PASSWORD }}
         run: |
           chmod +x gradlew
           set +e
-          ./gradlew assembleRelease --no-daemon -x lintVitalRelease > /tmp/assemble.log 2>&1
+          ./gradlew :app:assembleAnoyRelease :app:assembleKennyRelease --no-daemon > /tmp/assemble.log 2>&1
           rc=$?
           cat /tmp/assemble.log
-          if [ $rc -ne 0 ]; then
-            # Surface compiler / resource errors as annotations (readable via the API).
-            grep -E "Duplicate class|error:|: error|e: |ERROR:|What went wrong|AAPT|Execution failed|not found|cannot find symbol" /tmp/assemble.log \
-              | grep -v "^\s*at " | head -40 | while IFS= read -r line; do
-                echo "::error::$(echo "$line" | cut -c1-400)"
-              done
-            grep -A3 -E "error:" /tmp/assemble.log | head -60 | tr '\n' ' ' | cut -c1-3500 | sed 's/^/::error title=context::/'
-            grep -A8 "What went wrong" /tmp/assemble.log | head -30 | tr '\n' ' ' | cut -c1-3500 | sed 's/^/::error title=gradle::/'
+          if [ "$rc" -ne 0 ]; then
+            python3 - <<'PYLOG'
+          from pathlib import Path
+          log = '\n'.join(Path('/tmp/assemble.log').read_text(errors='replace').splitlines()[-80:])
+          print('::error title=Android assembly failed::' + log[-7000:].replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A'))
+          PYLOG
           fi
-          exit $rc
+          exit "$rc"
 
-      - name: Android lint (errors fail the build)
+      - name: Lint both variants
         run: |
           set +e
-          ./gradlew lintRelease --no-daemon > /tmp/lint.log 2>&1
+          ./gradlew :app:lintAnoyRelease :app:lintKennyRelease --no-daemon > /tmp/lint.log 2>&1
           rc=$?
           cat /tmp/lint.log
-          R=$(ls app/build/reports/lint-results-release.txt app/build/intermediates/lint_intermediate_text_report/release/*.txt 2>/dev/null | head -1)
-          if [ -n "$R" ]; then
-            grep -E ": Error:" "$R" | head -40 | while IFS= read -r line; do echo "::error::$(echo "$line" | cut -c1-400)"; done
-            grep -E ": Warning:" "$R" | head -20 | while IFS= read -r line; do echo "::warning::$(echo "$line" | cut -c1-400)"; done
-            # GitHub shows at most 10 warnings per step: one notice lists them all.
-            S=$(grep -E ": Warning:" "$R" | sed -E 's#^.*/app/(src/main/)?##; s#: Warning: .*\[([A-Za-z0-9]+)\]$# \1#' | sort | tr '\n' ';')
-            echo "::notice title=Lint warnings ($(grep -cE ': Warning:' "$R"))::${S:-none}"
+          if [ "$rc" -ne 0 ]; then
+            python3 - <<'PYLINT'
+          from pathlib import Path
+          reports = sorted(Path('app/build').rglob('lint-results*.txt'))
+          log = '\n'.join(Path('/tmp/lint.log').read_text(errors='replace').splitlines()[-100:])
+          messages = []
+          for report in reports:
+              text = report.read_text(errors='replace')
+              errors = [line for line in text.splitlines() if ': Error:' in line]
+              if errors:
+                  messages.extend(errors)
+          from collections import defaultdict
+          import re
+          by_issue = defaultdict(list)
+          for message in messages:
+              match = re.search(r'\[([^]\n]+)\]$', message)
+              by_issue[match[1] if match else 'Unknown'].append(message)
+          for issue, lines in sorted(by_issue.items()):
+              detail = str(len(lines)) + ' error(s):\n' + '\n'.join(lines[:5])
+              print('::error title=Android lint ' + issue + '::' + detail.replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A'))
+          print('::error title=Android lint failed::' + log[-6000:].replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A'))
+          PYLINT
           fi
-          [ $rc -ne 0 ] && grep -E "What went wrong|Lint found" /tmp/lint.log | head -5 | sed 's/^/::error::/'
-          exit $rc
+          exit "$rc"
 
-      - name: Upload lint report
+      - name: Collect separately named APKs
+        run: |
+          mkdir -p ../dist
+          ANOY=$(find app/build/outputs/apk/anoy/release -name '*.apk' | head -1)
+          KENNY=$(find app/build/outputs/apk/kenny/release -name '*.apk' | head -1)
+          test -n "$ANOY" && test -n "$KENNY"
+          cp "$ANOY" ../dist/Anoy-XLOX-loader.apk
+          cp "$KENNY" ../dist/KennyPvt-loader.apk
+          (cd ../dist && sha256sum Anoy-XLOX-loader.apk KennyPvt-loader.apk > SHA256SUMS.txt)
+
+      - name: Verify permissions in BOTH APKs
+        run: python3 scripts/check_apk_permissions.py ../dist/Anoy-XLOX-loader.apk ../dist/KennyPvt-loader.apk
+
+      - name: Verify compiled package identities and visible branding in BOTH APKs
+        run: python3 scripts/check_branding.py ../dist/Anoy-XLOX-loader.apk ../dist/KennyPvt-loader.apk
+
+      - name: Verify merged login callback routing in BOTH APKs
+        run: python3 scripts/test_runtime_fixes.py ../dist/Anoy-XLOX-loader.apk ../dist/KennyPvt-loader.apk
+
+      - name: Verify supplied artwork pixels in the compiled Kenny APK
+        run: python3 scripts/kenny_icons.py --check --apk ../dist/KennyPvt-loader.apk
+
+      - name: Verify native alignment in BOTH APKs
+        run: |
+          for APK in ../dist/Anoy-XLOX-loader.apk ../dist/KennyPvt-loader.apk; do
+            unzip -p "$APK" lib/arm64-v8a/libXloX.so > /tmp/libXloX.so
+            if ! python3 scripts/check_elf_alignment.py --fail-on-unaligned /tmp/libXloX.so; then
+              echo "::error title=Native alignment::$APK libXloX.so is not 16 KiB aligned. See the preceding alignment report."
+              exit 1
+            fi
+          done
+
+      - name: Verify both release signatures
+        if: env.XLOX_SIGNED == 'true'
+        env:
+          XLOX_STORE_PASSWORD: ${{ secrets.XLOX_STORE_PASSWORD }}
+        run: |
+          APKSIGNER=$(find "$ANDROID_SDK_ROOT/build-tools" -name apksigner | sort | tail -1)
+          SIGNER_JAR="$(dirname "$APKSIGNER")/lib/apksigner.jar"
+          test -f "$SIGNER_JAR"
+          export SIGNER_JAR
+          # Export only the public certificate; the original private key stays in its keystore.
+          keytool -exportcert -keystore app/xlox.jks -storepass:env XLOX_STORE_PASSWORD -alias key0 > /tmp/original-signer.der
+          mkdir -p /tmp/original-signer-check
+          javac -source 8 -target 8 -cp "$SIGNER_JAR" -d /tmp/original-signer-check tests/apk/VerifyOriginalSigner.java
+          python3 - <<'PYSIGN'
+          import os, subprocess
+          from pathlib import Path
+          apks = [Path('../dist/Anoy-XLOX-loader.apk'), Path('../dist/KennyPvt-loader.apk')]
+          apks += sorted(Path('../prior-release-backup').glob('*.apk'))
+          # ApkVerifier returns actual verified certificates. Human-readable apksigner
+          # report labels vary by SDK tools version and are not a machine-readable API.
+          result = subprocess.run(['java', '-cp', os.environ['SIGNER_JAR'] + ':/tmp/original-signer-check',
+                                   'com.xlox.tests.apk.VerifyOriginalSigner', '/tmp/original-signer.der',
+                                   *map(str, apks)], capture_output=True, text=True)
+          print(result.stdout)
+          if result.returncode:
+              detail = result.stderr[-5000:]
+              print('::error title=Original signer gate failed::' + detail.replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A'))
+              raise SystemExit(result.returncode)
+          PYSIGN
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: ${{ env.XLOX_SIGNED == 'true' && 'Anoy-APK' || 'Anoy-APK-unsigned' }}
+          path: dist/Anoy-XLOX-loader.apk
+          retention-days: 14
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v7
+        with:
+          name: ${{ env.XLOX_SIGNED == 'true' && 'KennyPvt-APK' || 'KennyPvt-APK-unsigned' }}
+          path: dist/KennyPvt-loader.apk
+          retention-days: 14
+          if-no-files-found: error
+      - name: Upload Android navigation test reports
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: lint-report
-          path: xlox/app/build/reports/lint-results-release.*
+          name: Android-navigation-tests
+          path: |
+            xlox/app/build/reports/tests/
+            xlox/app/build/test-results/
+            /tmp/navigation-tests.log
+          retention-days: 14
           if-no-files-found: ignore
-          retention-days: 7
 
-      - name: Build starter loader ZIP (arm64-v8a libbgmi.so)
-        run: |
-          SDK="${ANDROID_HOME:-$ANDROID_SDK_ROOT}"
-          CLANG="$SDK/ndk/24.0.8215888/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android21-clang"
-          test -x "$CLANG" || { echo "NDK clang not found at $CLANG"; exit 1; }
-          # 16 KB ELF alignment is mandatory for Android 15+ devices that boot
-          # with 16 KB memory pages; a 4 KB-aligned stub would fail dlopen().
-          "$CLANG" -shared -fPIC -O2 \
-            -Wl,-z,max-page-size=16384 -Wl,-z,common-page-size=16384 \
-            -o libbgmi.so loader-stub/bgmi_stub.c -llog
-          head -c 4 libbgmi.so | od -An -tx1
-          zip -j xlox-loader.zip libbgmi.so
-          unzip -l xlox-loader.zip
-
-      - name: Collect deliverables
-        run: |
-          mkdir -p ../dist
-          APK=$(find app/build/outputs/apk/release -name '*.apk' | head -1)
-          test -n "$APK" || { echo "No APK produced"; exit 1; }
-          cp "$APK" ../dist/Anoy-XLOX-loader.apk
-          cp xlox-loader.zip ../dist/xlox-loader.zip
-          ls -lh ../dist
-          echo "APK_SHA256=$(sha256sum ../dist/Anoy-XLOX-loader.apk | cut -d' ' -f1)" >> "$GITHUB_ENV"
-
-      - name: Permissions in the built APK
-        run: PERMISSIONS_LOG_DIR=/tmp/permissions python3 scripts/check_apk_permissions.py ../dist/Anoy-XLOX-loader.apk
-
-      - name: Assert the APK really contains the native panel library
-        run: |
-          unzip -l ../dist/Anoy-XLOX-loader.apk | grep -F 'libXloX.so' || {
-            echo "libXloX.so is missing from the APK"; exit 1; }
-          unzip -l ../dist/Anoy-XLOX-loader.apk | grep -E 'META-INF/.*\.(RSA|SF)' \
-            || echo "v2/v3 signature only (no v1 jar signature, still valid)"
-          test -f ../dist/xlox-loader.zip
-          echo "APK sha256 = $APK_SHA256"
-
-      - name: Verify the release signature
-        if: env.XLOX_SIGNED == 'true'
-        run: |
-          SDK="${ANDROID_HOME:-$ANDROID_SDK_ROOT}"
-          APKSIGNER=$(ls "$SDK"/build-tools/*/apksigner | sort | tail -1)
-          "$APKSIGNER" verify ../dist/Anoy-XLOX-loader.apk
-          echo "Release APK is signed with the release key"
-
-      - name: Verify 16 KB ELF alignment (Android 15 / 17 devices)
-        run: |
-          # Report every native library. The two prebuilt libs inside
-          # mundo-release.aar ship 4 KB-aligned and cannot be relinked here,
-          # so they are reported but do not fail the build (see README).
-          python3 scripts/check_elf_alignment.py \
-            ../dist/Anoy-XLOX-loader.apk ../dist/xlox-loader.zip || true
-          # Hard requirement: everything we build ourselves must be 16 KB.
-          unzip -p ../dist/Anoy-XLOX-loader.apk lib/arm64-v8a/libXloX.so > /tmp/libXloX.so
-          python3 scripts/check_elf_alignment.py --fail-on-unaligned \
-            /tmp/libXloX.so ../dist/xlox-loader.zip
-
-      - name: Upload APK and loader ZIP
+      - name: Upload lint reports
+        if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: ${{ env.XLOX_SIGNED == 'true' && 'xlox-apk' || 'xlox-apk-unsigned' }}
-          path: |
-            dist/Anoy-XLOX-loader.apk
-            dist/xlox-loader.zip
+          name: Android-lint-reports
+          path: xlox/app/build/reports/lint-results-*
           retention-days: 7
-          if-no-files-found: error
+          if-no-files-found: ignore
 
-      # The APK is published as a GitHub release (durable download link); build
-      # outputs are never committed to the repository.
-      - name: Publish APK as a GitHub release (anoy-v<name>-<code>, Latest)
-        if: env.XLOX_SIGNED == 'true'
+      - name: Publish both APKs in ONE GitHub release (no pruning)
+        if: env.XLOX_SIGNED == 'true' && ((github.event_name == 'push' && !contains(github.event.head_commit.message, '[verify-2.4.3]')) || (github.event_name == 'workflow_dispatch' && inputs.publish_release))
         working-directory: ${{ github.workspace }}
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -eu
-          TITLE="Anoy $APP_VERSION_NAME ($APP_VERSION_CODE)"
-          printf '%s\n' \
-            "Anoy $APP_VERSION_NAME" "" \
-            "- versionName: $APP_VERSION_NAME" \
-            "- versionCode: $APP_VERSION_CODE" \
-            "- commit: ${{ github.sha }}" \
-            "- APK sha256: $APK_SHA256" "" \
-            "Panel APK link: https://github.com/${{ github.repository }}/releases/download/$RELEASE_TAG/Anoy-XLOX-loader.apk" \
-            > /tmp/release-notes.md
-          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
-            # Same version rebuilt: replace the files, keep the tag.
-            gh release upload "$RELEASE_TAG" dist/Anoy-XLOX-loader.apk dist/xlox-loader.zip --clobber
-            gh release edit "$RELEASE_TAG" --title "$TITLE" --notes-file /tmp/release-notes.md --latest
-            echo "::notice title=Release updated::$RELEASE_TAG files replaced (sha256 $APK_SHA256)"
+          printf '%s\n\n' "Anoy + KennyPvt $APP_VERSION_NAME ($APP_VERSION_CODE)" > /tmp/release-notes.md
+          if [ "$APP_VERSION_NAME" = 2.4.3 ] && [ "$APP_VERSION_CODE" = 21 ]; then
+            cat xlox/CHANGELOG-2.4.3.md >> /tmp/release-notes.md
+            printf '\n%s\n' \
+              '**Update from 2.4.2:** install the matching Anoy or KennyPvt APK over your existing app. Do not uninstall or clear app/container data.' >> /tmp/release-notes.md
           else
-            gh release create "$RELEASE_TAG" dist/Anoy-XLOX-loader.apk dist/xlox-loader.zip \
-              --target "${{ github.sha }}" --title "$TITLE" --notes-file /tmp/release-notes.md --latest
-            echo "::notice title=Release created::$RELEASE_TAG (sha256 $APK_SHA256)"
+            printf '%s\n' '- Updated Anoy and KennyPvt loaders with their separate app/update identities preserved.' >> /tmp/release-notes.md
           fi
-          echo "RELEASE_PUBLISHED=true" >> "$GITHUB_ENV"
-
-      # Only the release just published stays, plus any release with a file the
-      # owner uploaded by hand and the one the panel's app update serves (their
-      # download links must keep working). Never touches $RELEASE_TAG.
-      - name: Delete every other release and tag
-        if: env.RELEASE_PUBLISHED == 'true'
-        working-directory: ${{ github.workspace }}
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -u
-          REPO="${{ github.repository }}"
-          gh release view "$RELEASE_TAG" >/dev/null || { echo "::error::$RELEASE_TAG is missing; nothing deleted"; exit 1; }
-          deleted=0; failed=0
-          # Releases with an asset not uploaded by this workflow's bot.
-          keep=" $(gh api --paginate "repos/$REPO/releases?per_page=100" \
-            --jq '.[] | select([.assets[].uploader.login] | any(. != "github-actions[bot]")) | .tag_name' | tr '\n' ' ') "
-          [ "$keep" = "  " ] || echo "::notice title=Releases kept::with files you uploaded:$keep"
-          # 2.3.8: the release phones are told to download (the panel's current
-          # app update) stays too, so its link never breaks before the owner
-          # publishes the new build. Panel unreachable: delete nothing.
-          if ! update=$(curl -fsS --max-time 20 https://anoymundo-panel.vercel.app/api/app/update); then
-            echo "::warning title=Releases kept::could not read the panel's current app update; nothing deleted"
-            exit 0
+          printf '\n%s\n' \
+            'BGMI Air needs its own library from the Owner bundle. Real-device game/provider compatibility still needs testing. No live panel/library/APK selections are changed.' \
+            '' '<details>' '<summary>Build verification and SHA-256 checksums</summary>' '' \
+            "Source: ${{ github.sha }}" \
+            "[Build and checks](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}): both brands built/linted, host Android 21/28 checks passed, and original APK signatures verified. Phone UI/frame-time validation is separate." \
+            '' '```text' >> /tmp/release-notes.md
+          cat dist/SHA256SUMS.txt >> /tmp/release-notes.md
+          printf '%s\n' '```' '</details>' >> /tmp/release-notes.md
+          PRE_RELEASE=false
+          case "$APP_VERSION_NAME" in
+            *-webtest*|*-test*|*-rc*) PRE_RELEASE=true ;;
+          esac
+          if [ "$PRE_RELEASE" = true ]; then
+            printf '\n%s\n' \
+              '**Phone validation pending — this is a non-latest prerelease, not a confirmed runtime fix.**' \
+              'The web-login candidate uses the original Mundo AAR and keeps game web-login navigation inside the loader. Provider authentication still needs a real-device test. It does not change live panel selections.' \
+              'This candidate deliberately retains versionCode 21 for an in-place return to 2.4.3 without uninstalling or clearing container data.' >> /tmp/release-notes.md
           fi
-          live=$(printf '%s' "$update" | jq -r '.apk_url // empty' | sed -n 's#.*/releases/download/\([^/]*\)/.*#\1#p')
-          if [ -n "$live" ]; then
-            keep="$keep$live "
-            echo "::notice title=Releases kept::served by the panel's app update: $live"
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            TARGET=$(gh release view "$RELEASE_TAG" --json targetCommitish --jq .targetCommitish)
+            [ "$TARGET" = '${{ github.sha }}' ] || { echo '::error::This version belongs to a different commit. Bump versionCode; the existing release is untouched.'; exit 1; }
+            gh release upload "$RELEASE_TAG" dist/Anoy-XLOX-loader.apk dist/KennyPvt-loader.apk dist/SHA256SUMS.txt --clobber
+          else
+            if [ "$PRE_RELEASE" = true ]; then
+              gh release create "$RELEASE_TAG" dist/Anoy-XLOX-loader.apk dist/KennyPvt-loader.apk dist/SHA256SUMS.txt \
+                --target '${{ github.sha }}' --title "Anoy + KennyPvt $APP_VERSION_NAME ($APP_VERSION_CODE)" --notes-file /tmp/release-notes.md --prerelease --latest=false
+            else
+              gh release create "$RELEASE_TAG" dist/Anoy-XLOX-loader.apk dist/KennyPvt-loader.apk dist/SHA256SUMS.txt \
+                --target '${{ github.sha }}' --title "Anoy + KennyPvt $APP_VERSION_NAME ($APP_VERSION_CODE)" --notes-file /tmp/release-notes.md --latest
+            fi
           fi
-          for t in $(gh api --paginate "repos/$REPO/releases?per_page=100" --jq '.[].tag_name'); do
-            [ "$t" = "$RELEASE_TAG" ] && continue
-            case "$keep" in *" $t "*) continue ;; esac
-            if gh release delete "$t" --yes --cleanup-tag; then deleted=$((deleted+1)); else failed=$((failed+1)); fi
-          done
-          tags=0
-          for t in $(gh api --paginate "repos/$REPO/git/matching-refs/tags/" --jq '.[].ref | sub("^refs/tags/"; "")'); do
-            [ "$t" = "$RELEASE_TAG" ] && continue
-            case "$keep" in *" $t "*) continue ;; esac
-            if gh api -X DELETE "repos/$REPO/git/refs/tags/$t" --silent; then tags=$((tags+1)); else failed=$((failed+1)); fi
-          done
-          left=$(gh api --paginate "repos/$REPO/releases?per_page=100" --jq '.[].tag_name' | tr '\n' ' ')
-          echo "::notice title=Releases cleaned::deleted $deleted releases and $tags leftover tags; remaining: $left"
-          [ "$failed" -eq 0 ] || echo "::warning::$failed releases/tags could not be deleted"
-
-      - name: Check the panel lib + version endpoints
-        run: |
-          BASE="https://anoymundo-panel.vercel.app"
-          printf 'version endpoint: '; curl -sS --max-time 30 "$BASE/api/lib/version" | tr -d '\n'; echo
-          curl -sS --max-time 30 -o /tmp/panel-lib.bin \
-            -w 'download endpoint: HTTP %{http_code}, %{content_type}, %{size_download} bytes\n' \
-            "$BASE/api/lib/download" || true
-
-      - name: Publish starter loader ZIP to the panel
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.publish_loader_zip }}
-        env:
-          PANEL_BASE_URL: https://anoymundo-panel.vercel.app
-          PANEL_ADMIN_USERNAME: Anoy
-          PANEL_ADMIN_PASSWORD: ${{ secrets.PANEL_OWNER_PASSWORD }}
-        run: |
-          node scripts/publish-release.mjs ../dist/xlox-loader.zip \
-            "${{ inputs.panel_version }}"
-
-      - name: Done
-        run: echo "XLOX APK built from ${{ github.sha }}"
+          # Deliberately no release deletion, tag cleanup or /lib publication.

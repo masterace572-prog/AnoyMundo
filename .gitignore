@@ -18,6 +18,7 @@ xlox/docs/ui-redesign/
 
 # ---- Node / Vercel ---------------------------------------------------------
 node_modules/
+.cache/
 .vercel/
 .env
 .env.local

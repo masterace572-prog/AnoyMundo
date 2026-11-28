@@ -84,7 +84,7 @@ jobs:
           set -o pipefail
           mkdir -p ../qa-logs
           set +e
-          ./gradlew :app:assembleDebug :app:assembleRelease --no-daemon -x lintVitalRelease > ../qa-logs/assemble.log 2>&1
+          ./gradlew :app:assembleAnoyDebug :app:assembleAnoyRelease --no-daemon -x lintVitalAnoyRelease > ../qa-logs/assemble.log 2>&1
           rc=$?
           cat ../qa-logs/assemble.log
           if [ $rc -ne 0 ]; then
@@ -98,14 +98,14 @@ jobs:
           M=$(find app/build/intermediates -name AndroidManifest.xml -path '*merged_manifest*' -path '*debug*' | head -1)
           [ -n "$M" ] && cp "$M" ../qa-logs/merged-manifest-debug.xml || true
           PERMISSIONS_LOG_DIR=../qa-logs python3 scripts/check_apk_permissions.py \
-            "$(ls app/build/outputs/apk/debug/*.apk | head -1)" "$(ls app/build/outputs/apk/release/*.apk | head -1)"
+            "$(ls app/build/outputs/apk/anoy/debug/*.apk | head -1)" "$(ls app/build/outputs/apk/anoy/release/*.apk | head -1)"
 
       - name: Android Lint (errors fail the job)
         run: |
           set -o pipefail
-          ./gradlew :app:lintDebug --no-daemon 2>&1 | tee ../qa-logs/lint.log
-          cp app/build/reports/lint-results-debug.txt ../qa-logs/ 2>/dev/null || \
-            cp app/build/intermediates/lint_intermediate_text_report/debug/lint-results-debug.txt ../qa-logs/ 2>/dev/null || true
+          ./gradlew :app:lintAnoyDebug --no-daemon 2>&1 | tee ../qa-logs/lint.log
+          cp app/build/reports/lint-results-anoyDebug.txt ../qa-logs/ 2>/dev/null || \
+            cp app/build/intermediates/lint_intermediate_text_report/anoyDebug/lint-results-anoyDebug.txt ../qa-logs/ 2>/dev/null || true
 
       - name: Emulator screenshots
         run: |

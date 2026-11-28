@@ -466,6 +466,20 @@
         <item name="backgroundTint">@color/tonal_bg_on_black</item>
     </style>
 
+    <!-- Switch: Anoy accent track, on-accent thumb when checked. -->
+    <style name="Widget.Anoy.Switch" parent="Widget.Material3.CompoundButton.MaterialSwitch">
+        <item name="thumbTint">@color/switch_thumb</item>
+        <item name="trackTint">@color/switch_track</item>
+        <item name="android:textColor">@color/text_primary</item>
+    </style>
+
+    <!-- CheckBox: Anoy accent when checked. -->
+    <style name="Widget.Anoy.CheckBox" parent="Widget.Material3.CompoundButton.CheckBox">
+        <item name="buttonTint">@color/checkbox_tint</item>
+        <item name="android:textColor">@color/text_primary</item>
+        <item name="android:minHeight">@dimen/touch_target</item>
+    </style>
+
     <!-- Text button: Link style (Inter 500 15), 48 dp target. -->
     <style name="Widget.Anoy.Button.Text" parent="Widget.Material3.Button.TextButton">
         <item name="android:minHeight">@dimen/touch_target</item>
@@ -532,10 +546,11 @@
     </style>
 
     <!-- ===================================================== Surfaces -->
-    <!-- Home cards: surface-1, radius 20, fill only (no stroke on black). -->
+    <!-- Home cards: lifted surface-2, radius 20, hairline edge for depth. -->
     <style name="Widget.Anoy.Card" parent="Widget.Material3.CardView.Filled">
-        <item name="cardBackgroundColor">@color/surface_1</item>
-        <item name="strokeWidth">0dp</item>
+        <item name="cardBackgroundColor">@color/surface_2</item>
+        <item name="strokeWidth">@dimen/hairline</item>
+        <item name="strokeColor">@color/hairline</item>
         <item name="cardCornerRadius">@dimen/radius_card</item>
         <item name="cardElevation">0dp</item>
         <item name="rippleColor">@color/ripple_none</item>
@@ -548,12 +563,13 @@
         <item name="cornerSize">@dimen/radius_card</item>
     </style>
 
-    <!-- Inset grouped list: surface-1, radius 16, no stroke; clips its rows. -->
+    <!-- Inset grouped list: matches the cards — lifted surface, hairline edge. -->
     <style name="Widget.Anoy.Group" parent="Widget.Material3.CardView.Filled">
         <item name="android:layout_width">match_parent</item>
         <item name="android:layout_height">wrap_content</item>
-        <item name="cardBackgroundColor">@color/surface_1</item>
-        <item name="strokeWidth">0dp</item>
+        <item name="cardBackgroundColor">@color/surface_2</item>
+        <item name="strokeWidth">@dimen/hairline</item>
+        <item name="strokeColor">@color/hairline</item>
         <item name="cardCornerRadius">@dimen/radius_control</item>
         <item name="cardElevation">0dp</item>
         <item name="rippleColor">@color/ripple_none</item>
@@ -649,6 +665,160 @@
         <item name="trackColor">@color/transparent</item>
         <item name="indicatorTrackGapSize">0dp</item>
         <item name="trackCornerRadius">0.75dp</item>
+    </style>
+
+    <!-- Loader screens share static Manrope weights back to Android 21 through
+         AppCompat. Keys and support previews retain the dedicated monospace face. -->
+    <style name="Text.Dashboard" parent="Text">
+        <item name="android:fontFamily">@font/manrope_regular</item>
+        <item name="fontFamily">@font/manrope_regular</item>
+        <item name="android:textSize">@dimen/text_body</item>
+        <item name="lineHeight">22sp</item>
+    </style>
+
+    <style name="Text.Dashboard.Title">
+        <item name="android:fontFamily">@font/manrope_semibold</item>
+        <item name="fontFamily">@font/manrope_semibold</item>
+        <item name="android:textSize">@dimen/text_dashboard_title</item>
+        <item name="lineHeight">28sp</item>
+        <item name="android:letterSpacing">-0.02</item>
+    </style>
+
+    <style name="Text.Dashboard.GameTitle" parent="Text.Dashboard.Title">
+        <item name="android:textSize">@dimen/text_dashboard_game</item>
+        <item name="lineHeight">24sp</item>
+        <item name="android:letterSpacing">-0.01</item>
+    </style>
+
+    <style name="Text.Dashboard.Brand" parent="Text.Dashboard">
+        <item name="android:fontFamily">@font/manrope_semibold</item>
+        <item name="fontFamily">@font/manrope_semibold</item>
+        <item name="android:textSize">@dimen/text_micro</item>
+        <item name="lineHeight">18sp</item>
+        <item name="android:textColor">@color/text_secondary</item>
+        <item name="android:letterSpacing">0.04</item>
+    </style>
+
+    <style name="Text.Dashboard.Meta">
+        <item name="android:textSize">@dimen/text_caption</item>
+        <item name="lineHeight">18sp</item>
+        <item name="android:textColor">@color/text_secondary</item>
+    </style>
+
+    <style name="Text.Dashboard.Meta.Medium">
+        <item name="android:fontFamily">@font/manrope_medium</item>
+        <item name="fontFamily">@font/manrope_medium</item>
+    </style>
+
+    <style name="Text.Dashboard.Expiry" parent="Text.Dashboard.Meta.Medium">
+        <item name="android:textColor">@color/text_primary</item>
+        <item name="android:fontFeatureSettings">tnum</item>
+    </style>
+
+    <style name="Text.Dashboard.Body" parent="Text.Dashboard" />
+    <style name="Text.Dashboard.Body.Medium">
+        <item name="android:fontFamily">@font/manrope_medium</item>
+        <item name="fontFamily">@font/manrope_medium</item>
+    </style>
+
+    <style name="Text.Dashboard.Section" parent="Text.Dashboard.Meta.Medium">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:paddingStart">@dimen/row_padding</item>
+        <item name="android:paddingEnd">@dimen/row_padding</item>
+        <item name="android:layout_marginBottom">@dimen/space_8</item>
+        <item name="android:textColor">@color/text_secondary</item>
+        <item name="android:textAllCaps">false</item>
+    </style>
+
+    <style name="Text.Dashboard.RowLabel" parent="Text.Dashboard" />
+    <style name="Text.Dashboard.RowValue" parent="Text.Dashboard">
+        <item name="android:textColor">@color/text_secondary</item>
+        <item name="android:gravity">end|center_vertical</item>
+    </style>
+    <style name="Text.Dashboard.RowValue.SingleLine">
+        <item name="android:maxLines">1</item>
+        <item name="android:ellipsize">end</item>
+        <item name="autoSizeTextType">uniform</item>
+        <item name="autoSizeMinTextSize">12sp</item>
+        <item name="autoSizeMaxTextSize">@dimen/text_body</item>
+        <item name="autoSizeStepGranularity">1sp</item>
+    </style>
+
+    <style name="Text.Dashboard.AnnouncementTitle" parent="Text.Dashboard.Meta.Medium">
+        <item name="android:textColor">@color/accent</item>
+    </style>
+    <style name="Text.Dashboard.WarningTitle" parent="Text.Dashboard.Meta.Medium">
+        <item name="android:textColor">@color/notice_icon</item>
+    </style>
+    <style name="Text.Dashboard.Notice" parent="Text.Dashboard">
+        <item name="android:textSize">@dimen/text_body_s</item>
+        <item name="lineHeight">21sp</item>
+    </style>
+
+    <!-- Same surface and border treatment as the game cards; blue stays in the heading/icon. -->
+    <style name="Widget.Anoy.Card.Announcement" parent="Widget.Anoy.Card" />
+    <style name="Widget.Anoy.Group.Dashboard" parent="Widget.Anoy.Group">
+        <item name="cardCornerRadius">@dimen/radius_card</item>
+        <item name="shapeAppearance">@style/ShapeAppearance.Anoy.Card</item>
+    </style>
+    <style name="Widget.Anoy.Button.Dashboard" parent="Widget.Anoy.Button">
+        <item name="android:minHeight">@dimen/touch_target</item>
+        <item name="android:fontFamily">@font/manrope_semibold</item>
+        <item name="fontFamily">@font/manrope_semibold</item>
+        <item name="android:textSize">@dimen/text_body</item>
+        <item name="android:textAppearance">@style/TextAppearance.Anoy.DashboardButton</item>
+    </style>
+    <style name="Widget.Anoy.Button.Dashboard.SignOut">
+        <item name="backgroundTint">@color/tonal_bg_on_black</item>
+        <item name="android:textColor">@color/danger_text</item>
+    </style>
+    <style name="TextAppearance.Anoy.DashboardButton" parent="TextAppearance.Anoy.Button">
+        <item name="android:fontFamily">@font/manrope_semibold</item>
+        <item name="fontFamily">@font/manrope_semibold</item>
+        <item name="android:textSize">@dimen/text_body</item>
+    </style>
+    <style name="Row.Dashboard" parent="Row">
+        <item name="android:minHeight">@dimen/space_56</item>
+    </style>
+
+    <style name="Text.Dashboard.Meta.Small" parent="Text.Dashboard.Meta">
+        <item name="android:textSize">@dimen/text_micro</item>
+    </style>
+    <style name="Text.Dashboard.Footer" parent="Text.Dashboard.Meta.Small">
+        <item name="android:textColor">@color/text_tertiary</item>
+    </style>
+
+    <!-- Login and Splash extend the Home typography, not the game runtime. -->
+    <style name="Text.Auth.Title" parent="Text.Dashboard.Title">
+        <item name="android:textSize">@dimen/text_title_l</item>
+        <item name="lineHeight">34sp</item>
+    </style>
+    <style name="Text.Auth.Key" parent="Text.MonoKey">
+        <item name="android:textSize">@dimen/text_login_key</item>
+        <item name="lineHeight">22sp</item>
+        <item name="android:letterSpacing">0</item>
+    </style>
+    <style name="Widget.Anoy.Button.Auth" parent="Widget.Anoy.Button.Dashboard">
+        <item name="android:minHeight">@dimen/button_height</item>
+    </style>
+    <style name="Widget.Anoy.Button.Text.Auth" parent="Widget.Anoy.Button.Text">
+        <item name="android:fontFamily">@font/manrope_medium</item>
+        <item name="fontFamily">@font/manrope_medium</item>
+        <item name="android:textAppearance">@style/TextAppearance.Anoy.AuthLink</item>
+    </style>
+    <style name="TextAppearance.Anoy.AuthLink" parent="TextAppearance.Anoy.TextButton">
+        <item name="android:fontFamily">@font/manrope_medium</item>
+        <item name="fontFamily">@font/manrope_medium</item>
+    </style>
+    <style name="Text.Splash.Wordmark" parent="Text.Wordmark">
+        <item name="android:fontFamily">@font/manrope_semibold</item>
+        <item name="fontFamily">@font/manrope_semibold</item>
+        <item name="android:textSize">@dimen/text_splash_wordmark</item>
+    </style>
+    <style name="Text.Splash.Kicker" parent="Text.Dashboard.Brand">
+        <item name="android:letterSpacing">0.08</item>
+        <item name="android:textAllCaps">false</item>
     </style>
 
     <!-- ===================================================== Rows -->

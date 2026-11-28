@@ -1,0 +1,300 @@
+// Real PostgreSQL semantics offline (PGlite). No production credentials/network.
+import { PGlite } from '@electric-sql/pglite';
+import fs from 'node:fs/promises';
+import assert from 'node:assert/strict';
+import crypto from 'node:crypto';
+
+const db = new PGlite();
+const rows = async (sql, args = []) => (await db.query(sql, args)).rows;
+let checks = 0;
+const ok = (value, message) => { assert.ok(value, message); checks++; console.log('  PASS  ' + message); };
+const rejects = async (fn, message) => { await assert.rejects(fn); checks++; console.log('  PASS  ' + message); };
+async function verifyPublicationLimitMigration(sql, label) {
+  const definition = async () => (await rows("select pg_get_functiondef('public.publish_library_release(integer,jsonb)'::regprocedure) as definition"))[0].definition;
+  const attributes = () => rows("select oid,proowner,prosecdef,proconfig,proacl::text from pg_proc where oid='public.publish_library_release(integer,jsonb)'::regprocedure");
+  const definitionBefore = await definition(), attributesBefore = await attributes();
+  const libraries = await rows('select * from public.client_release order by id');
+  const apps = await rows('select * from public.app_release order by id');
+  await db.exec(sql); await db.exec(sql);
+  const old = "coalesce((p_release->>'file_size')::bigint, 0) not between 1 and 11534336";
+  const updated = old.replace('11534336', '22020096');
+  ok(await definition() === definitionBefore.replace(old, updated), `${label}: only the normalized-object size expression changes (idempotent)`);
+  assert.deepEqual(await attributes(), attributesBefore);
+  checks++; console.log(`  PASS  ${label}: function identity/owner/ACL/definer/search_path are preserved`);
+  assert.deepEqual(await rows('select * from public.client_release order by id'), libraries);
+  assert.deepEqual(await rows('select * from public.app_release order by id'), apps);
+  checks++; console.log(`  PASS  ${label}: every existing library and APK row remains unchanged`);
+}
+
+async function verifyLargeSqlPublication(call, actor, channel, label) {
+  const before = await rows('select * from public.client_release order by id');
+  const descriptor = size => JSON.stringify({ channel, version: 'limit-' + size, file_size: size,
+    sha256: 'a'.repeat(64), storage_path: `${channel}/releases/${crypto.randomUUID()}/libbgmi.zip` });
+  await db.exec('begin');
+  try {
+    for (const size of [Math.floor(7.57 * 1024 * 1024) * 2 + 4096, 20 * 1024 * 1024 + 8192, 21 * 1024 * 1024]) {
+      ok((await call('publish_library_release', [actor, descriptor(size)])).ok,
+        `${label}: SQL publishes a ${size}-byte normalized bundle, including two 7.57 MiB libraries/ZIP overhead`);
+      ok(Number((await rows('select file_size from public.client_release where channel=$1 and is_current', [channel]))[0].file_size) === size,
+        `${label}: the full normalized size survives in release metadata`);
+    }
+    assert.deepEqual(await rows('select * from public.client_release where channel<>$1 order by id', [channel]), before.filter(row => row.channel !== channel));
+    checks++; console.log(`  PASS  ${label}: large publications preserve the other channel`);
+  } finally { await db.exec('rollback'); }
+  await rejects(() => call('publish_library_release', [actor, descriptor(21 * 1024 * 1024 + 1)]),
+    `${label}: SQL refuses one byte above the 21 MiB normalized Storage allowance`);
+  assert.deepEqual(await rows('select * from public.client_release order by id'), before);
+  checks++; console.log(`  PASS  ${label}: rollback/oversize rejection never changes an active release`);
+}
+
+try {
+  await db.exec(`create role anon; create role authenticated; create role service_role;
+    create schema storage; create table storage.buckets(id text primary key, name text, public boolean, file_size_limit bigint);
+    create table storage.objects(bucket_id text, name text, created_at timestamptz default now());`);
+  const base = (await fs.readFile(new URL('../../supabase/schema.sql', import.meta.url), 'utf8')).split('-- BEGIN TWO OWNER CHANNELS')[0].replace('create extension if not exists pgcrypto;', '');
+  await db.exec(base);
+  await db.exec('create unique index if not exists users_single_owner_idx on public.users(level) where level = 1;');
+  await db.exec(`update public.client_release set content_base64 = 'preserve-existing-bytes', file_size = 12345, sha256 = repeat('a',64);
+    insert into public.app_release(version_name, version_code, apk_url, changelog, mandatory, is_current) values('2.3.8',17,'https://example.com/Anoy.apk','Existing',true,true);`);
+  const before = (await rows('select password from public.users where username = $1', ['Anoy']))[0].password;
+  const migration = await fs.readFile(new URL('../../supabase/migrations/20261119_two_owner_channels.sql', import.meta.url), 'utf8');
+  const lifecycle = await fs.readFile(new URL('../../supabase/migrations/20261119_referral_single_use.sql', import.meta.url), 'utf8');
+  const schema = await fs.readFile(new URL('../../supabase/schema.sql', import.meta.url), 'utf8');
+  const uploadLimit = await fs.readFile(new URL('../../supabase/migrations/20261121134307_library_upload_20mib.sql', import.meta.url), 'utf8');
+  const publicationLimit = await fs.readFile(new URL('../../supabase/migrations/20261121134308_library_publish_20mib.sql', import.meta.url), 'utf8');
+  ok(schema.split('-- BEGIN SINGLE USE REFERRALS')[0].trim().endsWith(migration.trim())
+    && schema.split('-- BEGIN LIBRARY 20 MIB UPLOADS')[0].trim().endsWith(lifecycle.trim())
+    && schema.split('-- BEGIN LIBRARY 20 MIB PUBLICATION')[0].trim().endsWith(uploadLimit.trim())
+    && schema.endsWith(publicationLimit), 'fresh schema includes the exact owner/referral/Storage/publication-limit migrations');
+  await db.exec(migration);
+  await db.exec(lifecycle);
+  await db.exec(migration); // deliberately re-run both to verify idempotence
+  await db.exec(lifecycle);
+  ok((await rows('select password, owner_channel from public.users where username=$1', ['Anoy']))[0].password === before, 'migration preserves the original owner password');
+  ok((await rows('select content_base64, channel from public.client_release where is_current'))[0].content_base64 === 'preserve-existing-bytes', 'migration preserves the existing library bytes');
+  ok((await rows('select channel, version_code from public.app_release where is_current'))[0].version_code === 17, 'migration preserves the existing APK update');
+  ok((await rows('select public, file_size_limit from storage.buckets'))[0].public === false, 'new upload bucket is private');
+  const liveBeforeLimit = await rows('select row_to_json(r) as row from public.client_release r union all select row_to_json(a) from public.app_release a');
+  await db.exec(uploadLimit);
+  await db.exec(uploadLimit); // idempotent, including deployments with an existing private bucket
+  const [bucket] = await rows("select public, file_size_limit from storage.buckets where id='loader-releases'");
+  ok(bucket.public === false && Number(bucket.file_size_limit) === 21 * 1024 * 1024,
+    '20 MiB inputs have 21 MiB private Storage capacity for normalized ZIP overhead');
+  assert.deepEqual(await rows('select row_to_json(r) as row from public.client_release r union all select row_to_json(a) from public.app_release a'), liveBeforeLimit);
+  checks++; console.log('  PASS  upload-limit migration preserves every current library/APK row and byte descriptor');
+  await verifyPublicationLimitMigration(publicationLimit, 'historical two-owner RPC');
+  const [anoy] = await rows("select id_users from public.users where owner_channel='anoy'");
+  const call = async (name, args) => (await rows(`select public.${name}(${args.map((_, i) => '$' + (i + 1)).join(',')}) as result`, args))[0].result;
+  await verifyLargeSqlPublication(call, anoy.id_users, 'anoy', 'historical two-owner RPC');
+  const invite = await call('create_owner_invite', [anoy.id_users, 'a'.repeat(32), 'KENNY24']);
+  ok(invite.ok && invite.referral === 'KENNY24', 'Anoy can create the single-use second-owner invitation');
+  ok((await call('create_owner_invite', [anoy.id_users, 'b'.repeat(32), 'OTHER24'])).referral === invite.referral, 'repeated invitation requests return the same pending code');
+  ok(!(await call('create_owner_invite', [99999, 'c'.repeat(32), 'OTHER24'])).ok, 'unknown actors cannot invite an owner');
+  const registration = await call('register_owner_from_referral', ['a'.repeat(32), 'KennyPvt', 'Kenny Owner', 'kenny@example.com', '$2a$08$' + 'x'.repeat(53), '127.0.0.1']);
+  ok(registration.ok && registration.channel === 'kenny', 'owner registration atomically claims the Kenny channel');
+  const [kenny] = await rows("select id_users, expiration_date from public.users where owner_channel='kenny'");
+  ok(kenny.expiration_date === null, 'second owner has no account expiry');
+  ok((await rows('select count(*)::int n from public.users where level=1 and expiration_date is not null'))[0].n === 0, 'both Owner accounts are permanent');
+  await rejects(() => db.query("update public.users set expiration_date = now() + interval '7 days' where owner_channel='kenny'"), 'database cannot put Kenny on a seven-day account expiry');
+  ok(!(await call('register_owner_from_referral', ['a'.repeat(32), 'ThirdOwner', 'Other Owner', 'other@example.com', '$2a$08$' + 'x'.repeat(53), '127.0.0.1'])).ok, 'owner referral cannot be replayed');
+  ok(!(await call('create_owner_invite', [anoy.id_users, 'b'.repeat(32), 'OTHER24'])).ok, 'Anoy cannot invite a third owner');
+  ok(!(await call('create_owner_invite', [kenny.id_users, 'b'.repeat(32), 'OTHER24'])).ok, 'Kenny cannot invite another owner');
+  await rejects(() => db.query("insert into public.users(username,password,level,owner_channel) values('Third','hash',1,'third')"), 'database rejects a third owner channel');
+  await rejects(() => db.query("insert into public.users(username,password,level,owner_channel) values('Duplicate','hash',1,'kenny')"), 'database rejects a duplicate owner channel');
+  await rejects(() => db.query("update public.users set owner_channel='anoy' where owner_channel='kenny'"), 'owner channel cannot be reassigned');
+  await rejects(() => db.query("update public.users set username='Takeover' where owner_channel='anoy'"), 'original owner cannot be renamed');
+  await rejects(() => db.query("delete from public.users where owner_channel='kenny'"), 'second owner cannot be deleted');
+  await rejects(() => db.query("update public.users set status=0 where owner_channel='anoy'"), 'original owner cannot be disabled');
+  const pub = (actor, channel, version) => call('publish_library_release', [actor, JSON.stringify({
+    channel, version, file_size: 100, sha256: 'a'.repeat(64), storage_path: `${channel}/releases/${crypto.randomUUID()}/libbgmi.zip`, game_version: '4.7.0',
+  })]);
+  ok((await pub(kenny.id_users, 'kenny', '0.1')).ok, 'Kenny can publish his own library');
+  await rejects(() => pub(kenny.id_users, 'anoy', '99'), 'SQL rejects Kenny publishing to Anoy');
+  await rejects(() => pub(anoy.id_users, 'kenny', '99'), 'SQL rejects Anoy publishing to Kenny');
+  await rejects(() => call('publish_library_release', [kenny.id_users, JSON.stringify({ version: '99', file_size: 100, sha256: 'a'.repeat(64), storage_path: `anoy/releases/${crypto.randomUUID()}/libbgmi.zip` })]), 'SQL rejects cross-owner storage paths even without a channel parameter');
+  ok((await rows("select content_base64 from public.client_release where channel='anoy' and is_current"))[0].content_base64 === 'preserve-existing-bytes', 'Kenny publication leaves the original library untouched');
+  await rejects(() => pub(kenny.id_users, null, '99'), 'SQL rejects an explicitly null channel');
+  await rejects(() => call('publish_library_release', [anoy.id_users, JSON.stringify({ channel: 'anoy', version: '99', external_url: 'https://example.com/a.so', game_version: 'x'.repeat(200) })]), 'a post-demotion insert failure rolls the entire library publication back');
+  ok((await rows("select content_base64 from public.client_release where channel='anoy' and is_current"))[0].content_base64 === 'preserve-existing-bytes', 'failed publication keeps the previous current library and bytes');
+  const app = (actor, channel, versionCode) => call('publish_app_release', [actor, JSON.stringify({ channel, version_name: '2.4.0', version_code: versionCode, apk_url: 'https://example.com/update.apk', changelog: 'Test', mandatory: false })]);
+  ok((await app(kenny.id_users, 'kenny', 1)).ok, 'Kenny APK version codes are independent of Anoy');
+  await rejects(() => app(kenny.id_users, 'anoy', 99), 'SQL rejects cross-owner APK publication');
+  await rejects(() => app(anoy.id_users, 'kenny', 99), 'SQL rejects reciprocal cross-owner APK publication');
+  await rejects(() => app(kenny.id_users, 'kenny', 1), 'APK version code must increase within its own channel');
+  ok((await rows("select version_code from public.app_release where channel='anoy' and is_current"))[0].version_code === 17, 'Kenny APK publication leaves the existing mandatory Anoy update untouched');
+  await db.exec((await fs.readFile(new URL('../../supabase/schema.sql', import.meta.url), 'utf8')).replace('create extension if not exists pgcrypto;', ''));
+  ok((await rows("select count(*)::int n from public.users where level=1"))[0].n === 2, 'fresh-install schema can be re-run safely after both owners register');
+  const order = await call('create_keys_atomic', ['kenny-order-test', kenny.id_users, 'PUBG', 24, 1, 80, 80, ['KENNYPVT-1D-TEST1']]);
+  ok(order.ok && order.unlimited && order.price === 0, 'second owner uses the shared key system with unlimited balance');
+  const permissions = await rows("select proname, has_function_privilege('anon', p.oid, 'EXECUTE') a, has_function_privilege('authenticated', p.oid, 'EXECUTE') u, has_function_privilege('service_role', p.oid, 'EXECUTE') s from pg_proc p where proname in ('create_owner_invite','register_owner_from_referral','register_account_from_referral','revoke_referral','publish_library_release','publish_app_release')");
+  ok(permissions.length === 6 && permissions.every(p => !p.a && !p.u && p.s), 'owner and publish RPCs are service-role only');
+  // Every normal role uses an atomic insert + one-time claim, not two HTTP writes.
+  const add = async (text, level, creator = 'Anoy', expiry = null) => {
+    const hash = crypto.createHash('md5').update(text).digest('hex');
+    const [row] = await rows('insert into public.referral_code(code,referral,level,set_saldo,created_by,acc_expiration) values($1,$2,$3,100,$4,$5) returning *', [hash, text, level, creator, expiry]);
+    return row;
+  };
+  const redeem = (code, name) => call('register_account_from_referral', [code.code, name, 'Fixture User', `${name}@example.com`, '$2a$08$' + 'x'.repeat(53), '127.0.0.1']);
+  for (const [level, text, name] of [[2, 'ADMIN24', 'AdminSingle'], [3, 'RESELL4', 'ResellerSingle']]) {
+    const code = await add(text, level);
+    ok((await redeem(code, name)).ok, `${level === 2 ? 'Admin' : 'Reseller'} referral creates one user`);
+    ok(!(await redeem(code, name + 'Other')).ok, 'the same referral cannot create a second user');
+    const [user] = await rows('select level,saldo,owner_channel from public.users where username=$1', [name]);
+    ok(user.level === level && user.saldo === 100 && user.owner_channel === null, 'referral role and balance are applied, without Owner authority');
+    await rejects(() => db.query("update public.referral_code set used_by='' where id_reff=$1", [code.id_reff]), 'a used referral cannot be reset');
+    await rejects(() => db.query('delete from public.referral_code where id_reff=$1', [code.id_reff]), 'a consumed code cannot be removed and reissued');
+    ok((await call('revoke_referral', [anoy.id_users, code.id_reff])).ok, 'Owner can delete a used referral');
+    ok((await rows('select count(*)::int n from public.users where username=$1', [name]))[0].n === 1, 'deleting a referral does not delete its registered account');
+    ok(!(await redeem(code, name + 'Again')).ok, 'deleting the referral does not make it reusable');
+  }
+  const failed = await add('FAILINS', 3);
+  ok(!(await redeem(failed, 'Anoy')).ok, 'failed account insert returns a safe error');
+  ok((await rows('select used_by from public.referral_code where id_reff=$1', [failed.id_reff]))[0].used_by === '', 'failed insert rolls the claim back');
+  ok((await redeem(failed, 'RetryUser')).ok, 'unused referral remains valid after a failed signup');
+  const parallel = await add('RACE123', 3);
+  const results = await Promise.all([redeem(parallel, 'RaceAlpha'), redeem(parallel, 'RaceBravo')]);
+  ok(results.filter(r => r.ok).length === 1, 'parallel regular signups have exactly one winner');
+  const revoked = await add('REVOKE4', 3);
+  const [administrator] = await rows("select id_users from public.users where username='AdminSingle'");
+  ok(!(await call('revoke_referral', [administrator.id_users, revoked.id_reff])).ok, "Admin cannot delete another creator's referral");
+  ok(!(await call('revoke_referral', [999999, revoked.id_reff])).ok, 'unknown actor cannot delete a referral');
+  ok((await call('revoke_referral', [anoy.id_users, revoked.id_reff])).ok, 'Owner can delete an unused referral');
+  ok((await call('revoke_referral', [anoy.id_users, revoked.id_reff])).ok, 'repeated deletion is idempotent');
+  ok(!(await redeem(revoked, 'RevokedUser')).ok, 'revoked referral can never register a user');
+  await rejects(() => db.query('update public.referral_code set revoked_at=null where id_reff=$1', [revoked.id_reff]), 'deleted referral cannot be restored');
+  await rejects(() => db.query('insert into public.referral_code(code,referral) values($1,$2)', [revoked.code, 'OTHER23']), 'deleted hash cannot be reissued');
+  await rejects(() => db.query('insert into public.referral_code(code,referral) values($1,$2)', ['f'.repeat(32), revoked.referral.toLowerCase()]), 'deleted referral text cannot be reissued, including another case');
+  const ownCode = await add('OWNREF4', 3, 'AdminSingle');
+  ok((await call('revoke_referral', [administrator.id_users, ownCode.id_reff])).ok, 'Admin can delete their own Reseller referral');
+  const expired = await add('EXPREF4', 3, 'Anoy', '2000-01-01T00:00:00Z');
+  ok(!(await redeem(expired, 'ExpiredRegular')).ok, 'expired regular referral fails closed');
+  ok(!(await redeem({ code: 'a'.repeat(32) }, 'ForgedOwner')).ok, 'regular registration RPC cannot redeem an Owner referral');
+  ok(!(await call('revoke_referral', [kenny.id_users, 1])).ok, "Kenny cannot delete Anoy's Owner invitation");
+  // New site-only hierarchy/retention migration is additive to the preserved base.
+  const siteMigration = await fs.readFile(new URL('../sql/real_owner_library_retention.sql', import.meta.url), 'utf8');
+  const currentBefore = await rows('select id, channel, storage_path, content_base64 from public.client_release where is_current order by channel');
+  const appsBefore = await rows('select * from public.app_release where is_current order by channel');
+  const legacySiteMigration = siteMigration.replace('not between 1 and 22020096', 'not between 1 and 11534336');
+  await db.exec(legacySiteMigration);
+  await verifyPublicationLimitMigration(publicationLimit, 'Real Owner + retention RPC');
+  await verifyLargeSqlPublication(call, anoy.id_users, 'kenny', 'Real Owner + retention RPC');
+  await db.exec(siteMigration); // fresh/idempotent installer must also keep the larger guard
+  await db.exec(siteMigration);
+  ok((await rows("select pg_get_functiondef('public.publish_library_release(integer,jsonb)'::regprocedure) as definition"))[0].definition.includes('not between 1 and 22020096'),
+    'fresh/reapplied Real Owner SQL does not restore the obsolete publication cap');
+  ok(JSON.stringify(currentBefore) === JSON.stringify(await rows('select id, channel, storage_path, content_base64 from public.client_release where is_current order by channel')), 'new site migration installs without deleting/changing current libraries');
+  ok(JSON.stringify(appsBefore) === JSON.stringify(await rows('select * from public.app_release where is_current order by channel')), 'new site migration preserves both current app updates');
+  ok((await rows('select password from public.users where username=$1', ['Anoy']))[0].password === before, 'Real Owner capability does not reset credentials or numeric billing role');
+  ok(await call('authorized_release_channel', [anoy.id_users, '{}']) === 'anoy', 'old Real Owner scripts still default to Anoy');
+  ok(await call('authorized_release_channel', [anoy.id_users, '{"channel":"kenny"}']) === 'kenny', 'Real Owner may explicitly manage Kenny');
+  await rejects(() => call('authorized_release_channel', [kenny.id_users, '{"channel":"anoy"}']), 'delegated Owner cannot select the Real Owner channel');
+  for (const value of ['{"channel":null}', '{"channel":"third"}', '{"channel":["anoy"]}', '{"channel":"kenny","owner_channel":"anoy"}']) {
+    await rejects(() => call('authorized_release_channel', [anoy.id_users, value]), 'SQL refuses invalid/conflicting channel selectors');
+  }
+  const originalInline = (await rows("select content_base64 from public.client_release where channel='anoy' and is_current"))[0].content_base64;
+  ok(originalInline === 'preserve-existing-bytes', 'installing retention does not clear a current inline library');
+  const encodedFixture = 'anoy/releases/12345678-1234-1234-1234-123456789abc/libbgmi.zip';
+  const encodedUrl = 'https://storage.example/' + [...encodedFixture].map(c => '%' + c.charCodeAt(0).toString(16)).join('');
+  ok(await call('library_url_references_path', [encodedUrl, encodedFixture]) === true, 'percent-encoded managed download links remain protected');
+  const dry = await call('plan_library_storage_cleanup', [null, false]);
+  ok(dry.ok && !dry.applied && (await rows('select count(*)::int n from public.library_storage_cleanup'))[0].n === 0, 'maintenance plan is read-only by default');
+  const snapshotBeforeFailure = await rows('select id, is_current, content_base64 from public.client_release order by id');
+  await rejects(() => call('publish_library_release', [anoy.id_users, JSON.stringify({ channel:'anoy', version:'3.0', external_url:'https://example.com/new.so', game_version:'x'.repeat(200) })]), 'new publication still rolls back when insert fails after demotion');
+  ok(JSON.stringify(snapshotBeforeFailure) === JSON.stringify(await rows('select id, is_current, content_base64 from public.client_release order by id')), 'failed publish cannot clear old bytes or change active releases');
+  ok((await rows('select count(*)::int n from public.library_storage_cleanup'))[0].n === 0, 'failed publication creates no deletion jobs');
+  const kennyLive = (await rows("select storage_path from public.client_release where channel='kenny' and is_current"))[0].storage_path;
+  ok((await pub(anoy.id_users, 'kenny', '0.2')).ok, 'Real Owner can publish Kenny library in the SQL transaction');
+  ok((await rows('select count(*)::int n from public.library_storage_cleanup where storage_path=$1 and deleted_at is null', [kennyLive]))[0].n === 1, 'successful replacement enqueues the previous file only after the new current exists');
+  ok((await rows("select content_base64 from public.client_release where channel='anoy' and is_current"))[0].content_base64 === originalInline, 'Kenny cleanup preserves Anoy current inline bytes');
+  ok((await pub(anoy.id_users, 'anoy', '3.1')).ok, 'Real Owner can still publish Anoy');
+  ok((await rows("select count(*)::int n from public.client_release where not is_current and content_base64 is not null"))[0].n === 0, 'retired inline library payloads are cleared, audit rows retained');
+  ok((await rows('select count(*)::int n from public.client_release where is_current'))[0].n === 2, 'one active release per channel remains');
+  await rejects(() => db.query('update public.client_release set is_current=true where storage_path=$1', [kennyLive]), 'a retired file cannot be reactivated during cleanup');
+  await rejects(() => call('publish_library_release', [anoy.id_users, JSON.stringify({ channel:'kenny', version:'99', file_size:100, sha256:'a'.repeat(64), storage_path:kennyLive })]), 'a queued/old path cannot be republished');
+  await rejects(() => call('publish_library_release', [anoy.id_users, JSON.stringify({ channel:'anoy', version:'99', external_url:'https://storage.example/storage/v1/object/sign/loader-releases/' + kennyLive + '?token=fixture' })]), 'retired objects cannot be revived through an external URL in the other channel');
+  const livePaths = await rows('select storage_path from public.client_release where is_current');
+  const pendingPath = `anoy/pending/${crypto.randomUUID()}`;
+  const stalePath = `anoy/pending/${crypto.randomUUID()}`;
+  const orphanPath = `anoy/releases/${crypto.randomUUID()}/libbgmi.zip`;
+  await db.query("insert into storage.objects(bucket_id,name,created_at) values('loader-releases',$1,now()),('loader-releases',$2,now()-interval '2 days'),('loader-releases',$3,now()-interval '2 days'),('loader-releases','unrelated/private.txt',now()-interval '2 days'),('another-bucket',$2,now()-interval '2 days')", [pendingPath, stalePath, orphanPath]);
+  await call('plan_library_storage_cleanup', [null, true]);
+  ok((await rows('select * from public.library_storage_cleanup_batch(null,100)')).length === 0, 'newly retired files have a grace period longer than signed downloads');
+  ok((await rows("select bool_and(delete_after >= queued_at + interval '3 minutes') safe from public.library_storage_cleanup"))[0].safe, 'every queued deletion has the signed-download grace interval');
+  await db.exec("update public.library_storage_cleanup set delete_after=now()-interval '1 second'");
+  const batch = (await rows('select * from public.library_storage_cleanup_batch(null,100)')).map(row => row.storage_path);
+  ok(batch.includes(stalePath) && batch.includes(orphanPath), 'expired pending and orphan library objects are queued');
+  ok(!batch.includes(pendingPath) && !batch.includes('unrelated/private.txt'), 'fresh uploads and unrelated files/buckets are not garbage-collected');
+  ok(livePaths.every(row => !batch.includes(row.storage_path)), 'all current storage paths are excluded from deletion');
+  const currentKenny = livePaths.find(row => row.storage_path.startsWith('kenny/')).storage_path;
+  const externalReference = 'https://storage.example/storage/v1/object/sign/loader-releases/' + currentKenny;
+  ok((await call('publish_library_release', [anoy.id_users, JSON.stringify({channel:'anoy',version:'3.2',external_url:externalReference})])).ok, 'a live managed file may still be referenced by another active channel');
+  await pub(kenny.id_users,'kenny','0.3');
+  ok(!(await rows('select * from public.library_storage_cleanup_batch(null,100)')).some(row => row.storage_path===currentKenny), 'an active cross-channel external reference prevents physical deletion');
+  ok((await app(anoy.id_users,'kenny',2)).ok, 'Real Owner can publish Kenny APK update');
+  await rejects(() => app(kenny.id_users,'anoy',99), 'Kenny still cannot publish Anoy APK update');
+  await rejects(() => app(anoy.id_users,'kenny',2), 'cross-channel authority never bypasses increasing version codes');
+  const sitePermissions = await rows("select proname, has_function_privilege('anon',p.oid,'EXECUTE') a, has_function_privilege('authenticated',p.oid,'EXECUTE') u, has_function_privilege('service_role',p.oid,'EXECUTE') s from pg_proc p where proname in ('authorized_release_channel','plan_library_storage_cleanup','library_storage_cleanup_batch')");
+  ok(sitePermissions.length===3 && sitePermissions.every(p => !p.a && !p.u && p.s), 'new authorization/cleanup RPCs are service-role-only');
+  ok((await rows("select relrowsecurity from pg_class where oid='public.library_storage_cleanup'::regclass"))[0].relrowsecurity, 'cleanup queue is RLS-protected with no public policy');
+  await rejects(() => db.query("insert into public.library_storage_cleanup(storage_path,channel) values('anoy/../../private','anoy')"), 'queue constraint rejects paths outside managed libraries');
+  ok(await call('authorize_library_storage_worker', ['a'.repeat(64)]) === false, 'scheduled worker fails closed before its dedicated token is configured');
+  await db.query('insert into public.library_storage_worker_auth(singleton,token_sha256) values(true,$1)', ['a'.repeat(64)]);
+  ok(await call('authorize_library_storage_worker', ['a'.repeat(64)]) === true, 'scheduled worker verifies only its configured digest');
+  ok(await call('authorize_library_storage_worker', ['b'.repeat(64)]) === false, 'incorrect worker digest cannot authorize cleanup');
+  const authAcl = (await rows("select has_function_privilege('anon','public.authorize_library_storage_worker(text)','EXECUTE') a, has_function_privilege('authenticated','public.authorize_library_storage_worker(text)','EXECUTE') u, has_function_privilege('service_role','public.authorize_library_storage_worker(text)','EXECUTE') s"))[0];
+  ok(authAcl.s && !authAcl.a && !authAcl.u, 'only the backend can check worker authorization');
+  const workerAcl = (await rows("select has_table_privilege('anon','public.library_storage_worker_auth','SELECT') a, has_table_privilege('authenticated','public.library_storage_worker_auth','SELECT') u, has_table_privilege('service_role','public.library_storage_worker_auth','SELECT') s"))[0];
+  ok(!workerAcl.a && !workerAcl.u && !workerAcl.s, 'even the service role cannot read worker authorization hashes directly');
+  // Exercise our scheduler SQL with stubbed extension services: PostgreSQL
+  // control flow/privileges are real; no network, Vault or cron engine runs here.
+  await db.exec(`
+    create schema extensions; create schema vault; create schema net; create schema cron;
+    create function extensions.gen_random_bytes(integer) returns bytea language sql as $$ select decode(repeat('ab',32),'hex') $$;
+    create function extensions.digest(text,text) returns bytea language sql as $$ select decode(md5($1)||md5($1),'hex') $$;
+    create table vault.secrets(id uuid default gen_random_uuid(), name text unique, secret text);
+    create view vault.decrypted_secrets as select id,name,secret as decrypted_secret from vault.secrets;
+    create function vault.create_secret(new_secret text,new_name text,new_description text) returns uuid language plpgsql as $$ declare v_id uuid; begin insert into vault.secrets(name,secret) values(new_name,new_secret) returning id into v_id; return v_id; end $$;
+    create table cron.job(jobid bigserial primary key, jobname text unique, schedule text, command text, active boolean default true);
+    create table cron.job_run_details(jobid bigint,end_time timestamptz);
+    create function cron.schedule(p_name text,p_schedule text,p_command text) returns bigint language plpgsql as $$ declare v_id bigint; begin insert into cron.job(jobname,schedule,command) values(p_name,p_schedule,p_command) returning jobid into v_id; return v_id; end $$;
+    create function cron.alter_job(p_id bigint,active boolean) returns void language sql as $$ update cron.job set active=$2 where jobid=$1 $$;
+    create table net.offline_requests(id bigserial,url text,body jsonb,has_authorization boolean,timeout_ms integer);
+    create function net.http_post(url text,headers jsonb,body jsonb,timeout_milliseconds integer) returns bigint language plpgsql as $$ declare v_id bigint; begin insert into net.offline_requests(url,body,has_authorization,timeout_ms) values(url,body,headers->>'Authorization' like 'Bearer %',timeout_milliseconds) returning id into v_id; return v_id; end $$;
+  `);
+  const scheduleSql = (await fs.readFile(new URL('../sql/library_cleanup_schedule.sql', import.meta.url), 'utf8'))
+    .replace('create extension if not exists pg_net with schema extensions;', '').replace('create extension if not exists pg_cron;', '');
+  const releaseSnapshot = JSON.stringify(await rows('select * from public.client_release order by id'));
+  const accountSnapshot = JSON.stringify(await rows('select * from public.users order by id_users'));
+  const appSnapshot = JSON.stringify(await rows('select * from public.app_release order by id'));
+  await db.exec(scheduleSql);
+  await db.exec(scheduleSql);
+  ok((await rows('select count(*)::int n from cron.job'))[0].n === 1, 'scheduler installation is idempotent and creates exactly one dedicated job');
+  ok((await rows('select active from cron.job'))[0].active === false, 'new background cleanup is paused until live integrity checks pass');
+  ok((await rows('select count(*)::int n from vault.secrets'))[0].n === 1, 'scheduler reuses its dedicated Vault task token instead of rotating account/API keys');
+  await db.exec('select cron.alter_job(jobid,true) from cron.job'); await db.exec(scheduleSql);
+  ok((await rows('select active from cron.job'))[0].active === true, 'reapplying scheduler setup preserves an already enabled job');
+  const scheduleAcl = (await rows("select has_function_privilege('anon','public.request_library_storage_cleanup(text)','EXECUTE') a,has_function_privilege('authenticated','public.request_library_storage_cleanup(text)','EXECUTE') u,has_function_privilege('service_role','public.request_library_storage_cleanup(text)','EXECUTE') s"))[0];
+  ok(!scheduleAcl.a && !scheduleAcl.u && !scheduleAcl.s, 'only the database scheduler/operator can submit authenticated cleanup tasks');
+  const verifyRequest = await call('request_library_storage_cleanup',['verify']);
+  const queuedRequest = (await rows('select * from net.offline_requests where id=$1',[verifyRequest]))[0];
+  ok(queuedRequest.has_authorization && queuedRequest.body.action === 'verify' && queuedRequest.timeout_ms === 60000, 'scheduler sends an authenticated, bounded worker request without returning credentials');
+  await rejects(() => call('request_library_storage_cleanup',['delete-all']), 'scheduler refuses unknown actions');
+  await call('plan_library_storage_cleanup',[null,true]);
+  await db.exec('update public.library_storage_cleanup set deleted_at=now()');
+  const requestsBefore = (await rows('select count(*)::int n from net.offline_requests'))[0].n;
+  ok(await call('request_library_storage_cleanup',['cleanup']) === null, 'idle scheduler sends no HTTP request or repeated downloads');
+  ok((await rows('select count(*)::int n from net.offline_requests'))[0].n === requestsBefore, 'idle scheduling adds no Edge invocation or file egress');
+  const scheduledOrphan = `kenny/pending/${crypto.randomUUID()}`;
+  await db.query("insert into storage.objects(bucket_id,name,created_at) values('loader-releases',$1,now()-interval '2 days')",[scheduledOrphan]);
+  ok(await call('request_library_storage_cleanup',['cleanup']) === null, 'expired orphan is queued automatically but not deleted inside grace');
+  await db.query("update public.library_storage_cleanup set delete_after=now()-interval '1 second' where storage_path=$1",[scheduledOrphan]);
+  const autoRequest = await call('request_library_storage_cleanup',['cleanup']);
+  ok((await rows('select body from net.offline_requests where id=$1',[autoRequest]))[0].body.action === 'cleanup', 'due queued files trigger automatic cleanup without a logged-in browser');
+  await db.exec("insert into cron.job_run_details(jobid,end_time) select jobid,now()-interval '3 days' from cron.job; insert into cron.job_run_details(jobid,end_time) values(999999,now()-interval '3 days')");
+  await call('request_library_storage_cleanup',['cleanup']);
+  ok((await rows('select jobid from cron.job_run_details')).every(row => Number(row.jobid) === 999999), 'only this new job prunes its own old operational logs');
+  ok(JSON.stringify(await rows('select * from public.client_release order by id')) === releaseSnapshot
+    && JSON.stringify(await rows('select * from public.users order by id_users')) === accountSnapshot
+    && JSON.stringify(await rows('select * from public.app_release order by id')) === appSnapshot, 'scheduler setup and requests never change library metadata, accounts or APK selections');
+  console.log(`\n${checks} PostgreSQL checks passed`);
+} finally { await db.close(); }

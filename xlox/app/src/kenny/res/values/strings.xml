@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- KennyPvt overrides; all non-brand behaviour remains shared. -->
+<resources>
+    <string name="app_name">KennyPvt</string>
+    <string name="crash_report_title">KennyPvt crashed last time</string>
+    <string name="crash_action_title">KennyPvt closed while opening an app in Mundo</string>
+    <string name="telegram_url">https://t.me/crimecell</string>
+    <string name="licence_key_hint">KENNYPVT-7D-XXXXX</string>
+    <string name="error_key_format">Licence keys use letters, numbers and dashes, like KENNYPVT-7D-AB3DE.</string>
+    <string name="help_launch_body">Log in, allow the access items KennyPvt asks for, then tap Launch. The first launch copies the game files, so keep KennyPvt open.</string>
+    <string name="help_access_body">Turn on All files access, Files and Install unknown apps for KennyPvt, then come back and tap Launch.</string>
+    <string name="help_renew_body">To renew, add time on the panel or message support on Telegram. Your new time shows when you come back.</string>
+    <string name="preparing_first">First launch copies the game files. Keep KennyPvt open until it finishes.</string>
+    <string name="restarting_for_game_files">Restarting KennyPvt to finish setting up game files…</string>
+    <string name="permission_install_needed">Allow Install unknown apps for KennyPvt so game files can be prepared.</string>
+    <string name="app_update_subtitle">KennyPvt %1$s is ready. You have %2$s.</string>
+    <string name="app_update_subtitle_required">KennyPvt %1$s is required to keep using the app. You have %2$s.</string>
+    <string name="app_update_slow">Download is slow. Keep KennyPvt open.</string>
+    <string name="app_update_keep_open">Keep KennyPvt open until the update finishes.</string>
+    <string name="app_update_installed">Open KennyPvt again to continue.</string>
+    <string name="app_update_invalid">The downloaded file isn\'t a valid KennyPvt update.</string>
+    <string name="app_update_blocked">Android blocked the install. Allow Install unknown apps for KennyPvt and try again.</string>
+    <string name="brand_name">KennyPvt Hax</string>
+    <string name="support_info_includes_key">Includes your licence key. Only share it with KennyPvt support.</string>
+    <string name="perm_why_all_files">KennyPvt needs this to prepare game files.</string>
+    <string name="perm_why_install">KennyPvt needs this to install the library update and prepare game files.</string>
+    <string name="perm_step_turn_on">Turn it on for KennyPvt, then come back.</string>
+</resources>

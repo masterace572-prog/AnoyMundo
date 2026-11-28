@@ -156,6 +156,39 @@
             android:supportsPictureInPicture="true"
             tools:targetApi="n" />
 
+        <!-- Opened explicitly by game-process routing only. Not an OS browser
+             or a global HTTPS handler; never exported to other apps. -->
+        <activity
+            android:name=".GameWebLoginActivity"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden|uiMode"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:windowSoftInputMode="adjustResize" />
+
+        <!-- Legacy external callback fallback. The contained web-login path
+             resolves callbacks directly against the running virtual game. -->
+        <activity
+            android:name=".GameLoginCallbackActivity"
+            android:exported="true"
+            android:excludeFromRecents="true"
+            android:launchMode="singleTask"
+            android:noHistory="true"
+            android:theme="@android:style/Theme.NoDisplay">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="twittersdk" android:host="callback" />
+            </intent-filter>
+        </activity>
+        <!-- Retain the original alias/filters (fbconnect, imobile1450 and
+             tencent1106545419), but repair their bare browser-return handoff.
+             The bridge delegates fbconnect to Mundo's original activity. -->
+        <activity-alias
+            android:name="top.bienvenido.mundo.FBLoginAbility"
+            android:targetActivity="com.xlox.GameLoginCallbackActivity"
+            tools:replace="android:targetActivity" />
+
     </application>
 
 </manifest>

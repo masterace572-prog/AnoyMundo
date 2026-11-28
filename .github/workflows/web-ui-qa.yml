@@ -5,8 +5,13 @@ name: Web UI QA
 # (7 days). Nothing is committed to the repository.
 on:
   workflow_dispatch:
+    inputs:
+      live_channel_storage:
+        description: 'Opt-in only after production is promoted: verify a temporary 20 MiB upload without publishing or touching licence keys'
+        type: boolean
+        default: false
   push:
-    branches: [arena/2e95185a-anoymundo]
+    branches: [main, arena/dda4cc57-anoymundo]
     paths:
       - 'web/**'
       - '.github/workflows/web-ui-qa.yml'
@@ -35,6 +40,18 @@ jobs:
       - run: npm ci
       - run: npm test
       - run: node scripts/check.mjs
+      # Opt in AFTER the production deployment is READY/promoted. A push does
+      # not itself deploy Vercel. This never mutates a live release or
+      # creates an Owner; optionally uses the EXISTING Owner secret to PUT and
+      # remove one private 20 MiB pending object. No licence-key fixtures.
+      - name: Live channel and Storage acceptance (explicit opt-in)
+        if: contains(github.event.head_commit.message, '[live-check]') || (github.event_name == 'workflow_dispatch' && inputs.live_channel_storage)
+        env:
+          BASE: https://anoymundo-panel.vercel.app
+          OWNER_USERNAME: Anoy
+          OWNER_PASSWORD: ${{ secrets.PANEL_OWNER_PASSWORD }}
+          CHANNEL_LIVE_ONLY: '1'
+        run: node scripts/live-smoke.mjs
       - name: Install Playwright
         run: |
           npm i --no-save playwright@1.49.1

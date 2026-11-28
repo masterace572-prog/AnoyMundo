@@ -6,4 +6,6 @@
     <item name="tag_swap_text" type="id" />
     <!-- com.xlox.ui.Motion: which Lottie a view shows -->
     <item name="tag_lottie_res" type="id" />
+    <!-- StatusText: avoids rebuilding an unchanged status drawable. -->
+    <item name="tag_status_dot" type="id" />
 </resources>

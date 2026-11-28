@@ -11,6 +11,11 @@
 
 ---
 
+> **v2.4:** the same API, key pool, pricing and billing are shared by both fixed
+> Owners (Anoy / KennyPvt). Library and APK release isolation does not change
+> `/api/v1` authorization. Personal API keys cannot publish either kind of
+> release; use the signed-in Owner panel for your own brand.
+
 ## 1. Get a personal API key
 
 1. Log in to the panel at `https://anoymundo-panel.vercel.app`.
