@@ -18,12 +18,13 @@
         <include layout="@layout/page_settings" />
     </com.xlox.ui.HomeSettingsPager>
 
+    <!-- Floating pill nav: no bar or capsule background, content floats behind. -->
     <FrameLayout
         android:id="@+id/bottomNavigationHost"
         android:tag="snackbar_anchor"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="@color/black"
+        android:background="@color/transparent"
         android:paddingStart="@dimen/screen_padding"
         android:paddingTop="@dimen/space_8"
         android:paddingEnd="@dimen/screen_padding"
@@ -34,7 +35,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center_horizontal"
-            android:background="@drawable/bg_nav_capsule"
+            android:background="@color/transparent"
             android:layoutDirection="ltr"
             android:minHeight="@dimen/button_height"
             android:padding="@dimen/space_4">

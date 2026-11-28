@@ -63,28 +63,5 @@
                 <div class="save-bar" data-save-bar><button type="submit" class="btn btn-primary" data-busy-label="Saving…">{{icon "check"}}Save changes</button></div>
             </form>
         </section>
-
-        {{#if user.isOwner}}
-        <section class="card">
-            <div class="card-head">
-                <div class="tile purple">{{icon "layers"}}</div>
-                <div><h2 class="card-title">Features</h2><div class="card-sub">Turn mod features on or off for everyone</div></div>
-            </div>
-            <form method="post" action="/server" class="form" data-busy-form data-dirty-form>
-                <input type="hidden" name="feature_form" value="1">
-                <div class="switch-list">
-                    <label class="switch"><span>ESP</span><input type="checkbox" name="ESP" value="on" {{#if (eq feature.esp "on")}}checked{{/if}}><span class="track"></span></label>
-                    <label class="switch"><span>Items</span><input type="checkbox" name="Item" value="on" {{#if (eq feature.item "on")}}checked{{/if}}><span class="track"></span></label>
-                    <label class="switch"><span>Aim-bot</span><input type="checkbox" name="AIM" value="on" {{#if (eq feature.aim "on")}}checked{{/if}}><span class="track"></span></label>
-                    <label class="switch"><span>Silent aim</span><input type="checkbox" name="SilentAim" value="on" {{#if (eq feature.silentaim "on")}}checked{{/if}}><span class="track"></span></label>
-                    <label class="switch"><span>Bullet track</span><input type="checkbox" name="BulletTrack" value="on" {{#if (eq feature.bullettrack "on")}}checked{{/if}}><span class="track"></span></label>
-                    <label class="switch"><span>Memory</span><input type="checkbox" name="Memory" value="on" {{#if (eq feature.memory "on")}}checked{{/if}}><span class="track"></span></label>
-                    <label class="switch"><span>Floating text</span><input type="checkbox" name="Floating" value="on" {{#if (eq feature.floating "on")}}checked{{/if}}><span class="track"></span></label>
-                    <label class="switch"><span>In-app settings</span><input type="checkbox" name="Setting" value="on" {{#if (eq feature.setting "on")}}checked{{/if}}><span class="track"></span></label>
-                </div>
-                <div class="save-bar" data-save-bar><button type="submit" class="btn btn-primary" data-busy-label="Saving…">{{icon "check"}}Save changes</button></div>
-            </form>
-        </section>
-        {{/if}}
     </div>
 </div>

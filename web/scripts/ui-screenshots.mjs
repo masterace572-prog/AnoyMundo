@@ -48,10 +48,7 @@ const pages = [
   ['referral', '/admin/create-referral'],
   ['lib', '/lib'],
   ['app_update', '/app-update'],
-  ['api_docs', '/api-docs'],
-  ['api_keys', '/api-keys'],
   ['settings', '/settings'],
-  ['docs', '/docs'],
   ['not_found', '/does-not-exist'],
 ];
 
@@ -212,27 +209,8 @@ try {
     report.push(`[${size.name}] expiry row: label ${JSON.stringify(exp && exp.label)} value ${JSON.stringify(exp && exp.value)}`);
     await shot(page, `${size.name}_dashboard_expiry`, { fullPage: false });
 
-    // 2. Docs callouts: ordinary flowing text, links inline and tappable.
-    for (const [name, url] of [['docs', '/docs'], ['api_docs', '/api-docs']]) {
-      await page.goto(`${BASE}${url}`);
-      const notes = await page.evaluate(() => [...document.querySelectorAll('.doc-note')].map((n) => {
-        const parts = [...n.querySelectorAll('a, strong, .doc-inline')].map((el) => [...el.getClientRects()].map((r) => ({ left: r.left, right: r.right, top: r.top, bottom: r.bottom, h: r.height })));
-        return { display: getComputedStyle(n).display, parts, links: [...n.querySelectorAll('a')].map((a) => a.textContent.trim()) };
-      }));
-      if (!notes.length) problem(`${name}: no .doc-note callouts found`);
-      notes.forEach((note, i) => {
-        if (note.display !== 'block') problem(`${name}: callout ${i} is display:${note.display}, not flowing text`);
-        for (let a = 0; a < note.parts.length; a += 1) {
-          for (let b = a + 1; b < note.parts.length; b += 1) {
-            if (note.parts[a].some((ra) => note.parts[b].some((rb) => overlaps(ra, rb)))) problem(`${name}: callout ${i} has overlapping words/links`);
-          }
-          if (note.parts[a].some((r) => r.h < 12)) problem(`${name}: callout ${i} has a squeezed link/word`);
-        }
-      });
-    }
-
-    // 4. Referral codes + API keys: stacked on a phone, side by side on desktop, never overlapping.
-    for (const [name, url] of [['referral', '/admin/create-referral'], ['api_keys', '/api-keys']]) {
+    // 4. Referral codes: stacked on a phone, side by side on desktop, never overlapping.
+    for (const [name, url] of [['referral', '/admin/create-referral']]) {
       await page.goto(`${BASE}${url}`);
       const cards = await page.evaluate(() => [...document.querySelectorAll('.grid-split > .card')].slice(0, 2).map((c) => {
         const b = c.getBoundingClientRect(); return { left: b.left, right: b.right, top: b.top, bottom: b.bottom };

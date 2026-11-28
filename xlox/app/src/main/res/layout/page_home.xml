@@ -217,12 +217,9 @@
                             android:layout_width="@dimen/game_tile"
                             android:layout_height="@dimen/game_tile"
                             android:contentDescription="@string/game_icon_description"
-                            android:padding="@dimen/game_icon_inset"
                             android:scaleType="centerCrop"
                             app:shapeAppearanceOverlay="@style/ShapeAppearance.Anoy.GameTile"
-                            app:srcCompat="@drawable/ic_game_bgmi"
-                            app:strokeColor="@color/hairline"
-                            app:strokeWidth="@dimen/hairline" />
+                            app:srcCompat="@drawable/ic_game_bgmi" />
                         <LinearLayout
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
@@ -300,12 +297,9 @@
                             android:layout_width="@dimen/game_tile"
                             android:layout_height="@dimen/game_tile"
                             android:contentDescription="@string/game_air_name"
-                            android:padding="@dimen/game_icon_inset"
                             android:scaleType="centerCrop"
                             app:shapeAppearanceOverlay="@style/ShapeAppearance.Anoy.GameTile"
-                            app:srcCompat="@drawable/ic_game_bgmi_air"
-                            app:strokeColor="@color/hairline"
-                            app:strokeWidth="@dimen/hairline" />
+                            app:srcCompat="@drawable/ic_game_bgmi_air" />
                         <LinearLayout
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"

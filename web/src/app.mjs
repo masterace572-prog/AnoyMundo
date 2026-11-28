@@ -25,9 +25,6 @@ import {
   handleLibDownload, handleLibInfo, handleLibManifest,
 } from './licensing.mjs';
 import {
-  handleApiV1, createApiKeyForUser, listApiKeysForUser, mutateApiKey,
-} from './api-keys.mjs';
-import {
   createKeysForUser, deleteKeysWithRefund, refundMessage, keyPrefix, isUnlimited, normalizeKey,
 } from './key-service.mjs';
 
@@ -493,12 +490,6 @@ async function doServer(req, res, body, user) {
     const myinput = str(body.myInput).slice(0, 500);
     return write('onoff', { status, myinput }, 'Maintenance settings updated.');
   }
-  if (body.feature_form && user.isOwner) {
-    const flags = ['ESP', 'Item', 'AIM', 'SilentAim', 'BulletTrack', 'Memory', 'Floating', 'Setting'];
-    const patch = {};
-    for (const flag of flags) patch[flag.toLowerCase()] = body[flag] === 'on' ? 'on' : 'off';
-    return write('feature', patch, 'Features updated.');
-  }
   // The hidden marker is always posted. A checkbox that is OFF is simply
   // absent from the body, so testing for `_ftextr` alone used to make it
   // impossible to switch the mod status back. That is the bug fixed here.
@@ -749,10 +740,6 @@ export async function handle(req, res) {
     // The Android app's own update (APK), checked on the splash screen.
     if (lp === '/api/app/update') return handleAppUpdateCheck(res, q);
     if (lp === '/favicon.ico') { res.statusCode = 301; res.setHeader('Location', '/favicon.svg'); return res.end(); }
-    // Personal API-key endpoints authenticate with X-API-Key, not a session.
-    if (lp === '/api/v1' || lp.startsWith('/api/v1/')) {
-      return handleApiV1(req, res, body, q, p, method);
-    }
     if (lp === '/connect' || lp === '/api/connect') {
       if (method === 'POST') return handleConnect(req, res, body);
       // Some loaders (and deployment checks) use a query-string GET instead
@@ -792,61 +779,6 @@ export async function handle(req, res) {
     if (lp === '/dashboard' || lp === '/dbg') {
       const { stats } = await dashboardData(user);
       return page(req, res, 'dashboard', { user, title: 'Home', stats, unlimited: isUnlimited(user) });
-    }
-
-    // --------------------------- docs (two kinds) ---------------------------
-    // /docs      = loader integration (mod name, expiry, status, floating text, C++)
-    // /api-docs  = personal API-key REST reference (key management only)
-    if (lp === '/docs') {
-      return page(req, res, 'integration_docs', { user, title: 'Integration docs', apiBase: publicBase(req) });
-    }
-    if (lp === '/api-docs') {
-      return page(req, res, 'api_docs', { user, title: 'API docs', apiBase: publicBase(req) });
-    }
-
-    // --------------------- personal API keys (panel UI) ---------------------
-    if (lp === '/api-keys') {
-      if (method === 'POST') {
-        const action = str(body.action);
-        if (action === 'create') {
-          const name = str(body.name);
-          if (!name || name.length > 80) {
-            return redirect(res, '/api-keys', { msgDanger: 'Enter a name of 1–80 characters.' });
-          }
-          try {
-            const { token } = await createApiKeyForUser(user, name);
-            return redirect(res, '/api-keys', {
-              msgSuccess: `API key "${name}" created. Copy it now — it will not be shown again.`,
-              apiKeyPlain: token,
-            });
-          } catch (error) {
-            console.error('[anoymundo] api key create failed:', error);
-            return redirect(res, '/api-keys', { msgDanger: 'Could not create the API key. Please try again.' });
-          }
-        }
-        if (action === 'revoke' || action === 'delete') {
-          try {
-            const done = await mutateApiKey(user, num(body.id, 0), action);
-            if (!done) return redirect(res, '/api-keys', { msgDanger: 'That API key was not found.' });
-            return redirect(res, '/api-keys', {
-              msgSuccess: action === 'revoke' ? 'API key revoked.' : 'API key deleted.',
-            });
-          } catch (error) {
-            console.error('[anoymundo] api key update failed:', error);
-            return redirect(res, '/api-keys', { msgDanger: 'Could not update the API key. Please try again.' });
-          }
-        }
-        return redirect(res, '/api-keys', { msgWarning: 'Unknown action.' });
-      }
-      const apiKeys = await listApiKeysForUser(user);
-      return page(req, res, 'api_keys', {
-        user, title: 'API keys', apiKeys: apiKeys.map((k) => ({
-          ...k,
-          statusLabel: Number(k.status) === 1 ? 'Active' : 'Revoked',
-          createdLabel: humanDate(k.created_at),
-          usedLabel: k.last_used_at ? humanDate(k.last_used_at) : 'Never',
-        })),
-      });
     }
 
     // --------------------------------- keys ---------------------------------

@@ -548,8 +548,9 @@
     <!-- ===================================================== Surfaces -->
     <!-- Home cards: surface-1, radius 20, fill only (no stroke on black). -->
     <style name="Widget.Anoy.Card" parent="Widget.Material3.CardView.Filled">
-        <item name="cardBackgroundColor">@color/surface_1</item>
-        <item name="strokeWidth">0dp</item>
+        <item name="cardBackgroundColor">@color/surface_2</item>
+        <item name="strokeWidth">@dimen/hairline</item>
+        <item name="strokeColor">@color/hairline</item>
         <item name="cardCornerRadius">@dimen/radius_card</item>
         <item name="cardElevation">0dp</item>
         <item name="rippleColor">@color/ripple_none</item>
@@ -562,12 +563,13 @@
         <item name="cornerSize">@dimen/radius_card</item>
     </style>
 
-    <!-- Inset grouped list: surface-1, radius 16, no stroke; clips its rows. -->
+    <!-- Inset grouped list: matches the cards — lifted surface, hairline edge. -->
     <style name="Widget.Anoy.Group" parent="Widget.Material3.CardView.Filled">
         <item name="android:layout_width">match_parent</item>
         <item name="android:layout_height">wrap_content</item>
-        <item name="cardBackgroundColor">@color/surface_1</item>
-        <item name="strokeWidth">0dp</item>
+        <item name="cardBackgroundColor">@color/surface_2</item>
+        <item name="strokeWidth">@dimen/hairline</item>
+        <item name="strokeColor">@color/hairline</item>
         <item name="cardCornerRadius">@dimen/radius_control</item>
         <item name="cardElevation">0dp</item>
         <item name="rippleColor">@color/ripple_none</item>

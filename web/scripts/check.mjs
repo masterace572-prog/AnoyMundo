@@ -35,7 +35,7 @@ for (const [name, source] of Object.entries(templates)) {
 
 for (const mod of ['../src/config.mjs', '../src/memory-db.mjs', '../src/db.mjs',
   '../src/auth.mjs', '../src/render.mjs', '../src/http.mjs',
-  '../src/licensing.mjs', '../src/key-service.mjs', '../src/api-keys.mjs',
+  '../src/licensing.mjs', '../src/key-service.mjs',
   '../src/channels.mjs', '../src/owners.mjs', '../src/referrals.mjs', '../src/library-package.mjs', '../src/library-release.mjs', '../src/library-storage.mjs', '../src/library-storage-core.mjs', '../src/library-storage-worker.mjs', '../src/library-link.mjs',
   '../src/app.mjs', '../api/index.js']) {
   try { await import(mod); process.stdout.write(`  ok  module ${mod}\n`); }

@@ -143,7 +143,7 @@ try {
 
   // 3. every page renders in the new design
   for (const route of ['/dashboard', '/keys', '/keys/generate', '/keys/1', '/settings', '/server',
-    '/admin/manage-users', '/admin/create-referral', '/lib', '/api-keys', '/api-docs', '/docs']) {
+    '/admin/manage-users', '/admin/create-referral', '/lib']) {
     r = await request(route);
     ok(r.status === 200, `GET ${route} renders (${r.status})`);
     if (r.status !== 200) console.error(String(r.body).slice(0, 300));
@@ -240,10 +240,8 @@ try {
   await request('/server', { method: 'POST', headers: SAME, body: form({ floating_form: '1', _ftextr: 'Safe', _ftext: 'Short status line' }) });
   r = await request('/connect', { method: 'POST', body: form({ game: 'PUBG', user_key: ownerKey, serial: 'TESTDEVICE001' }) });
   ok(r.body?.data?.mod_status === 'Safe', '/connect serves the freshly saved mod status');
-  await request('/server', { method: 'POST', headers: SAME, body: form({ feature_form: '1', AIM: 'on' }) });
-  r = await request('/connect', { method: 'POST', body: form({ game: 'PUBG', user_key: ownerKey, serial: 'TESTDEVICE001' }) });
-  ok(r.body?.data?.ESP === 'off' && r.body?.data?.AIM === 'on', 'feature toggles reach the licensing API');
-  await request('/server', { method: 'POST', headers: SAME, body: form({ feature_form: '1', ESP: 'on', Item: 'on', AIM: 'on', SilentAim: 'on', BulletTrack: 'on', Memory: 'on', Floating: 'on', Setting: 'on' }) });
+  // The mod-feature switches were removed from the panel; the /connect
+  // response keeps the feature fields as stored for the loader.
 
   // 9b. ban / unban (2.3.6)
   r = await request('/keys/ban', { method: 'POST', headers: SAME, body: form({ userkey: ownerKey, ban: '1' }) });
@@ -320,43 +318,7 @@ try {
   r = await request('/keys/api');
   ok(r.body?.total === 2, 'a rejected order creates zero keys');
 
-  // 12. personal API keys (as the reseller, so charges are visible)
-  r = await request('/api/v1/keys');
-  ok(r.status === 401 && r.body?.error?.code === 'missing_api_key', '/api/v1 refuses requests without an API key');
-  r = await request('/api-keys', { method: 'POST', headers: SAME, body: form({ action: 'create', name: 'smoke-bot' }) });
-  r = await request('/api-keys');
-  const apiToken = String(r.body).match(/amk_[A-Za-z0-9_-]{20,}/)?.[0] || '';
-  ok(/smoke-bot/.test(r.body) && apiToken.length > 20, 'a new API key is shown once');
-  const H = { 'X-API-Key': apiToken };
-  r = await request('/api/v1/me', { headers: H });
-  ok(r.body?.account?.username === 'reseller1' && r.body?.account?.saldo === 340, 'GET /api/v1/me authenticates the API key');
-  r = await request('/api/v1/pricing', { headers: H });
-  ok(r.body?.durations?.length === 10 && r.body.durations.find((d) => d.hours === 168)?.label === '7 days', 'GET /api/v1/pricing lists durations');
-  r = await request('/api/v1/keys', { method: 'POST', headers: H, body: { game: 'PUBG', duration: 2, max_devices: 1, count: 3 } });
-  ok(r.status === 201 && r.body?.keys?.length === 3 && r.body?.price === 30 && r.body?.saldo_after === 310, 'bulk API order charges per key (3 × ₹10)');
-  ok((r.body?.keys || []).every((k) => /^RESELLER1-2H-[A-Z0-9]{5}$/.test(k.user_key)), 'API keys use the same format');
-  const apiKeyMade = r.body?.keys?.[0]?.user_key || '';
-  r = await request('/api/v1/keys', { method: 'POST', headers: H, body: { game: 'PUBG', duration: 2, max_devices: 1, custom_key: 'apione' } });
-  ok(r.status === 201 && r.body?.keys?.[0]?.user_key === 'RESELLER1-2H-APIONE', 'API custom key is upper-cased');
-  r = await request('/api/v1/keys', { method: 'POST', headers: H, body: { game: 'PUBG', duration: 2, max_devices: 1, custom_key: 'apione' } });
-  ok(r.status === 409 && r.body?.error?.code === 'key_exists', 'a duplicate API custom key returns 409');
-  r = await request('/api/v1/keys', { method: 'POST', headers: H, body: { game: 'PUBG', duration: 2, max_devices: 1, custom_key: 'x' } });
-  ok(r.status === 400 && r.body?.error?.code === 'invalid_request', 'an invalid API custom key is rejected');
-  r = await request(`/api/v1/keys/${apiKeyMade.toLowerCase()}`, { headers: H });
-  ok(r.body?.key?.user_key === apiKeyMade, 'GET /api/v1/keys/{key} finds keys case-insensitively');
-  r = await request(`/api/v1/keys/${apiKeyMade}`, { method: 'DELETE', headers: H });
-  ok(r.body?.deleted === true && r.body?.refunded === 1 && r.body?.refund_total === 10, 'DELETE refunds a never-used key (₹10)');
-  const idem = 'req-smoke-idem-0000001';
-  r = await request('/api/v1/keys', { method: 'POST', headers: H, body: { game: 'PUBG', duration: 2, max_devices: 1, count: 2, request_id: idem } });
-  const idemKeys = (r.body?.keys || []).map((k) => k.user_key).join();
-  const idemSaldo = r.body?.saldo_after;
-  r = await request('/api/v1/keys', { method: 'POST', headers: H, body: { game: 'PUBG', duration: 2, max_devices: 1, count: 2, request_id: idem } });
-  ok(r.status === 201 && r.body?.saldo_after === idemSaldo && (r.body?.keys || []).map((k) => k.user_key).join() === idemKeys,
-    'replaying a request_id returns the original batch without charging again');
-  r = await request('/api/v1/keys/ANOY-1D-VIP01', { headers: H });
-  ok(r.status === 404, "an API key cannot read someone else's key");
-  r = await request('/api/v1/Server', { method: 'POST', headers: H, body: { modname: 'HACKED' } });
-  ok(r.status === 404, 'API keys cannot reach server settings');
+  // 12. personal API keys and the /api/v1 surface were removed from the panel.
   await request('/logout');
 
   // 13. Owner sees the reseller, library + loader endpoints

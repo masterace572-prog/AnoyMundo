@@ -142,8 +142,8 @@ gate('app.getPackageName().equals(info.packageName)' in app_client
 gate('BuildConfig.DISPLAY_BRAND' in (java / 'MAct.java').read_text(), 'support info uses the correct display brand')
 game_targets = (java / 'utils/GameTarget.java').read_text()
 lib_manager = (java / 'utils/LibManager.java').read_text()
-gate('BGMI("com.pubg.imobile", "libbgmi.so", "BGMI")' in game_targets
-     and 'BGMI_AIR("com.krafton.bgmilite", "libbgmilite.so", "BGMI Air")' in game_targets
+gate('BGMI("com.pubg.imobile", "libbgmi.so", "BGMI", true)' in game_targets
+     and 'BGMI_AIR("com.krafton.bgmilite", "libbgmilite.so", "BGMI Air", false)' in game_targets
      and 'public static final String LIB_NAME = GameTarget.BGMI.libraryName;' in lib_manager
      and 'return libFile(context, GameTarget.BGMI);' in lib_manager
      and 'new File(loaderDir(context), game.libraryName)' in lib_manager,
