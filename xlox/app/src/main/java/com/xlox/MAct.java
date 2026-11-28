@@ -1404,7 +1404,8 @@ public class MAct extends AppCompatActivity {
      * BGMI Air's closed-source native container core breaks inside its own game
      * startup on Android 16+ (library loads and the container initialises, then
      * the game process faults). There is no compat switch in the engine API, so
-     * the launch is gated to Android 15 and below instead of crashing.
+     * the launch is gated to Android 15 and below instead of crashing. The
+     * button, the state dot and every launch entry point all check this.
      */
     private boolean airUnsupportedOs(GameSession game) {
         return game == air && Build.VERSION.SDK_INT >= 36;
