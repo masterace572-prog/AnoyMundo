@@ -45,10 +45,8 @@ import com.xlox.utils.ConcurrentLaunchGuard;
 import com.xlox.utils.ConfigGuard;
 import com.xlox.utils.CrashLogger;
 import com.xlox.utils.SplitDepsFix;
-import com.xlox.utils.GoogleLoginSetup;
 import com.xlox.utils.GoogleServicesInstaller;
 import com.xlox.utils.LibManager;
-import com.xlox.utils.MicroGInstaller;
 import com.xlox.utils.Net;
 import com.xlox.utils.AccountTrace;
 import com.xlox.utils.PmCompatShim;
@@ -228,11 +226,6 @@ public class MAct extends AppCompatActivity {
     private ExecutorService appCheckExecutor;
     private UpdateGate redownloadGate;
     private BottomSheetDialog helpSheet;
-    /** Settings > Google login (test build). */
-    private TextView googleStatusValue;
-    private BottomSheetDialog googleSheet;
-    private ExecutorService googleExecutor;
-    private boolean googleRunning;
     private TextView serverValue;
     private MaterialButton primaryAction;
 
@@ -748,12 +741,6 @@ public class MAct extends AppCompatActivity {
         }
         if (gate != null) gate.dispose();
         if (redownloadGate != null) redownloadGate.dispose();
-        if (googleSheet != null) {
-            googleSheet.setOnDismissListener(null);
-            googleSheet.dismiss();
-            googleSheet = null;
-        }
-        if (googleExecutor != null) googleExecutor.shutdownNow();
         if (appCheckExecutor != null) appCheckExecutor.shutdownNow();
         if (navigation != null) navigation.dispose();
         super.onDestroy();
@@ -1337,6 +1324,8 @@ public class MAct extends AppCompatActivity {
             boolean available = libraryAvailable(game);
             if (game.runtime.isRunning()) {
                 setDot(game.state, getString(R.string.state_running), R.color.success, R.color.text_primary);
+            } else if (airUnsupportedOs(game)) {
+                setDot(game.state, getString(R.string.game_air_os_unsupported), R.color.warning, R.color.text_secondary);
             } else if (game == air && !available) {
                 // Its disabled button is the ONLY "Coming soon" copy on Home.
                 game.state.setText("");
@@ -1409,6 +1398,16 @@ public class MAct extends AppCompatActivity {
     private boolean libraryAvailable(GameSession game) {
         return (preview && qaLaunch != null && game == qaLaunchTarget)
                 || LibManager.isUsableLib(this, game.target);
+    }
+
+    /**
+     * BGMI Air's closed-source native container core breaks inside its own game
+     * startup on Android 16+ (library loads and the container initialises, then
+     * the game process faults). There is no compat switch in the engine API, so
+     * the launch is gated to Android 15 and below instead of crashing.
+     */
+    private boolean airUnsupportedOs(GameSession game) {
+        return game == air && Build.VERSION.SDK_INT >= 36;
     }
 
     private boolean controlsBlocked() {
@@ -1580,26 +1579,6 @@ public class MAct extends AppCompatActivity {
                         .append(redactStatus(game.message.getText().toString()));
             }
         }
-        // What's actually inside the container for Google sign-in: gms/gsf/games
-        // versions and whether GMS is registered internal (the game's button dies
-        // silently when it is not).
-        String googleState;
-        try {
-            googleState = GoogleServicesInstaller.installedSummary();
-        } catch (Throwable t) {
-            googleState = null;
-        }
-        b.append("\nGoogle in Mundo: ").append(googleState != null && !googleState.trim().isEmpty()
-                ? googleState.trim() : "none installed");
-        String splitState;
-        try {
-            splitState = SplitDepsFix.readState(this);
-        } catch (Throwable t) {
-            splitState = null;
-        }
-        if (splitState != null && !splitState.trim().isEmpty()) {
-            b.append("\nSplit repair fired for: ").append(splitState.trim());
-        }
         // Virtual account calls (method names and outcomes only, no secrets):
         // the Play Store's in-container sign-in fails silently without this.
         String accountTrace;
@@ -1680,13 +1659,14 @@ public class MAct extends AppCompatActivity {
             if (busy && game == launchTarget) continue; // Keep its live copy/launch label and spinner.
             boolean stop = game.runtime.isRunning(); // Stopping is always allowed, including after expiry.
             boolean comingSoon = game == air && !libraryAvailable(game) && !stop;
+            boolean osBlocked = airUnsupportedOs(game) && !stop;
             CharSequence label = stop ? getString(R.string.game_stop_named, gameName(game))
                     : comingSoon ? getString(R.string.game_air_coming_soon_action)
                     : expired ? getString(R.string.sign_in_again)
                     : !game.installed ? getString(R.string.game_install_named, gameName(game))
                     : getString(R.string.game_launch_named, gameName(game));
             Ui.setLoading(game.action, false, label);
-            game.action.setEnabled(!blocked && !comingSoon);
+            game.action.setEnabled(!blocked && !comingSoon && !osBlocked);
             game.action.setBackgroundTintList(ContextCompat.getColorStateList(this,
                     stop ? R.color.tonal_bg_on_black : R.color.button_bg));
             game.action.setTextColor(ContextCompat.getColorStateList(this,
@@ -1736,6 +1716,9 @@ public class MAct extends AppCompatActivity {
         refreshGameState();
         if (game.runtime.isRunning() || containerRunning(game)) {
             stopGame();
+        } else if (airUnsupportedOs(game)) {
+            showMessage(getString(R.string.game_air_os_unsupported), true);
+            refreshPrimary();
         } else if (game == air && !libraryAvailable(game)) {
             refreshPrimary();
         } else if (expired) {
@@ -1752,6 +1735,11 @@ public class MAct extends AppCompatActivity {
         hideMessage();
         if (expired || (expiryMillis > 0 && expiryMillis <= System.currentTimeMillis())) {
             openLogin();
+            return;
+        }
+        if (airUnsupportedOs(launchTarget)) {
+            showMessage(getString(R.string.game_air_os_unsupported), true);
+            refreshGameState();
             return;
         }
         if (launchTarget == air && !libraryAvailable(air)) {
@@ -1993,6 +1981,13 @@ public class MAct extends AppCompatActivity {
             setBusy(false, null);
             hideProgress();
             showMessage(getString(R.string.licence_expired_message), true);
+            refreshGameState();
+            return;
+        }
+        if (airUnsupportedOs(launchTarget)) {
+            setBusy(false, null);
+            hideProgress();
+            showMessage(getString(R.string.game_air_os_unsupported), true);
             refreshGameState();
             return;
         }
@@ -2458,7 +2453,6 @@ public class MAct extends AppCompatActivity {
             Ui.tap(v);
             confirmRedownload();
         });
-        setupGoogleLogin();
         ((TextView) findViewById(R.id.appVersionValue)).setText(getString(R.string.settings_version_value,
                 BuildConfig.VERSION_NAME, BuildConfig.VERSION_CODE));
         // Insets: mainRoot pads the status bar and sides; setupInsets pads the bottom.
@@ -2721,251 +2715,6 @@ public class MAct extends AppCompatActivity {
         });
     }
 
-    // ------------------------------------------------------ settings: Google login
-
-    /** Row wiring; the status is a probe of the container, refreshed whenever Settings shows. */
-    private void setupGoogleLogin() {
-        googleStatusValue = findViewById(R.id.googleStatusValue);
-        refreshGoogleStatus();
-        repairGoogleOnStart();
-        findViewById(R.id.googleSetupRow).setOnClickListener(v -> {
-            Ui.tap(v);
-            showGoogleLoginSheet();
-        });
-    }
-
-    /** The container can drop GMS's internal registration across launches —
-     *  working loaders re-assert it on every start, before the game runs.
-     *  Without it the game's Google button spins and shows no account picker. */
-    private void repairGoogleOnStart() {
-        if (anyGameRunning()) return;
-        GoogleLoginSetup.Status status = probeGoogleStatus();
-        if (!GoogleLoginSetup.isReady(status)) return;
-        if (googleExecutor == null) {
-            googleExecutor = Executors.newSingleThreadExecutor(r -> new Thread(r, "anoy-google-setup"));
-        }
-        final Context app = getApplicationContext();
-        final boolean microg = status == GoogleLoginSetup.Status.MICROG;
-        try {
-            googleExecutor.execute(() -> {
-                try {
-                    if (microg) {
-                        MicroGInstaller.repairInternalInstall(app);
-                    } else {
-                        GoogleServicesInstaller.repairInternalInstall(app);
-                    }
-                } catch (Throwable t) {
-                    Log.w(TAG, "Google login: start repair failed", t);
-                }
-            });
-        } catch (RejectedExecutionException ignored) {
-        }
-    }
-
-    /** A container failure reads as "not set up": the sheet's actions still work. */
-    private GoogleLoginSetup.Status probeGoogleStatus() {
-        try {
-            boolean microg = MicroGInstaller.isMicroGInstalled(this);
-            boolean internal = microg && MicroGInstaller.isInternalInstall(this);
-            boolean stock = !microg && GoogleServicesInstaller.hasCoreServices(this);
-            return GoogleLoginSetup.resolveStatus(microg, internal, stock);
-        } catch (Throwable t) {
-            Log.w(TAG, "Google login: status probe failed", t);
-            return GoogleLoginSetup.Status.NOT_SET_UP;
-        }
-    }
-
-    private void refreshGoogleStatus() {
-        if (googleStatusValue == null) return;
-        applyGoogleStatus(googleStatusValue, probeGoogleStatus());
-    }
-
-    private void applyGoogleStatus(TextView view, GoogleLoginSetup.Status status) {
-        switch (status) {
-            case GOOGLE_SERVICES:
-                setDot(view, getString(R.string.google_status_stock), R.color.success, R.color.text_secondary);
-                break;
-            case MICROG:
-                setDot(view, getString(R.string.google_status_microg), R.color.success, R.color.text_secondary);
-                break;
-            case MICROG_NEEDS_REPAIR:
-                setDot(view, getString(R.string.google_status_repair), R.color.warning, R.color.text_secondary);
-                break;
-            default:
-                setDot(view, getString(R.string.google_status_none), 0, R.color.text_tertiary);
-                break;
-        }
-    }
-
-    /** Every view the sheet flow touches, resolved once. */
-    private static final class GoogleSheetViews {
-        final TextView status;
-        final MaterialSwitch enableSwitch;
-        final TextView switchCaption;
-        final MaterialButton addAccount;
-        final TextView addAccountHint;
-        final View progressWrap;
-        final LinearProgressIndicator progress;
-        final TextView progressText;
-        final TextView result;
-        final MaterialButton cancel;
-
-        GoogleSheetViews(View root) {
-            status = root.findViewById(R.id.googleSheetStatus);
-            enableSwitch = root.findViewById(R.id.googleEnableSwitch);
-            switchCaption = root.findViewById(R.id.googleSwitchCaption);
-            addAccount = root.findViewById(R.id.googleAddAccount);
-            addAccountHint = root.findViewById(R.id.googleAddAccountHint);
-            progressWrap = root.findViewById(R.id.googleProgressWrap);
-            progress = root.findViewById(R.id.googleProgress);
-            progressText = root.findViewById(R.id.googleProgressText);
-            result = root.findViewById(R.id.googleResultText);
-            cancel = root.findViewById(R.id.googleCancel);
-        }
-    }
-
-    /** The setup sheet: provider state, the actions, inline progress and the result. */
-    @SuppressLint("InflateParams") // a sheet has no parent view until it is shown
-    private void showGoogleLoginSheet() {
-        if ((googleSheet != null && googleSheet.isShowing()) || googleRunning) return;
-        if (anyGameRunning()) {
-            Ui.snackbar(this, getString(R.string.google_stop_game_first));
-            return;
-        }
-        View sheetView = LayoutInflater.from(this).inflate(R.layout.sheet_google_login, null, false);
-        BottomSheetDialog sheet = Ui.sheet(this, sheetView, true);
-        googleSheet = sheet;
-        sheet.setOnDismissListener(d -> {
-            if (googleSheet == sheet) googleSheet = null;
-        });
-        GoogleSheetViews views = new GoogleSheetViews(sheetView);
-        renderGoogleSheet(views, probeGoogleStatus());
-        views.enableSwitch.setOnCheckedChangeListener((button, checked) -> {
-            if (!button.isPressed() || googleRunning) return; // programmatic render or busy
-            Ui.tap(button);
-            GoogleLoginSetup.Status status = probeGoogleStatus();
-            if (status == GoogleLoginSetup.Status.GOOGLE_SERVICES) {
-                renderGoogleSheet(views, status); // already on: the switch stays on
-                return;
-            }
-            // Off or degraded: (re)run the phone copy. A tap on a latched-but-degraded
-            // switch restores the install; a healthy install can never be turned off.
-            runGoogleTask(sheet, views, GoogleLoginSetup.phoneTask(status));
-        });
-        views.addAccount.setOnClickListener(v -> {
-            Ui.tap(v);
-            openGoogleAddAccountInMundo(views);
-        });
-        views.cancel.setOnClickListener(v -> sheet.dismiss());
-        sheet.show();
-    }
-
-    /**
-     * Opens GMS's own add-account flow (MinuteMaidActivity — the exact activity a
-     * real phone shows when an account is added) inside the container. Once an
-     * account exists in Mundo, the game's Google button offers it in the picker.
-     * No Play Store is involved anywhere in this flow.
-     *
-     * NOTE: the SDK's launchApp(pkg, string) / obtainSplashLaunchIntent(pkg,
-     * string, ctx) overloads take a container USER name as the middle argument,
-     * not an activity — passing the activity name silently launches nothing.
-     * launchIntent(Intent) is the arbitrary-component entry point.
-     */
-    private void openGoogleAddAccountInMundo(GoogleSheetViews views) {
-        if (googleRunning || !Ui.alive(this)) return;
-        if (anyGameRunning()) {
-            Ui.snackbar(this, getString(R.string.google_stop_game_first));
-            return;
-        }
-        final ComponentName minutemaid = new ComponentName(
-                GoogleServicesInstaller.GMS_PKG, GoogleServicesInstaller.MINUTEMAID_ACTIVITY);
-        if (!GoogleServicesInstaller.resolvableInContainer(minutemaid)) {
-            // The registry may still be reloading right after the copy; never
-            // launch a component the container cannot resolve.
-            views.result.setText(R.string.google_add_account_settling);
-            views.result.setVisibility(View.VISIBLE);
-            return;
-        }
-        try {
-            // A native container crash kills the process before any Java catch
-            // runs; the breadcrumb lets the next start say what was being opened.
-            CrashLogger.noteAction(this, "open in Mundo: Google account");
-            guardContainerLaunch();
-            // The proven in-container launch recipe (the web-login router uses
-            // exactly this): explicit container user, NEW_TASK | SINGLE_TOP.
-            Intent target = new Intent().setComponent(minutemaid);
-            target.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP);
-            MetaActivityManager.launchIntent(target, GameLoginRouter.USER);
-            views.result.setText(R.string.google_add_account_opening);
-            views.result.setVisibility(View.VISIBLE);
-            // Six seconds later GMS must be running in the container; otherwise
-            // the launch was silently swallowed — say so instead of "nothing".
-            // Only scheduled when dispatch returned cleanly: a throw already
-            // showed the failure in the catch below.
-            crashHandler.postDelayed(() -> {
-                boolean up;
-                try {
-                    up = MetaActivityManager.isAppRunning(GoogleServicesInstaller.GMS_PKG,
-                            GameLoginRouter.USER);
-                } catch (Throwable t) {
-                    up = true; // probe failed: do not cry wolf
-                }
-                if (!up && Ui.alive(this) && googleSheet != null && googleSheet.isShowing()) {
-                    views.result.setText(R.string.google_add_account_failed);
-                }
-            }, 6000L);
-            // Still alive 15 s later: the launch did not kill the process. Uses
-            // crashHandler because onDestroy wipes `main` while the process lives.
-            crashHandler.postDelayed(() -> CrashLogger.clearAction(getApplicationContext()), 15000L);
-        } catch (Throwable t) {
-            CrashLogger.clearAction(this);
-            Log.e(TAG, "Google login: add-account launch failed", t);
-            views.result.setText(R.string.google_add_account_failed);
-            views.result.setVisibility(View.VISIBLE);
-        }
-    }
-
-    /**
-     * Switch state for a status. Once Google services are live the switch
-     * latches on and stays on — the only way back is clearing the app's data
-     * or reinstalling, per the product decision. A latched switch whose
-     * install degraded (services gone from the container) stays on and a tap
-     * re-runs the copy.
-     */
-    private void renderGoogleSheet(GoogleSheetViews views, GoogleLoginSetup.Status status) {
-        applyGoogleStatus(views.status, status);
-        boolean ready = status == GoogleLoginSetup.Status.GOOGLE_SERVICES;
-        if (ready) setGoogleLoginLatched();
-        boolean on = ready || isGoogleLoginLatched();
-        boolean phoneOk = GoogleServicesInstaller.availableOnPhone(this);
-        views.enableSwitch.setChecked(on);
-        views.enableSwitch.setEnabled(!googleRunning && (on || phoneOk));
-        views.switchCaption.setText(on ? R.string.google_switch_caption_on
-                : phoneOk ? R.string.google_switch_caption_off : R.string.google_use_phone_unavailable);
-        views.addAccount.setVisibility(ready ? View.VISIBLE : View.GONE);
-        views.addAccount.setEnabled(!googleRunning);
-        views.addAccountHint.setVisibility(ready ? View.VISIBLE : View.GONE);
-        views.cancel.setEnabled(!googleRunning);
-    }
-
-    private static final String PREF_GOOGLE_LOGIN = "google_login_enabled";
-
-    private boolean isGoogleLoginLatched() {
-        try {
-            return "1".equals(new Prefs(this).getSt(PREF_GOOGLE_LOGIN, ""));
-        } catch (Throwable t) {
-            return false;
-        }
-    }
-
-    private void setGoogleLoginLatched() {
-        try {
-            new Prefs(this).setSt(PREF_GOOGLE_LOGIN, "1");
-        } catch (Throwable t) {
-            Log.w(TAG, "Google login: could not persist the switch", t);
-        }
-    }
-
     /** Android 16+ split-APK launch guard: the framework NPEs when the
      *  container leaves no current Application across the vprocess handoff. */
     private void guardContainerLaunch() {
@@ -2980,58 +2729,6 @@ public class MAct extends AppCompatActivity {
         }
     }
 
-    /** Runs the phone-copy installer on the setup executor; the sheet cannot leave while it works. */
-    private void runGoogleTask(BottomSheetDialog sheet, GoogleSheetViews views, GoogleLoginSetup.Task task) {
-        if (googleRunning || !Ui.alive(this)) return;
-        googleRunning = true;
-        sheet.setCancelable(false);
-        sheet.setCanceledOnTouchOutside(false);
-        views.result.setVisibility(View.GONE);
-        views.progressWrap.setVisibility(View.VISIBLE);
-        views.progress.setIndeterminate(true);
-        views.progressText.setText(R.string.google_working_phone);
-        renderGoogleSheet(views, probeGoogleStatus());
-        if (googleExecutor == null) {
-            googleExecutor = Executors.newSingleThreadExecutor(r -> new Thread(r, "anoy-google-setup"));
-        }
-        final Context app = getApplicationContext();
-        try {
-            googleExecutor.execute(() -> {
-                String result;
-                try {
-                    // SWITCH_TO_PHONE covers phones where a previous build
-                    // installed microG: it removes microG and installs stock.
-                    result = task == GoogleLoginSetup.Task.SWITCH_TO_PHONE
-                            ? MicroGInstaller.installStock(app)
-                            : GoogleServicesInstaller.installFresh(app);
-                } catch (Throwable t) {
-                    Log.e(TAG, "Google login: setup task crashed", t);
-                    result = getString(R.string.net_generic);
-                }
-                final String text = result;
-                main.post(() -> finishGoogleTask(sheet, views, text));
-            });
-        } catch (RejectedExecutionException e) {
-            googleRunning = false;
-            views.progressWrap.setVisibility(View.GONE);
-            renderGoogleSheet(views, probeGoogleStatus());
-        }
-    }
-
-    private void finishGoogleTask(BottomSheetDialog sheet, GoogleSheetViews views, String result) {
-        googleRunning = false;
-        refreshGoogleStatus();
-        Log.d(TAG, "Google login: setup finished");
-        if (!sheet.isShowing() || googleSheet != sheet) return;
-        sheet.setCancelable(true);
-        sheet.setCanceledOnTouchOutside(true);
-        views.progressWrap.setVisibility(View.GONE);
-        views.result.setText(result);
-        views.result.setVisibility(View.VISIBLE);
-        views.cancel.setText(R.string.done);
-        renderGoogleSheet(views, probeGoogleStatus());
-    }
-
     private void setupNavigation(Bundle savedInstanceState) {
         navigation = new HomeSettingsNavigation(findViewById(R.id.mainRoot),
                 new HomeSettingsNavigation.Listener() {
@@ -3043,7 +2740,6 @@ public class MAct extends AppCompatActivity {
                         if (settings) {
                             refreshLibraryVersion();
                             renderAppCheckCaption();
-                            refreshGoogleStatus();
                         }
                         resumeHomeCountdown();
                     }

@@ -28,8 +28,8 @@ import java.util.List;
  * LoadedApk builds its SplitDependencyLoader from aInfo.splitDependencies.
  * On a real phone PMS computes that table at install time; the container's
  * own APK parser never does, so the field is null and the first activity
- * context (base or split) dies. BGMI Air and the in-container Google sign-in
- * both hit this on Android 17.
+ * context (base or split) dies. BGMI Air's split installs hit this on
+ * Android 17.
  *
  * The fix wraps ActivityThread's H callback and repairs the ApplicationInfo
  * of every incoming launch/bind before the framework builds the LoadedApk.

@@ -280,68 +280,6 @@
                 style="@style/Text.Dashboard.Section"
                 android:layout_marginTop="@dimen/space_24"
                 android:accessibilityHeading="true"
-                android:text="@string/settings_section_google" />
-            <com.google.android.material.card.MaterialCardView
-                android:id="@+id/googleGroup"
-                style="@style/Widget.Anoy.Group.Dashboard">
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical">
-                    <LinearLayout
-                        style="@style/Row.Dashboard"
-                        android:background="@null"
-                        android:focusable="true">
-                        <TextView
-                            style="@style/Text.Dashboard.RowLabel"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:text="@string/google_status_label" />
-                        <TextView
-                            android:id="@+id/googleStatusValue"
-                            style="@style/Text.Dashboard.RowValue"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginStart="@dimen/space_16"
-                            android:drawablePadding="@dimen/space_8"
-                            android:text="@string/google_status_none" />
-                    </LinearLayout>
-                    <View
-                        style="@style/RowDivider" />
-                    <LinearLayout
-                        android:id="@+id/googleSetupRow"
-                        style="@style/Row.Dashboard"
-                        android:clickable="true"
-                        android:focusable="true">
-                        <LinearLayout
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:orientation="vertical">
-                            <TextView
-                                style="@style/Text.Dashboard.RowLabel"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:text="@string/google_setup_row" />
-                            <TextView
-                                android:id="@+id/googleSetupCaption"
-                                style="@style/Text.Dashboard.Meta"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:layout_marginTop="@dimen/space_2"
-                                android:text="@string/google_setup_caption" />
-                        </LinearLayout>
-                        <ImageView
-                            style="@style/RowGlyph"
-                            app:srcCompat="@drawable/ic_chevron_right" />
-                    </LinearLayout>
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
-            <TextView
-                style="@style/Text.Dashboard.Section"
-                android:layout_marginTop="@dimen/space_24"
-                android:accessibilityHeading="true"
                 android:text="@string/settings_section_device" />
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/deviceCard"

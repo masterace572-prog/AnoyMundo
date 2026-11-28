@@ -105,6 +105,7 @@
     <string name="game_air_library">libbgmilite.so</string>
     <string name="coming_soon">Coming soon</string>
     <string name="game_air_coming_soon_action">Coming soon</string>
+    <string name="game_air_os_unsupported">BGMI Air needs Android 15 or below</string>
     <string name="game_launch_bgmi">Launch BGMI</string>
     <string name="game_launch_named">Launch %1$s</string>
     <string name="game_stop_named">Stop %1$s</string>
@@ -310,29 +311,6 @@
     <string name="redownload_action">Re-download</string>
     <string name="redownload_done">Library %1$s installed</string>
 
-    <!-- Google login: Google services / microG inside the container (test build). -->
-    <string name="settings_section_google">Google login</string>
-    <string name="google_setup_row">Set up Google login</string>
-    <string name="google_setup_caption">Needed once so the game can sign in with Google.</string>
-    <string name="google_status_label">Status</string>
-    <string name="google_status_none">Not set up</string>
-    <string name="google_status_stock">Google services</string>
-    <string name="google_status_microg">microG</string>
-    <string name="google_status_repair">Needs repair</string>
-    <string name="google_sheet_kicker">GOOGLE LOGIN</string>
-    <string name="google_sheet_title">Set up Google login</string>
-    <string name="google_sheet_body">The game asks Google to sign in, and the Mundo container needs Google services for that. Turn on the switch once to copy this phone\'s Google apps into Mundo — then sign in with Google inside the game. Nothing on the phone itself is changed.</string>
-    <string name="google_switch_label">Enable Google login</string>
-    <string name="google_switch_caption_off">Uses this phone\'s Google apps. Once on, it stays on.</string>
-    <string name="google_switch_caption_on">On. Stays on until the app is reinstalled or its data is cleared.</string>
-    <string name="google_use_phone_unavailable">This phone has no Google apps to copy.</string>
-    <string name="google_stop_game_first">Stop the game first, then set up Google login.</string>
-    <string name="google_working_phone">Copying Google apps into Mundo…</string>
-    <string name="google_add_account">Add Google account</string>
-    <string name="google_add_account_hint">If the game shows no account to pick, add your Google account inside Mundo once.</string>
-    <string name="google_add_account_settling">Google sign-in is still settling inside Mundo. Close this, wait a few seconds and try again.</string>
-    <string name="google_add_account_failed">Could not open Google sign-in inside Mundo. Restart the app and try again.</string>
-    <string name="google_add_account_opening">Opening Google sign-in inside Mundo…</string>
     <string name="game_container_install_failed">%1$s could not be prepared inside Mundo. Restart the app and try again.</string>    <string name="crash_report_title">Anoy crashed last time</string>
     <string name="crash_action_title">Anoy closed while opening an app in Mundo</string>
     <string name="crash_report_copy">Copy report</string>

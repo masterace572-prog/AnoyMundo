@@ -182,45 +182,10 @@ class AndroidWiring(unittest.TestCase):
         self.assertNotIn('percent == lastPercent', gate)
         self.assertIn('if (optional) runRedownload();\n            else runCheck();', gate)
 
-    def test_google_login_installers_are_pinned_and_verified(self):
-        microg = (JAVA / 'utils/MicroGInstaller.java').read_text()
-        services = (JAVA / 'utils/GoogleServicesInstaller.java').read_text()
-        # Pinned microG release URLs, sizes and SHA-256 digests (provided by the owner).
-        for needle in (
-                'https://github.com/microg/GmsCore/releases/download/v0.3.18.252432/com.google.android.gms-252432036.apk',
-                'https://github.com/microg/GsfProxy/releases/download/v0.1.0/GsfProxy.apk',
-                'https://github.com/microg/GmsCore/releases/download/v0.3.18.252432/com.android.vending-84022636.apk',
-                '"108520063"', '"21872"', '"4212484"',
-                '1094fa60ace2367ac52bd08d1bd4f33fa8144ba930e355121b28234b8ebbf382',
-                '86891b174301f06a1c84187b545a0a2a57044c6b768f3e84e865908743349692',
-                '3f1bde2f72bca746fbb53b61a32c2a85fcb026f886ee96d6fe9a05de9a6c6d5b'):
-            self.assertIn(needle, microg)
-        # Downloads are verified before install; HTTP only by redirect from the pinned https URL.
-        self.assertIn('expectedSha256.equalsIgnoreCase(sha256Of(outFile))', microg)
-        self.assertIn('outFile.length() != expectedSize', microg)
-        self.assertIn('HTTP_OK', microg)
-        self.assertNotIn('http://', microg)
-        # The stock path only clones/installs apps already on the phone, and a
-        # split APK (modern GMS) is staged as base + splits, never base-only.
-        self.assertIn('info.applicationInfo.sourceDir', services)
-        self.assertIn('MetaApplicationInstaller.cloneApp(pkg)', services)
-        self.assertIn('info.applicationInfo.splitSourceDirs', services)
-        self.assertIn('MetaApplicationInstaller.installAppsByPath(dir.getAbsolutePath())', services)
-        self.assertNotIn('http://', services)
-        # BOTH stock paths (fresh install and the microG->stock switch) must
-        # register GMS as internal and reload the container registry, or the
-        # game's Google button spins and dies with no account picker.
-        self.assertEqual(services.count('installOne(ctx, GMS_PKG, true, out)'), 2)
-        self.assertIn('MetaPackageManager.fixInternalAppAndReinstall(pkg)', services)
-        self.assertIn('reloadRegistry()', services)
-        # The container drops the internal flag across launches: a public repair
-        # exists and MAct re-asserts it on every start (working-loader pattern).
-        self.assertIn('public static void repairInternalInstall(Context ctx)', services)
-        mact = (JAVA / 'MAct.java').read_text()
-        self.assertIn('GoogleServicesInstaller.repairInternalInstall(app)', mact)
-        self.assertIn('MicroGInstaller.repairInternalInstall(app)', mact)
-        # Crashes are recorded and offered for copying on the next home open.
+    def test_crash_and_split_fix_wiring(self):
         box = (JAVA / 'BoxApplication.java').read_text()
+        mact = (JAVA / 'MAct.java').read_text()
+        # Crashes are recorded and offered for copying on the next home open.
         self.assertIn('CrashLogger.install(this)', box)
         self.assertIn('CrashLogger.read(this)', mact)
         self.assertTrue((JAVA / 'utils' / 'CrashLogger.java').is_file())
@@ -229,8 +194,6 @@ class AndroidWiring(unittest.TestCase):
         crash = (JAVA / 'utils' / 'CrashLogger.java').read_text()
         self.assertIn('noteAction', crash)
         self.assertIn('CrashLogger.pendingAction(this)', mact)
-        # The Android 16+ broadcast double-finish race is benign and swallowed,
-        # including the Play-Services-executor-wrapped variant.
         self.assertIn('Broadcast already finished', crash)
         self.assertIn('t.getCause()', crash)
         # Android 16+ split-APK launch NPE: the config guard is installed at
@@ -238,77 +201,21 @@ class AndroidWiring(unittest.TestCase):
         self.assertTrue((JAVA / 'utils' / 'ConfigGuard.java').is_file())
         self.assertIn('ConfigGuard.install(this)', box)
         self.assertIn('guardContainerLaunch()', mact)
-        # Android 16+ PM slice types: the shim re-wraps ParceledListSlice into
-        # the PackageInfoList-style subclass the current Android expects.
+        # Android 16+ PM slice types: the shim re-wraps ParceledListSlice.
         self.assertTrue((JAVA / 'utils' / 'PmCompatShim.java').is_file())
         self.assertIn('PmCompatShim.install()', box)
         self.assertIn('PmCompatShim.install()', mact)
         # Android 16+ isolated-split launches: the container never computes the
-        # split dependency table, so every virtual-app activity launch NPEs in
-        # SplitDependencyLoader.collectConfigSplitIndices. The fix repairs the
-        # ApplicationInfo on incoming launches and on PM-returned infos.
+        # split dependency table; the fix repairs the ApplicationInfo.
         self.assertTrue((JAVA / 'utils' / 'SplitDepsFix.java').is_file())
         self.assertTrue((JAVA / 'utils' / 'SplitDepsTable.java').is_file())
         self.assertEqual(box.count('SplitDepsFix.install(this)'), 3)
         self.assertIn('SplitDepsFix.install(this)', mact)
         self.assertIn('SplitDepsFix.repair(info)', (JAVA / 'utils' / 'PmCompatShim.java').read_text())
-        # Silent in-container sign-in failures are traced into support info.
+        # Silent in-container account calls are traced into support info.
         self.assertTrue((JAVA / 'utils' / 'AccountTrace.java').is_file())
         self.assertIn('AccountTrace.install(this)', box)
         self.assertIn('AccountTrace.read(this)', mact)
-        # BGMI's Google button rides on Play Games; it is cloned too (optional).
-        self.assertEqual(services.count('installOneClone(ctx, PLAY_GAMES_PKG, out)'), 2)
-        for src in (microg, services):
-            self.assertNotIn('getExtras(', src)
-            self.assertNotIn('FLAG_GRANT_', src)
-
-    def test_google_login_setup_is_wired_into_settings(self):
-        home = (JAVA / 'MAct.java').read_text()
-        self.assertIn('GoogleLoginSetup.resolveStatus', home)
-        self.assertIn('R.layout.sheet_google_login', home)
-        self.assertIn('R.id.googleSetupRow', home)
-        self.assertIn('GoogleServicesInstaller.installFresh(app)', home)
-        self.assertIn('MicroGInstaller.installStock(app)', home)
-        self.assertIn('MicroGInstaller.repairInternalInstall(app)', home)
-        self.assertIn('anyGameRunning()', home)
-        self.assertIn('googleSheet.dismiss()', home)
-        settings = (ROOT / 'app/src/main/res/layout/page_settings.xml').read_text()
-        self.assertIn('@+id/googleSetupRow', settings)
-        self.assertIn('@+id/googleStatusValue', settings)
-        sheet = (ROOT / 'app/src/main/res/layout/sheet_google_login.xml').read_text()
-        for view_id in ('googleEnableSwitch', 'googleSwitchCaption', 'googleAddAccount',
-                        'googleProgress', 'googleProgressText', 'googleResultText', 'googleCancel'):
-            self.assertIn('@+id/' + view_id, sheet)
-        # microG and the in-container Play Store button are gone: the phone's
-        # Google apps are the only provider, driven by one latching switch.
-        self.assertNotIn('googleUseMicrog', sheet)
-        self.assertNotIn('googleOpenProvider', sheet)
-        # The account the game picks comes from GMS's own add-account flow
-        # (MinuteMaidActivity, verified on a real phone), opened inside Mundo.
-        # NB: the SDK's launchApp/obtainSplashLaunchIntent String overloads take
-        # a container USER name, not an activity — launchIntent(Intent) is the
-        # arbitrary-component entry point and the only correct call here.
-        self.assertIn('openGoogleAddAccountInMundo', home)
-        self.assertIn('GoogleServicesInstaller.MINUTEMAID_ACTIVITY', home)
-        self.assertIn('MetaActivityManager.launchIntent(', home)
-        self.assertNotIn('obtainSplashLaunchIntent(GoogleServicesInstaller.GMS_PKG', home)
-        self.assertNotIn('MetaActivityManager.launchApp(GoogleServicesInstaller.GMS_PKG', home)
-        services = (JAVA / 'utils/GoogleServicesInstaller.java').read_text()
-        self.assertIn('com.google.android.gms.auth.uiflows.minutemaid.MinuteMaidActivity', services)
-        self.assertIn('public static boolean resolvableInContainer(ComponentName component)', services)
-        strings = (ROOT / 'app/src/main/res/values/strings.xml').read_text()
-        for name in ('google_setup_row', 'google_status_none', 'google_status_stock',
-                     'google_status_microg', 'google_status_repair', 'google_stop_game_first',
-                     'google_switch_label', 'google_switch_caption_on', 'google_switch_caption_off',
-                     'google_add_account', 'google_add_account_settling', 'google_add_account_failed',
-                     'google_add_account_opening'):
-            self.assertIn('name="' + name + '"', strings)
-        # The switch latches on and is only reset by clearing the app's data.
-        self.assertIn('google_login_enabled', home)
-        # Switches and CheckBoxes have Anoy-themed widget styles.
-        styles = (ROOT / 'app/src/main/res/values/styles.xml').read_text()
-        self.assertIn('Widget.Anoy.Switch', styles)
-        self.assertIn('Widget.Anoy.CheckBox', styles)
 
     def test_bgmi_air_launches_without_game_files(self):
         target = (JAVA / 'utils/GameTarget.java').read_text()
@@ -418,12 +325,12 @@ def main() -> None:
     ecj = os.environ.get('ECJ_JAR')
     if not java or not (javac or ecj):
         raise RuntimeError('A JDK is needed (or JAVA + ECJ_JAR for a JRE-only local environment)')
-    sources = [JAVA / 'utils' / name for name in ('GameLoginRouter.java', 'UpdateRequest.java', 'LibraryHttp.java', 'GameWebPolicy.java', 'GameWebCallRouter.java', 'GameWebNavigator.java', 'GoogleLoginSetup.java', 'SplitDepsTable.java')]
-    sources.extend(ROOT / 'tests/runtime' / name for name in ('RuntimeFixesTest.java', 'GameWebFlowTest.java', 'GoogleLoginSetupTest.java', 'SplitDepsTableTest.java'))
+    sources = [JAVA / 'utils' / name for name in ('GameLoginRouter.java', 'UpdateRequest.java', 'LibraryHttp.java', 'GameWebPolicy.java', 'GameWebCallRouter.java', 'GameWebNavigator.java', 'SplitDepsTable.java')]
+    sources.extend(ROOT / 'tests/runtime' / name for name in ('RuntimeFixesTest.java', 'GameWebFlowTest.java', 'SplitDepsTableTest.java'))
     with tempfile.TemporaryDirectory(prefix='loader-runtime-test-') as output:
         compiler = [javac, '-source', '8', '-target', '8'] if javac else [java, '-jar', ecj, '-8', '-warn:none']
         subprocess.run([*compiler, '-d', output, *map(str, sources)], check=True)
-        for test in ('RuntimeFixesTest', 'GameWebFlowTest', 'GoogleLoginSetupTest', 'SplitDepsTableTest'):
+        for test in ('RuntimeFixesTest', 'GameWebFlowTest', 'SplitDepsTableTest'):
             subprocess.run([java, '-ea', '-cp', output, 'com.xlox.tests.' + test], check=True, timeout=30)
     # SDK-free structural checks (host Android UI behavior runs separately in Gradle).
     subprocess.run([sys.executable, '-B', str(ROOT / 'scripts/test_navigation.py')], check=True)

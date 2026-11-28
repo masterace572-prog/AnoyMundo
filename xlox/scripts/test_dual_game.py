@@ -57,7 +57,7 @@ class DualGameWiring(unittest.TestCase):
         home = (JAVA / 'MAct.java').read_text()
         self.assertIn('LibManager.isUsableLib(this, game.target)', home)
         self.assertIn('boolean comingSoon = game == air && !libraryAvailable(game) && !stop;', home)
-        self.assertIn('game.action.setEnabled(!blocked && !comingSoon)', home)
+        self.assertIn('game.action.setEnabled(!blocked && !comingSoon && !osBlocked)', home)
         self.assertIn('private final GameSession air = new GameSession(GameTarget.BGMI_AIR)', home)
         self.assertIn('final GameRunState runtime = new GameRunState()', home)
         client = (JAVA / 'utils/Downtwo.java').read_text()
