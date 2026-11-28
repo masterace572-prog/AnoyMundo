@@ -30,7 +30,6 @@
     <color name="accent">#FF0A84FF</color>
     <color name="accent_pressed">#FF0974E0</color>
     <color name="accent_tint">#FF0F2236</color>
-    <color name="accent_border">#FF1D3B59</color>
     <color name="on_accent">#FFFFFFFF</color>
 
     <!-- Status -->
@@ -48,7 +47,6 @@
     <color name="notice_kicker">#D9FF9F0A</color>
 
     <!-- Effects -->
-    <color name="scrim">#A3000000</color>
     <!-- Press feedback is a fill change to surface-3, not a ripple wash. -->
     <color name="ripple_none">#00000000</color>
     <color name="transparent">#00000000</color>

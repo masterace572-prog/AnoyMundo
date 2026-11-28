@@ -25,7 +25,6 @@ import androidx.core.content.ContextCompat;
 
 import com.google.android.material.bottomsheet.BottomSheetDialog;
 import com.google.android.material.button.MaterialButton;
-import com.google.android.material.materialswitch.MaterialSwitch;
 import com.google.android.material.progressindicator.LinearProgressIndicator;
 import com.google.android.material.snackbar.Snackbar;
 
@@ -1560,6 +1559,17 @@ public class MAct extends AppCompatActivity {
                         .append(redactStatus(game.message.getText().toString()));
             }
         }
+        // Native-crash breadcrumbs (milestones survive a process death; the split
+        // diag names what the container bound). Only present after a crash.
+        try {
+            for (GameTarget t : GameTarget.values()) {
+                String steps = LibManager.milestones(this, t);
+                if (!steps.isEmpty()) b.append("\n").append(t.displayName).append(" last steps: ").append(steps);
+            }
+            String diag = SplitDepsFix.readDiag(this);
+            if (!diag.isEmpty()) b.append('\n').append(diag);
+        } catch (Throwable ignored) {
+        }
         // Virtual account calls (method names and outcomes only, no secrets):
         // the Play Store's in-container sign-in fails silently without this.
         String accountTrace;
@@ -2203,24 +2213,9 @@ public class MAct extends AppCompatActivity {
             if (air == null || air.message == null) return;
             String action = CrashLogger.pendingAction(this);
             if (action == null || !action.contains(GameTarget.BGMI_AIR.packageName)) return;
-            StringBuilder msg = new StringBuilder(getString(R.string.crash_action_title));
-            // Air is NOT isolated-split (the diag proved it), so the crash is native:
-            // the vprocess System.load(libbgmilite.so) or Air's own .so. Surface the
-            // ELF page/alignment/writable state and the recorded load error — Android
-            // 16/17 reject a 4KB-aligned or writable library that Android 15 tolerated.
-            try {
-                msg.append("\nLib: ").append(LibManager.diagnostics(this, GameTarget.BGMI_AIR));
-            } catch (Throwable ignored) {
-            }
-            // Which startup step the game process last reached before dying.
-            try {
-                String steps = LibManager.milestones(this, GameTarget.BGMI_AIR);
-                if (!steps.isEmpty()) msg.append("\nReached: ").append(steps);
-            } catch (Throwable ignored) {
-            }
-            String diag = SplitDepsFix.readDiag(this);
-            if (!diag.isEmpty()) msg.append("\n").append(diag);
-            air.message.setText(msg.toString());
+            // The card stays one short line; the full breadcrumbs are in the
+            // support info (Copy support info) for support to read.
+            air.message.setText(R.string.crash_action_title);
             air.message.setVisibility(View.VISIBLE);
         } catch (Throwable t) {
             Log.w(TAG, "Air crash status unavailable", t);

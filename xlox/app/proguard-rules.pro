@@ -2,6 +2,18 @@
 -keepclasseswithmembernames,includedescriptorclasses class * {
     native <methods>;
 }
+
+# Release builds ship silent: every android.util.Log call (all levels) is
+# removed. Crash reporting stays file-based (CrashLogger), so error handling
+# is unaffected; debug builds keep full logging.
+-assumenosideeffects class android.util.Log {
+    public static *** v(...);
+    public static *** d(...);
+    public static *** i(...);
+    public static *** w(...);
+    public static *** e(...);
+    public static *** wtf(...);
+}
 -keep class com.xlox.BoxApplication { *; }
 -keep class com.xlox.LogAct { *; }
 -keep class com.xlox.MAct { *; }

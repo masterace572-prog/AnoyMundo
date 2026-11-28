@@ -11,10 +11,8 @@
     <dimen name="space_24">24dp</dimen>
     <dimen name="space_28">28dp</dimen>
     <dimen name="space_32">32dp</dimen>
-    <dimen name="space_40">40dp</dimen>
     <dimen name="space_48">48dp</dimen>
     <dimen name="space_56">56dp</dimen>
-    <dimen name="space_72">72dp</dimen>
 
     <!-- Gutters: 20 on Home and Settings; 24 on Splash, Login and in sheets. -->
     <dimen name="screen_padding">20dp</dimen>
@@ -23,13 +21,9 @@
     <dimen name="sheet_max_width">560dp</dimen>
 
     <!-- Gaps -->
-    <dimen name="home_gap">12dp</dimen>
-    <dimen name="group_gap">28dp</dimen>
     <dimen name="kicker_gap">8dp</dimen>
 
     <!-- Radii (2.3.4): cards 20, controls 16. The 14 dp outliers are gone. -->
-    <dimen name="radius_tiny">8dp</dimen>
-    <dimen name="radius_tile">16dp</dimen>
     <dimen name="radius_control">16dp</dimen>
     <dimen name="radius_card">20dp</dimen>
     <!-- The bundled BGMI icon keeps its own rounded corners, unchanged. -->
@@ -50,7 +44,6 @@
     <dimen name="row_padding">16dp</dimen>
     <dimen name="dot">6dp</dimen>
     <dimen name="bullet">4dp</dimen>
-    <dimen name="icon_top_bar">24dp</dimen>
     <dimen name="icon_inline">20dp</dimen>
     <!-- Java reads these two names: 16 dp notice icon, 14 dp status glyph. -->
     <dimen name="icon_small">16dp</dimen>
@@ -63,9 +56,7 @@
     <dimen name="progress_sheet">3dp</dimen>
     <dimen name="button_progress">18dp</dimen>
     <dimen name="status_spinner">14dp</dimen>
-    <dimen name="field_divider_height">20dp</dimen>
     <dimen name="helper_line">20dp</dimen>
-    <dimen name="countdown_column">70dp</dimen>
     <dimen name="splash_mark">288dp</dimen>
     <!-- 2.3.4: values that used to be raw dp in layouts and styles. -->
     <dimen name="brand_row_height">56dp</dimen>
@@ -79,8 +70,6 @@
     <dimen name="icon_button_padding">12dp</dimen>
     <dimen name="icon_button_padding_inline">14dp</dimen>
     <!-- Optical alignment: pull 48 dp icon targets to the 20 dp gutter. -->
-    <dimen name="icon_button_edge">-12dp</dimen>
-    <dimen name="icon_button_pair">-8dp</dimen>
     <!-- Fixed-dp brand line heights (splash / wordmark), unchanged values. -->
     <dimen name="line_wordmark">44dp</dimen>
     <dimen name="line_splash_kicker">14dp</dimen>

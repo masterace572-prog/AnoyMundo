@@ -7,7 +7,6 @@
     <string name="splash_hax">Hax</string>
     <string name="telegram_url">https://t.me/libAkAudioVisiual</string>
     <string name="version_footer">App %1$s · Library %2$s</string>
-    <string name="version_footer_app">Version %1$s</string>
     <string name="not_installed_short">not installed</string>
     <string name="dash">—</string>
 
@@ -29,7 +28,6 @@
     <string name="update_check_failed_title">Couldn\'t check for updates</string>
     <string name="update_done_title">You\'re up to date</string>
     <string name="update_done_message">Library %1$s</string>
-    <string name="update_slow">Taking longer than usual. Keep Anoy open.</string>
     <string name="update_connecting">Connecting to the library server…</string>
     <string name="update_check_slow">Still waiting for the update server…</string>
     <string name="update_download_stalled">Waiting for more data from the server…</string>
@@ -51,7 +49,6 @@
     <string name="signing_in">Logging in…</string>
     <string name="still_logging_in">Still logging in…</string>
     <string name="signed_in">Logged in</string>
-    <string name="need_key">Need a licence key?</string>
     <string name="get_key">Buy one</string>
     <string name="get_key_lead">Don\'t have a licence?</string>
     <string name="clipboard_empty">Clipboard has no licence key.</string>
@@ -89,20 +86,11 @@
     <!-- Home -->
     <string name="home_title">Welcome back</string>
     <string name="sign_out">Sign out</string>
-    <string name="section_licence">Licence</string>
-    <string name="section_game">Game</string>
-    <string name="section_device">Device</string>
-    <string name="row_status">Status</string>
-    <string name="row_expires">Expires</string>
     <string name="licence_expires_in">Expires in</string>
     <string name="announcement">Announcement</string>
-    <string name="row_game">Game</string>
-    <string name="row_state">State</string>
     <string name="row_library">Library</string>
-    <string name="row_server">Server</string>
     <string name="game_name">BGMI</string>
     <string name="game_air_name">BGMI Air</string>
-    <string name="game_air_library">libbgmilite.so</string>
     <string name="coming_soon">Coming soon</string>
     <string name="game_air_coming_soon_action">Coming soon</string>
     <string name="game_launch_bgmi">Launch BGMI</string>
@@ -110,20 +98,18 @@
     <string name="game_stop_named">Stop %1$s</string>
     <string name="game_install_named">Install %1$s</string>
     <string name="game_version_named">%1$s v%2$s</string>
-    <string name="game_library_file">%1$s · Library %2$s</string>
     <string name="game_stopped_named">%1$s stopped.</string>
     <string name="game_error_obb_missing">Game files not found. Open %1$s normally once to download its game files, then try again.</string>
     <string name="game_library_error">%1$s library: %2$s</string>
     <string name="game_libraries_in_use">Stop both games before updating or re-downloading libraries.</string>
     <string name="concurrent_games_kicker">Two games</string>
     <string name="concurrent_games_title">Launch a second game?</string>
-    <string name="concurrent_games_message">%1$s is already running. Launching %2$s alongside it uses more RAM and CPU/GPU resources. This can cause lag, overheating, higher battery use, or crashes in either game or the loader. Android may close a game when memory is low.\n\nFor better stability, cancel and stop the running game first. Wait 10 seconds, then confirm only if you want to run both. Nothing launches automatically.</string>
+    <string name="concurrent_games_message">%1$s is already running. Launching %2$s too can lag, overheat or crash.\n\nWait 10 seconds, then confirm only if you really want both.</string>
     <string name="concurrent_games_wait">Launch anyway in %1$d s</string>
     <string name="concurrent_games_confirm">OK, launch anyway</string>
 
     <string name="active">Active</string>
     <string name="expired">Expired</string>
-    <string name="time_left_value">%1$dd %2$02dh %3$02dm %4$02ds</string>
     <string name="state_ready">Ready</string>
     <string name="state_obb_missing">OBB not found</string>
     <string name="state_files_access">Files access needed</string>
@@ -137,11 +123,11 @@
     <string name="help_open">Help and tips</string>
     <string name="help_title">Help</string>
     <string name="help_launch_title">Launching the game</string>
-    <string name="help_launch_body">Log in, allow the three access items if Anoy asks (All files access, Files, Install unknown apps), then tap Launch. The first time, Anoy copies the game files before the game opens.</string>
+    <string name="help_launch_body">Log in, allow the access items Anoy asks for, then tap Launch. The first launch copies the game files, so keep Anoy open.</string>
     <string name="help_access_title">Files missing or access needed</string>
     <string name="help_access_body">Turn on All files access, Files and Install unknown apps for Anoy, then come back and tap Launch.</string>
     <string name="help_renew_title">Renewing your licence</string>
-    <string name="help_renew_body">Your time left shows on Home. To renew, add time to your licence on the panel, or message support with Help on Telegram. The new time shows when you come back to Anoy.</string>
+    <string name="help_renew_body">To renew, add time on the panel or message support on Telegram. Your new time shows when you come back.</string>
     <string name="help_copy_support">Copy support info</string>
     <string name="help_got_it">Got it</string>
     <string name="support_info_title">Support info</string>
@@ -150,16 +136,12 @@
     <string name="state_not_installed">Not installed</string>
     <string name="state_running">Running</string>
     <string name="launch">Launch</string>
-    <string name="install_game">Install BGMI</string>
-    <string name="stop">Stop</string>
     <string name="sign_in_again">Log in again</string>
     <string name="help">Help on Telegram</string>
     <string name="preparing">Preparing game files</string>
-    <string name="preparing_progress">Preparing game files · %1$d%%</string>
     <string name="preparing_first">First launch copies the game files. Keep Anoy open until it finishes.</string>
     <string name="preparing_slow">Still preparing. Large game files take a while.</string>
     <string name="launching">Launching…</string>
-    <string name="game_stopped">Game stopped.</string>
     <string name="licence_expired_message">Your licence has expired. Log in with a new key.</string>
     <string name="error_activation">The game container isn\'t ready. Restart the app and try again.</string>
     <string name="error_launch">Couldn\'t launch the game. Try again.</string>
@@ -167,7 +149,6 @@
     <string name="error_store">Couldn\'t open the Play Store.</string>
     <string name="error_obb_missing">Game files not found. Open BGMI once from the Play Store to download them.</string>
     <string name="error_obb_copy">Couldn\'t prepare game files: %1$s</string>
-    <string name="error_library">Library problem: %1$s</string>
     <string name="error_link">No app can open this link.</string>
     <string name="android_version">Android %1$s (API %2$d)</string>
 
@@ -180,8 +161,6 @@
     <string name="game_web_interrupted">This login was interrupted. Go back to the game and start login again.</string>
 
     <!-- AppManager -->
-    <string name="sandbox_install_failed">Couldn\'t install the game into the container.</string>
-    <string name="package_not_found">BGMI is not installed.</string>
     <string name="obb_folder_not_found">Game files folder not found.</string>
     <string name="main_obb_not_found">Main game file not found.</string>
     <!-- Reasons shown inside error_obb_copy ("Couldn't prepare game files: …"). -->
@@ -197,12 +176,9 @@
     <string name="permission_install_needed">Allow Install unknown apps for Anoy so game files can be prepared.</string>
     <!-- Shown before Anoy opens the All files access / Install unknown apps settings page. -->
     <string name="perm_explain_all_files_title">Allow All files access</string>
-    <string name="perm_explain_all_files_message">Anoy needs this to prepare game files. You\'ll be taken to Settings. Turn it on for Anoy, then come back.</string>
     <string name="perm_explain_install_title">Allow Install unknown apps</string>
-    <string name="perm_explain_install_message">Anoy needs this to install the library update and prepare game files. You\'ll be taken to Settings. Turn it on for Anoy, then come back.</string>
     <string name="perm_explain_continue">Continue to Settings</string>
     <string name="not_now">Not now</string>
-    <string name="home_kicker">Welcome back</string>
     <!-- UI redesign (2.1) -->
     <string name="action_preparing">Preparing…</string>
     <string name="action_preparing_progress">Preparing… %1$d%%</string>
@@ -215,20 +191,16 @@
     <string name="forget_key_description">Sign out and remove the saved licence key from this phone</string>
     <string name="cancel">Cancel</string>
     <string name="close">Close</string>
-    <string name="loading">Loading</string>
     <string name="licence_a11y_active">Licence active, %1$s left, expires %2$s</string>
     <string name="licence_a11y_expired">Licence expired on %1$s</string>
     <string name="licence_a11y_unknown">Licence status unknown</string>
     <string name="licence_a11y_soon">Licence expires soon, %1$s left, expires %2$s</string>
     <string name="expires_soon">Expires soon</string>
-    <string name="licence_soon_message">Renew now to keep playing without a break.</string>
     <string name="renew">Renew</string>
-    <string name="renew_description">Renew your licence on Telegram</string>
     <!-- Quiet line when the latest licence refresh could not reach the server. -->
     <string name="licence_last_checked">Last checked %1$s</string>
     <!-- 2.3.4: Home licence caption when the latest refresh could not reach the panel. -->
     <string name="licence_offline_checked">Offline · last checked %1$s</string>
-    <string name="status_chip_description">%1$s: %2$s</string>
     <!-- 2.2.0: splash status line (real state of the app update check). -->
     <string name="splash_version">v%1$s</string>
     <string name="splash_status_init">Initializing…</string>
@@ -250,11 +222,9 @@
     <string name="app_update_no_changelog">Fixes and improvements.</string>
     <string name="app_update_now">Update now</string>
     <string name="app_update_not_now">Not now</string>
-    <string name="app_update_retry">Try again</string>
     <string name="app_update_cancel_download">Cancel download</string>
     <string name="app_update_slow">Download is slow. Keep Anoy open.</string>
     <string name="app_update_downloading">Downloading…</string>
-    <string name="app_update_progress">%1$d%% · %2$s of %3$s</string>
     <string name="app_update_progress_unknown">%1$s downloaded</string>
     <string name="app_update_verifying">Checking the download…</string>
     <string name="app_update_installing">Installing…</string>
@@ -279,8 +249,6 @@
 
     <!-- 2.2.0: home + Settings. -->
     <string name="settings">Settings</string>
-    <string name="settings_open">Open settings</string>
-    <string name="settings_back">Back</string>
     <string name="settings_section_device">Device</string>
     <string name="settings_section_licence">Licence</string>
     <string name="settings_section_updates">Updates</string>
@@ -314,7 +282,6 @@
     <string name="crash_action_title">Anoy closed while opening an app in Mundo</string>
     <string name="crash_report_copy">Copy report</string>
     <string name="crash_report_dismiss">Dismiss</string>
-    <string name="done">Done</string>
     <string name="settings_section_report">Report a problem</string>
     <string name="settings_section_account">Account</string>
     <string name="settings_model">Model</string>
@@ -326,13 +293,11 @@
     <string name="settings_version">App version</string>
     <string name="settings_version_value">%1$s (%2$d)</string>
     <string name="settings_row_description">%1$s: %2$s</string>
-    <string name="game_title_version">BGMI v%1$s</string>
     <string name="game_icon_description">BGMI</string>
 
     <!-- 2.3.0: premium redesign - new labels only. -->
     <string name="brand_name">Anoy Hax</string>
     <string name="ellipsis">…</string>
-    <string name="paste">Paste</string>
     <string name="get_key_description">Buy a licence on Telegram</string>
     <string name="progress_bytes">%1$s of %2$s</string>
     <string name="app_update_headline">A new version is ready</string>
@@ -340,8 +305,6 @@
     <string name="app_update_error_block">%1$s. %2$s</string>
     <string name="help_glyph">?</string>
     <string name="help_kicker_access">Files and access</string>
-    <string name="library_version">Library %1$s</string>
-    <string name="library_not_installed">Library not installed</string>
     <string name="sign_out_keep_caption">Your key stays saved on this device.</string>
     <string name="forget_key_caption">Removes the key from this device. You\'ll need to enter it again.</string>
     <string name="support_info_includes_key">Includes your licence key. Only share it with Anoy support.</string>
