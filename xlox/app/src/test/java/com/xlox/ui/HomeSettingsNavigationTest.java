@@ -488,8 +488,12 @@ public class HomeSettingsNavigationTest {
                 note.getCardBackgroundColor().getDefaultColor());
         assertEquals(air.getCardBackgroundColor().getDefaultColor(),
                 note.getCardBackgroundColor().getDefaultColor());
+        // Announcement and game cards share one surface and the same hairline
+        // edge: a single lifted card treatment (depth without slop).
+        int hairline = activity.getResources().getDimensionPixelSize(R.dimen.hairline);
+        assertEquals(hairline, bgmi.getStrokeWidth());
+        assertEquals(hairline, air.getStrokeWidth());
         assertEquals(bgmi.getStrokeWidth(), note.getStrokeWidth());
-        assertEquals(0, note.getStrokeWidth());
         assertEquals(ContextCompat.getColor(activity, R.color.accent), heading.getCurrentTextColor());
         assertNotNull(ImageViewCompat.getImageTintList(icon));
         assertEquals(ContextCompat.getColor(activity, R.color.accent),
