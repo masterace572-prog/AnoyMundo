@@ -143,7 +143,7 @@ public class MAct extends AppCompatActivity {
     /** Duration segment of a licence key: ANOY-7D-XXXXX, ANOY-2H-XXXXX. */
     private static final Pattern KEY_DURATION = Pattern.compile("^[A-Z0-9]+-(\\d{1,4})([HD])-", Pattern.CASE_INSENSITIVE);
 
-    /** Debug builds only (screenshot QA) - see docs/ui-redesign/README.md. */
+    /** Debug builds only (screenshot QA); release builds ignore every qa_* extra. */
     public static final String EXTRA_QA_EXPIRY = "qa_expiry";
     public static final String EXTRA_QA_STATUS = "qa_status";
     public static final String EXTRA_QA_NOTE = "qa_note";
