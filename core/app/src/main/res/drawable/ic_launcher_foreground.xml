@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Glowing Outer Hexagon -->
+    <path
+        android:strokeColor="#00E5FF"
+        android:strokeWidth="2.5"
+        android:pathData="M54,22L84,38L84,70L54,86L24,70L24,38Z" />
+    <!-- Inner Core Shield -->
+    <path
+        android:fillColor="#1F2A38"
+        android:strokeColor="#2979FF"
+        android:strokeWidth="1.5"
+        android:pathData="M54,30L76,42L76,66L54,78L32,66L32,42Z" />
+    <!-- Stylized "C" Symbol -->
+    <path
+        android:strokeColor="#00E5FF"
+        android:strokeWidth="4"
+        android:strokeLineCap="round"
+        android:pathData="M64,48C60,44 48,44 48,54C48,64 60,64 64,60" />
+</vector>

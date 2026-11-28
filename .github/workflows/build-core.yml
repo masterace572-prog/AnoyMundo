@@ -1,0 +1,43 @@
+name: Build Anoy core test APK
+
+# The vendored CCore spike (core/) is a self-contained 2020-era build:
+# its own Gradle wrapper + AGP 4.0.1, built with JDK 11. It produces a
+# standalone test APK ("Anoy Core Test") for real-device validation only —
+# it is never attached to a release.
+
+on:
+  push:
+    branches: [main, arena/dda4cc57-anoymundo]
+    paths:
+      - 'core/**'
+      - '.github/workflows/build-core.yml'
+  workflow_dispatch:
+
+jobs:
+  core-test-apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '11'
+
+      - name: Install the Android SDK pieces the 2020-era build expects
+        run: |
+          yes | sdkmanager --sdk_root="${ANDROID_SDK_ROOT}" --licenses > /dev/null || true
+          sdkmanager --sdk_root="${ANDROID_SDK_ROOT}" \
+            "platforms;android-30" "build-tools;30.0.3" \
+            "cmake;3.10.2.4988404" "ndk;21.4.7075529"
+
+      - name: Build the container test app
+        working-directory: core
+        run: ./gradlew :app:assembleDebug --no-daemon --stacktrace
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: AnoyCore-test-apk
+          path: core/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 14
