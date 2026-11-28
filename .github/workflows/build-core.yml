@@ -26,8 +26,9 @@ jobs:
 
       - name: Install the Android SDK pieces the 2020-era build expects
         run: |
-          yes | sdkmanager --sdk_root="${ANDROID_SDK_ROOT}" --licenses > /dev/null || true
-          sdkmanager --sdk_root="${ANDROID_SDK_ROOT}" \
+          SDKMANAGER="${ANDROID_SDK_ROOT}/cmdline-tools/latest/bin/sdkmanager"
+          yes | "$SDKMANAGER" --sdk_root="${ANDROID_SDK_ROOT}" --licenses > /dev/null || true
+          "$SDKMANAGER" --sdk_root="${ANDROID_SDK_ROOT}" \
             "platforms;android-30" "build-tools;30.0.3" \
             "cmake;3.10.2.4988404" "ndk;21.4.7075529"
 
