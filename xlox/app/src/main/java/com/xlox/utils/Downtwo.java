@@ -227,6 +227,7 @@ public final class Downtwo {
             String sha = json.optString("sha256", "").trim();
             if (!SHA_PATTERN.matcher(sha).matches()) sha = "";
             GameSupport.remember(app, json.optString("game_version", ""));
+            GameStatus.remember(app, json.optJSONObject("games"));
             return new Release(version, json.optBoolean("available", false),
                     json.optLong("size", 0L), sha.toLowerCase(Locale.US));
         } catch (JSONException e) {

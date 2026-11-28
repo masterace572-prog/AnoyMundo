@@ -36,6 +36,7 @@ import com.xlox.ui.PermissionSheet;
 import com.xlox.ui.UpdateGate;
 import com.xlox.utils.AppManager;
 import com.xlox.utils.AppUpdater;
+import com.xlox.utils.GameStatus;
 import com.xlox.utils.GameSupport;
 import com.xlox.utils.GameTarget;
 import com.xlox.utils.GameLoginRouter;
@@ -1329,6 +1330,11 @@ public class MAct extends AppCompatActivity {
                 setDot(game.state, getString(R.string.state_not_installed), 0, R.color.text_secondary);
             } else if (!available) {
                 setDot(game.state, getString(R.string.state_library_needed), R.color.warning, R.color.text_secondary);
+            } else if (!GameStatus.isPlayable(this, game.target)) {
+                // Panel-set availability: the owner's message wins, else a short default.
+                String statusMessage = GameStatus.message(this, game.target);
+                setDot(game.state, !statusMessage.isEmpty() ? statusMessage : gameStatusLabel(game),
+                        R.color.warning, R.color.text_secondary);
             } else if (StorageAccess.firstMissing(this) != null && !game.target.optionalObb()
                     || game.obbState == AppManager.ObbState.ACCESS_REQUIRED) {
                 setDot(game.state, getString(R.string.state_files_access), R.color.warning, R.color.text_secondary);
@@ -1386,6 +1392,12 @@ public class MAct extends AppCompatActivity {
 
     private String gameName(GameSession game) {
         return getString(game == air ? R.string.game_air_name : R.string.game_name);
+    }
+
+    /** Short default for a panel-blocked game when the owner left no message. */
+    private String gameStatusLabel(GameSession game) {
+        return getString(GameStatus.MAINTENANCE.equals(GameStatus.status(this, game.target))
+                ? R.string.state_game_maintenance : R.string.state_game_unavailable);
     }
 
     private boolean libraryAvailable(GameSession game) {
@@ -1657,18 +1669,21 @@ public class MAct extends AppCompatActivity {
             if (busy && game == launchTarget) continue; // Keep its live copy/launch label and spinner.
             boolean stop = game.runtime.isRunning(); // Stopping is always allowed, including after expiry.
             boolean comingSoon = game == air && !libraryAvailable(game) && !stop;
+            // A game the panel marks unavailable/maintenance cannot be launched.
+            boolean off = !stop && game.installed && !GameStatus.isPlayable(this, game.target);
             CharSequence label = stop ? getString(R.string.game_stop_named, gameName(game))
                     : comingSoon ? getString(R.string.game_air_coming_soon_action)
+                    : off ? gameStatusLabel(game)
                     : expired ? getString(R.string.sign_in_again)
                     : !game.installed ? getString(R.string.game_install_named, gameName(game))
                     : getString(R.string.game_launch_named, gameName(game));
             Ui.setLoading(game.action, false, label);
-            game.action.setEnabled(!blocked && !comingSoon);
+            game.action.setEnabled(!blocked && !comingSoon && !off);
             game.action.setBackgroundTintList(ContextCompat.getColorStateList(this,
                     stop ? R.color.tonal_bg_on_black : R.color.button_bg));
             game.action.setTextColor(ContextCompat.getColorStateList(this,
                     stop ? R.color.danger_text : R.color.button_text));
-            boolean play = !comingSoon && !expired && game.installed;
+            boolean play = !comingSoon && !off && !expired && game.installed;
             if (stop || play) {
                 game.action.setIconResource(stop ? R.drawable.ic_stop : R.drawable.ic_play);
                 game.action.setIconSize(getResources().getDimensionPixelSize(R.dimen.icon_inline));
@@ -1729,6 +1744,13 @@ public class MAct extends AppCompatActivity {
         hideMessage();
         if (expired || (expiryMillis > 0 && expiryMillis <= System.currentTimeMillis())) {
             openLogin();
+            return;
+        }
+        // The panel can disable one game at a time (e.g. BGMI unsafe, Air stays up).
+        if (!GameStatus.isPlayable(this, launchTarget.target)) {
+            String statusMessage = GameStatus.message(this, launchTarget.target);
+            showMessage(!statusMessage.isEmpty() ? statusMessage : gameStatusLabel(launchTarget), true);
+            refreshGameState();
             return;
         }
         if (launchTarget == air && !libraryAvailable(air)) {

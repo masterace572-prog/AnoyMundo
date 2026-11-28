@@ -63,5 +63,40 @@
                 <div class="save-bar" data-save-bar><button type="submit" class="btn btn-primary" data-busy-label="Saving…">{{icon "check"}}Save changes</button></div>
             </form>
         </section>
+
+        <section class="card">
+            <div class="card-head">
+                <div class="tile red">{{icon "gamepad-2"}}</div>
+                <div><h2 class="card-title">Game availability</h2><div class="card-sub">Unavailable or Maintenance disables that game's Launch in the loader.</div></div>
+            </div>
+            <form method="post" action="/server" class="form" data-busy-form data-dirty-form>
+                <input type="hidden" name="gamestatus_form" value="1">
+                <div class="field">
+                    <label class="label" for="status_bgmi">BGMI</label>
+                    <select class="input" name="status_bgmi" id="status_bgmi">
+                        <option value="available" {{#if (eq gameStatus.bgmi.status "available")}}selected{{/if}}>Available</option>
+                        <option value="unavailable" {{#if (eq gameStatus.bgmi.status "unavailable")}}selected{{/if}}>Unavailable</option>
+                        <option value="maintenance" {{#if (eq gameStatus.bgmi.status "maintenance")}}selected{{/if}}>Maintenance</option>
+                    </select>
+                </div>
+                <div class="field">
+                    <label class="label" for="message_bgmi">BGMI message <span class="label-hint">optional</span></label>
+                    <input type="text" class="input" name="message_bgmi" id="message_bgmi" value="{{gameStatus.bgmi.message}}" maxlength="200" placeholder="Shown on the BGMI card while it is not available">
+                </div>
+                <div class="field">
+                    <label class="label" for="status_bgmi_air">BGMI Air</label>
+                    <select class="input" name="status_bgmi_air" id="status_bgmi_air">
+                        <option value="available" {{#if (eq gameStatus.bgmi_air.status "available")}}selected{{/if}}>Available</option>
+                        <option value="unavailable" {{#if (eq gameStatus.bgmi_air.status "unavailable")}}selected{{/if}}>Unavailable</option>
+                        <option value="maintenance" {{#if (eq gameStatus.bgmi_air.status "maintenance")}}selected{{/if}}>Maintenance</option>
+                    </select>
+                </div>
+                <div class="field">
+                    <label class="label" for="message_bgmi_air">BGMI Air message <span class="label-hint">optional</span></label>
+                    <input type="text" class="input" name="message_bgmi_air" id="message_bgmi_air" value="{{gameStatus.bgmi_air.message}}" maxlength="200" placeholder="Shown on the BGMI Air card while it is not available">
+                </div>
+                <div class="save-bar" data-save-bar><button type="submit" class="btn btn-primary" data-busy-label="Saving…">{{icon "check"}}Save changes</button></div>
+            </form>
+        </section>
     </div>
 </div>

@@ -330,6 +330,45 @@ test('keys, unlimited-owner billing and general settings remain shared', async (
   assert.equal(users().filter(u => u.level === 1).length, 2);
 });
 
+test('per-game status rides the library manifest and disables only that game', async () => {
+  // Defaults: both games available on both channels.
+  for (const channel of ['anoy', 'kenny']) {
+    const m = await manifest(channel);
+    assert.equal(m.games.bgmi.status, 'available');
+    assert.equal(m.games.bgmi_air.status, 'available');
+  }
+  // The Server page renders the controls with the current selections.
+  const pageHtml = (await anoy.request('/server')).data;
+  assert.match(pageHtml, /name="gamestatus_form"/);
+  assert.match(pageHtml, /name="status_bgmi"/);
+  assert.match(pageHtml, /name="status_bgmi_air"/);
+  // Owner marks BGMI unavailable with a message; BGMI Air stays available.
+  const saved = await anoy.post('/server', new URLSearchParams({
+    gamestatus_form: '1', status_bgmi: 'unavailable', message_bgmi: 'BGMI is not safe right now',
+    status_bgmi_air: 'available', message_bgmi_air: '',
+  }));
+  assert.equal(saved.status, 302);
+  const after = await manifest('anoy');
+  assert.equal(after.games.bgmi.status, 'unavailable');
+  assert.equal(after.games.bgmi.message, 'BGMI is not safe right now');
+  assert.equal(after.games.bgmi_air.status, 'available', 'the other game is never touched');
+  assert.match((await anoy.request('/server')).data, /BGMI is not safe right now/);
+  // Maintenance is a distinct blocked state; an unknown status coerces to available.
+  await anoy.post('/server', new URLSearchParams({
+    gamestatus_form: '1', status_bgmi: 'maintenance', message_bgmi: 'Back soon',
+    status_bgmi_air: 'bogus-value', message_bgmi_air: '',
+  }));
+  const maint = await manifest('kenny');
+  assert.equal(maint.games.bgmi.status, 'maintenance');
+  assert.equal(maint.games.bgmi_air.status, 'available', 'unknown status fails open');
+  // Restore defaults so later tests see the untouched state.
+  await anoy.post('/server', new URLSearchParams({
+    gamestatus_form: '1', status_bgmi: 'available', message_bgmi: '',
+    status_bgmi_air: 'available', message_bgmi_air: '',
+  }));
+  assert.equal((await manifest('anoy')).games.bgmi.status, 'available');
+});
+
 // Parsing real rendered inline JS catches browser syntax errors that plain
 // Handlebars compilation cannot detect. No DOM/network execution is needed.
 test('release-page browser scripts parse after rendering; file uploads never use base64', async () => {

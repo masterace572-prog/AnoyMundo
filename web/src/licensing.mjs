@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 import { LIBRARY_BUCKET } from './library-package.mjs';
 import { config } from './config.mjs';
-import { db, getSettings, getKeyForGame, deviceList } from './db.mjs';
+import { db, getSettings, getKeyForGame, deviceList, getGameStatuses } from './db.mjs';
 import { envStatus } from './config.mjs';
 import { sendJson, sendText, sqlDateTime } from './render.mjs';
 
@@ -223,6 +223,9 @@ export async function handleLibManifest(res, channel = 'anoy') {
     // both. Reading those avoids transferring the file itself.
     const hasFile = !!(data && Number(data.file_size) > 0 && data.sha256);
     const hasLink = !!(data && data.external_url);
+    // Per-game availability (v2.5.1): the home screen disables Launch for a
+    // game whose status is not 'available' and shows its message instead.
+    const games = await getGameStatuses();
     return sendJson(res, {
       ok: true, channel, library_name: 'libbgmi.so',
       version: data?.version || (channel === 'anoy' ? process.env.FALLBACK_LIB_VERSION || '1.0' : '0.0'),
@@ -233,6 +236,7 @@ export async function handleLibManifest(res, channel = 'anoy') {
       file_name: data?.file_name || '',
       notes: data?.notes || '',
       game_version: data?.game_version || '',
+      games,
       updated_at: data?.created_at || null,
     });
   } catch (e) {

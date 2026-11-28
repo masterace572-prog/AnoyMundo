@@ -6,7 +6,7 @@ import { cleanLibraryStorage } from './library-storage.mjs';
 import { config } from './config.mjs';
 import {
   db, getUserByUsername, listUsers, getKeyById, getKeyByUserKey,
-  getSettings, deviceList,
+  getSettings, deviceList, getGameStatuses,
 } from './db.mjs';
 import {
   currentUser, authenticate, hashPassword, codeHash, verifyPassword,
@@ -499,6 +499,23 @@ async function doServer(req, res, body, user) {
     const status = body._ftextr === 'Safe' ? 'Safe' : 'Anti-Cheat is High..!!';
     return write('_ftext', { _ftext: myinput, _status: status }, `Mod status set to ${status === 'Safe' ? 'Safe' : 'High risk'}.`);
   }
+  // Per-game availability: one form posts both games. Unknown statuses are
+  // refused; the message is optional and capped at 200 chars (loader shows it
+  // on the game card).
+  if (body.gamestatus_form && user.isAdmin) {
+    const allowed = ['available', 'unavailable', 'maintenance'];
+    for (const game of ['bgmi', 'bgmi_air']) {
+      const status = allowed.includes(body[`status_${game}`]) ? body[`status_${game}`] : 'available';
+      const message = str(body[`message_${game}`]).slice(0, 200);
+      const { error } = await db().from('game_status')
+        .update({ status, message, updated_at: nowIso() }).eq('game', game);
+      if (error) {
+        console.error('[anoymundo] game_status update failed:', error.message);
+        return redirect(res, targetUrl, { msgDanger: 'Could not save game status. Is the game_status table created?' });
+      }
+    }
+    return redirect(res, targetUrl, { msgSuccess: 'Game availability updated.' });
+  }
   if (body.password_form || body.fullname_form) return doSettings(req, res, body, user, targetUrl);
   return redirect(res, targetUrl, { msgWarning: 'Unknown action. Nothing was changed.' });
 }
@@ -883,7 +900,8 @@ export async function handle(req, res) {
       if (!user.isAdmin) return redirect(res, '/dashboard', { msgWarning: 'You do not have access to that page.' });
       if (method === 'POST') return doServer(req, res, body, user);
       const settings = await getSettings();
-      return page(req, res, 'server', { user, title: 'Server', ...serverData(settings) });
+      const gameStatus = await getGameStatuses();
+      return page(req, res, 'server', { user, title: 'Server', ...serverData(settings), gameStatus });
     }
 
     // --------------------------------- admin --------------------------------

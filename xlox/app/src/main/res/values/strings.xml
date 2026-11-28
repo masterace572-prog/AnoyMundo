@@ -112,6 +112,8 @@
     <string name="expired">Expired</string>
     <string name="state_ready">Ready</string>
     <string name="state_obb_missing">OBB not found</string>
+    <string name="state_game_unavailable">Unavailable</string>
+    <string name="state_game_maintenance">Maintenance</string>
     <string name="state_files_access">Files access needed</string>
     <string name="state_checking_files">Checking files…</string>
     <string name="state_check_files">Check game files</string>

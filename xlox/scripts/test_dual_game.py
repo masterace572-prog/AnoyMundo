@@ -57,7 +57,7 @@ class DualGameWiring(unittest.TestCase):
         home = (JAVA / 'MAct.java').read_text()
         self.assertIn('LibManager.isUsableLib(this, game.target)', home)
         self.assertIn('boolean comingSoon = game == air && !libraryAvailable(game) && !stop;', home)
-        self.assertIn('game.action.setEnabled(!blocked && !comingSoon)', home)
+        self.assertIn('game.action.setEnabled(!blocked && !comingSoon && !off)', home)
         self.assertIn('private final GameSession air = new GameSession(GameTarget.BGMI_AIR)', home)
         self.assertIn('final GameRunState runtime = new GameRunState()', home)
         client = (JAVA / 'utils/Downtwo.java').read_text()
@@ -95,6 +95,30 @@ class DualGameWiring(unittest.TestCase):
             body = home.split('private void ' + method, 1)[1].split('\n    }', 1)[0]
             self.assertIn('anyGameRunning()', body)
             self.assertIn('R.string.game_libraries_in_use', body)
+
+    def test_per_game_server_status_disables_only_that_game(self):
+        # The panel sets each game's status (available / unavailable /
+        # maintenance) on the Server page; the library manifest carries it.
+        status = (JAVA / 'utils/GameStatus.java').read_text()
+        self.assertIn('public static boolean isPlayable(Context context, GameTarget game)', status)
+        self.assertIn('static void remember(Context context, JSONObject games)', status)
+        self.assertIn('"bgmi_air"', status)
+        # Fail-open: a missing or unknown status must never block Launch.
+        self.assertIn('return isKnown(value) ? value : AVAILABLE;', status)
+        # The SAME verified manifest request feeds the cache — no extra HTTP.
+        client = (JAVA / 'utils/Downtwo.java').read_text()
+        self.assertIn('GameStatus.remember(app, json.optJSONObject("games"));', client)
+        home = (JAVA / 'MAct.java').read_text()
+        # Home shows the owner's message (or a short default) on that card…
+        self.assertIn('!GameStatus.isPlayable(this, game.target)', home)
+        self.assertIn('GameStatus.message(this, game.target)', home)
+        self.assertIn('private String gameStatusLabel(GameSession game)', home)
+        # …disables only that game's Launch button…
+        self.assertIn('boolean off = !stop && game.installed && !GameStatus.isPlayable(this, game.target);', home)
+        self.assertIn('game.action.setEnabled(!blocked && !comingSoon && !off)', home)
+        # …and startLaunch re-checks so a stale card cannot slip through.
+        launch = home.split('private void startLaunch()', 1)[1].split('\n    }', 1)[0]
+        self.assertIn('!GameStatus.isPlayable(this, launchTarget.target)', launch)
 
 
 # Tiny in-memory platform adapters, written only into a temporary compile dir.

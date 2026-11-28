@@ -369,6 +369,7 @@ a.list-row:hover .chev { color: var(--text); transform: translateX(2px); }
 .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 @media (max-width: 520px) { .field-row { grid-template-columns: 1fr; } }
 .label { font-size: 13px; font-weight: 500; color: var(--dim); margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+.label-hint { font-weight: 400; color: var(--faint); font-size: 12px; }
 .input {
   width: 100%; min-height: 46px; padding: 11px 14px;
   background: var(--surface-2); color: var(--text);

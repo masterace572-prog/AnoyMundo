@@ -65,6 +65,36 @@ export async function countRows(table, column = '*') {
 // ---------------------------------------------------------------------------
 // settings / lookup tables
 // ---------------------------------------------------------------------------
+
+const GAME_STATUS_DEFAULTS = () => ({
+  bgmi: { status: 'available', message: '' },
+  bgmi_air: { status: 'available', message: '' },
+});
+
+/**
+ * Per-game availability shown on the Server page and served to the loader in
+ * the library manifest. Fail-open on purpose: a missing table (migration not
+ * applied yet) or a hiccup must never block players.
+ */
+export async function getGameStatuses() {
+  const out = GAME_STATUS_DEFAULTS();
+  try {
+    const { data, error } = await db().from('game_status').select('game,status,message');
+    if (error) throw new Error(error.message);
+    for (const row of data || []) {
+      if (Object.hasOwn(out, row.game)) {
+        out[row.game] = {
+          status: ['available', 'unavailable', 'maintenance'].includes(row.status) ? row.status : 'available',
+          message: String(row.message || '').slice(0, 200),
+        };
+      }
+    }
+  } catch (error) {
+    console.error('[anoymundo] game_status read failed (defaulting to available):', error.message);
+  }
+  return out;
+}
+
 export async function getSettings(channel = 'anoy') {
   const [onoff, ftext, feature, modname, credit, libRows, release] = await Promise.all([
     db().from('onoff').select('*').eq('id', 1).maybeSingle(),
