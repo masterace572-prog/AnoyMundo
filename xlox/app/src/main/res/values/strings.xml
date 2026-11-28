@@ -105,7 +105,6 @@
     <string name="game_air_library">libbgmilite.so</string>
     <string name="coming_soon">Coming soon</string>
     <string name="game_air_coming_soon_action">Coming soon</string>
-    <string name="game_air_os_unsupported">BGMI Air needs Android 15 or below</string>
     <string name="game_launch_bgmi">Launch BGMI</string>
     <string name="game_launch_named">Launch %1$s</string>
     <string name="game_stop_named">Stop %1$s</string>
@@ -311,7 +310,7 @@
     <string name="redownload_action">Re-download</string>
     <string name="redownload_done">Library %1$s installed</string>
 
-    <string name="game_container_install_failed">%1$s could not be prepared inside Mundo. Restart the app and try again.</string>    <string name="crash_report_title">Anoy crashed last time</string>
+    <string name="crash_report_title">Anoy crashed last time</string>
     <string name="crash_action_title">Anoy closed while opening an app in Mundo</string>
     <string name="crash_report_copy">Copy report</string>
     <string name="crash_report_dismiss">Dismiss</string>

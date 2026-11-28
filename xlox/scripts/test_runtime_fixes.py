@@ -217,29 +217,25 @@ class AndroidWiring(unittest.TestCase):
         self.assertIn('AccountTrace.install(this)', box)
         self.assertIn('AccountTrace.read(this)', mact)
 
-    def test_bgmi_air_launches_without_game_files(self):
+    def test_bgmi_air_launches_through_the_same_obb_path_as_bgmi(self):
         target = (JAVA / 'utils/GameTarget.java').read_text()
         mact = (JAVA / 'MAct.java').read_text()
-        # Air carries no OBB: the launch flow skips the copy and the inspection.
-        self.assertIn('BGMI_AIR("com.krafton.bgmilite", "libbgmilite.so", "BGMI Air", false)', target)
-        self.assertIn('public final boolean needsObb', target)
-        self.assertIn('if (!launchTarget.target.needsObb)', mact)
-        self.assertIn('if (!game.target.needsObb)', mact)
-        # Air still needs the game inside the container, installed through the
-        # staged base+splits path (the SDK's implicit first-launch install is
-        # where Air died natively on Android 17).
-        self.assertIn('ensureGameInContainerThenLaunch()', mact)
-        self.assertIn('MetaPackageManager.isInnerAppInstalled(launching.target.packageName)', mact)
-        self.assertIn('GoogleServicesInstaller.installFromPhone(app, launching.target.packageName)', mact)
-        services = (JAVA / 'utils/GoogleServicesInstaller.java').read_text()
-        self.assertIn('public static boolean installFromPhone(Context ctx, String pkg)', services)
-        # cloneApp goes first (the SDK's native clone carries the split set);
-        # the staged fallback drops foreign-ABI/density config splits.
-        self.assertIn('ok = installOneClone(ctx, pkg, out);', services)
-        self.assertIn('filterSplits(ctx, splits)', services)
-        self.assertIn('Build.SUPPORTED_ABIS', services)
-        # A native death during install or launch is attributed by a breadcrumb.
-        self.assertIn('"container install: "', mact)
+        # Air launches exactly like BGMI: game-files copy, then the container
+        # launch. The "no game files" skip and the staged pre-install were
+        # reverted — on the last working build (25be3c6) Air copied its OBB
+        # and launched straight through the SDK's implicit install.
+        self.assertIn('BGMI_AIR("com.krafton.bgmilite", "libbgmilite.so", "BGMI Air")', target)
+        self.assertNotIn('needsObb', target)
+        self.assertNotIn('needsObb', mact)
+        self.assertNotIn('ensureGameInContainerThenLaunch', mact)
+        self.assertNotIn('installFromPhone', mact)
+        self.assertNotIn('airUnsupportedOs', mact)
+        self.assertNotIn('game_air_os_unsupported', mact)
+        self.assertFalse((JAVA / 'utils/GoogleServicesInstaller.java').exists())
+        # Both games share the one copy-then-launch flow.
+        self.assertIn('prepareObbThenLaunch();', mact)
+        self.assertIn('copyObbAsync(preparingGame.target.packageName', mact)
+        # A native death during launch is still attributed by a breadcrumb.
         self.assertIn('"launch: "', mact)
 
     def test_one_fresh_manifest_also_updates_the_game_support_notice(self):

@@ -2,20 +2,17 @@ package com.xlox.utils;
 
 /** Package/native-library identities shared by Home and the virtual process. */
 public enum GameTarget {
-    BGMI("com.pubg.imobile", "libbgmi.so", "BGMI", true),
-    BGMI_AIR("com.krafton.bgmilite", "libbgmilite.so", "BGMI Air", false);
+    BGMI("com.pubg.imobile", "libbgmi.so", "BGMI"),
+    BGMI_AIR("com.krafton.bgmilite", "libbgmilite.so", "BGMI Air");
 
     public final String packageName;
     public final String libraryName;
     public final String displayName;
-    /** Air carries no OBB: launch skips the game-files copy entirely. */
-    public final boolean needsObb;
 
-    GameTarget(String packageName, String libraryName, String displayName, boolean needsObb) {
+    GameTarget(String packageName, String libraryName, String displayName) {
         this.packageName = packageName;
         this.libraryName = libraryName;
         this.displayName = displayName;
-        this.needsObb = needsObb;
     }
 
     public static GameTarget fromPackage(String packageName) {

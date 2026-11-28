@@ -45,7 +45,6 @@ import com.xlox.utils.ConcurrentLaunchGuard;
 import com.xlox.utils.ConfigGuard;
 import com.xlox.utils.CrashLogger;
 import com.xlox.utils.SplitDepsFix;
-import com.xlox.utils.GoogleServicesInstaller;
 import com.xlox.utils.LibManager;
 import com.xlox.utils.Net;
 import com.xlox.utils.AccountTrace;
@@ -68,7 +67,6 @@ import java.util.regex.Pattern;
 
 import net_62v.external.MetaActivationManager;
 import net_62v.external.MetaActivityManager;
-import net_62v.external.MetaPackageManager;
 
 /**
  * Home screen after a successful sign in. JNI: exdate / modStatus / credit
@@ -1324,8 +1322,6 @@ public class MAct extends AppCompatActivity {
             boolean available = libraryAvailable(game);
             if (game.runtime.isRunning()) {
                 setDot(game.state, getString(R.string.state_running), R.color.success, R.color.text_primary);
-            } else if (airUnsupportedOs(game)) {
-                setDot(game.state, getString(R.string.game_air_os_unsupported), R.color.warning, R.color.text_secondary);
             } else if (game == air && !available) {
                 // Its disabled button is the ONLY "Coming soon" copy on Home.
                 game.state.setText("");
@@ -1364,11 +1360,6 @@ public class MAct extends AppCompatActivity {
                 game.obbState = AppManager.ObbState.AVAILABLE;
                 continue;
             }
-            if (!game.target.needsObb) {
-                // BGMI Air carries no game files: nothing to inspect or copy.
-                game.obbState = AppManager.ObbState.AVAILABLE;
-                continue;
-            }
             game.checkingObb = true;
             try {
                 ioExecutor.execute(() -> {
@@ -1398,17 +1389,6 @@ public class MAct extends AppCompatActivity {
     private boolean libraryAvailable(GameSession game) {
         return (preview && qaLaunch != null && game == qaLaunchTarget)
                 || LibManager.isUsableLib(this, game.target);
-    }
-
-    /**
-     * BGMI Air's closed-source native container core breaks inside its own game
-     * startup on Android 16+ (library loads and the container initialises, then
-     * the game process faults). There is no compat switch in the engine API, so
-     * the launch is gated to Android 15 and below instead of crashing. The
-     * button, the state dot and every launch entry point all check this.
-     */
-    private boolean airUnsupportedOs(GameSession game) {
-        return game == air && Build.VERSION.SDK_INT >= 36;
     }
 
     private boolean controlsBlocked() {
@@ -1660,14 +1640,13 @@ public class MAct extends AppCompatActivity {
             if (busy && game == launchTarget) continue; // Keep its live copy/launch label and spinner.
             boolean stop = game.runtime.isRunning(); // Stopping is always allowed, including after expiry.
             boolean comingSoon = game == air && !libraryAvailable(game) && !stop;
-            boolean osBlocked = airUnsupportedOs(game) && !stop;
             CharSequence label = stop ? getString(R.string.game_stop_named, gameName(game))
                     : comingSoon ? getString(R.string.game_air_coming_soon_action)
                     : expired ? getString(R.string.sign_in_again)
                     : !game.installed ? getString(R.string.game_install_named, gameName(game))
                     : getString(R.string.game_launch_named, gameName(game));
             Ui.setLoading(game.action, false, label);
-            game.action.setEnabled(!blocked && !comingSoon && !osBlocked);
+            game.action.setEnabled(!blocked && !comingSoon);
             game.action.setBackgroundTintList(ContextCompat.getColorStateList(this,
                     stop ? R.color.tonal_bg_on_black : R.color.button_bg));
             game.action.setTextColor(ContextCompat.getColorStateList(this,
@@ -1717,9 +1696,6 @@ public class MAct extends AppCompatActivity {
         refreshGameState();
         if (game.runtime.isRunning() || containerRunning(game)) {
             stopGame();
-        } else if (airUnsupportedOs(game)) {
-            showMessage(getString(R.string.game_air_os_unsupported), true);
-            refreshPrimary();
         } else if (game == air && !libraryAvailable(game)) {
             refreshPrimary();
         } else if (expired) {
@@ -1736,11 +1712,6 @@ public class MAct extends AppCompatActivity {
         hideMessage();
         if (expired || (expiryMillis > 0 && expiryMillis <= System.currentTimeMillis())) {
             openLogin();
-            return;
-        }
-        if (airUnsupportedOs(launchTarget)) {
-            showMessage(getString(R.string.game_air_os_unsupported), true);
-            refreshGameState();
             return;
         }
         if (launchTarget == air && !libraryAvailable(air)) {
@@ -1835,12 +1806,6 @@ public class MAct extends AppCompatActivity {
      */
     private void prepareObbThenLaunch() {
         Log.d(TAG, "Launch: preparing game files");
-        if (!launchTarget.target.needsObb) {
-            // BGMI Air has no game files: the copy step is skipped entirely.
-            Log.d(TAG, "Launch: " + gameName(launchTarget) + " needs no game files, launching");
-            ensureGameInContainerThenLaunch();
-            return;
-        }
         setBusy(true, getString(R.string.action_preparing));
         showProgress(0, true);
         // 2.3.4 (text only; the copy itself is unchanged): nothing new for the
@@ -1935,60 +1900,12 @@ public class MAct extends AppCompatActivity {
         }, RESTART_DELAY_MS);
     }
 
-    /**
-     * Air has no game files, but the container still needs the game itself. The
-     * SDK's implicit first-launch install is where Air died natively on Android
-     * 17, so the game goes in through the staged base+splits path that reliably
-     * installs GMS. Already installed: straight to launch.
-     */
-    private void ensureGameInContainerThenLaunch() {
-        if (!Ui.alive(this)) return;
-        hideMessage();
-        setBusy(true, getString(R.string.launching));
-        final GameSession launching = launchTarget;
-        final Context app = getApplicationContext();
-        new Thread(() -> {
-            boolean ok = true;
-            try {
-                if (!MetaPackageManager.isInnerAppInstalled(launching.target.packageName)) {
-                    // A native death inside the container installer leaves no
-                    // Java trace; the breadcrumb names the step on next start.
-                    CrashLogger.noteAction(app, "container install: " + launching.target.packageName);
-                    ok = GoogleServicesInstaller.installFromPhone(app, launching.target.packageName);
-                    CrashLogger.clearAction(app);
-                }
-            } catch (Throwable t) {
-                Log.e(TAG, "Container game install failed", t);
-                ok = false;
-            }
-            final boolean installed = ok;
-            main.post(() -> {
-                if (!Ui.alive(MAct.this) || launchTarget != launching) return;
-                if (!installed) {
-                    setBusy(false, null);
-                    hideProgress();
-                    showMessage(getString(R.string.game_container_install_failed,
-                            gameName(launching)), true);
-                    return;
-                }
-                main.postDelayed(MAct.this::launchGame, LAUNCH_DELAY_MS);
-            });
-        }, "anoy-game-install").start();
-    }
-
     private void launchGame() {
         if (!Ui.alive(this)) return;
         if (!preview && (expired || (expiryMillis > 0 && expiryMillis <= System.currentTimeMillis()))) {
             setBusy(false, null);
             hideProgress();
             showMessage(getString(R.string.licence_expired_message), true);
-            refreshGameState();
-            return;
-        }
-        if (airUnsupportedOs(launchTarget)) {
-            setBusy(false, null);
-            hideProgress();
-            showMessage(getString(R.string.game_air_os_unsupported), true);
             refreshGameState();
             return;
         }
