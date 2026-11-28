@@ -2299,6 +2299,12 @@ public class MAct extends AppCompatActivity {
                 msg.append("\nLib: ").append(LibManager.diagnostics(this, GameTarget.BGMI_AIR));
             } catch (Throwable ignored) {
             }
+            // Which startup step the game process last reached before dying.
+            try {
+                String steps = LibManager.milestones(this, GameTarget.BGMI_AIR);
+                if (!steps.isEmpty()) msg.append("\nReached: ").append(steps);
+            } catch (Throwable ignored) {
+            }
             String diag = SplitDepsFix.readDiag(this);
             if (!diag.isEmpty()) msg.append("\n").append(diag);
             air.message.setText(msg.toString());

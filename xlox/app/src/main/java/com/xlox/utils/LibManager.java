@@ -387,6 +387,48 @@ public final class LibManager {
         }
     }
 
+    /** Appends a startup milestone that survives a native death (append-only). */
+    public static void recordMilestone(Context context, GameTarget game, String step) {
+        OutputStream out = null;
+        try {
+            out = new FileOutputStream(new File(context.getFilesDir(),
+                    "milestones_" + (game == GameTarget.BGMI ? "bgmi" : "air") + ".txt"), true);
+            out.write((System.currentTimeMillis() / 1000L + " " + step + "\n").getBytes("UTF-8"));
+            out.flush();
+        } catch (Exception ignored) {
+        } finally {
+            closeQuietly(out);
+        }
+    }
+
+    /** The last few startup milestones for a game, or "" when none. */
+    public static String milestones(Context context, GameTarget game) {
+        File file = new File(context.getFilesDir(),
+                "milestones_" + (game == GameTarget.BGMI ? "bgmi" : "air") + ".txt");
+        if (!file.isFile()) return "";
+        InputStream in = null;
+        try {
+            in = new FileInputStream(file);
+            byte[] buffer = new byte[(int) Math.min(file.length(), 1024)];
+            int read = in.read(buffer);
+            if (read <= 0) return "";
+            String[] lines = new String(buffer, 0, read, "UTF-8").trim().split("\n");
+            StringBuilder out = new StringBuilder();
+            for (int i = Math.max(0, lines.length - 6); i < lines.length; i++) {
+                String step = lines[i].trim();
+                int space = step.indexOf(' ');
+                if (space > 0) step = step.substring(space + 1); // drop the epoch prefix
+                if (out.length() > 0) out.append(" > ");
+                out.append(step);
+            }
+            return out.toString();
+        } catch (Exception e) {
+            return "";
+        } finally {
+            closeQuietly(in);
+        }
+    }
+
     public static String lastLoadError(Context context) {
         return lastLoadError(context, GameTarget.BGMI);
     }

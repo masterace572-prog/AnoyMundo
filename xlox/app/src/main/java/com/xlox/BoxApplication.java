@@ -157,6 +157,10 @@ public class BoxApplication extends Application
             System.load(lib.getAbsolutePath());
             Log.i(LOAD_TAG, game.libraryName + " LOADED from " + lib.getAbsolutePath());
             LibManager.recordLoadSuccess(ctx, game, lib.getAbsolutePath());
+            // Milestone AFTER the load: the next thing to die is the game's own
+            // startup or its own .so exec under the Android 16/17 virtual runtime.
+            // Seeing "loaded-ok" with no following milestone pins the crash there.
+            LibManager.recordMilestone(ctx, game, "loaded-ok");
         } catch (UnsatisfiedLinkError e) {
             String message = describeLoadFailure(ctx, game, e);
             Log.e(LOAD_TAG, message, e);
@@ -172,6 +176,13 @@ public class BoxApplication extends Application
     public void onInitialized() {
         PmCompatShim.install();
         SplitDepsFix.install(this);
+        // The game process reached full container init — the game's own code/.so
+        // runs next. If this milestone is present but the process still died, the
+        // fault is inside the game's own native startup under Android 16/17.
+        try {
+            LibManager.recordMilestone(this, GameTarget.BGMI_AIR, "container-init-ok");
+        } catch (Throwable ignored) {
+        }
         if (virtualGameProcess) installGameWebRouting(true);
     }
 
